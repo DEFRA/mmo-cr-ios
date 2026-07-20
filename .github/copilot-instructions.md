@@ -4,8 +4,9 @@ This repository holds the source code for the **MMO Catch Recording** native iOS
 the Marine Management Organisation, part of the Department for Environment, Food and Rural
 Affairs (**DEFRA**).
 
-These guidelines apply to **every** chat request in this workspace and are inherited by both custom
-agents ([iOS Developer](.github/agents/ios-developer.agent.md) and
+These guidelines apply to **every** chat request in this workspace and are inherited by custom
+agents (including [iOS Developer](.github/agents/ios-developer.agent.md),
+[iOS Planner](.github/agents/ios-planner.agent.md) and
 [iOS DevOps](.github/agents/ios-devops.agent.md)).
 
 ---
@@ -57,24 +58,48 @@ This repository builds a **native iOS (Swift/SwiftUI)** app. Agents MUST:
   [README standards](https://defra.github.io/software-development-standards/standards/readme_standards/),
   plus a solution overview, ADRs and architecture diagrams.
 
-## 4. The working framework (Read → Research → Plan → Implement → Test → Iterate)
+## 4. The working framework (Triage → Read → Research → Plan Handoff → Plan Validation Research → Approval → Implement → Test → Iterate)
 
-Every non-trivial task follows this loop:
+This section is the **single source of truth** for the working loop. Custom agents reference it and
+**must not restate or fork it**.
+
+**Triage first — pick the right path by size and risk:**
+
+- **Trivial / low-risk** (typo, copy/comment/doc tweak, a small localised change with no impact on
+  architecture, networking, persistence/sync, auth, security or accessibility): skip the planner and
+  heavy research. Do a light **Read → Implement → Test → Summarise**, and research only the specific
+  point that is genuinely uncertain.
+- **Non-trivial** (new feature, architecture, networking, persistence/sync, auth, security, an
+  accessibility surface, or anything user-visible or risky): run the full loop below.
+
+Non-trivial loop:
 
 1. **Read** — Read the relevant files/config in the repo for context before acting. Never assume; verify.
-2. **Research** — Do up-to-date internet research (Apple docs, DEFRA/GDS manuals, framework docs) so
-   advice reflects current APIs and policy. Cite sources.
+2. **Research** — Do a thorough internet research in the open, **scoped to the task's risk**, and validate
+  findings against Apple, DEFRA/GDS, and framework guidance so advice reflects current APIs and policy.
+  Cite sources.
 3. **Clarify** — Ask the user targeted questions whenever requirements are ambiguous or missing.
    Surface requirement gaps explicitly with suggested fixes. Do not guess at intent.
-4. **Plan** — Break the work into small, manageable, ordered tasks with a todo list. Note which tasks
-   can run in parallel and which are sequential/dependent.
-5. **Implement** — Deliver one task at a time (or parallel independent tasks). Stay focused on the
-   requested outcome; do not scope-creep or refactor unrelated code.
-6. **Test / Validate** — Build, run unit/UI/accessibility tests, check errors, and confirm each task
-   works before moving on.
-7. **Iterate** — Refine until the user is satisfied with each task.
-8. **Summarise** — End with a detailed **executive summary** of what changed, why, how it was validated,
-   and any follow-ups or risks.
+4. **Plan handoff** — Delegate planning to the task's designated planning agent when one exists (for
+  iOS app implementation, this is [iOS Planner](.github/agents/ios-planner.agent.md)). The planning
+  agent returns the complete implementation plan.
+5. **Plan validation research** — Perform a thorough internet research in the open to validate the plan
+  against Apple, DEFRA/GDS, and framework guidance, **focusing on the steps the planner flagged as risky
+  or version-sensitive** (unfamiliar APIs, security, policy). Send targeted revisions back to the planner.
+6. **Approval** — Present the complete validated plan to the user and obtain explicit approval before
+  implementation. If changes are requested, update the plan, re-validate, and re-approve. **Cap the
+  plan → validate → approve → implement replanning cycle at 3 iterations**; if it is still unresolved,
+  stop and surface the blocker to the user instead of looping.
+7. **Implement** — Deliver one task at a time (or parallel independent tasks) from the approved plan.
+  Stay focused on the requested outcome; do not scope-creep or refactor unrelated code. **When starting
+  development on a new feature (or on this repo while it still has no app code), create the required
+  ADR(s) first** — architecture pattern, offline persistence choice, and the native-app exception — under
+  `docs/adr/`, then build against them.
+8. **Test / Validate** — Build, run unit/UI/accessibility tests, check errors, and confirm each task
+  works before moving on.
+9. **Iterate** — Refine until the user is satisfied with each task.
+10. **Summarise** — End with a detailed **executive summary** of what changed, why, how it was validated,
+  and any follow-ups or risks.
 
 ## 5. Tech stack (current decisions)
 

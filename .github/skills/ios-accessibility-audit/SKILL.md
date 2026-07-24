@@ -2,6 +2,7 @@
 name: ios-accessibility-audit
 description: "Audit and validate the MMO Catch Recording iOS app against WCAG 2.2 AA and Apple accessibility guidance (a DEFRA legal requirement). Use to review SwiftUI views for VoiceOver, Dynamic Type, contrast, tap targets, Reduce Motion and assistive-technology support, and to prepare for a formal audit before public beta."
 argument-hint: "e.g. 'audit the Catch Recording screen for accessibility'"
+user-invocable: false
 ---
 
 # iOS accessibility audit

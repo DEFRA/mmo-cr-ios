@@ -2,6 +2,7 @@
 name: figma-to-swiftui
 description: "Turn a Figma design into accessible SwiftUI screens for the MMO Catch Recording app. Use when building or updating an iOS page/screen from a Figma URL (design-to-code), when a large Figma file needs specific node/page names, or when there is no design and a screen must be built from a description + acceptance criteria. Enforces STRICT read-only Figma MCP use and captures a reusable Design Spec to avoid rate-limited re-reads."
 argument-hint: "e.g. 'build the Catch Recording screen from <figma-url>' or 'build a login screen from these acceptance criteria'"
+user-invocable: false
 ---
 
 # Figma → SwiftUI

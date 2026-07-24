@@ -2,6 +2,7 @@
 name: ios-project-scaffold
 description: "Scaffold or extend the MMO Catch Recording iOS app structure: SwiftUI app skeleton, feature folders, Core layers (networking, offline persistence/sync, design system), SPM setup, config/xcconfig, ADRs and README. Use when creating the initial project, adding a new feature module, or establishing conventions."
 argument-hint: "e.g. 'scaffold the initial app' or 'add a Catch Recording feature module'"
+user-invocable: false
 ---
 
 # iOS project scaffold

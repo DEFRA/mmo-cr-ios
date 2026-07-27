@@ -1,6 +1,6 @@
 ---
 description: "Read a JIRA ticket (via the Atlassian MCP server or pasted content) and hand it to the iOS Orchestrator to deliver the described feature/user story end-to-end for the MMO Catch Recording iOS app. Parses the standard ticket format (user story, context, acceptance criteria, Gherkin scenarios, Figma URL, considerations, technical notes) into a delivery brief and lets the Orchestrator drive the §4 non-trivial loop."
-name: "JIRA ticket → iOS feature"
+name: "JIRA ticket to iOS app feature"
 argument-hint: "JIRA ticket URL or paste JIRA ticket content"
 agent: "iOS Orchestrator"
 tools: [read, search, todo, agent, "mcp-atlassian/*"]

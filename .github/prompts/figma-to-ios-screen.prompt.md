@@ -1,6 +1,6 @@
 ---
 description: "Plan, build or update an accessible SwiftUI iOS screen from a Figma design (design-to-code) — or from a description + acceptance criteria when there is no design — by orchestrating the full working framework (Planner → approval gate → Developer → Code Reviewer). Enforces strict read-only Figma MCP use and gathers inputs to avoid rate-limited re-reads."
-name: "Figma → iOS screen"
+name: "Figma design to iOS app screen"
 argument-hint: "Figma URL (or description) + screen name"
 agent: "iOS Orchestrator"
 tools: [read, search, todo, agent]

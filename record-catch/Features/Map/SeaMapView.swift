@@ -12,7 +12,7 @@ struct SeaMapView: UIViewRepresentable {
 
     private static let boundaryRegion = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 55.0, longitude: -3.5),
-        span: MKCoordinateSpan(latitudeDelta: 14.0, longitudeDelta: 10.0)
+        span: MKCoordinateSpan(latitudeDelta: 14.0, longitudeDelta: 12.0)
     )
 
     func makeCoordinator() -> SeaMapCoordinator {

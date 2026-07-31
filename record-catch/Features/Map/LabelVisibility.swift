@@ -4,7 +4,7 @@ import Foundation
 enum LabelVisibility {
 
     /// Labels are shown once the visible map region is zoomed in past this threshold.
-    static let latitudeDeltaThreshold: Double = 1.5
+    static let latitudeDeltaThreshold: Double = 1
 
     static func shouldShowLabels(forLatitudeDelta latitudeDelta: Double) -> Bool {
         latitudeDelta < latitudeDeltaThreshold

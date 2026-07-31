@@ -9,20 +9,26 @@ import SwiftUI
 
 struct ViewHeader: View {
     var body: some View {
-        ZStack {
-            Rectangle()
-                .fill(Color.blue)
-                .frame(height: 50)
-            HStack{
-                Text("GOV.UK")
-                    .font(.title3)
-                    .fontWeight(.bold)
-                    .foregroundStyle(.white)
-                Spacer()
-            }
-            .padding()
-            .backgroundStyle(.black)
+        HStack {
+            Text("< Back")
+                .font(AppTypography.bodySmall)
+                .foregroundStyle(.white)
+
+            Spacer()
+
+            Text("GOV.UK")
+                .font(AppTypography.headerTitle)
+                .foregroundStyle(.white)
+
+            Spacer()
+
+            Text("CYM")
+                .font(AppTypography.bodySmall)
+                .foregroundStyle(.white)
         }
+        .padding(.horizontal, AppSpacing.medium)
+        .frame(height: 56)
+        .background(AppColors.govBlue)
     }
 }
 

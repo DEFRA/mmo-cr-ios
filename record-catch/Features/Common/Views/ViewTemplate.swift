@@ -9,7 +9,6 @@ import SwiftUI
 
 struct ViewTemplate<Content: View>: View {
     
-    
     let title: String
     let content: Content
     
@@ -22,12 +21,20 @@ struct ViewTemplate<Content: View>: View {
         VStack(spacing: 0) {
             ViewHeader()
             ScrollView {
-                content
-                ViewFooter()
+                VStack(alignment: .leading, spacing: AppSpacing.large) {
+                    Text(title)
+                        .font(AppTypography.pageCaption)
+                        .foregroundStyle(AppColors.govBlue)
+                    content
+                    ViewFooter()
+                }
+                .padding(.horizontal, AppSpacing.medium)
+                .padding(.vertical, AppSpacing.large)
             }
+            .background(AppColors.background)
         }
+        .background(AppColors.background)
     }
-    
 }
 
 #Preview {

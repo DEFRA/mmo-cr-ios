@@ -9,25 +9,25 @@ import SwiftUI
 
 struct ViewFooter: View {
     var body: some View {
-            Divider()
+        Divider()
+            .padding(.top, AppSpacing.large)
 
-            VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: AppSpacing.small) {
+            Text("Support")
+                .font(AppTypography.footerHeading)
 
-                Text("Support")
-                    .font(.headline)
+            Link(
+                "Contact Defra",
+                destination: URL(string: "https://www.gov.uk")!
+            )
+            .font(AppTypography.bodySmall)
 
-                Link(
-                    "Contact Defra",
-                    destination: URL(string: "https://www.gov.uk")!
-                )
-
-                Text("© Crown copyright")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.top)
+            Text("© Crown copyright")
+                .font(AppTypography.bodySmall)
+                .foregroundStyle(AppColors.textSecondary)
         }
-
+        .padding(.top, AppSpacing.medium)
+    }
 }
 
 #Preview {

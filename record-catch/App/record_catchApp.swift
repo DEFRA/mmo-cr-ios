@@ -27,7 +27,7 @@ struct record_catchApp: App {
 
     var body: some Scene {
         WindowGroup {
-            MapView()
+            TripFormDemoView()
                 .environment(environment)
         }
         .modelContainer(sharedModelContainer)

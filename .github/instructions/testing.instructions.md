@@ -28,6 +28,20 @@ New or changed behaviour ships with tests. Track coverage in
 - Structure tests **Arrange → Act → Assert**. One behaviour per test; descriptive names
   (`test_savingCatch_whenOffline_queuesForSync`).
 
+## Coverage targets
+
+Coverage must be **visible and reported** in [DEFRA SonarCloud](https://sonarcloud.io/organizations/defra)
+and must not regress below the established baseline. The project quality gate is:
+
+- **≥90%** overall (global) line/branch coverage.
+- **≥95%** for core business logic — view models, services, repositories, sync/offline logic and domain
+  rules.
+- **100%** for error-handling and security-critical paths — auth, token/Keychain handling, input
+  validation and conflict resolution.
+
+Write tests alongside the code (same change, not a follow-up), and run the full suite after every change —
+`xcodebuild test` / `fastlane test` — confirming all tests pass before moving on.
+
 ## Conventions
 
 - Mirror the source tree: `Tests/` for unit, `UITests/` for UI/accessibility.

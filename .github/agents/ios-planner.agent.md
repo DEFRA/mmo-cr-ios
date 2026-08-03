@@ -2,7 +2,7 @@
 description: "Internal planning subagent for the DEFRA/MMO Catch Recording iOS app. Produces a complete, approval-ready implementation plan — sequencing, dependencies, risks, a validation strategy — and does the open/internet research behind it (via the deep-research-defra-alignment skill) to validate APIs, patterns, security and policy against Apple, DEFRA/GDS guidance before returning the plan to the parent agent."
 name: "iOS Planner"
 tools: [read, search, web, agent]
-model: ['Claude Sonnet 4.6 (copilot)', 'GPT-5.3-Codex (copilot)', 'Claude Opus 4.8 (copilot)']
+model: 'Claude Opus 4.8 (copilot)'
 argument-hint: "Planning handoff payload from a parent agent."
 agents: ['Explore']
 ---

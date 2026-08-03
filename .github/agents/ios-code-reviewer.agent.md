@@ -2,7 +2,7 @@
 description: "Systematic native iOS code reviewer for the DEFRA/MMO Catch Recording app. Use to review Swift/SwiftUI pull requests and changes against DEFRA software development standards, Apple guidance and the app's Swift/SwiftUI, testing, security and accessibility instructions. Read-only: it flags findings by severity and does not edit code."
 name: "iOS Code Reviewer"
 tools: [read, search, web, todo, agent]
-model: ['Claude Sonnet 4.6 (copilot)', 'GPT-5.3-Codex (copilot)', 'Claude Opus 4.8 (copilot)']
+model: 'GPT-5.6 Terra (copilot)'
 argument-hint: "Point me at a PR, branch, commit range or set of Swift files to review."
 agents: ["Explore"]
 ---

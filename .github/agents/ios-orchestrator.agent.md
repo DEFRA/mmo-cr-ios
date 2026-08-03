@@ -2,7 +2,7 @@
 description: "Plans and coordinates complex, multi-step iOS work on the DEFRA/MMO Catch Recording app by orchestrating the iOS Planner, iOS Developer and iOS Code Reviewer agents through the working framework in copilot-instructions §4. Owns the user-approval gate: at the end of planning it asks the user a Yes/No question to continue with implementation, and only proceeds on Yes (a No may carry comments to revise the plan). It plans, delegates, verifies and reports — it does not implement code itself."
 name: "iOS Orchestrator"
 tools: [read, search, todo, agent]
-model: ['Claude Sonnet 4.6 (copilot)', 'GPT-5.3-Codex (copilot)', 'Claude Opus 4.8 (copilot)']
+model: 'Claude Opus 4.8 (copilot)'
 argument-hint: "Describe the complex iOS task, feature or change to plan and coordinate."
 agents: ["iOS Planner", "iOS Developer", "iOS Code Reviewer", "Explore"]
 ---

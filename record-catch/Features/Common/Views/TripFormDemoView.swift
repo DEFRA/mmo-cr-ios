@@ -7,6 +7,7 @@ struct TripFormDemoView: View {
     @State private var portQuery = ""
     @State private var selectedPort: String?
     @State private var didAttemptSubmit = false
+    @State private var password = ""
 
     private let portProvider: PortOptionProviding = StubPortOptionProvider()
 
@@ -72,12 +73,11 @@ struct TripFormDemoView: View {
                     didAttemptSubmit: didAttemptSubmit
                 )
 
-                SearchDropdownField(
-                    label: "Add port to vessel ACHILLES",
-                    options: portProvider.options,
-                    query: $portQuery,
-                    selectedOption: $selectedPort,
-                    didAttemptSubmit: didAttemptSubmit
+                TextInputField(
+                    label: "Password",
+                    isSecure: true,
+                    isRequired: false,
+                    text: $password
                 )
 
                 PrimaryButton(title: "Save and continue") {

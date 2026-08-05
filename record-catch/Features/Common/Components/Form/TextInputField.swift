@@ -18,6 +18,11 @@ struct TextInputField: View {
     @State private var hasBlurred = false
     @State private var isSecureTextVisible = false
 
+    /// Creates a text input field.
+    ///
+    /// - Note: When `isSecure == true`, the `textInputAutocapitalization` and
+    ///   `autocorrectionDisabled` parameters are IGNORED — secure input always forces
+    ///   `.never` capitalisation and disables autocorrection for security reasons.
     init(
         label: String,
         hint: String? = nil,
@@ -121,7 +126,11 @@ struct TextInputField: View {
             Button {
                 isSecureTextVisible.toggle()
                 // Preserve focus on the field after toggling where practical.
-                isFocused = true
+                // Defer to the next runloop so the SecureField/TextField swap
+                // completes before we restore focus, which is more robust on device.
+                Task { @MainActor in
+                    isFocused = true
+                }
             } label: {
                 Image(systemName: isSecureTextVisible ? "eye.slash" : "eye")
                     .frame(width: AppControlSize.buttonHeight, height: AppControlSize.buttonHeight)

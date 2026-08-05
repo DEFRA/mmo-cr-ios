@@ -9,12 +9,14 @@ struct TextInputField: View {
     let keyboardType: UIKeyboardType
     let textInputAutocapitalization: TextInputAutocapitalization
     let autocorrectionDisabled: Bool
+    let secureTextContentType: UITextContentType
     @Binding var text: String
     var didAttemptSubmit: Bool = false
     var errorMessage: String?
 
     @FocusState private var isFocused: Bool
     @State private var hasBlurred = false
+    @State private var isSecureTextVisible = false
 
     init(
         label: String,
@@ -25,6 +27,7 @@ struct TextInputField: View {
         keyboardType: UIKeyboardType = .default,
         textInputAutocapitalization: TextInputAutocapitalization = .sentences,
         autocorrectionDisabled: Bool = false,
+        secureTextContentType: UITextContentType = .password,
         text: Binding<String>,
         didAttemptSubmit: Bool = false,
         errorMessage: String? = nil
@@ -37,6 +40,7 @@ struct TextInputField: View {
         self.keyboardType = keyboardType
         self.textInputAutocapitalization = textInputAutocapitalization
         self.autocorrectionDisabled = autocorrectionDisabled
+        self.secureTextContentType = secureTextContentType
         _text = text
         self.didAttemptSubmit = didAttemptSubmit
         self.errorMessage = errorMessage
@@ -87,10 +91,7 @@ struct TextInputField: View {
     @ViewBuilder
     private var inputField: some View {
         if isSecure {
-            SecureField(placeholder, text: $text)
-                .textContentType(.password)
-                .formInputStyle(showError: shouldShowError)
-                .focused($isFocused)
+            secureInputField
         } else {
             TextField(placeholder, text: $text)
                 .keyboardType(keyboardType)
@@ -99,6 +100,46 @@ struct TextInputField: View {
                 .formInputStyle(showError: shouldShowError)
                 .focused($isFocused)
         }
+    }
+
+    @ViewBuilder
+    private var secureInputField: some View {
+        HStack(spacing: AppSpacing.small) {
+            Group {
+                if isSecureTextVisible {
+                    TextField(placeholder, text: $text)
+                } else {
+                    SecureField(placeholder, text: $text)
+                }
+            }
+            .textContentType(secureTextContentType)
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled(true)
+            .focused($isFocused)
+            .accessibilityIdentifier("TextInputField.secureInput")
+
+            Button {
+                isSecureTextVisible.toggle()
+                // Preserve focus on the field after toggling where practical.
+                isFocused = true
+            } label: {
+                Image(systemName: isSecureTextVisible ? "eye.slash" : "eye")
+                    .frame(width: AppControlSize.buttonHeight, height: AppControlSize.buttonHeight)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .tint(AppColors.govBlue)
+            .accessibilityLabel(Self.passwordToggleLabel(isVisible: isSecureTextVisible))
+            .accessibilityAddTraits(.isButton)
+            .accessibilityIdentifier("TextInputField.secureToggle")
+        }
+        .formInputStyle(showError: shouldShowError)
+    }
+
+    /// Returns the accessibility label for the show/hide password toggle.
+    /// Pure and static so the security-relevant labelling can be unit tested.
+    static func passwordToggleLabel(isVisible: Bool) -> String {
+        isVisible ? "Hide password" : "Show password"
     }
 
     static func shouldShowRequiredError(text: String, didAttemptSubmit: Bool, hasBlurred: Bool, isRequired: Bool) -> Bool {
@@ -145,6 +186,7 @@ private extension View {
             isSecure: true,
             textInputAutocapitalization: .never,
             autocorrectionDisabled: true,
+            secureTextContentType: .password,
             text: $password,
             didAttemptSubmit: true
         )

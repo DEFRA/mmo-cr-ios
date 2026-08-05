@@ -54,4 +54,12 @@ final class TextInputFieldTests: XCTestCase {
 
         XCTAssertFalse(shouldShowError)
     }
+
+    func testPasswordToggleLabelWhenHiddenPromptsToShow() {
+        XCTAssertEqual(TextInputField.passwordToggleLabel(isVisible: false), "Show password")
+    }
+
+    func testPasswordToggleLabelWhenVisiblePromptsToHide() {
+        XCTAssertEqual(TextInputField.passwordToggleLabel(isVisible: true), "Hide password")
+    }
 }

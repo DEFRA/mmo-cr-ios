@@ -38,6 +38,7 @@
                 Features/Common/Components/Form/PrimaryButton.swift,
                 Features/Common/Components/Form/RadioOption.swift,
                 Features/Common/Components/Form/SearchDropdownField.swift,
+                Features/Common/Components/Form/TextInputField.swift,
                 Features/Common/Components/Table/SubmissionsTable.swift,
                 Features/Common/Components/Typography/ParagraphText.swift,
                 Features/Common/Components/Typography/TitleText.swift,

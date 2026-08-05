@@ -16,6 +16,7 @@ This folder contains reusable GDS-inspired SwiftUI components and shared design 
 - `Components/Form/RadioOption.swift`: radio-style option row.
 - `Components/Form/DateEntryField.swift`: day/month/year date input with inline validation.
 - `Components/Form/SearchDropdownField.swift`: list-only search field with dropdown results.
+- `Components/Form/TextInputField.swift`: text input that also supports secure password entry.
 
 ## Demo screen
 

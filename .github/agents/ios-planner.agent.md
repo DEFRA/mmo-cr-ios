@@ -1,15 +1,12 @@
 ---
-description: >-
-  Internal planning subagent for the DEFRA/MMO Catch Recording iOS app. Produces
-  a complete, approval-ready implementation plan - sequencing, dependencies,
-  risks, a validation strategy - and does the open/internet research behind it
-  (via the deep-research-defra-alignment skill) to validate APIs, patterns,
-  security and policy against Apple, DEFRA/GDS guidance before returning the
-  plan to the parent agent.
-name: iOS Planner
-tools: ['read', 'search', 'web', 'agent', 'fetch_webpage', 'file_search', 'grep_search', 'get_errors', 'get_terminal_output', 'list_dir', 'read_file', 'run_subagent', 'validate_cves']
-argument-hint: Planning handoff payload from a parent agent.
+description: "Internal planning subagent for the DEFRA/MMO Catch Recording iOS app. Produces a complete, approval-ready implementation plan — sequencing, dependencies, risks, a validation strategy — and does the open/internet research behind it (via the deep-research-defra-alignment skill) to validate APIs, patterns, security and policy against Apple, DEFRA/GDS guidance before returning the plan to the parent agent."
+name: "iOS Planner"
+tools: [read, search, web, agent]
+model: 'Claude Opus 4.8 (copilot)'
+argument-hint: "Planning handoff payload from a parent agent."
+agents: ['Explore']
 ---
+
 You are an **internal planning specialist** for the **DEFRA / Marine Management Organisation (MMO)
 Catch Recording** native iOS app.
 

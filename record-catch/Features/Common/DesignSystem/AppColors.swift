@@ -4,7 +4,7 @@ enum AppColors {
     static let govBlue = Color(red: 0.0, green: 0.37, blue: 0.65)
     static let govGreen = Color(red: 0.0, green: 0.44, blue: 0.24)
     static let govYellow = Color(red: 1.0, green: 0.87, blue: 0.0)
-    static let errorRed = Color(red: 0.84, green: 0.15, blue: 0.16)
+    static let errorRed = Color(red: 0.831, green: 0.208, blue: 0.110)
 
     static let textPrimary = Color.black
     static let textSecondary = Color(red: 0.31, green: 0.31, blue: 0.31)

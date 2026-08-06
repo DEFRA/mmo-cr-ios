@@ -8,23 +8,31 @@
 import SwiftUI
 
 struct ViewHeader: View {
+
+    @Environment(AppLanguageStore.self) private var languageStore
+
     var body: some View {
         HStack {
-            Text("< Back")
-                .font(AppTypography.bodySmall)
-                .foregroundStyle(.white)
+            HStack(spacing: AppSpacing.xSmall) {
+                Image(systemName: "chevron.left")
+                    .accessibilityHidden(true)
+                LocalizedText("header.back")
+            }
+            .font(AppTypography.bodySmall)
+            .foregroundStyle(.white)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(languageStore.localized("header.back"))
+            .accessibilityAddTraits(.isButton)
 
             Spacer()
 
-            Text("GOV.UK")
+            LocalizedText("header.branding")
                 .font(AppTypography.headerTitle)
                 .foregroundStyle(.white)
 
             Spacer()
 
-            Text("CYM")
-                .font(AppTypography.bodySmall)
-                .foregroundStyle(.white)
+            LanguageToggleButton()
         }
         .padding(.horizontal, AppSpacing.medium)
         .frame(height: 56)
@@ -34,4 +42,5 @@ struct ViewHeader: View {
 
 #Preview {
     ViewHeader()
+        .environment(AppLanguageStore.preview)
 }

@@ -41,4 +41,5 @@ struct ViewTemplate<Content: View>: View {
     ViewTemplate(title: "Test") {
         Text("Test")
     }
+    .environment(AppLanguageStore.preview)
 }

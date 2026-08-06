@@ -24,11 +24,14 @@ struct record_catchApp: App {
     }()
     
     let environment = AppEnvironment()
+    @State private var languageStore = AppLanguageStore()
 
     var body: some Scene {
         WindowGroup {
-            TripFormDemoView()
+            SignInView()
                 .environment(environment)
+                .environment(languageStore)
+                .environment(\.locale, languageStore.language.locale)
         }
         .modelContainer(sharedModelContainer)
     }

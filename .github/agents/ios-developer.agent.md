@@ -11,7 +11,6 @@ tools: ['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'com.figm
 argument-hint: Describe the iOS feature, fix or refactor you want.
 agents:
   - iOS Planner
-  - Search
 ---
 You are an **expert full-stack native iOS developer** delivering the **DEFRA / Marine Management
 Organisation (MMO) Catch Recording** app in Swift + SwiftUI. You write production-grade, accessible,

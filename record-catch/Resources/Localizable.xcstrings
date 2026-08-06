@@ -1,0 +1,222 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "a11y.errorPrefix" : {
+      "comment" : "Hidden prefix read by VoiceOver before an error message.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "cy" : {
+          "stringUnit" : { "state" : "translated", "value" : "Gwall:" }
+        },
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Error:" }
+        }
+      }
+    },
+    "header.back" : {
+      "comment" : "Header back button label.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "cy" : {
+          "stringUnit" : { "state" : "translated", "value" : "Yn ôl" }
+        },
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Back" }
+        }
+      }
+    },
+    "header.branding" : {
+      "comment" : "GOV.UK wordmark branding text.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "cy" : {
+          "stringUnit" : { "state" : "translated", "value" : "GOV.UK" }
+        },
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "GOV.UK" }
+        }
+      }
+    },
+    "header.language.hint.toEnglish" : {
+      "comment" : "VoiceOver hint for the language toggle when it will switch to English.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "cy" : {
+          "stringUnit" : { "state" : "translated", "value" : "Newid i'r Saesneg" }
+        },
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Switch to English" }
+        }
+      }
+    },
+    "header.language.hint.toWelsh" : {
+      "comment" : "VoiceOver hint for the language toggle when it will switch to Welsh.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "cy" : {
+          "stringUnit" : { "state" : "translated", "value" : "Newid i'r Gymraeg" }
+        },
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Switch to Welsh" }
+        }
+      }
+    },
+    "header.language.toEnglish" : {
+      "comment" : "Language toggle label shown when the app is in Welsh (offers English).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "cy" : {
+          "stringUnit" : { "state" : "translated", "value" : "English" }
+        },
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "English" }
+        }
+      }
+    },
+    "header.language.toWelsh" : {
+      "comment" : "Language toggle label shown when the app is in English (offers Welsh).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "cy" : {
+          "stringUnit" : { "state" : "translated", "value" : "Cymraeg" }
+        },
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Cymraeg" }
+        }
+      }
+    },
+    "signIn.button" : {
+      "comment" : "Primary sign in button title.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "cy" : {
+          "stringUnit" : { "state" : "translated", "value" : "Mewngofnodi" }
+        },
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Sign in" }
+        }
+      }
+    },
+    "signIn.email.label" : {
+      "comment" : "Email address field label.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "cy" : {
+          "stringUnit" : { "state" : "translated", "value" : "Cyfeiriad e-bost" }
+        },
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Email address" }
+        }
+      }
+    },
+    "signIn.error.credentials" : {
+      "comment" : "Generic stubbed credential error. Welsh needs confirmation by a Welsh speaker (see needs_review state).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "cy" : {
+          "stringUnit" : { "state" : "needs_review", "value" : "Mae'r cyfeiriad e-bost neu'r cyfrinair a roddwyd gennych yn anghywir" }
+        },
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "The email address or password you entered is incorrect" }
+        }
+      }
+    },
+    "signIn.error.email.empty" : {
+      "comment" : "Inline error when the email field is empty on submit.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "cy" : {
+          "stringUnit" : { "state" : "translated", "value" : "Rhowch eich cyfeiriad e-bost" }
+        },
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Enter your email address" }
+        }
+      }
+    },
+    "signIn.error.password.empty" : {
+      "comment" : "Inline error when the password field is empty on submit.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "cy" : {
+          "stringUnit" : { "state" : "translated", "value" : "Rhowch eich cyfrinair" }
+        },
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Enter your password" }
+        }
+      }
+    },
+    "signIn.heading" : {
+      "comment" : "Main sign in heading.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "cy" : {
+          "stringUnit" : { "state" : "translated", "value" : "Mewngofnodi" }
+        },
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Sign in" }
+        }
+      }
+    },
+    "signIn.link.createAccount" : {
+      "comment" : "Inert link: create an account.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "cy" : {
+          "stringUnit" : { "state" : "translated", "value" : "Creu cyfrif" }
+        },
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Create an account" }
+        }
+      }
+    },
+    "signIn.link.forgottenPassword" : {
+      "comment" : "Inert link: forgotten password.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "cy" : {
+          "stringUnit" : { "state" : "translated", "value" : "Wedi anghofio'ch cyfrinair?" }
+        },
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Forgotten your password?" }
+        }
+      }
+    },
+    "signIn.password.label" : {
+      "comment" : "Password field label.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "cy" : {
+          "stringUnit" : { "state" : "translated", "value" : "Cyfrinair" }
+        },
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Password" }
+        }
+      }
+    },
+    "signIn.title" : {
+      "comment" : "Sign in page caption/title (ViewTemplate title).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "cy" : {
+          "stringUnit" : { "state" : "translated", "value" : "Mewngofnodi" }
+        },
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Sign in" }
+        }
+      }
+    },
+    "signIn.trouble.heading" : {
+      "comment" : "Secondary heading above the help links.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "cy" : {
+          "stringUnit" : { "state" : "translated", "value" : "Cael trafferth mewngofnodi?" }
+        },
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Having trouble signing in?" }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

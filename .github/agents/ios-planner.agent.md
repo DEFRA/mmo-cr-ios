@@ -7,10 +7,8 @@ description: >-
   security and policy against Apple, DEFRA/GDS guidance before returning the
   plan to the parent agent.
 name: iOS Planner
-tools: ['read', 'search', 'web', 'agent', 'apply_patch', 'create_file', 'insert_edit_into_file', 'fetch_webpage', 'file_search', 'grep_search', 'get_errors', 'get_terminal_output', 'list_dir', 'read_file', 'replace_string_in_file', 'run_subagent', 'run_in_terminal', 'validate_cves']
+tools: ['read', 'search', 'web', 'agent', 'fetch_webpage', 'file_search', 'grep_search', 'get_errors', 'get_terminal_output', 'list_dir', 'read_file', 'run_subagent', 'validate_cves']
 argument-hint: Planning handoff payload from a parent agent.
-agents:
-  - Search
 ---
 You are an **internal planning specialist** for the **DEFRA / Marine Management Organisation (MMO)
 Catch Recording** native iOS app.

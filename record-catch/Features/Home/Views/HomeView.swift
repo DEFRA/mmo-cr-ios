@@ -19,6 +19,19 @@ struct HomeView: View {
     /// the horizontal-scroll reflow legible at accessibility text sizes.
     private static let tableReflowMinWidth: CGFloat = 560
 
+    /// Stubbed page/total counts for this UI-only phase. Injectable so previews
+    /// can demonstrate the multi-page pagination (Previous/Next arrows) without
+    /// changing the default single-page production behaviour.
+    private let currentPage: Int
+    private let totalPages: Int
+    private let totalItems: Int
+
+    init(currentPage: Int = 1, totalPages: Int = 1, totalItems: Int = 4) {
+        self.currentPage = currentPage
+        self.totalPages = totalPages
+        self.totalItems = totalItems
+    }
+
     // Stubbed, static trips for this UI-only phase.
     private let rows: [SubmissionRow] = [
         SubmissionRow(dateText: "20 Nov 2020", vesselName: "ACHILLES", status: .submitted, createdBy: "J.Smith"),
@@ -29,7 +42,12 @@ struct HomeView: View {
 
     // Stubbed single page of results.
     private var paginationState: PaginationState {
-        PaginationState(currentPage: 1, totalPages: 1, pageSize: 4, totalItems: rows.count)
+        PaginationState(
+            currentPage: currentPage,
+            totalPages: totalPages,
+            pageSize: 4,
+            totalItems: totalItems
+        )
     }
 
     var body: some View {
@@ -111,6 +129,12 @@ struct HomeView: View {
 
 #Preview("English") {
     HomeView()
+        .environment(AppLanguageStore.preview)
+}
+
+#Preview("Pagination – multiple pages") {
+    // Injects a multi-page state so the GDS Previous/Next arrows are visible.
+    HomeView(currentPage: 2, totalPages: 5, totalItems: 20)
         .environment(AppLanguageStore.preview)
 }
 

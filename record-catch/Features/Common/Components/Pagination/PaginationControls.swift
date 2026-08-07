@@ -16,29 +16,43 @@ struct PaginationControls: View {
     private var minTarget: CGFloat { 44 }
 
     var body: some View {
-        HStack(spacing: AppSpacing.medium) {
-            if state.canGoPrevious {
-                previousButton
-            }
+        VStack(spacing: AppSpacing.xSmall) {
+            // Navigation row — GDS: Previous pinned leading, page numbers centred,
+            // Next pinned trailing. Fixed to the tap-target height so it never inflates.
+            HStack(spacing: AppSpacing.small) {
+                if state.canGoPrevious {
+                    previousButton
+                }
 
-            showingText
+                Spacer(minLength: AppSpacing.small)
 
-            ForEach(Array(state.pageItems.enumerated()), id: \.offset) { _, item in
-                switch item {
-                case let .page(number):
-                    pageButton(number)
-                case .ellipsis:
-                    Text("…")
-                        .font(AppTypography.bodySmall)
-                        .foregroundStyle(AppColors.textPrimary)
-                        .accessibilityHidden(true)
+                HStack(spacing: AppSpacing.small) {
+                    ForEach(Array(state.pageItems.enumerated()), id: \.offset) { _, item in
+                        switch item {
+                        case let .page(number):
+                            pageButton(number)
+                        case .ellipsis:
+                            Text("…")
+                                .font(AppTypography.bodySmall)
+                                .foregroundStyle(AppColors.textPrimary)
+                                .accessibilityHidden(true)
+                        }
+                    }
+                }
+
+                Spacer(minLength: AppSpacing.small)
+
+                if state.canGoNext {
+                    nextButton
                 }
             }
+            .frame(minHeight: minTarget)
 
-            if state.canGoNext {
-                nextButton
-            }
+            // GDS: the "Showing X to Y of Z" results text sits on its own line,
+            // not inline with the page numbers.
+            showingText
         }
+        .fixedSize(horizontal: false, vertical: true)
         .frame(maxWidth: .infinity, alignment: .center)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(languageStore.localized("home.pagination.a11y.container"))
@@ -88,8 +102,12 @@ struct PaginationControls: View {
             Text(String(number))
                 .font(AppTypography.bodySmall)
                 .fontWeight(isCurrent ? .bold : .regular)
-                .foregroundStyle(isCurrent ? AppColors.textPrimary : AppColors.linkText)
+                .foregroundStyle(isCurrent ? AppColors.background : AppColors.linkText)
                 .frame(minWidth: minTarget, minHeight: minTarget)
+                .background(
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(isCurrent ? AppColors.govBlue : Color.clear)
+                )
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -110,7 +128,15 @@ struct PaginationControls: View {
     }
 }
 
-#Preview {
+#Preview("Multiple pages") {
+    PaginationControls(
+        state: PaginationState(currentPage: 2, totalPages: 5, pageSize: 4, totalItems: 20)
+    )
+    .padding()
+    .environment(AppLanguageStore.preview)
+}
+
+#Preview("Single page") {
     PaginationControls(
         state: PaginationState(currentPage: 1, totalPages: 1, pageSize: 4, totalItems: 4)
     )

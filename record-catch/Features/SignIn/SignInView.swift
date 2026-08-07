@@ -1,4 +1,3 @@
-//
 //  SignInView.swift
 //  record-catch
 //
@@ -13,13 +12,27 @@ struct SignInView: View {
     @State private var viewModel = SignInViewModel()
 
     var body: some View {
-        ViewTemplate(title: languageStore.localized("signIn.title")) {
-            content
-                // Locale drives formatting (dates/numbers). VoiceOver pronunciation
-                // of runtime strings is handled per-part via `LocalizedText` /
-                // `ErrorLabel` carrying a language identifier (WCAG 3.1.2).
-                .environment(\.locale, languageStore.language.locale)
+        // The Sign In design has no GOV.UK header bar and no footer — just a
+        // language toggle, the crown logo, heading, form and links on a plain
+        // white background. So this screen does NOT use `ViewTemplate`.
+        VStack(spacing: 0) {
+            HStack {
+                Spacer()
+                LanguageToggleButton(foregroundColor: AppColors.linkText)
+            }
+            .padding(.horizontal, AppSpacing.medium)
+
+            ScrollView {
+                content
+                    .padding(.horizontal, AppSpacing.medium)
+                    .padding(.bottom, AppSpacing.large)
+            }
         }
+        .background(AppColors.background)
+        // Locale drives formatting (dates/numbers). VoiceOver pronunciation of
+        // runtime strings is handled per-part via `LocalizedText` / `ErrorLabel`
+        // carrying a language identifier (WCAG 3.1.2).
+        .environment(\.locale, languageStore.language.locale)
     }
 
     @ViewBuilder
@@ -28,6 +41,14 @@ struct SignInView: View {
             if viewModel.showInvalidCredentials {
                 credentialErrorSummary
             }
+
+            // DEFRA crown logo, centred above the heading (per design).
+            Image("CrownLogo")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 64, height: 64)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .accessibilityHidden(true)
 
             LocalizedText("signIn.heading")
                 .font(AppTypography.pageTitle)

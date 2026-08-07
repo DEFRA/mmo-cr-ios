@@ -10,10 +10,19 @@ import SwiftUI
 struct ViewTemplate<Content: View>: View {
     
     let title: String
+    /// Optional important-information box rendered at the very top of the
+    /// content, above the page title. Opt-in per screen (defaults to `nil`) so
+    /// existing screens are unaffected.
+    let warning: WarningBox?
     let content: Content
     
-    init(title: String, @ViewBuilder content: () -> Content) {
+    init(
+        title: String,
+        warning: WarningBox? = nil,
+        @ViewBuilder content: () -> Content
+    ) {
         self.title = title
+        self.warning = warning
         self.content = content()
     }
     
@@ -22,9 +31,16 @@ struct ViewTemplate<Content: View>: View {
             ViewHeader()
             ScrollView {
                 VStack(alignment: .leading, spacing: AppSpacing.large) {
-                    Text(title)
-                        .font(AppTypography.pageCaption)
-                        .foregroundStyle(AppColors.govBlue)
+                    if let warning {
+                        warning
+                    }
+                    // Render the page title only when non-empty, so a screen can
+                    // opt out (e.g. when it renders its own heading) without a
+                    // blank heading slot appearing.
+                    if !title.isEmpty {
+                        TitleText(text: title)
+                            .accessibilityAddTraits(.isHeader)
+                    }
                     content
                     ViewFooter()
                 }

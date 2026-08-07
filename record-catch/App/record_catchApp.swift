@@ -28,11 +28,22 @@ struct record_catchApp: App {
 
     var body: some Scene {
         WindowGroup {
-            SignInView()
+            rootView
                 .environment(environment)
                 .environment(languageStore)
                 .environment(\.locale, languageStore.language.locale)
         }
         .modelContainer(sharedModelContainer)
+    }
+
+    // Default app root stays `SignInView`. A `-uiTestHome` launch argument shows
+    // `HomeView` instead, for lightweight UI-test hosting of the Home screen.
+    @ViewBuilder
+    private var rootView: some View {
+        if ProcessInfo.processInfo.arguments.contains("-uiTestHome") {
+            HomeView()
+        } else {
+            SignInView()
+        }
     }
 }

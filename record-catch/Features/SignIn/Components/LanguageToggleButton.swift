@@ -10,12 +10,19 @@ import SwiftUI
 
 /// Header button that toggles the app language.
 ///
-/// Displays the language it switches *to* ("Cymraeg" when in English, "English"
-/// when in Welsh), meets the 44×44pt target, and exposes an accessible label and
-/// hint. Wired to `AppLanguageStore` and persists across launches via that store.
+/// Displays a short bold abbreviation of the language it switches *to* ("CYM"
+/// when in English, "ENG" when in Welsh), meets the 44×44pt target, and exposes
+/// a descriptive accessible label ("Switch to Welsh" / "Switch to English") so
+/// VoiceOver announces the full action rather than the abbreviation. Wired to
+/// `AppLanguageStore` and persists across launches via that store.
 struct LanguageToggleButton: View {
 
     @Environment(AppLanguageStore.self) private var languageStore
+
+    /// Text colour for the toggle. Defaults to white for use on the coloured
+    /// header bar; screens that place the toggle on a light background (e.g. the
+    /// headerless Sign In) can pass a darker colour for contrast.
+    var foregroundColor: Color = .white
 
     private var target: AppLanguage { languageStore.language.opposite }
 
@@ -23,7 +30,10 @@ struct LanguageToggleButton: View {
         target == .welsh ? "header.language.toWelsh" : "header.language.toEnglish"
     }
 
-    private var hintKey: String {
+    /// Descriptive action text ("Switch to Welsh" / "Switch to English") used as
+    /// the VoiceOver label so the spoken control is clear even though the visible
+    /// text is an abbreviation.
+    private var accessibilityLabelKey: String {
         target == .welsh ? "header.language.hint.toWelsh" : "header.language.hint.toEnglish"
     }
 
@@ -32,14 +42,13 @@ struct LanguageToggleButton: View {
             languageStore.toggle()
         } label: {
             LocalizedText(titleKey)
-                .font(AppTypography.bodySmall)
-                .foregroundStyle(.white)
+                .font(AppTypography.bodySmall.weight(.bold))
+                .foregroundStyle(foregroundColor)
                 .frame(minWidth: 44, minHeight: 44)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(languageStore.localized(titleKey))
-        .accessibilityHint(languageStore.localized(hintKey))
+        .accessibilityLabel(languageStore.localized(accessibilityLabelKey))
         .accessibilityAddTraits(.isButton)
         .accessibilityIdentifier("Header.languageToggle")
     }

@@ -12,10 +12,10 @@ struct TripFormDemoView: View {
     private let portProvider: PortOptionProviding = StubPortOptionProvider()
 
     private let previousSubmissions: [SubmissionRow] = [
-        SubmissionRow(dateText: "20 Nov 2020", vesselName: "ACHILLES", status: .submitted),
-        SubmissionRow(dateText: "20 Nov 2020", vesselName: "ACHILLES", status: .amended),
-        SubmissionRow(dateText: "20 Nov 2020", vesselName: "ACHILLES", status: .unsent),
-        SubmissionRow(dateText: "20 Nov 2020", vesselName: "ACHILLES", status: .late)
+        SubmissionRow(dateText: "20 Nov 2020", vesselName: "ACHILLES", status: .submitted, createdBy: "J.Smith"),
+        SubmissionRow(dateText: "20 Nov 2020", vesselName: "ACHILLES", status: .amended, createdBy: "J.Smith"),
+        SubmissionRow(dateText: "20 Nov 2020", vesselName: "ACHILLES", status: .unsent, createdBy: "J.Smith"),
+        SubmissionRow(dateText: "20 Nov 2020", vesselName: "ACHILLES", status: .late, createdBy: "J.Smith")
     ]
 
     private let statusHelpItems: [HelpItem] = [
@@ -95,9 +95,15 @@ struct TripFormDemoView: View {
 
                 TitleText(text: "Your trips")
                 ParagraphText(text: "View trips you've already submitted.")
-                ParagraphText(text: "Select a departure date to see the details you recorded.")
+                ParagraphText(text: "Select an end date to see the details you recorded.")
 
-                SubmissionsTable(rows: previousSubmissions)
+                SubmissionsTable(
+                    rows: previousSubmissions,
+                    headerEndDate: "Trip end date",
+                    headerVessel: "Vessel",
+                    headerStatus: "Status",
+                    headerCreatedBy: "Created by"
+                )
 
                 ExpandableHelpSection(
                     title: "Understanding catch record statuses",

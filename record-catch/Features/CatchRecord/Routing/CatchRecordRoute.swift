@@ -26,6 +26,15 @@ enum CatchRecordRoute: Hashable {
     case addPort(vessel: String, referenceNumber: String, returnPhase: SelectPortPhase?)
     /// Pick a port (departure or return) from the user's favourite ports.
     case selectPort(phase: SelectPortPhase, vessel: String, referenceNumber: String)
+    /// Choose the gear(s) used, from the user's favourite gears (multi-select checkboxes). Shown
+    /// when the user already has favourite gears; "Add another gear" pushes `addGear`.
+    case selectGear(vessel: String, referenceNumber: String)
+    /// Add a gear via type-to-search. Shown when the user has no favourite gears yet, and reached
+    /// from the select screen's "Add another gear" button.
+    case addGear(vessel: String, referenceNumber: String)
+    /// Enter the measurements for a chosen gear (e.g. mesh size for seine nets), then save it to
+    /// favourites and return to the select screen.
+    case gearMeasurements(gear: GearOption, vessel: String, referenceNumber: String)
     /// Minimal placeholder for the next step in the journey (future phase).
     case placeholderNextStep
 }

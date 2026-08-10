@@ -10,14 +10,16 @@ final class SelectPortViewModelTests: XCTestCase {
     private func makeSUT(
         phase: SelectPortPhase,
         router: CatchRecordRouter,
-        favourites: [PortOption] = [PortOption(name: "Hastings")]
+        favourites: [PortOption] = [PortOption(name: "Hastings")],
+        favouriteGears: [GearOption] = []
     ) -> SelectPortViewModel {
         SelectPortViewModel(
             phase: phase,
             vessel: vessel,
             referenceNumber: referenceNumber,
             router: router,
-            favouritePorts: StubFavouritePortsProvider(initialFavourites: favourites)
+            favouritePorts: StubFavouritePortsProvider(initialFavourites: favourites),
+            favouriteGears: StubFavouriteGearProvider(initialFavourites: favouriteGears)
         )
     }
 
@@ -53,14 +55,24 @@ final class SelectPortViewModelTests: XCTestCase {
         )
     }
 
-    func test_submit_return_withSelection_pushesPlaceholderNextStep() {
+    func test_submit_return_withSelection_entersGearSubJourney_noGearFavourites_pushesAddGear() async {
         let router = CatchRecordRouter()
-        let sut = makeSUT(phase: .return, router: router)
+        let sut = makeSUT(phase: .return, router: router, favouriteGears: [])
         sut.selection = "Hastings"
 
-        sut.submit()
+        await sut.enterGearSubJourney()
 
-        XCTAssertEqual(router.path, [.placeholderNextStep])
+        XCTAssertEqual(router.path, [.addGear(vessel: vessel, referenceNumber: referenceNumber)])
+    }
+
+    func test_submit_return_withSelection_entersGearSubJourney_withGearFavourites_pushesSelectGear() async {
+        let router = CatchRecordRouter()
+        let sut = makeSUT(phase: .return, router: router, favouriteGears: [.seineNets])
+        sut.selection = "Hastings"
+
+        await sut.enterGearSubJourney()
+
+        XCTAssertEqual(router.path, [.selectGear(vessel: vessel, referenceNumber: referenceNumber)])
     }
 
     func test_addAnotherPort_fromDeparture_pushesAddPortCarryingDeparturePhase() {

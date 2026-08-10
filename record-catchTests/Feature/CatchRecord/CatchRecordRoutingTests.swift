@@ -49,4 +49,16 @@ final class CatchRecordRoutingTests: XCTestCase {
 
         XCTAssertEqual(route, .selectPort(phase: .departure, vessel: "ACHILLES", referenceNumber: "REF"))
     }
+
+    // MARK: - Gear entry decision
+
+    func test_gearEntryRoute_withNoFavourites_returnsAddGear() {
+        let route = CatchRecordRouting.gearEntryRoute(hasFavourites: false, vessel: "ACHILLES", referenceNumber: "REF")
+        XCTAssertEqual(route, .addGear(vessel: "ACHILLES", referenceNumber: "REF"))
+    }
+
+    func test_gearEntryRoute_withFavourites_returnsSelectGear() {
+        let route = CatchRecordRouting.gearEntryRoute(hasFavourites: true, vessel: "ACHILLES", referenceNumber: "REF")
+        XCTAssertEqual(route, .selectGear(vessel: "ACHILLES", referenceNumber: "REF"))
+    }
 }

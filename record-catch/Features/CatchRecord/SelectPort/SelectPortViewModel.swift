@@ -23,19 +23,22 @@ final class SelectPortViewModel {
 
     private let router: CatchRecordRouter
     private let favouritePorts: FavouritePortsProviding
+    private let favouriteGears: FavouriteGearProviding
 
     init(
         phase: SelectPortPhase,
         vessel: String,
         referenceNumber: String,
         router: CatchRecordRouter,
-        favouritePorts: FavouritePortsProviding = StubFavouritePortsProvider()
+        favouritePorts: FavouritePortsProviding = StubFavouritePortsProvider(),
+        favouriteGears: FavouriteGearProviding = StubFavouriteGearProvider()
     ) {
         self.phase = phase
         self.vessel = vessel
         self.referenceNumber = referenceNumber
         self.router = router
         self.favouritePorts = favouritePorts
+        self.favouriteGears = favouriteGears
     }
 
     /// Loads favourite ports for display. Failures leave the list empty.
@@ -57,8 +60,18 @@ final class SelectPortViewModel {
         case .departure:
             router.push(.selectPort(phase: .return, vessel: vessel, referenceNumber: referenceNumber))
         case .return:
-            router.push(.placeholderNextStep)
+            Task { await enterGearSubJourney() }
         }
+    }
+
+    /// Fetches favourite gears, then pushes the pure gear-entry route (Add gear vs Select gear).
+    func enterGearSubJourney() async {
+        let favourites = (try? await favouriteGears.favouriteGears()) ?? []
+        router.push(CatchRecordRouting.gearEntryRoute(
+            hasFavourites: !favourites.isEmpty,
+            vessel: vessel,
+            referenceNumber: referenceNumber
+        ))
     }
 
     /// Routes to the Add-port screen, recording this phase so it returns here after saving.

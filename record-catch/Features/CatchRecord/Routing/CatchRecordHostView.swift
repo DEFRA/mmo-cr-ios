@@ -13,15 +13,20 @@ struct CatchRecordHostView: View {
     /// visible on the select screens (offline-first, local source of truth — see ADR-0004).
     /// A reference type shared across every screen in the stack.
     private let favouritePorts: FavouritePortsProviding
+    /// Shared, journey-scoped favourite gears store so a gear added on the measurements screen is
+    /// visible on the select screen (offline-first, local source of truth — mirrors ports).
+    private let favouriteGears: FavouriteGearProviding
 
     /// - Parameters:
     ///   - initialRoute: optional route to seed the stack with at launch, used by UI tests to jump
     ///     straight to a screen (see `-uiTestCatchRecord*`).
     ///   - favouritePorts: injectable favourites store; UI tests seed it to exercise the
     ///     has-favourites vs no-favourites branches.
+    ///   - favouriteGears: injectable favourite gears store; seeded by UI tests as above.
     init(
         initialRoute: CatchRecordRoute? = nil,
-        favouritePorts: FavouritePortsProviding = StubFavouritePortsProvider()
+        favouritePorts: FavouritePortsProviding = StubFavouritePortsProvider(),
+        favouriteGears: FavouriteGearProviding = StubFavouriteGearProvider()
     ) {
         let router = CatchRecordRouter()
         if let initialRoute {
@@ -29,6 +34,7 @@ struct CatchRecordHostView: View {
         }
         _router = State(wrappedValue: router)
         self.favouritePorts = favouritePorts
+        self.favouriteGears = favouriteGears
     }
 
     var body: some View {
@@ -73,7 +79,36 @@ struct CatchRecordHostView: View {
                 vessel: vessel,
                 referenceNumber: referenceNumber,
                 router: router,
-                favouritePorts: favouritePorts
+                favouritePorts: favouritePorts,
+                favouriteGears: favouriteGears
+            )
+        case .selectGear(let vessel, let referenceNumber):
+            SelectGearView(
+                vessel: vessel,
+                referenceNumber: referenceNumber,
+                router: router,
+                favouriteGears: favouriteGears
+            )
+        case .addGear(let vessel, let referenceNumber):
+            AddGearView(
+                vessel: vessel,
+                referenceNumber: referenceNumber,
+                router: router
+            )
+        case .gearMeasurements(let gear, let vessel, let referenceNumber):
+            GearMeasurementsView(
+                gear: gear,
+                vessel: vessel,
+                referenceNumber: referenceNumber,
+                router: router,
+                favouriteGears: favouriteGears
+            )
+        case .catchLocation(let gear, let vessel, let referenceNumber):
+            CatchLocationView(
+                gear: gear,
+                vessel: vessel,
+                referenceNumber: referenceNumber,
+                router: router
             )
         case .placeholderNextStep:
             PlaceholderNextStepView()

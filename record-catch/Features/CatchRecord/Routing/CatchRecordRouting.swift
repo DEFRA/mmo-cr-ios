@@ -31,4 +31,20 @@ enum CatchRecordRouting {
             ? .selectPort(phase: .departure, vessel: vessel, referenceNumber: referenceNumber)
             : .addPort(vessel: vessel, referenceNumber: referenceNumber, returnPhase: nil)
     }
+
+    /// Resolves the route to enter the gear sub-journey.
+    ///
+    /// - When the user already has favourite gears, show the select (checkbox) screen.
+    /// - Otherwise, go straight to the Add-gear search screen.
+    ///
+    /// Pure so it is trivially unit-testable, mirroring `portEntryRoute`.
+    static func gearEntryRoute(
+        hasFavourites: Bool,
+        vessel: String,
+        referenceNumber: String
+    ) -> CatchRecordRoute {
+        hasFavourites
+            ? .selectGear(vessel: vessel, referenceNumber: referenceNumber)
+            : .addGear(vessel: vessel, referenceNumber: referenceNumber)
+    }
 }

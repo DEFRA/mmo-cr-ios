@@ -15,14 +15,16 @@ struct SelectPortView: View {
         vessel: String,
         referenceNumber: String,
         router: CatchRecordRouter,
-        favouritePorts: FavouritePortsProviding
+        favouritePorts: FavouritePortsProviding,
+        favouriteGears: FavouriteGearProviding = StubFavouriteGearProvider()
     ) {
         _viewModel = State(wrappedValue: SelectPortViewModel(
             phase: phase,
             vessel: vessel,
             referenceNumber: referenceNumber,
             router: router,
-            favouritePorts: favouritePorts
+            favouritePorts: favouritePorts,
+            favouriteGears: favouriteGears
         ))
     }
 

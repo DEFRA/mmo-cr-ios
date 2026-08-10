@@ -36,6 +36,24 @@ final class CatchRecordRouterTests: XCTestCase {
         XCTAssertEqual(sut.path, [.selectVessel, .tripStartedToday(vessel: "ACHILLES", referenceNumber: "REF")])
     }
 
+    func test_pop_removesTopRoute_returningToPreviousScreen() {
+        let sut = CatchRecordRouter()
+        sut.startNew()
+        sut.push(.tripStartedToday(vessel: "ACHILLES", referenceNumber: "REF"))
+
+        sut.pop()
+
+        XCTAssertEqual(sut.path, [.selectVessel])
+    }
+
+    func test_pop_whenAtRoot_isNoOp() {
+        let sut = CatchRecordRouter()
+
+        sut.pop()
+
+        XCTAssertTrue(sut.path.isEmpty)
+    }
+
     func test_popToRoot_clearsPath() {
         let sut = CatchRecordRouter()
         sut.startNew()

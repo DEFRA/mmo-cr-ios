@@ -47,4 +47,21 @@ enum CatchRecordRouting {
             ? .selectGear(vessel: vessel, referenceNumber: referenceNumber)
             : .addGear(vessel: vessel, referenceNumber: referenceNumber)
     }
+
+    /// Resolves the route to enter the species sub-journey once the catch location is known.
+    ///
+    /// - When the user already has favourite species, show the "Record species weights" screen.
+    /// - Otherwise, go straight to the Add-species search screen (returning to the weights screen).
+    ///
+    /// Pure so it is trivially unit-testable, mirroring `gearEntryRoute`.
+    static func speciesEntryRoute(
+        hasFavourites: Bool,
+        gear: GearOption,
+        vessel: String,
+        referenceNumber: String
+    ) -> CatchRecordRoute {
+        hasFavourites
+            ? .recordSpeciesWeights(gear: gear, vessel: vessel, referenceNumber: referenceNumber)
+            : .addSpecies(gear: gear, vessel: vessel, referenceNumber: referenceNumber, returnPhase: .recordWeights)
+    }
 }

@@ -16,6 +16,10 @@ struct CatchRecordHostView: View {
     /// Shared, journey-scoped favourite gears store so a gear added on the measurements screen is
     /// visible on the select screen (offline-first, local source of truth — mirrors ports).
     private let favouriteGears: FavouriteGearProviding
+    /// Shared, journey-scoped favourite species store so a species added on the Add-species screen,
+    /// and weights recorded on the weights screen, are visible on the summary screen (offline-first,
+    /// local source of truth — mirrors gears).
+    private let favouriteSpecies: FavouriteSpeciesProviding
 
     /// - Parameters:
     ///   - initialRoute: optional route to seed the stack with at launch, used by UI tests to jump
@@ -23,10 +27,12 @@ struct CatchRecordHostView: View {
     ///   - favouritePorts: injectable favourites store; UI tests seed it to exercise the
     ///     has-favourites vs no-favourites branches.
     ///   - favouriteGears: injectable favourite gears store; seeded by UI tests as above.
+    ///   - favouriteSpecies: injectable favourite species store; seeded by UI tests as above.
     init(
         initialRoute: CatchRecordRoute? = nil,
         favouritePorts: FavouritePortsProviding = StubFavouritePortsProvider(),
-        favouriteGears: FavouriteGearProviding = StubFavouriteGearProvider()
+        favouriteGears: FavouriteGearProviding = StubFavouriteGearProvider(),
+        favouriteSpecies: FavouriteSpeciesProviding = StubFavouriteSpeciesProvider()
     ) {
         let router = CatchRecordRouter()
         if let initialRoute {
@@ -35,6 +41,7 @@ struct CatchRecordHostView: View {
         _router = State(wrappedValue: router)
         self.favouritePorts = favouritePorts
         self.favouriteGears = favouriteGears
+        self.favouriteSpecies = favouriteSpecies
     }
 
     var body: some View {
@@ -108,7 +115,33 @@ struct CatchRecordHostView: View {
                 gear: gear,
                 vessel: vessel,
                 referenceNumber: referenceNumber,
-                router: router
+                router: router,
+                favouriteSpecies: favouriteSpecies
+            )
+        case .recordSpeciesWeights(let gear, let vessel, let referenceNumber):
+            RecordSpeciesWeightsView(
+                gear: gear,
+                vessel: vessel,
+                referenceNumber: referenceNumber,
+                router: router,
+                favouriteSpecies: favouriteSpecies
+            )
+        case .addSpecies(let gear, let vessel, let referenceNumber, let returnPhase):
+            AddSpeciesView(
+                gear: gear,
+                vessel: vessel,
+                referenceNumber: referenceNumber,
+                returnPhase: returnPhase,
+                router: router,
+                favouriteSpecies: favouriteSpecies
+            )
+        case .speciesSummary(let gear, let vessel, let referenceNumber):
+            SpeciesSummaryView(
+                gear: gear,
+                vessel: vessel,
+                referenceNumber: referenceNumber,
+                router: router,
+                favouriteSpecies: favouriteSpecies
             )
         case .placeholderNextStep:
             PlaceholderNextStepView()

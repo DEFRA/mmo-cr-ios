@@ -18,6 +18,18 @@ struct SubmissionRow: Identifiable, Equatable {
     }
 }
 
+extension SubmissionRow: Hashable {
+    /// Hashes on content only (not `id`), to stay consistent with the custom
+    /// content-based `Equatable` conformance above. This lets `SubmissionRow`
+    /// be carried as an associated value on `CatchRecordRoute` (see ADR-0003).
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(dateText)
+        hasher.combine(vesselName)
+        hasher.combine(status)
+        hasher.combine(createdBy)
+    }
+}
+
 enum SubmissionStatus: String, CaseIterable {
     case submitted = "Submitted"
     case amended = "Amended"
@@ -197,8 +209,6 @@ private struct SubmissionStatusTag: View {
         Text(status.rawValue)
             .font(AppTypography.bodySmall)
             .foregroundStyle(status.textColor)
-            .lineLimit(1)
-            .fixedSize(horizontal: true, vertical: false)
             .padding(.horizontal, AppSpacing.small)
             .padding(.vertical, AppSpacing.xSmall)
             .background(status.backgroundColor)

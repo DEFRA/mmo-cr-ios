@@ -29,6 +29,14 @@ final class AppLanguageStore {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        // UI tests share `UserDefaults.standard`, so a language toggled in one test would
+        // otherwise persist into the next and break identifier/label matching. When launched
+        // for UI testing, start from a deterministic English baseline.
+        if ProcessInfo.processInfo.arguments.contains("-uiTestResetLanguage") {
+            self.language = .english
+            defaults.set(AppLanguage.english.rawValue, forKey: Self.storageKey)
+            return
+        }
         let stored = defaults.string(forKey: Self.storageKey)
         self.language = stored.flatMap(AppLanguage.init(rawValue:)) ?? .english
     }

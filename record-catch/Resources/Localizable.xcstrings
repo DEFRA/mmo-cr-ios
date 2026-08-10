@@ -369,6 +369,114 @@
         }
       }
     },
+    "catchRecord.catchLocation.heading": {
+      "comment": "Heading for the catch-location screen. %@ is the gear name.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ble cafodd y rhan fwyaf o'ch dalfa ei ddal gan ddefnyddio %@?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Where was most of your catch caught using %@?"
+          }
+        }
+      }
+    },
+    "catchRecord.catchLocation.hint.nearest": {
+      "comment": "Hint explaining the map shows areas nearest the departure port.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Dangosir yr ardaloedd ystadegol agosaf at eich porthladd ymadael isod."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The statistical areas nearest to your departure port are shown below."
+          }
+        }
+      }
+    },
+    "catchRecord.catchLocation.hint.select": {
+      "comment": "Hint telling the user to tap the area where most of the catch was caught.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Dewiswch yr ardal lle cafodd y rhan fwyaf o'ch dalfa ei ddal."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select the area where most of your catch was caught."
+          }
+        }
+      }
+    },
+    "catchRecord.catchLocation.selectedArea": {
+      "comment": "Read-out of the currently selected statistical area. %@ is the area code or the none placeholder.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ardal a ddewiswyd: %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Selected area: %@"
+          }
+        }
+      }
+    },
+    "catchRecord.catchLocation.selectedArea.none": {
+      "comment": "Placeholder shown in the selected-area read-out before any area is picked.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "dim wedi'i ddewis"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "none selected"
+          }
+        }
+      }
+    },
+    "catchRecord.catchLocation.validation.none": {
+      "comment": "Inline error when the user tries to continue without selecting a statistical area on the map.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Dewiswch yr ardal lle cafodd y rhan fwyaf o'ch dalfa ei ddal"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select the area where most of your catch was caught"
+          }
+        }
+      }
+    },
     "catchRecord.draftAction.delete.cancel": {
       "comment": "Destructive cancel button.",
       "extractionState": "manual",

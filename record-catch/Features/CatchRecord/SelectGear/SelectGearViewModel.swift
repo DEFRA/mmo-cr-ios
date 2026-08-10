@@ -47,10 +47,15 @@ final class SelectGearViewModel {
     }
 
     /// Validates "Save and continue" and routes on when at least one gear is ticked.
+    ///
+    /// Routes to the catch-location screen for the selected gear (the first, in favourites order,
+    /// while only a single gear is implemented) so the user can pick where most of that catch was
+    /// caught.
     func submit() {
         didAttemptSubmit = true
         guard !selection.isEmpty else { return }
-        router.push(.placeholderNextStep)
+        guard let gear = favourites.first(where: { selection.contains($0.id) }) else { return }
+        router.push(.catchLocation(gear: gear, vessel: vessel, referenceNumber: referenceNumber))
     }
 
     /// Routes to the Add-gear search screen.

@@ -35,6 +35,10 @@ enum CatchRecordRoute: Hashable {
     /// Enter the measurements for a chosen gear (e.g. mesh size for seine nets), then save it to
     /// favourites and return to the select screen.
     case gearMeasurements(gear: GearOption, vessel: String, referenceNumber: String)
+    /// Pick the statistical area where most of the catch was caught using a given gear, from a map.
+    /// Carries the gear (for the "using <gear>" heading), the vessel and the display-only reference
+    /// number, all threaded onward unchanged.
+    case catchLocation(gear: GearOption, vessel: String, referenceNumber: String)
     /// Minimal placeholder for the next step in the journey (future phase).
     case placeholderNextStep
 }

@@ -40,15 +40,19 @@ final class SelectGearViewModelTests: XCTestCase {
         XCTAssertNil(sut.errorKey)
     }
 
-    func test_submit_withSelection_routesToNextStep() {
+    func test_submit_withSelection_routesToCatchLocationForSelectedGear() async {
         let router = CatchRecordRouter()
         let sut = makeSUT(router: router)
+        await sut.loadFavourites()
         sut.selection = ["Seine nets (not specified)"]
 
         sut.submit()
 
         XCTAssertNil(sut.errorKey)
-        XCTAssertEqual(router.path, [.placeholderNextStep])
+        XCTAssertEqual(
+            router.path,
+            [.catchLocation(gear: .seineNets, vessel: vessel, referenceNumber: referenceNumber)]
+        )
     }
 
     func test_addAnotherGear_pushesAddGear() {

@@ -103,6 +103,13 @@ struct CatchRecordHostView: View {
                 router: router,
                 favouriteGears: favouriteGears
             )
+        case .catchLocation(let gear, let vessel, let referenceNumber):
+            CatchLocationView(
+                gear: gear,
+                vessel: vessel,
+                referenceNumber: referenceNumber,
+                router: router
+            )
         case .placeholderNextStep:
             PlaceholderNextStepView()
         }

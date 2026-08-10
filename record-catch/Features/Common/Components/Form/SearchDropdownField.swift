@@ -8,9 +8,18 @@ struct SearchDropdownField: View {
     @Binding var query: String
     @Binding var selectedOption: String?
     var didAttemptSubmit: Bool = false
+    /// Error message shown when the query has no valid selection from the list.
+    var errorMessage: String = "Select a port from the list"
+    /// Localised "results" announcement builder for VoiceOver (WCAG 2.2 SC 4.1.3). Given a count,
+    /// returns the phrase to announce (e.g. "5 results" / "No results"). Announcements are made
+    /// without moving focus so the user is informed of changes to the results list.
+    var resultsAnnouncement: (Int) -> String = { count in
+        count == 0 ? "No results" : "\(count) results"
+    }
 
     @FocusState private var isFocused: Bool
     @State private var hasBlurred = false
+    @State private var lastAnnouncedCount: Int?
 
     init(
         label: String,
@@ -19,7 +28,9 @@ struct SearchDropdownField: View {
         options: [String],
         query: Binding<String>,
         selectedOption: Binding<String?>,
-        didAttemptSubmit: Bool = false
+        didAttemptSubmit: Bool = false,
+        errorMessage: String = "Select a port from the list",
+        resultsAnnouncement: @escaping (Int) -> String = { $0 == 0 ? "No results" : "\($0) results" }
     ) {
         self.label = label
         self.placeholder = placeholder
@@ -28,6 +39,8 @@ struct SearchDropdownField: View {
         _query = query
         _selectedOption = selectedOption
         self.didAttemptSubmit = didAttemptSubmit
+        self.errorMessage = errorMessage
+        self.resultsAnnouncement = resultsAnnouncement
     }
 
     private var filteredOptions: [String] {
@@ -75,6 +88,7 @@ struct SearchDropdownField: View {
                     if selectedOption != newValue {
                         selectedOption = nil
                     }
+                    announceResultsIfNeeded()
                 }
                 .onChange(of: isFocused) { _, newValue in
                     if !newValue {
@@ -107,10 +121,35 @@ struct SearchDropdownField: View {
             }
 
             if shouldShowError {
-                Text("Select a port from the list")
+                Text(errorMessage)
                     .font(AppTypography.error)
                     .foregroundStyle(AppColors.errorRed)
             }
+        }
+    }
+
+    /// Announces the current result count to assistive technology without moving focus, when it
+    /// changes and the query is long enough to search (WCAG 2.2 SC 4.1.3 Status Messages).
+    private func announceResultsIfNeeded() {
+        guard query.count >= minimumCharacters, selectedOption == nil else {
+            lastAnnouncedCount = nil
+            return
+        }
+        let count = filteredOptions.count
+        guard count != lastAnnouncedCount else { return }
+        lastAnnouncedCount = count
+        Self.announce(resultsAnnouncement(count))
+    }
+
+    /// Posts a VoiceOver announcement using the iOS 17+ API where available, falling back to the
+    /// `UIAccessibility` notification on iOS 16 (the app's minimum deployment target).
+    static func announce(_ message: String) {
+        if #available(iOS 17, *) {
+            var announcement = AttributedString(message)
+            announcement.accessibilitySpeechAnnouncementPriority = .high
+            AccessibilityNotification.Announcement(announcement).post()
+        } else {
+            UIAccessibility.post(notification: .announcement, argument: message)
         }
     }
 

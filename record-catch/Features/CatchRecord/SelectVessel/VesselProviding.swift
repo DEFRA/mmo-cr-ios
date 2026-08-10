@@ -9,6 +9,6 @@ protocol VesselProviding {
 }
 
 /// Static, UI-only vessel list. Stands in until a real vessel API/service exists.
-struct StaticVesselProvider: VesselProviding {
+nonisolated struct StaticVesselProvider: VesselProviding {
     let vessels: [String] = ["ACHILLES", "HERCULES"]
 }

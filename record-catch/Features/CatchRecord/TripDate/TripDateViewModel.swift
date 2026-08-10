@@ -11,6 +11,8 @@ final class TripDateViewModel {
 
     /// Which date this screen is collecting; drives copy, identifiers and the next route.
     let phase: TripDatePhase
+    /// Selected vessel name, threaded onward for the port screens' headers.
+    let vessel: String
     /// Display-only placeholder reference number shown at the top of the screen.
     let referenceNumber: String
     /// The parsed departure date carried into the return screen (nil for the departure screen).
@@ -20,17 +22,22 @@ final class TripDateViewModel {
     private(set) var didAttemptSubmit = false
 
     private let router: CatchRecordRouter
+    private let favouritePorts: FavouritePortsProviding
 
     init(
         phase: TripDatePhase,
+        vessel: String,
         referenceNumber: String,
         departureDate: Date?,
-        router: CatchRecordRouter
+        router: CatchRecordRouter,
+        favouritePorts: FavouritePortsProviding = StubFavouritePortsProvider()
     ) {
         self.phase = phase
+        self.vessel = vessel
         self.referenceNumber = referenceNumber
         self.departureDate = departureDate
         self.router = router
+        self.favouritePorts = favouritePorts
     }
 
     /// String Catalog key for the screen's H1.
@@ -51,9 +58,19 @@ final class TripDateViewModel {
         guard let date = DateEntryField.parsedDate(from: value) else { return }
         switch phase {
         case .departure:
-            router.push(.tripDate(phase: .return, referenceNumber: referenceNumber, departureDate: date))
+            router.push(.tripDate(phase: .return, vessel: vessel, referenceNumber: referenceNumber, departureDate: date))
         case .return:
-            router.push(.placeholderNextStep)
+            Task { await enterPortSubJourney() }
         }
+    }
+
+    /// Fetches favourites, then pushes the pure port-entry route (Add port vs Select departure).
+    func enterPortSubJourney() async {
+        let favourites = (try? await favouritePorts.favouritePorts()) ?? []
+        router.push(CatchRecordRouting.portEntryRoute(
+            hasFavourites: !favourites.isEmpty,
+            vessel: vessel,
+            referenceNumber: referenceNumber
+        ))
     }
 }

@@ -32,7 +32,7 @@ final class SelectVesselViewModel {
     /// Runs validation for "Save and continue" and routes on to the next screen when valid.
     func submit() {
         didAttemptSubmit = true
-        guard selection != nil else { return }
-        router.push(.tripStartedToday(referenceNumber: Self.placeholderReferenceNumber))
+        guard let selection else { return }
+        router.push(.tripStartedToday(vessel: selection, referenceNumber: Self.placeholderReferenceNumber))
     }
 }

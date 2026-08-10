@@ -10,12 +10,14 @@ struct TripDateView: View {
     @Environment(AppLanguageStore.self) private var languageStore
     @State private var viewModel: TripDateViewModel
 
-    init(phase: TripDatePhase, referenceNumber: String, departureDate: Date?, router: CatchRecordRouter) {
+    init(phase: TripDatePhase, vessel: String, referenceNumber: String, departureDate: Date?, router: CatchRecordRouter, favouritePorts: FavouritePortsProviding) {
         _viewModel = State(wrappedValue: TripDateViewModel(
             phase: phase,
+            vessel: vessel,
             referenceNumber: referenceNumber,
             departureDate: departureDate,
-            router: router
+            router: router,
+            favouritePorts: favouritePorts
         ))
     }
 
@@ -67,17 +69,17 @@ struct TripDateView: View {
 }
 
 #Preview("Departure — English") {
-    TripDateView(phase: .departure, referenceNumber: "A1234520260727150815", departureDate: nil, router: CatchRecordRouter())
+    TripDateView(phase: .departure, vessel: "ACHILLES", referenceNumber: "A1234520260727150815", departureDate: nil, router: CatchRecordRouter(), favouritePorts: StubFavouritePortsProvider())
         .environment(AppLanguageStore.preview)
 }
 
 #Preview("Return — English") {
-    TripDateView(phase: .return, referenceNumber: "A1234520260727150815", departureDate: nil, router: CatchRecordRouter())
+    TripDateView(phase: .return, vessel: "ACHILLES", referenceNumber: "A1234520260727150815", departureDate: nil, router: CatchRecordRouter(), favouritePorts: StubFavouritePortsProvider())
         .environment(AppLanguageStore.preview)
 }
 
 #Preview("Departure — Welsh") {
-    TripDateView(phase: .departure, referenceNumber: "A1234520260727150815", departureDate: nil, router: CatchRecordRouter())
+    TripDateView(phase: .departure, vessel: "ACHILLES", referenceNumber: "A1234520260727150815", departureDate: nil, router: CatchRecordRouter(), favouritePorts: StubFavouritePortsProvider())
         .environment({
             let store = AppLanguageStore.preview
             store.language = .welsh
@@ -86,7 +88,7 @@ struct TripDateView: View {
 }
 
 #Preview("Max Dynamic Type") {
-    TripDateView(phase: .departure, referenceNumber: "A1234520260727150815", departureDate: nil, router: CatchRecordRouter())
+    TripDateView(phase: .departure, vessel: "ACHILLES", referenceNumber: "A1234520260727150815", departureDate: nil, router: CatchRecordRouter(), favouritePorts: StubFavouritePortsProvider())
         .environment(AppLanguageStore.preview)
         .environment(\.dynamicTypeSize, .accessibility5)
 }

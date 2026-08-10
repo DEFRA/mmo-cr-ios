@@ -4,6 +4,7 @@ import XCTest
 @MainActor
 final class TripDateViewModelTests: XCTestCase {
 
+    private let vessel = "ACHILLES"
     private let referenceNumber = "A1234520260727150815"
 
     private func makeValidDate() -> DateEntryValue {
@@ -15,12 +16,14 @@ final class TripDateViewModelTests: XCTestCase {
     func test_initialState_hasNoErrorAndExposesPhaseCopy() {
         let sut = TripDateViewModel(
             phase: .departure,
+            vessel: vessel,
             referenceNumber: referenceNumber,
             departureDate: nil,
             router: CatchRecordRouter()
         )
         XCTAssertNil(sut.errorKey)
         XCTAssertEqual(sut.referenceNumber, referenceNumber)
+        XCTAssertEqual(sut.vessel, vessel)
         XCTAssertEqual(sut.titleKey, "catchRecord.tripDate.departure.title")
         XCTAssertEqual(sut.hintKey, "catchRecord.tripDate.departure.hint")
     }
@@ -28,6 +31,7 @@ final class TripDateViewModelTests: XCTestCase {
     func test_returnPhase_exposesReturnCopy() {
         let sut = TripDateViewModel(
             phase: .return,
+            vessel: vessel,
             referenceNumber: referenceNumber,
             departureDate: Date(),
             router: CatchRecordRouter()
@@ -42,6 +46,7 @@ final class TripDateViewModelTests: XCTestCase {
         let router = CatchRecordRouter()
         let sut = TripDateViewModel(
             phase: .departure,
+            vessel: vessel,
             referenceNumber: referenceNumber,
             departureDate: nil,
             router: router
@@ -59,6 +64,7 @@ final class TripDateViewModelTests: XCTestCase {
         let router = CatchRecordRouter()
         let sut = TripDateViewModel(
             phase: .departure,
+            vessel: vessel,
             referenceNumber: referenceNumber,
             departureDate: nil,
             router: router
@@ -71,31 +77,54 @@ final class TripDateViewModelTests: XCTestCase {
         let expectedDate = DateEntryField.parsedDate(from: makeValidDate())
         XCTAssertEqual(
             router.path,
-            [.tripDate(phase: .return, referenceNumber: referenceNumber, departureDate: expectedDate)]
+            [.tripDate(phase: .return, vessel: vessel, referenceNumber: referenceNumber, departureDate: expectedDate)]
         )
     }
 
-    // MARK: - Submit: return success
+    // MARK: - Submit: return success (enters port sub-journey)
 
-    func test_submit_return_withValidDate_pushesPlaceholderNextStep() {
+    func test_enterPortSubJourney_return_withNoFavourites_pushesAddPort() async {
         let router = CatchRecordRouter()
         let sut = TripDateViewModel(
             phase: .return,
+            vessel: vessel,
             referenceNumber: referenceNumber,
             departureDate: Date(),
-            router: router
+            router: router,
+            favouritePorts: StubFavouritePortsProvider()
         )
-        sut.value = makeValidDate()
 
-        sut.submit()
+        await sut.enterPortSubJourney()
 
-        XCTAssertNil(sut.errorKey)
-        XCTAssertEqual(router.path, [.placeholderNextStep])
+        XCTAssertEqual(
+            router.path,
+            [.addPort(vessel: vessel, referenceNumber: referenceNumber, returnPhase: nil)]
+        )
+    }
+
+    func test_enterPortSubJourney_return_withFavourites_pushesSelectDeparture() async {
+        let router = CatchRecordRouter()
+        let sut = TripDateViewModel(
+            phase: .return,
+            vessel: vessel,
+            referenceNumber: referenceNumber,
+            departureDate: Date(),
+            router: router,
+            favouritePorts: StubFavouritePortsProvider(initialFavourites: [PortOption(name: "Hastings")])
+        )
+
+        await sut.enterPortSubJourney()
+
+        XCTAssertEqual(
+            router.path,
+            [.selectPort(phase: .departure, vessel: vessel, referenceNumber: referenceNumber)]
+        )
     }
 
     func test_errorKey_beforeSubmit_isNil() {
         let sut = TripDateViewModel(
             phase: .departure,
+            vessel: vessel,
             referenceNumber: referenceNumber,
             departureDate: nil,
             router: CatchRecordRouter()

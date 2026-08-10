@@ -6,8 +6,8 @@ struct TripStartedTodayView: View {
     @Environment(AppLanguageStore.self) private var languageStore
     @State private var viewModel: TripStartedTodayViewModel
 
-    init(referenceNumber: String, router: CatchRecordRouter) {
-        _viewModel = State(wrappedValue: TripStartedTodayViewModel(referenceNumber: referenceNumber, router: router))
+    init(vessel: String, referenceNumber: String, router: CatchRecordRouter, favouritePorts: FavouritePortsProviding) {
+        _viewModel = State(wrappedValue: TripStartedTodayViewModel(vessel: vessel, referenceNumber: referenceNumber, router: router, favouritePorts: favouritePorts))
     }
 
     var body: some View {
@@ -70,12 +70,12 @@ struct TripStartedTodayView: View {
 }
 
 #Preview("English") {
-    TripStartedTodayView(referenceNumber: "A1234520260727150815", router: CatchRecordRouter())
+    TripStartedTodayView(vessel: "ACHILLES", referenceNumber: "A1234520260727150815", router: CatchRecordRouter(), favouritePorts: StubFavouritePortsProvider())
         .environment(AppLanguageStore.preview)
 }
 
 #Preview("Welsh") {
-    TripStartedTodayView(referenceNumber: "A1234520260727150815", router: CatchRecordRouter())
+    TripStartedTodayView(vessel: "ACHILLES", referenceNumber: "A1234520260727150815", router: CatchRecordRouter(), favouritePorts: StubFavouritePortsProvider())
         .environment({
             let store = AppLanguageStore.preview
             store.language = .welsh
@@ -84,7 +84,7 @@ struct TripStartedTodayView: View {
 }
 
 #Preview("Max Dynamic Type") {
-    TripStartedTodayView(referenceNumber: "A1234520260727150815", router: CatchRecordRouter())
+    TripStartedTodayView(vessel: "ACHILLES", referenceNumber: "A1234520260727150815", router: CatchRecordRouter(), favouritePorts: StubFavouritePortsProvider())
         .environment(AppLanguageStore.preview)
         .environment(\.dynamicTypeSize, .accessibility5)
 }

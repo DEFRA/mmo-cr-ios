@@ -9,15 +9,26 @@ import SwiftUI
 struct CatchRecordHostView: View {
 
     @State private var router: CatchRecordRouter
+    /// Shared, journey-scoped favourite ports store so a port added on the Add-port screen is
+    /// visible on the select screens (offline-first, local source of truth — see ADR-0004).
+    /// A reference type shared across every screen in the stack.
+    private let favouritePorts: FavouritePortsProviding
 
-    /// - Parameter initialRoute: optional route to seed the stack with at launch, used by UI
-    ///   tests to jump straight to a screen (see `-uiTestCatchRecordDraft` / `-uiTestCatchRecordNew`).
-    init(initialRoute: CatchRecordRoute? = nil) {
+    /// - Parameters:
+    ///   - initialRoute: optional route to seed the stack with at launch, used by UI tests to jump
+    ///     straight to a screen (see `-uiTestCatchRecord*`).
+    ///   - favouritePorts: injectable favourites store; UI tests seed it to exercise the
+    ///     has-favourites vs no-favourites branches.
+    init(
+        initialRoute: CatchRecordRoute? = nil,
+        favouritePorts: FavouritePortsProviding = StubFavouritePortsProvider()
+    ) {
         let router = CatchRecordRouter()
         if let initialRoute {
             router.push(initialRoute)
         }
         _router = State(wrappedValue: router)
+        self.favouritePorts = favouritePorts
     }
 
     var body: some View {
@@ -37,14 +48,32 @@ struct CatchRecordHostView: View {
             DraftActionView(row: row, router: router)
         case .selectVessel:
             SelectVesselView(router: router)
-        case .tripStartedToday(let referenceNumber):
-            TripStartedTodayView(referenceNumber: referenceNumber, router: router)
-        case .tripDate(let phase, let referenceNumber, let departureDate):
+        case .tripStartedToday(let vessel, let referenceNumber):
+            TripStartedTodayView(vessel: vessel, referenceNumber: referenceNumber, router: router, favouritePorts: favouritePorts)
+        case .tripDate(let phase, let vessel, let referenceNumber, let departureDate):
             TripDateView(
                 phase: phase,
+                vessel: vessel,
                 referenceNumber: referenceNumber,
                 departureDate: departureDate,
-                router: router
+                router: router,
+                favouritePorts: favouritePorts
+            )
+        case .addPort(let vessel, let referenceNumber, let returnPhase):
+            AddPortView(
+                vessel: vessel,
+                referenceNumber: referenceNumber,
+                returnPhase: returnPhase,
+                router: router,
+                favouritePorts: favouritePorts
+            )
+        case .selectPort(let phase, let vessel, let referenceNumber):
+            SelectPortView(
+                phase: phase,
+                vessel: vessel,
+                referenceNumber: referenceNumber,
+                router: router,
+                favouritePorts: favouritePorts
             )
         case .placeholderNextStep:
             PlaceholderNextStepView()

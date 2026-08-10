@@ -5,7 +5,7 @@ import Foundation
 /// Drives the screen's heading, hint, accessibility identifiers and the next route
 /// so a single View/ViewModel serves both the "trip departure" and "trip return"
 /// variants of the design.
-enum TripDatePhase: Hashable {
+nonisolated enum TripDatePhase: Hashable {
     /// "When did you leave for your trip?"
     case departure
     /// "When did you return from your trip?"

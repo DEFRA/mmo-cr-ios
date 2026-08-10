@@ -1,4 +1,5 @@
 import XCTest
+import SwiftUI
 @testable import record_catch
 
 final class SearchDropdownFieldTests: XCTestCase {
@@ -61,5 +62,29 @@ final class SearchDropdownFieldTests: XCTestCase {
         )
 
         XCTAssertTrue(isValid)
+    }
+
+    // MARK: - Accessible results announcement (WCAG 2.2 SC 4.1.3)
+
+    func testDefaultResultsAnnouncement_zero_saysNoResults() {
+        let field = SearchDropdownField(
+            label: "Add port",
+            options: options,
+            query: .constant("xyz"),
+            selectedOption: .constant(nil)
+        )
+
+        XCTAssertEqual(field.resultsAnnouncement(0), "No results")
+    }
+
+    func testDefaultResultsAnnouncement_nonZero_saysCountResults() {
+        let field = SearchDropdownField(
+            label: "Add port",
+            options: options,
+            query: .constant("ham"),
+            selectedOption: .constant(nil)
+        )
+
+        XCTAssertEqual(field.resultsAnnouncement(2), "2 results")
     }
 }

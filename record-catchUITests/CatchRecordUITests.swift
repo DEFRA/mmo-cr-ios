@@ -140,7 +140,7 @@ final class CatchRecordUITests: XCTestCase {
     }
 
     @MainActor
-    func test_fullNewJourney_selectVessel_tripToday_reachesPlaceholder() {
+    func test_fullNewJourney_selectVessel_tripTodayYes_reachesAddPort() {
         let app = launch("-uiTestCatchRecordNew")
 
         let achilles = element(app, ID.vesselAchilles)
@@ -155,15 +155,15 @@ final class CatchRecordUITests: XCTestCase {
         app.buttons[ID.tripContinue].tap()
         XCTAssertTrue(element(app, ID.tripError).waitForExistence(timeout: 5))
 
-        // Select Yes and continue — reaches the placeholder next-step screen.
+        // Select Yes and continue — with no favourites yet, enters the port sub-journey at Add port.
         element(app, ID.tripYes).tap()
         app.buttons[ID.tripContinue].tap()
 
-        XCTAssertTrue(element(app, "CatchRecord.placeholderNextStep.heading").waitForExistence(timeout: 5))
+        XCTAssertTrue(element(app, "CatchRecord.addPort.heading").waitForExistence(timeout: 5))
     }
 
     @MainActor
-    func test_tripToday_no_routesThroughDepartureAndReturn_toPlaceholder() {
+    func test_tripToday_no_routesThroughDepartureAndReturn_toAddPort() {
         let app = launch("-uiTestCatchRecordNew")
 
         // Select vessel → Trip today.
@@ -187,8 +187,8 @@ final class CatchRecordUITests: XCTestCase {
         enterDate(app, day: "01", month: "04", year: "2020", headingID: ID.returnHeading)
         app.buttons[ID.returnContinue].tap()
 
-        // Reaches the placeholder next-step screen.
-        XCTAssertTrue(element(app, "CatchRecord.placeholderNextStep.heading").waitForExistence(timeout: 5))
+        // With no favourites yet, enters the port sub-journey at the Add-port screen.
+        XCTAssertTrue(element(app, "CatchRecord.addPort.heading").waitForExistence(timeout: 5))
     }
 
     @MainActor
@@ -210,6 +210,58 @@ final class CatchRecordUITests: XCTestCase {
         XCTAssertTrue(element(app, ID.departureError).waitForExistence(timeout: 5))
         // Did not route on: still on the departure screen.
         XCTAssertTrue(element(app, ID.departureHeading).exists)
+    }
+
+    // MARK: - Port journey
+
+    @MainActor
+    func test_portJourney_addFirstPort_thenSelectDepartureAndReturn_reachesPlaceholder() {
+        let app = launch("-uiTestCatchRecordAddPort")
+
+        // Add-port screen shown first (no favourites yet).
+        XCTAssertTrue(element(app, "CatchRecord.addPort.heading").waitForExistence(timeout: 5))
+
+        // Submitting with no selection shows the inline error and does not route.
+        app.buttons["CatchRecord.addPort.saveContinue"].tap()
+        XCTAssertTrue(element(app, "CatchRecord.addPort.search").exists)
+
+        // Type a port and pick it from the results.
+        let field = app.textFields.firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.typeText("Hastings")
+        app.buttons["Hastings"].firstMatch.tap()
+
+        app.buttons["CatchRecord.addPort.saveContinue"].tap()
+
+        // Lands on the departure select screen with the new favourite present.
+        XCTAssertTrue(element(app, "CatchRecord.selectPort.departure.heading").waitForExistence(timeout: 5))
+        app.buttons["CatchRecord.selectPort.departure.saveContinue"].tap()
+        // No selection → inline error.
+        XCTAssertTrue(element(app, "CatchRecord.selectPort.departure.error").waitForExistence(timeout: 5))
+
+        element(app, "CatchRecord.selectPort.departure.option.hastings").tap()
+        app.buttons["CatchRecord.selectPort.departure.saveContinue"].tap()
+
+        // Return select screen.
+        XCTAssertTrue(element(app, "CatchRecord.selectPort.return.heading").waitForExistence(timeout: 5))
+        element(app, "CatchRecord.selectPort.return.option.hastings").tap()
+        app.buttons["CatchRecord.selectPort.return.saveContinue"].tap()
+
+        // Reaches the placeholder next-step screen.
+        XCTAssertTrue(element(app, "CatchRecord.placeholderNextStep.heading").waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    func test_portJourney_withSeededFavourites_startsAtSelectDeparture_andAddAnotherReturnsToSearch() {
+        let app = launch("-uiTestCatchRecordSelectPort")
+
+        // With favourites seeded, the departure select screen is shown first.
+        XCTAssertTrue(element(app, "CatchRecord.selectPort.departure.heading").waitForExistence(timeout: 5))
+
+        // "Add another port" routes to the Add-port search screen.
+        app.buttons["CatchRecord.selectPort.departure.addAnother"].tap()
+        XCTAssertTrue(element(app, "CatchRecord.addPort.heading").waitForExistence(timeout: 5))
     }
 
     private func enterDate(_ app: XCUIApplication, day: String, month: String, year: String, headingID: String) {

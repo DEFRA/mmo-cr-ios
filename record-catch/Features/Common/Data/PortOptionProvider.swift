@@ -1,10 +1,10 @@
 import Foundation
 
-protocol PortOptionProviding {
+nonisolated protocol PortOptionProviding {
     var options: [String] { get }
 }
 
-struct StubPortOptionProvider: PortOptionProviding {
+nonisolated struct StubPortOptionProvider: PortOptionProviding {
     let options: [String] = [
         "Aberdeen",
         "Brixham",

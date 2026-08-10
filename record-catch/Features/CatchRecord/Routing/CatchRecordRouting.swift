@@ -14,4 +14,21 @@ enum CatchRecordRouting {
         guard row.status == .unsent else { return nil }
         return .draftAction(row)
     }
+
+    /// Resolves the route to enter the port sub-journey once the trip dates are known.
+    ///
+    /// - When the user already has favourite ports, go straight to the departure select screen.
+    /// - Otherwise, go to the Add-port screen first (no originating select phase).
+    ///
+    /// The (async) favourites fetch is performed by the caller; this decision stays pure so it is
+    /// trivially unit-testable (see ADR-0004).
+    static func portEntryRoute(
+        hasFavourites: Bool,
+        vessel: String,
+        referenceNumber: String
+    ) -> CatchRecordRoute {
+        hasFavourites
+            ? .selectPort(phase: .departure, vessel: vessel, referenceNumber: referenceNumber)
+            : .addPort(vessel: vessel, referenceNumber: referenceNumber, returnPhase: nil)
+    }
 }

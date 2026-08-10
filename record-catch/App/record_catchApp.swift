@@ -48,6 +48,18 @@ struct record_catchApp: App {
             CatchRecordHostView(initialRoute: .draftAction(Self.seedDraftRow))
         } else if arguments.contains("-uiTestCatchRecordNew") {
             CatchRecordHostView(initialRoute: .selectVessel)
+        } else if arguments.contains("-uiTestCatchRecordAddPort") {
+            // No favourites yet → Add-port screen first.
+            CatchRecordHostView(
+                initialRoute: .addPort(vessel: "ACHILLES", referenceNumber: "A1234520260727150815", returnPhase: nil),
+                favouritePorts: StubFavouritePortsProvider()
+            )
+        } else if arguments.contains("-uiTestCatchRecordSelectPort") {
+            // Seeded favourites → Select-departure-port screen first.
+            CatchRecordHostView(
+                initialRoute: .selectPort(phase: .departure, vessel: "ACHILLES", referenceNumber: "A1234520260727150815"),
+                favouritePorts: StubFavouritePortsProvider(initialFavourites: [PortOption(name: "Hastings")])
+            )
         } else if arguments.contains("-uiTestHome") {
             CatchRecordHostView()
         } else {

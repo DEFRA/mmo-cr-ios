@@ -31,15 +31,15 @@ final class CatchRecordRouterTests: XCTestCase {
         let sut = CatchRecordRouter()
         sut.startNew()
 
-        sut.push(.tripStartedToday(referenceNumber: "REF"))
+        sut.push(.tripStartedToday(vessel: "ACHILLES", referenceNumber: "REF"))
 
-        XCTAssertEqual(sut.path, [.selectVessel, .tripStartedToday(referenceNumber: "REF")])
+        XCTAssertEqual(sut.path, [.selectVessel, .tripStartedToday(vessel: "ACHILLES", referenceNumber: "REF")])
     }
 
     func test_popToRoot_clearsPath() {
         let sut = CatchRecordRouter()
         sut.startNew()
-        sut.push(.tripStartedToday(referenceNumber: "REF"))
+        sut.push(.tripStartedToday(vessel: "ACHILLES", referenceNumber: "REF"))
 
         sut.popToRoot()
 

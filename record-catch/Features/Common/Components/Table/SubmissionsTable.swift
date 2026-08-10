@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct SubmissionRow: Identifiable, Equatable {
+nonisolated struct SubmissionRow: Identifiable, Equatable {
     let id = UUID()
     let dateText: String
     let vesselName: String

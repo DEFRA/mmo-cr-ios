@@ -37,7 +37,7 @@ final class SelectVesselViewModelTests: XCTestCase {
         XCTAssertNil(sut.errorKey)
         XCTAssertEqual(
             router.path,
-            [.tripStartedToday(referenceNumber: SelectVesselViewModel.placeholderReferenceNumber)]
+            [.tripStartedToday(vessel: "ACHILLES", referenceNumber: SelectVesselViewModel.placeholderReferenceNumber)]
         )
     }
 

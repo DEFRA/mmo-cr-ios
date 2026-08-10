@@ -1,6 +1,7 @@
 import XCTest
 @testable import record_catch
 
+@MainActor
 final class TripDatePhaseTests: XCTestCase {
 
     func test_departure_copyKeysAndIdentifierFragment() {
@@ -17,9 +18,9 @@ final class TripDatePhaseTests: XCTestCase {
 
     func test_tripDateRoute_equality_dependsOnPhaseReferenceAndDate() {
         let date = Date(timeIntervalSince1970: 1_000)
-        let a = CatchRecordRoute.tripDate(phase: .departure, referenceNumber: "REF", departureDate: nil)
-        let b = CatchRecordRoute.tripDate(phase: .departure, referenceNumber: "REF", departureDate: nil)
-        let differentPhase = CatchRecordRoute.tripDate(phase: .return, referenceNumber: "REF", departureDate: date)
+        let a = CatchRecordRoute.tripDate(phase: .departure, vessel: "ACHILLES", referenceNumber: "REF", departureDate: nil)
+        let b = CatchRecordRoute.tripDate(phase: .departure, vessel: "ACHILLES", referenceNumber: "REF", departureDate: nil)
+        let differentPhase = CatchRecordRoute.tripDate(phase: .return, vessel: "ACHILLES", referenceNumber: "REF", departureDate: date)
 
         XCTAssertEqual(a, b)
         XCTAssertNotEqual(a, differentPhase)

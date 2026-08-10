@@ -5,6 +5,8 @@ import Foundation
 @Observable
 final class TripStartedTodayViewModel {
 
+    /// Selected vessel name, threaded onward for the port screens' headers.
+    let vessel: String
     /// Display-only placeholder reference number shown at the top of the screen.
     let referenceNumber: String
 
@@ -12,10 +14,18 @@ final class TripStartedTodayViewModel {
     private(set) var didAttemptSubmit = false
 
     private let router: CatchRecordRouter
+    private let favouritePorts: FavouritePortsProviding
 
-    init(referenceNumber: String, router: CatchRecordRouter) {
+    init(
+        vessel: String,
+        referenceNumber: String,
+        router: CatchRecordRouter,
+        favouritePorts: FavouritePortsProviding = StubFavouritePortsProvider()
+    ) {
+        self.vessel = vessel
         self.referenceNumber = referenceNumber
         self.router = router
+        self.favouritePorts = favouritePorts
     }
 
     /// Current inline error, once a submit has been attempted.
@@ -26,16 +36,26 @@ final class TripStartedTodayViewModel {
 
     /// Runs validation for "Save and continue" and routes on to the next screen when valid.
     ///
-    /// "Yes" (trip started and finished today) continues to the next step; "No" branches into
+    /// "Yes" (trip started and finished today) enters the port sub-journey now; "No" branches into
     /// the trip-date sub-journey, starting with the departure date.
     func submit() {
         didAttemptSubmit = true
         guard let selection else { return }
         switch selection {
         case .yes:
-            router.push(.placeholderNextStep)
+            Task { await enterPortSubJourney() }
         case .no:
-            router.push(.tripDate(phase: .departure, referenceNumber: referenceNumber, departureDate: nil))
+            router.push(.tripDate(phase: .departure, vessel: vessel, referenceNumber: referenceNumber, departureDate: nil))
         }
+    }
+
+    /// Fetches favourites, then pushes the pure port-entry route (Add port vs Select departure).
+    func enterPortSubJourney() async {
+        let favourites = (try? await favouritePorts.favouritePorts()) ?? []
+        router.push(CatchRecordRouting.portEntryRoute(
+            hasFavourites: !favourites.isEmpty,
+            vessel: vessel,
+            referenceNumber: referenceNumber
+        ))
     }
 }

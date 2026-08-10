@@ -36,14 +36,30 @@ struct record_catchApp: App {
         .modelContainer(sharedModelContainer)
     }
 
-    // Default app root stays `SignInView`. A `-uiTestHome` launch argument shows
-    // `HomeView` instead, for lightweight UI-test hosting of the Home screen.
+    // Default app root stays `SignInView`. UI-test launch arguments show the Home /
+    // Create-a-catch-record journey instead, for lightweight UI-test hosting:
+    // `-uiTestHome` boots at Home; `-uiTestCatchRecordNew` seeds the stack at Select
+    // vessel (as if "Create a new catch record" was tapped); `-uiTestCatchRecordDraft`
+    // seeds the stack at Draft action for a stubbed unsent record.
     @ViewBuilder
     private var rootView: some View {
-        if ProcessInfo.processInfo.arguments.contains("-uiTestHome") {
-            HomeView()
+        let arguments = ProcessInfo.processInfo.arguments
+        if arguments.contains("-uiTestCatchRecordDraft") {
+            CatchRecordHostView(initialRoute: .draftAction(Self.seedDraftRow))
+        } else if arguments.contains("-uiTestCatchRecordNew") {
+            CatchRecordHostView(initialRoute: .selectVessel)
+        } else if arguments.contains("-uiTestHome") {
+            CatchRecordHostView()
         } else {
             SignInView()
         }
     }
+
+    /// Stubbed unsent record used to seed `-uiTestCatchRecordDraft`.
+    private static let seedDraftRow = SubmissionRow(
+        dateText: "20 Nov 2020",
+        vesselName: "ACHILLES",
+        status: .unsent,
+        createdBy: "J.Smith"
+    )
 }

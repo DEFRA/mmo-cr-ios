@@ -14,6 +14,7 @@ struct HomeView: View {
 
     @Environment(AppLanguageStore.self) private var languageStore
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(CatchRecordRouter.self) private var router
 
     /// Minimum width the 4-column table needs before columns clip; used to keep
     /// the horizontal-scroll reflow legible at accessibility text sizes.
@@ -96,7 +97,7 @@ struct HomeView: View {
             )
 
             PrimaryButton(title: languageStore.localized("home.createRecord.button")) {
-                // Inert in this UI-only phase — navigates nowhere yet.
+                router.startNew()
             }
             .accessibilityIdentifier("Home.createRecordButton")
         }
@@ -114,7 +115,12 @@ struct HomeView: View {
             headerVessel: languageStore.localized("home.table.header.vessel"),
             headerStatus: languageStore.localized("home.table.header.status"),
             headerCreatedBy: languageStore.localized("home.table.header.createdBy"),
-            viewSubmissionFormat: languageStore.localized("home.table.viewSubmission")
+            viewSubmissionFormat: languageStore.localized("home.table.viewSubmission"),
+            onDateTapped: { row in
+                if let route = CatchRecordRouting.entryRoute(for: row) {
+                    router.push(route)
+                }
+            }
         )
 
         if dynamicTypeSize.isAccessibilitySize {
@@ -130,12 +136,14 @@ struct HomeView: View {
 #Preview("English") {
     HomeView()
         .environment(AppLanguageStore.preview)
+        .environment(CatchRecordRouter())
 }
 
 #Preview("Pagination – multiple pages") {
     // Injects a multi-page state so the GDS Previous/Next arrows are visible.
     HomeView(currentPage: 2, totalPages: 5, totalItems: 20)
         .environment(AppLanguageStore.preview)
+        .environment(CatchRecordRouter())
 }
 
 #Preview("Welsh") {
@@ -145,10 +153,12 @@ struct HomeView: View {
             store.language = .welsh
             return store
         }())
+        .environment(CatchRecordRouter())
 }
 
 #Preview("Max Dynamic Type") {
     HomeView()
         .environment(AppLanguageStore.preview)
         .environment(\.dynamicTypeSize, .accessibility5)
+        .environment(CatchRecordRouter())
 }

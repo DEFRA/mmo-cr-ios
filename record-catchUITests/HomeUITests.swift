@@ -61,14 +61,15 @@ final class HomeUITests: XCTestCase {
     }
 
     @MainActor
-    func test_createRecordButton_isInert() {
+    func test_createRecordButton_startsNewCatchRecordJourney() {
         let app = launchHome()
 
         let button = app.buttons[ID.createRecord]
         XCTAssertTrue(button.waitForExistence(timeout: 5))
         button.tap()
 
-        // Inert: still on the Home screen after tapping.
-        XCTAssertTrue(element(app, ID.warningBox).exists)
+        // No longer inert: routes straight to Select vessel.
+        let selectVesselHeading = element(app, "CatchRecord.selectVessel.radioGroup")
+        XCTAssertTrue(selectVesselHeading.waitForExistence(timeout: 5))
     }
 }

@@ -50,6 +50,17 @@ struct ViewTemplate<Content: View>: View {
             .background(AppColors.background)
         }
         .background(AppColors.background)
+        // The custom `ViewHeader` is the single source of truth for back
+        // navigation and branding, so hide the system navigation bar to avoid a
+        // duplicate back chevron rendered on top of the custom header.
+        //
+        // NOTE: We hide the bar via `.toolbar(.hidden:)` only — we deliberately
+        // do NOT add `.navigationBarBackButtonHidden(true)`. Hiding the toolbar
+        // removes the duplicate chevron while preserving the interactive
+        // swipe-from-edge back gesture, which `NavigationStack` reflects into the
+        // bound router `path` (see `CatchRecordRouter.setPath`). Disabling the
+        // back button would kill that gesture, so it stays enabled.
+        .toolbar(.hidden, for: .navigationBar)
     }
 }
 

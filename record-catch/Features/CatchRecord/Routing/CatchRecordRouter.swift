@@ -28,6 +28,12 @@ final class CatchRecordRouter {
         path.append(route)
     }
 
+    /// Pops the top screen, returning to the previous one. No-op at the root.
+    func pop() {
+        guard !path.isEmpty else { return }
+        path.removeLast()
+    }
+
     /// Clears the stack, returning to the journey's host root (e.g. after a confirmed delete).
     func popToRoot() {
         path.removeAll()

@@ -22,17 +22,20 @@ final class CatchLocationViewModel {
     private(set) var didAttemptSubmit = false
 
     private let router: CatchRecordRouter
+    private let favouriteSpecies: FavouriteSpeciesProviding
 
     init(
         gear: GearOption,
         vessel: String,
         referenceNumber: String,
-        router: CatchRecordRouter
+        router: CatchRecordRouter,
+        favouriteSpecies: FavouriteSpeciesProviding = StubFavouriteSpeciesProvider()
     ) {
         self.gear = gear
         self.vessel = vessel
         self.referenceNumber = referenceNumber
         self.router = router
+        self.favouriteSpecies = favouriteSpecies
     }
 
     /// Current inline error, once a submit has been attempted.
@@ -41,10 +44,23 @@ final class CatchLocationViewModel {
         return CatchLocationValidation.errorKey(for: selectedArea)
     }
 
-    /// Validates "Save and continue" and routes on when an area has been selected.
+    /// Validates "Save and continue" and, when an area has been selected, enters the species
+    /// sub-journey.
     func submit() {
         didAttemptSubmit = true
         guard CatchLocationValidation.errorKey(for: selectedArea) == nil else { return }
-        router.push(.placeholderNextStep)
+        Task { await enterSpeciesSubJourney() }
+    }
+
+    /// Fetches favourite species, then pushes the pure species-entry route (Record weights vs Add
+    /// species). Mirrors `SelectPortViewModel.enterGearSubJourney()`.
+    func enterSpeciesSubJourney() async {
+        let favourites = (try? await favouriteSpecies.favouriteSpecies()) ?? []
+        router.push(CatchRecordRouting.speciesEntryRoute(
+            hasFavourites: !favourites.isEmpty,
+            gear: gear,
+            vessel: vessel,
+            referenceNumber: referenceNumber
+        ))
     }
 }

@@ -39,6 +39,28 @@ enum CatchRecordRoute: Hashable {
     /// Carries the gear (for the "using <gear>" heading), the vessel and the display-only reference
     /// number, all threaded onward unchanged.
     case catchLocation(gear: GearOption, vessel: String, referenceNumber: String)
+    /// Record the species caught and their live weights, from the user's favourite species
+    /// (per-species checkboxes with reveal-able weight fields). Shown when the user already has
+    /// favourite species; "Add a species" pushes `addSpecies`, "Save and continue" pushes
+    /// `speciesSummary`. Carries the gear (for the "with <gear>" heading), vessel and reference.
+    case recordSpeciesWeights(gear: GearOption, vessel: String, referenceNumber: String)
+    /// Add a species via type-to-search and save it to the user's favourites (see ADR-0004). Shown
+    /// when the user has no favourite species yet, and reached from "Add a species"/"Add another
+    /// species". `returnPhase` records which screen to return to after saving.
+    case addSpecies(gear: GearOption, vessel: String, referenceNumber: String, returnPhase: SpeciesReturnPhase)
+    /// Review the recorded species and their weights, with per-species removal, before continuing.
+    case speciesSummary(gear: GearOption, vessel: String, referenceNumber: String)
     /// Minimal placeholder for the next step in the journey (future phase).
     case placeholderNextStep
+}
+
+/// Which species screen the Add-species screen should return to after a successful save.
+///
+/// Mirrors the port `returnPhase` pattern: first-time entry (no favourites yet) returns to the
+/// weights screen; "Add another species" from the summary returns to the summary.
+enum SpeciesReturnPhase: Hashable {
+    /// Return to the "Record species weights" screen (first-time entry).
+    case recordWeights
+    /// Return to the "Species summary" screen ("Add another species").
+    case summary
 }

@@ -17,10 +17,17 @@ final class SelectVesselViewModel {
     private(set) var didAttemptSubmit = false
 
     private let router: CatchRecordRouter
+    /// Shared journey draft; the chosen vessel is written into it on submit (see `CatchRecordDraft`).
+    private let draft: CatchRecordDraft
 
-    init(router: CatchRecordRouter, provider: VesselProviding = StaticVesselProvider()) {
+    init(
+        router: CatchRecordRouter,
+        provider: VesselProviding = StaticVesselProvider(),
+        draft: CatchRecordDraft = CatchRecordDraft()
+    ) {
         self.router = router
         self.vessels = provider.vessels
+        self.draft = draft
     }
 
     /// Current inline error, once a submit has been attempted.
@@ -33,6 +40,7 @@ final class SelectVesselViewModel {
     func submit() {
         didAttemptSubmit = true
         guard let selection else { return }
+        draft.vessel = selection
         router.push(.tripStartedToday(vessel: selection, referenceNumber: Self.placeholderReferenceNumber))
     }
 }

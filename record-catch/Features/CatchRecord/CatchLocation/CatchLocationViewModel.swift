@@ -23,19 +23,23 @@ final class CatchLocationViewModel {
 
     private let router: CatchRecordRouter
     private let favouriteSpecies: FavouriteSpeciesProviding
+    /// Shared journey draft; the selected area is written into it on submit (see `CatchRecordDraft`).
+    private let draft: CatchRecordDraft
 
     init(
         gear: GearOption,
         vessel: String,
         referenceNumber: String,
         router: CatchRecordRouter,
-        favouriteSpecies: FavouriteSpeciesProviding = StubFavouriteSpeciesProvider()
+        favouriteSpecies: FavouriteSpeciesProviding = StubFavouriteSpeciesProvider(),
+        draft: CatchRecordDraft = CatchRecordDraft()
     ) {
         self.gear = gear
         self.vessel = vessel
         self.referenceNumber = referenceNumber
         self.router = router
         self.favouriteSpecies = favouriteSpecies
+        self.draft = draft
     }
 
     /// Current inline error, once a submit has been attempted.
@@ -49,6 +53,7 @@ final class CatchLocationViewModel {
     func submit() {
         didAttemptSubmit = true
         guard CatchLocationValidation.errorKey(for: selectedArea) == nil else { return }
+        draft.statisticalArea = selectedArea
         Task { await enterSpeciesSubJourney() }
     }
 

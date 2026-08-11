@@ -7,7 +7,7 @@ import Foundation
 /// the user tick species that are being kept onboard/in keep pots, and records a single weight for
 /// each ticked species ("weight above minimum size kept onboard or in keep pots"). On
 /// "Save and continue" the captured weights are written back to favourites and the journey routes
-/// to the placeholder next step.
+/// to Check your answers.
 ///
 /// Weight validation is intentionally deferred to a future phase — the field accepts free input.
 @MainActor
@@ -30,15 +30,20 @@ final class LandingStorageSpeciesViewModel {
 
     private let router: CatchRecordRouter
     private let favouriteSpecies: FavouriteSpeciesProviding
+    /// Shared journey draft; the ticked species-not-landed list is written into it on submit (see
+    /// `CatchRecordDraft`).
+    private let draft: CatchRecordDraft
 
     init(
         referenceNumber: String,
         router: CatchRecordRouter,
-        favouriteSpecies: FavouriteSpeciesProviding = StubFavouriteSpeciesProvider()
+        favouriteSpecies: FavouriteSpeciesProviding = StubFavouriteSpeciesProvider(),
+        draft: CatchRecordDraft = CatchRecordDraft()
     ) {
         self.referenceNumber = referenceNumber
         self.router = router
         self.favouriteSpecies = favouriteSpecies
+        self.draft = draft
     }
 
     /// Loads favourite species and seeds any previously-captured weights into the field.
@@ -64,7 +69,7 @@ final class LandingStorageSpeciesViewModel {
     }
 
     /// The route to push after saving. Pure, so it is directly unit-testable.
-    var completionRoute: CatchRecordRoute { .placeholderNextStep }
+    var completionRoute: CatchRecordRoute { .checkYourAnswers(referenceNumber: referenceNumber) }
 
     /// Writes captured weights for ticked species back to favourites, then routes onward.
     ///
@@ -74,6 +79,7 @@ final class LandingStorageSpeciesViewModel {
         isSaving = true
         defer { isSaving = false }
         do {
+            var kept: [SpeciesOption] = []
             for species in favourites where selection.contains(species.id) {
                 let captured = species.withWeights(
                     above: weightEntries[species.id] ?? "",
@@ -81,7 +87,9 @@ final class LandingStorageSpeciesViewModel {
                     discarded: species.weightLegallyDiscardedKg
                 )
                 try await favouriteSpecies.addFavourite(captured)
+                kept.append(captured)
             }
+            draft.speciesNotLanded = kept
             router.push(completionRoute)
         } catch {
             saveFailed = true

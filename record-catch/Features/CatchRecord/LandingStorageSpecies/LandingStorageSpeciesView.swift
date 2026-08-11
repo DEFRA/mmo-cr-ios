@@ -15,12 +15,14 @@ struct LandingStorageSpeciesView: View {
     init(
         referenceNumber: String,
         router: CatchRecordRouter,
-        favouriteSpecies: FavouriteSpeciesProviding
+        favouriteSpecies: FavouriteSpeciesProviding,
+        draft: CatchRecordDraft = CatchRecordDraft()
     ) {
         _viewModel = State(wrappedValue: LandingStorageSpeciesViewModel(
             referenceNumber: referenceNumber,
             router: router,
-            favouriteSpecies: favouriteSpecies
+            favouriteSpecies: favouriteSpecies,
+            draft: draft
         ))
     }
 

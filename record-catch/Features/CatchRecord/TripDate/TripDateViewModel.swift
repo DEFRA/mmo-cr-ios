@@ -23,6 +23,8 @@ final class TripDateViewModel {
 
     private let router: CatchRecordRouter
     private let favouritePorts: FavouritePortsProviding
+    /// Shared journey draft; the parsed date is written into it on submit (see `CatchRecordDraft`).
+    private let draft: CatchRecordDraft
     /// Injectable "now" so the late-submission nudge decision is deterministic in tests.
     private let now: () -> Date
 
@@ -33,6 +35,7 @@ final class TripDateViewModel {
         departureDate: Date?,
         router: CatchRecordRouter,
         favouritePorts: FavouritePortsProviding = StubFavouritePortsProvider(),
+        draft: CatchRecordDraft = CatchRecordDraft(),
         now: @escaping () -> Date = Date.init
     ) {
         self.phase = phase
@@ -41,6 +44,7 @@ final class TripDateViewModel {
         self.departureDate = departureDate
         self.router = router
         self.favouritePorts = favouritePorts
+        self.draft = draft
         self.now = now
     }
 
@@ -62,8 +66,10 @@ final class TripDateViewModel {
         guard let date = DateEntryField.parsedDate(from: value) else { return }
         switch phase {
         case .departure:
+            draft.departureDate = date
             router.push(.tripDate(phase: .return, vessel: vessel, referenceNumber: referenceNumber, departureDate: date))
         case .return:
+            draft.returnDate = date
             // Records must be submitted within 24 hours of a trip ending. When the trip ended more
             // than 24 hours ago, interpose the late-submission nudge before the port sub-journey so
             // the user can double-check the trip end date (see `SubmissionNudge`).

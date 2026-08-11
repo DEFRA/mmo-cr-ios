@@ -180,4 +180,42 @@ final class TripDateViewModelTests: XCTestCase {
         XCTAssertNil(sut.errorKey)
         XCTAssertFalse(router.path.contains(.submissionNudge(daysLate: 0, vessel: vessel, referenceNumber: referenceNumber)))
     }
+
+    // MARK: - Draft capture
+
+    func test_submit_departure_withValidDate_writesDepartureDateIntoDraft() {
+        let draft = CatchRecordDraft()
+        let sut = TripDateViewModel(
+            phase: .departure,
+            vessel: vessel,
+            referenceNumber: referenceNumber,
+            departureDate: nil,
+            router: CatchRecordRouter(),
+            draft: draft
+        )
+        sut.value = makeValidDate()
+
+        sut.submit()
+
+        XCTAssertEqual(draft.departureDate, DateEntryField.parsedDate(from: makeValidDate()))
+        XCTAssertNil(draft.returnDate)
+    }
+
+    func test_submit_return_withValidDate_writesReturnDateIntoDraft() {
+        let draft = CatchRecordDraft()
+        let sut = TripDateViewModel(
+            phase: .return,
+            vessel: vessel,
+            referenceNumber: referenceNumber,
+            departureDate: Date(),
+            router: CatchRecordRouter(),
+            draft: draft,
+            now: { DateEntryField.parsedDate(from: self.makeValidDate())!.addingTimeInterval(60 * 60) }
+        )
+        sut.value = makeValidDate()
+
+        sut.submit()
+
+        XCTAssertEqual(draft.returnDate, DateEntryField.parsedDate(from: makeValidDate()))
+    }
 }

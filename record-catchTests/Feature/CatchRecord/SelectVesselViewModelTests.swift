@@ -45,4 +45,16 @@ final class SelectVesselViewModelTests: XCTestCase {
         let sut = SelectVesselViewModel(router: CatchRecordRouter(), provider: StaticVesselProvider())
         XCTAssertNil(sut.errorKey)
     }
+
+    // MARK: - Draft capture
+
+    func test_submit_withSelection_writesVesselIntoDraft() {
+        let draft = CatchRecordDraft()
+        let sut = SelectVesselViewModel(router: CatchRecordRouter(), provider: StaticVesselProvider(), draft: draft)
+        sut.selection = "ACHILLES"
+
+        sut.submit()
+
+        XCTAssertEqual(draft.vessel, "ACHILLES")
+    }
 }

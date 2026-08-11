@@ -67,7 +67,35 @@ Interposed after a valid **trip end (return) date** when the trip ended **more t
 When the trip ended **within** 24 hours (or the entered date is in the future), the nudge is skipped
 and the journey continues straight into the port sub-journey.
 
+## Screen — Check your answers (`CatchRecord.checkYourAnswers.*`)
+
+Ends the journey. Reached from the landing-storage sub-journey; a read-only summary of every value
+captured in `CatchRecordDraft`, each row pairing a label with a "Change" control that returns the
+user into the journey at the screen where that value was captured.
+
+1. Caption "New catch record", display-only reference number header (`.referenceNumber`).
+2. H1 "Check your answers" (`.heading`).
+3. Four ordered sections (`.section.<id>`), each an H2-level heading:
+   - **Trip** (`.section.trip`) — vessel, departure date, return date, departure port, return
+     port, statistical area. Always rendered, even with zero rows if nothing has been captured yet.
+   - **Gear used** (`.section.gear`) — gear name plus its captured measurements (e.g. mesh size).
+     Always rendered.
+   - **Species caught** (`.section.speciesCaught`) — one row set per species landed (name + weight
+     above minimum size, plus below-minimum/discarded weights where captured). Omitted entirely
+     when no species have been recorded.
+   - **Species not landed** (`.section.speciesNotLanded`) — one row set per species kept
+     onboard/in keep pots (name + weight). Omitted entirely when empty.
+4. Each row (`.change.<rowId>`) shows a label + formatted value and a "Change" link
+   (`AppColors.linkText`, underlined) that pushes the route for the screen where that value was
+   captured (e.g. dates → trip-date screen, ports → select-port screen, area → catch-location map,
+   vessel → select-vessel, gear → gear-measurements, species → the relevant weights screen).
+   Tapping Change **pushes forward** into the journey (not a pop) so the existing "Save and
+   continue" flow naturally returns here once the user re-confirms the changed value.
+5. This is a **UI-only, unsubmitted** summary in this phase — there is no further "Submit" action
+   past this screen; see the design spec's placeholder-next-step note for what comes after.
+
 ## States (per screen)
+
 
 | State | Trigger | Presentation |
 |---|---|---|
@@ -117,6 +145,24 @@ String Catalog (never a `[CY-TODO]` prefix in rendered copy).
 | `catchRecord.submissionNudge.checkDateLink` | Check the trip end date is correct before you continue | Gwiriwch fod dyddiad diwedd y daith yn gywir cyn i chi barhau |
 | `catchRecord.placeholder.nextStep.heading` | Next step | Cam nesaf |
 | `catchRecord.placeholder.nextStep.message` | This part of the journey is coming soon. | Bydd y rhan hon o'r daith ar gael yn fuan. |
+| `catchRecord.checkYourAnswers.heading` | Check your answers | Gwiriwch eich atebion |
+| `catchRecord.checkYourAnswers.change` | Change | Newid |
+| `catchRecord.checkYourAnswers.section.trip` | Trip | Taith |
+| `catchRecord.checkYourAnswers.section.gear` | Gear used | Offer a ddefnyddiwyd |
+| `catchRecord.checkYourAnswers.section.speciesCaught` | Species caught | Rhywogaethau a ddaliwyd |
+| `catchRecord.checkYourAnswers.section.speciesNotLanded` | Species not landed | Rhywogaethau na chafodd eu glanio |
+| `catchRecord.checkYourAnswers.label.vessel` | Vessel | Llong |
+| `catchRecord.checkYourAnswers.label.departureDate` | Departure date | Dyddiad ymadael |
+| `catchRecord.checkYourAnswers.label.returnDate` | Return date | Dyddiad dychwelyd |
+| `catchRecord.checkYourAnswers.label.departurePort` | Departure port | Porthladd ymadael |
+| `catchRecord.checkYourAnswers.label.returnPort` | Return port | Porthladd dychwelyd |
+| `catchRecord.checkYourAnswers.label.statisticalArea` | Statistical area | Ardal ystadegol |
+| `catchRecord.checkYourAnswers.label.gear` | Gear | Offer |
+| `catchRecord.checkYourAnswers.label.speciesName` | Species | Rhywogaeth |
+| `catchRecord.checkYourAnswers.label.weightAbove` | Weight landed | Pwysau a laniwyd |
+| `catchRecord.checkYourAnswers.label.weightBelow` | Weight below minimum size | Pwysau o dan y maint lleiaf |
+| `catchRecord.checkYourAnswers.label.weightDiscarded` | Weight legally discarded | Pwysau a waredwyd yn gyfreithiol |
+| `catchRecord.checkYourAnswers.label.weightNotLanded` | Weight kept onboard | Pwysau a gadwyd ar y llong |
 | `a11y.errorPrefix` | (existing) Error: | Gwall: |
 
 ## Accessibility annotations
@@ -140,6 +186,15 @@ String Catalog (never a `[CY-TODO]` prefix in rendered copy).
   through the standard `NavigationStack` transition (no custom animation added).
 - **Language of parts**: all rendered copy goes through `LocalizedText`, carrying the active
   language identifier for correct VoiceOver pronunciation (WCAG 3.1.2).
+- **Check your answers**: section headings carry `.isHeader` (H2-level, under the screen's H1) so
+  VoiceOver rotor navigation can jump between sections; each row is a single accessibility element
+  (`.accessibilityElement(children: .contain)`) so the label and value are announced together, and
+  each "Change" control is a real `Button` with the `.isLink` trait, a 44×44pt minimum target
+  (`AppControlSize.buttonHeight`), and a composed accessibility label ("Change <field label>", e.g.
+  "Change Departure port") rather than a bare "Change" — so VoiceOver users can distinguish the many
+  Change links on the screen without extra exploration. Dynamic Type is honoured throughout (no
+  fixed frames on label/value text); colour contrast for the link text meets 4.5:1 (WCAG 1.4.3);
+  Welsh copy for this screen is `needs_review` pending translation, per the copy table above.
 
 ## Reference number placeholder note
 

@@ -103,4 +103,43 @@ final class SelectPortViewModelTests: XCTestCase {
         let sut = makeSUT(phase: .departure, router: CatchRecordRouter())
         XCTAssertNil(sut.errorKey)
     }
+
+    // MARK: - Draft capture
+
+    func test_submit_departure_withSelection_writesDeparturePortIntoDraft() async {
+        let draft = CatchRecordDraft()
+        let sut = SelectPortViewModel(
+            phase: .departure,
+            vessel: vessel,
+            referenceNumber: referenceNumber,
+            router: CatchRecordRouter(),
+            favouritePorts: StubFavouritePortsProvider(initialFavourites: [PortOption(name: "Hastings")]),
+            draft: draft
+        )
+        await sut.loadFavourites()
+        sut.selection = "Hastings"
+
+        sut.submit()
+
+        XCTAssertEqual(draft.departurePort, PortOption(name: "Hastings"))
+        XCTAssertNil(draft.returnPort)
+    }
+
+    func test_submit_return_withSelection_writesReturnPortIntoDraft() async {
+        let draft = CatchRecordDraft()
+        let sut = SelectPortViewModel(
+            phase: .return,
+            vessel: vessel,
+            referenceNumber: referenceNumber,
+            router: CatchRecordRouter(),
+            favouritePorts: StubFavouritePortsProvider(initialFavourites: [PortOption(name: "Hastings")]),
+            draft: draft
+        )
+        await sut.loadFavourites()
+        sut.selection = "Hastings"
+
+        sut.submit()
+
+        XCTAssertEqual(draft.returnPort, PortOption(name: "Hastings"))
+    }
 }

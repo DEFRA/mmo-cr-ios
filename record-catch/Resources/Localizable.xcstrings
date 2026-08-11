@@ -477,6 +477,330 @@
         }
       }
     },
+    "catchRecord.checkYourAnswers.change": {
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Newid"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change"
+          }
+        }
+      },
+      "comment": "Link text that returns to the screen where a value was captured, to change it."
+    },
+    "catchRecord.checkYourAnswers.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Gwiriwch eich atebion"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check your answers"
+          }
+        }
+      },
+      "comment": "H1 for the final read-only summary screen."
+    },
+    "catchRecord.checkYourAnswers.label.departureDate": {
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Dyddiad gadael"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Departure date"
+          }
+        }
+      },
+      "comment": "Row label: the trip's departure date."
+    },
+    "catchRecord.checkYourAnswers.label.departurePort": {
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Porthladd gadael"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Departure port"
+          }
+        }
+      },
+      "comment": "Row label: the trip's departure port."
+    },
+    "catchRecord.checkYourAnswers.label.gear": {
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Offer"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gear"
+          }
+        }
+      },
+      "comment": "Row label: the gear used."
+    },
+    "catchRecord.checkYourAnswers.label.returnDate": {
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Dyddiad dychwelyd"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Return date"
+          }
+        }
+      },
+      "comment": "Row label: the trip's return date."
+    },
+    "catchRecord.checkYourAnswers.label.returnPort": {
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Porthladd dychwelyd"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Return port"
+          }
+        }
+      },
+      "comment": "Row label: the trip's return port."
+    },
+    "catchRecord.checkYourAnswers.label.speciesName": {
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Rhywogaeth"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Species"
+          }
+        }
+      },
+      "comment": "Row label: a species' name."
+    },
+    "catchRecord.checkYourAnswers.label.statisticalArea": {
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ardal ystadegol / is-ardal"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Statistical area / sub area"
+          }
+        }
+      },
+      "comment": "Row label: the statistical (catch) area / sub area."
+    },
+    "catchRecord.checkYourAnswers.label.vessel": {
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Llong"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vessel"
+          }
+        }
+      },
+      "comment": "Row label: the selected vessel."
+    },
+    "catchRecord.checkYourAnswers.label.weightAbove": {
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Pwysau uwch na'r maint lleiaf a gedwir"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weight above minimum size retained"
+          }
+        }
+      },
+      "comment": "Row label: live weight above minimum size retained, for a caught species."
+    },
+    "catchRecord.checkYourAnswers.label.weightBelow": {
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Pwysau is na'r maint lleiaf a gedwir"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weight below minimum size retained"
+          }
+        }
+      },
+      "comment": "Row label: live weight below minimum size retained, for a caught species."
+    },
+    "catchRecord.checkYourAnswers.label.weightDiscarded": {
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Pwysau a daflwyd yn gyfreithlon"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weight legally discarded"
+          }
+        }
+      },
+      "comment": "Row label: live weight legally discarded, for a caught species."
+    },
+    "catchRecord.checkYourAnswers.label.weightNotLanded": {
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Pwysau a gedwir ar y llong neu mewn potiau cadw"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weight kept onboard or in keep pots"
+          }
+        }
+      },
+      "comment": "Row label: weight kept onboard/in keep pots, for a species not landed straight away."
+    },
+    "catchRecord.checkYourAnswers.section.gear": {
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Offer a ddefnyddiwyd"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gear used"
+          }
+        }
+      },
+      "comment": "Section heading: gear used."
+    },
+    "catchRecord.checkYourAnswers.section.speciesCaught": {
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Rhywogaethau a ddaliwyd"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Species caught"
+          }
+        }
+      },
+      "comment": "Section heading: species caught."
+    },
+    "catchRecord.checkYourAnswers.section.speciesNotLanded": {
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Rhywogaethau na chânt eu glanio"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Species not landed"
+          }
+        }
+      },
+      "comment": "Section heading: species not landed straight away."
+    },
+    "catchRecord.checkYourAnswers.section.trip": {
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Y daith"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trip"
+          }
+        }
+      },
+      "comment": "Section heading: the trip (vessel, dates, ports, statistical area)."
+    },
     "catchRecord.draftAction.delete.cancel": {
       "comment": "Destructive cancel button.",
       "extractionState": "manual",

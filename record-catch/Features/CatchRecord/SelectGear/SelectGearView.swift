@@ -14,13 +14,15 @@ struct SelectGearView: View {
         vessel: String,
         referenceNumber: String,
         router: CatchRecordRouter,
-        favouriteGears: FavouriteGearProviding
+        favouriteGears: FavouriteGearProviding,
+        draft: CatchRecordDraft = CatchRecordDraft()
     ) {
         _viewModel = State(wrappedValue: SelectGearViewModel(
             vessel: vessel,
             referenceNumber: referenceNumber,
             router: router,
-            favouriteGears: favouriteGears
+            favouriteGears: favouriteGears,
+            draft: draft
         ))
     }
 

@@ -6,20 +6,26 @@ import SwiftUI
 /// `CatchRecordRoute` to its screen (see ADR-0003). `HomeView` and the journey screens read the
 /// router from the environment rather than receiving it as an explicit dependency at each call
 /// site, matching how `AppLanguageStore` is shared today.
+@MainActor
 struct CatchRecordHostView: View {
 
     @State private var router: CatchRecordRouter
     /// Shared, journey-scoped favourite ports store so a port added on the Add-port screen is
     /// visible on the select screens (offline-first, local source of truth — see ADR-0004).
     /// A reference type shared across every screen in the stack.
-    private let favouritePorts: FavouritePortsProviding
+    @State private var favouritePorts: FavouritePortsProviding
     /// Shared, journey-scoped favourite gears store so a gear added on the measurements screen is
     /// visible on the select screen (offline-first, local source of truth — mirrors ports).
-    private let favouriteGears: FavouriteGearProviding
+    @State private var favouriteGears: FavouriteGearProviding
     /// Shared, journey-scoped favourite species store so a species added on the Add-species screen,
     /// and weights recorded on the weights screen, are visible on the summary screen (offline-first,
     /// local source of truth — mirrors gears).
-    private let favouriteSpecies: FavouriteSpeciesProviding
+    @State private var favouriteSpecies: FavouriteSpeciesProviding
+    /// Shared, journey-scoped draft accumulating the in-progress catch record (vessel, dates,
+    /// ports, gear and species) so it is available to every screen in the stack without re-deriving
+    /// it from route payloads. Offline-first, local source of truth — not yet persisted to disk
+    /// (see `CatchRecordDraft`).
+    @State private var draft: CatchRecordDraft
 
     /// - Parameters:
     ///   - initialRoute: optional route to seed the stack with at launch, used by UI tests to jump
@@ -28,20 +34,23 @@ struct CatchRecordHostView: View {
     ///     has-favourites vs no-favourites branches.
     ///   - favouriteGears: injectable favourite gears store; seeded by UI tests as above.
     ///   - favouriteSpecies: injectable favourite species store; seeded by UI tests as above.
+    ///   - draft: injectable journey draft; UI tests can seed it to jump into a mid-journey state.
     init(
         initialRoute: CatchRecordRoute? = nil,
         favouritePorts: FavouritePortsProviding = StubFavouritePortsProvider(),
         favouriteGears: FavouriteGearProviding = StubFavouriteGearProvider(),
-        favouriteSpecies: FavouriteSpeciesProviding = StubFavouriteSpeciesProvider()
+        favouriteSpecies: FavouriteSpeciesProviding = StubFavouriteSpeciesProvider(),
+        draft: CatchRecordDraft? = nil
     ) {
         let router = CatchRecordRouter()
         if let initialRoute {
             router.push(initialRoute)
         }
         _router = State(wrappedValue: router)
-        self.favouritePorts = favouritePorts
-        self.favouriteGears = favouriteGears
-        self.favouriteSpecies = favouriteSpecies
+        _favouritePorts = State(wrappedValue: favouritePorts)
+        _favouriteGears = State(wrappedValue: favouriteGears)
+        _favouriteSpecies = State(wrappedValue: favouriteSpecies)
+        _draft = State(wrappedValue: draft ?? CatchRecordDraft())
     }
 
     var body: some View {
@@ -53,6 +62,7 @@ struct CatchRecordHostView: View {
         }
         .environment(router)
         .environment(\.headerNavigator, router)
+        .environment(draft)
     }
 
     @ViewBuilder
@@ -61,7 +71,7 @@ struct CatchRecordHostView: View {
         case .draftAction(let row):
             DraftActionView(row: row, router: router)
         case .selectVessel:
-            SelectVesselView(router: router)
+            SelectVesselView(router: router, draft: draft)
         case .tripStartedToday(let vessel, let referenceNumber):
             TripStartedTodayView(vessel: vessel, referenceNumber: referenceNumber, router: router, favouritePorts: favouritePorts)
         case .tripDate(let phase, let vessel, let referenceNumber, let departureDate):
@@ -71,7 +81,8 @@ struct CatchRecordHostView: View {
                 referenceNumber: referenceNumber,
                 departureDate: departureDate,
                 router: router,
-                favouritePorts: favouritePorts
+                favouritePorts: favouritePorts,
+                draft: draft
             )
         case .submissionNudge(let daysLate, let vessel, let referenceNumber):
             SubmissionNudgeView(
@@ -96,14 +107,16 @@ struct CatchRecordHostView: View {
                 referenceNumber: referenceNumber,
                 router: router,
                 favouritePorts: favouritePorts,
-                favouriteGears: favouriteGears
+                favouriteGears: favouriteGears,
+                draft: draft
             )
         case .selectGear(let vessel, let referenceNumber):
             SelectGearView(
                 vessel: vessel,
                 referenceNumber: referenceNumber,
                 router: router,
-                favouriteGears: favouriteGears
+                favouriteGears: favouriteGears,
+                draft: draft
             )
         case .addGear(let vessel, let referenceNumber):
             AddGearView(
@@ -117,7 +130,8 @@ struct CatchRecordHostView: View {
                 vessel: vessel,
                 referenceNumber: referenceNumber,
                 router: router,
-                favouriteGears: favouriteGears
+                favouriteGears: favouriteGears,
+                draft: draft
             )
         case .catchLocation(let gear, let vessel, let referenceNumber):
             CatchLocationView(
@@ -125,7 +139,8 @@ struct CatchRecordHostView: View {
                 vessel: vessel,
                 referenceNumber: referenceNumber,
                 router: router,
-                favouriteSpecies: favouriteSpecies
+                favouriteSpecies: favouriteSpecies,
+                draft: draft
             )
         case .recordSpeciesWeights(let gear, let vessel, let referenceNumber):
             RecordSpeciesWeightsView(
@@ -150,7 +165,8 @@ struct CatchRecordHostView: View {
                 vessel: vessel,
                 referenceNumber: referenceNumber,
                 router: router,
-                favouriteSpecies: favouriteSpecies
+                favouriteSpecies: favouriteSpecies,
+                draft: draft
             )
         case .landingStorage(let referenceNumber):
             LandingStorageView(referenceNumber: referenceNumber, router: router)
@@ -158,8 +174,11 @@ struct CatchRecordHostView: View {
             LandingStorageSpeciesView(
                 referenceNumber: referenceNumber,
                 router: router,
-                favouriteSpecies: favouriteSpecies
+                favouriteSpecies: favouriteSpecies,
+                draft: draft
             )
+        case .checkYourAnswers(let referenceNumber):
+            CheckYourAnswersView(referenceNumber: referenceNumber, router: router, draft: draft)
         case .placeholderNextStep:
             PlaceholderNextStepView()
         }

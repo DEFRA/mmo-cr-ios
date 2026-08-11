@@ -15,14 +15,16 @@ struct CatchLocationView: View {
         vessel: String,
         referenceNumber: String,
         router: CatchRecordRouter,
-        favouriteSpecies: FavouriteSpeciesProviding = StubFavouriteSpeciesProvider()
+        favouriteSpecies: FavouriteSpeciesProviding = StubFavouriteSpeciesProvider(),
+        draft: CatchRecordDraft = CatchRecordDraft()
     ) {
         _viewModel = State(wrappedValue: CatchLocationViewModel(
             gear: gear,
             vessel: vessel,
             referenceNumber: referenceNumber,
             router: router,
-            favouriteSpecies: favouriteSpecies
+            favouriteSpecies: favouriteSpecies,
+            draft: draft
         ))
     }
 

@@ -29,13 +29,13 @@ final class LandingStorageViewModel {
     }
 
     /// The route to push for the current selection. Pure, so it is directly unit-testable.
-    /// "Yes" leads to the not-landing species screen; "No" ends at the placeholder next step.
+    /// "Yes" leads to the not-landing species screen; "No" ends the journey at Check your answers.
     var completionRoute: CatchRecordRoute {
         switch selection {
         case .yes:
             return .landingStorageSpecies(referenceNumber: referenceNumber)
         case .no, .none:
-            return .placeholderNextStep
+            return .checkYourAnswers(referenceNumber: referenceNumber)
         }
     }
 

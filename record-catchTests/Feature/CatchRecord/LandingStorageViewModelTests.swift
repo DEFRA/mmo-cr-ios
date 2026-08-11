@@ -40,7 +40,7 @@ final class LandingStorageViewModelTests: XCTestCase {
         XCTAssertEqual(router.path, [.landingStorageSpecies(referenceNumber: referenceNumber)])
     }
 
-    func test_submit_withNoSelected_pushesPlaceholderNextStep() {
+    func test_submit_withNoSelected_pushesCheckYourAnswers() {
         let router = CatchRecordRouter()
         let sut = LandingStorageViewModel(referenceNumber: referenceNumber, router: router)
         sut.selection = .no
@@ -48,6 +48,6 @@ final class LandingStorageViewModelTests: XCTestCase {
         sut.submit()
 
         XCTAssertNil(sut.errorKey)
-        XCTAssertEqual(router.path, [.placeholderNextStep])
+        XCTAssertEqual(router.path, [.checkYourAnswers(referenceNumber: referenceNumber)])
     }
 }

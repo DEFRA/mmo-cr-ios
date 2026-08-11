@@ -64,6 +64,10 @@ enum CatchRecordRoute: Hashable {
     /// each kept onboard or in keep pots. Reached from the "Yes" answer on `landingStorage`;
     /// carries the display-only reference number shown at the top of the screen.
     case landingStorageSpecies(referenceNumber: String)
+    /// Review every answer captured so far before submission. Reached at the end of the
+    /// landing-storage sub-journey; carries the display-only reference number shown at the top of
+    /// the screen.
+    case checkYourAnswers(referenceNumber: String)
     /// Minimal placeholder for the next step in the journey (future phase).
     case placeholderNextStep
 }

@@ -60,6 +60,13 @@ struct record_catchApp: App {
                 initialRoute: .selectPort(phase: .departure, vessel: "ACHILLES", referenceNumber: "A1234520260727150815"),
                 favouritePorts: StubFavouritePortsProvider(initialFavourites: [PortOption(name: "Hastings")])
             )
+        } else if arguments.contains("-uiTestCatchRecordCheckYourAnswers") {
+            // Fully-populated draft → Check your answers screen, for UI testing the summary/Change
+            // links without driving the whole journey by hand.
+            CatchRecordHostView(
+                initialRoute: .checkYourAnswers(referenceNumber: "A1234520260727150815"),
+                draft: Self.seedCheckYourAnswersDraft
+            )
         } else if arguments.contains("-uiTestHome") {
             CatchRecordHostView()
         } else {
@@ -74,4 +81,24 @@ struct record_catchApp: App {
         status: .unsent,
         createdBy: "J.Smith"
     )
+
+    /// Fully-populated `CatchRecordDraft` used to seed `-uiTestCatchRecordCheckYourAnswers`, so the
+    /// Check-your-answers screen can be UI-tested (headings, rows, Change navigation) without
+    /// driving the whole journey by hand.
+    @MainActor
+    private static var seedCheckYourAnswersDraft: CatchRecordDraft {
+        let draft = CatchRecordDraft()
+        draft.vessel = "ACHILLES"
+        draft.departureDate = Date(timeIntervalSince1970: 1_785_000_000)
+        draft.returnDate = Date(timeIntervalSince1970: 1_785_100_000)
+        draft.departurePort = PortOption(name: "Plymouth")
+        draft.returnPort = PortOption(name: "Plymouth")
+        draft.statisticalArea = "27.7.e"
+        draft.gear = GearOption.seineNets.withMeasurements([
+            GearMeasurement(id: "meshSize", labelKey: "catchRecord.gear.measurement.meshSize", value: 80)
+        ])
+        draft.speciesCaught = [SpeciesOption(name: "Atlantic cod (COD)").withWeights(above: "250", below: nil, discarded: nil)]
+        draft.speciesNotLanded = [SpeciesOption(name: "Atlantic cod (COD)").withWeights(above: "5", below: nil, discarded: nil)]
+        return draft
+    }
 }

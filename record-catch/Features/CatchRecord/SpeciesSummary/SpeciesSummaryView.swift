@@ -15,14 +15,16 @@ struct SpeciesSummaryView: View {
         vessel: String,
         referenceNumber: String,
         router: CatchRecordRouter,
-        favouriteSpecies: FavouriteSpeciesProviding
+        favouriteSpecies: FavouriteSpeciesProviding,
+        draft: CatchRecordDraft = CatchRecordDraft()
     ) {
         _viewModel = State(wrappedValue: SpeciesSummaryViewModel(
             gear: gear,
             vessel: vessel,
             referenceNumber: referenceNumber,
             router: router,
-            favouriteSpecies: favouriteSpecies
+            favouriteSpecies: favouriteSpecies,
+            draft: draft
         ))
     }
 

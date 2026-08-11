@@ -36,7 +36,7 @@ final class LandingStorageSpeciesViewModelTests: XCTestCase {
         XCTAssertFalse(sut.isSelected("COD"))
     }
 
-    func test_submit_savesCapturedWeightsForTickedSpecies_andPushesPlaceholderNextStep() async {
+    func test_submit_savesCapturedWeightsForTickedSpecies_andPushesCheckYourAnswers() async {
         let cod = SpeciesOption(name: "Atlantic cod (COD)")
         let hake = SpeciesOption(name: "Hake (HKE)")
         let provider = StubFavouriteSpeciesProvider(initialFavourites: [cod, hake])
@@ -50,7 +50,7 @@ final class LandingStorageSpeciesViewModelTests: XCTestCase {
         await sut.submit()
 
         XCTAssertFalse(sut.saveFailed)
-        XCTAssertEqual(router.path, [.placeholderNextStep])
+        XCTAssertEqual(router.path, [.checkYourAnswers(referenceNumber: referenceNumber)])
         let saved = try? await provider.favouriteSpecies()
         XCTAssertEqual(saved?.first(where: { $0.id == cod.id })?.weightAboveMinimumKg, "8.5")
     }
@@ -67,6 +67,25 @@ final class LandingStorageSpeciesViewModelTests: XCTestCase {
 
         XCTAssertTrue(sut.saveFailed)
         XCTAssertTrue(router.path.isEmpty)
+    }
+
+    // MARK: - Draft capture
+
+    func test_submit_writesTickedSpeciesWithCapturedWeightsIntoDraftAsSpeciesNotLanded() async {
+        let cod = SpeciesOption(name: "Atlantic cod (COD)")
+        let hake = SpeciesOption(name: "Hake (HKE)")
+        let provider = StubFavouriteSpeciesProvider(initialFavourites: [cod, hake])
+        let draft = CatchRecordDraft()
+        let sut = LandingStorageSpeciesViewModel(referenceNumber: referenceNumber, router: CatchRecordRouter(), favouriteSpecies: provider, draft: draft)
+        await sut.loadFavourites()
+        sut.toggleSelection(cod.id)
+        sut.weightEntries[cod.id] = "8.5"
+
+        await sut.submit()
+
+        XCTAssertEqual(draft.speciesNotLanded.count, 1)
+        XCTAssertEqual(draft.speciesNotLanded.first?.id, cod.id)
+        XCTAssertEqual(draft.speciesNotLanded.first?.weightAboveMinimumKg, "8.5")
     }
 }
 

@@ -46,6 +46,7 @@
 				Features/Common/DesignSystem/AppColors.swift,
 				Features/Common/DesignSystem/AppSpacing.swift,
 				Features/Common/DesignSystem/AppTypography.swift,
+				Features/Common/Views/HeaderNavigating.swift,
 				Features/Common/Views/TripsOverviewDemoView.swift,
 				Features/Common/Views/ViewFooter.swift,
 				Features/Common/Views/ViewHeader.swift,

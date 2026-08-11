@@ -48,3 +48,8 @@ final class CatchRecordRouter {
         path = newPath
     }
 }
+
+extension CatchRecordRouter: HeaderNavigating {
+    /// There is a screen to pop back to whenever the journey stack is non-empty.
+    var canGoBack: Bool { !path.isEmpty }
+}

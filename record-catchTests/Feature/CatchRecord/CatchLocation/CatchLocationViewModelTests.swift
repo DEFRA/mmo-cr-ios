@@ -42,14 +42,19 @@ final class CatchLocationViewModelTests: XCTestCase {
         XCTAssertTrue(router.path.isEmpty)
     }
 
-    func test_submit_withSelection_routesToNextStep() {
+    func test_submit_withSelection_routesToSpeciesSubJourney() async {
         let router = CatchRecordRouter()
         let sut = makeSUT(router: router)
         sut.selectedArea = "38E96"
 
-        sut.submit()
+        // Await the sub-journey directly (rather than the fire-and-forget `Task` in `submit()`)
+        // so the assertion is deterministic. With no favourite species, entry goes to Add-species.
+        await sut.enterSpeciesSubJourney()
 
         XCTAssertNil(sut.errorKey)
-        XCTAssertEqual(router.path, [.placeholderNextStep])
+        XCTAssertEqual(
+            router.path,
+            [.addSpecies(gear: .seineNets, vessel: vessel, referenceNumber: referenceNumber, returnPhase: .recordWeights)]
+        )
     }
 }

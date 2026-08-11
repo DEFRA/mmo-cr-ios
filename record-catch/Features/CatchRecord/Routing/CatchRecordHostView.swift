@@ -52,6 +52,7 @@ struct CatchRecordHostView: View {
                 }
         }
         .environment(router)
+        .environment(\.headerNavigator, router)
     }
 
     @ViewBuilder
@@ -139,6 +140,14 @@ struct CatchRecordHostView: View {
             SpeciesSummaryView(
                 gear: gear,
                 vessel: vessel,
+                referenceNumber: referenceNumber,
+                router: router,
+                favouriteSpecies: favouriteSpecies
+            )
+        case .landingStorage(let referenceNumber):
+            LandingStorageView(referenceNumber: referenceNumber, router: router)
+        case .landingStorageSpecies(let referenceNumber):
+            LandingStorageSpeciesView(
                 referenceNumber: referenceNumber,
                 router: router,
                 favouriteSpecies: favouriteSpecies

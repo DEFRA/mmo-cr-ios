@@ -4,7 +4,7 @@ import Foundation
 ///
 /// Lists the species recorded so far (the user's favourites that have weights captured) with their
 /// weights, lets the user remove any, add another, or continue. Offline-first: the favourites store
-/// is the local source of truth (mirrors gears/ports). Routes to `.placeholderNextStep` on continue.
+/// is the local source of truth (mirrors gears/ports). Routes to `.landingStorage` on continue.
 @MainActor
 @Observable
 final class SpeciesSummaryViewModel {
@@ -59,6 +59,6 @@ final class SpeciesSummaryViewModel {
 
     /// Continues to the next step in the journey.
     func submit() {
-        router.push(.placeholderNextStep)
+        router.push(.landingStorage(referenceNumber: referenceNumber))
     }
 }

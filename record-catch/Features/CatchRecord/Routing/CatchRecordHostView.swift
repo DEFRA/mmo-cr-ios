@@ -146,6 +146,12 @@ struct CatchRecordHostView: View {
             )
         case .landingStorage(let referenceNumber):
             LandingStorageView(referenceNumber: referenceNumber, router: router)
+        case .landingStorageSpecies(let referenceNumber):
+            LandingStorageSpeciesView(
+                referenceNumber: referenceNumber,
+                router: router,
+                favouriteSpecies: favouriteSpecies
+            )
         case .placeholderNextStep:
             PlaceholderNextStepView()
         }

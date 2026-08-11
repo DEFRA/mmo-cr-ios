@@ -2,8 +2,9 @@ import Foundation
 
 /// View model for the "Is there any catch you will not be landing straight away?" screen.
 ///
-/// A Yes/No radio question reached after the species summary. UI-only for this phase: both answers
-/// continue to the placeholder next step (the answer is not yet persisted or branched on).
+/// A Yes/No radio question reached after the species summary. "Yes" continues to the
+/// "Which species are you not landing straight away?" screen; "No" continues to the placeholder
+/// next step. The answer is not yet persisted.
 @MainActor
 @Observable
 final class LandingStorageViewModel {
@@ -27,10 +28,21 @@ final class LandingStorageViewModel {
         return LandingStorageValidation.errorKey(for: selection)
     }
 
+    /// The route to push for the current selection. Pure, so it is directly unit-testable.
+    /// "Yes" leads to the not-landing species screen; "No" ends at the placeholder next step.
+    var completionRoute: CatchRecordRoute {
+        switch selection {
+        case .yes:
+            return .landingStorageSpecies(referenceNumber: referenceNumber)
+        case .no, .none:
+            return .placeholderNextStep
+        }
+    }
+
     /// Runs validation for "Save and continue" and routes on to the next screen when valid.
     func submit() {
         didAttemptSubmit = true
         guard selection != nil else { return }
-        router.push(.placeholderNextStep)
+        router.push(completionRoute)
     }
 }

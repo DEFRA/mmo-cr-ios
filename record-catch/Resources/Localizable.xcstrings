@@ -819,6 +819,60 @@
         }
       }
     },
+    "catchRecord.landingStorageSpecies.heading": {
+      "comment": "Not-landing species screen H1.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Pa rywogaethau o'r daith hon nad ydych yn eu glanio ar unwaith?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Which species from this trip are you not landing straight away?"
+          }
+        }
+      }
+    },
+    "catchRecord.landingStorageSpecies.hint": {
+      "comment": "Not-landing species screen hint/example.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Er enghraifft, cadw pysgod gwyn ar y bwrdd fel abwyd neu storio pysgod cregyn mewn cewyll cadw."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For example, keeping white fish onboard for bait or storing shellfish in keep pots."
+          }
+        }
+      }
+    },
+    "catchRecord.landingStorageSpecies.weight": {
+      "comment": "Not-landing species per-species weight field label.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Pwysau uwchlaw'r maint lleiaf a gedwir ar y bwrdd neu mewn cewyll cadw (kg)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weight above minimum size kept onboard or in keep pots (kg)"
+          }
+        }
+      }
+    },
     "catchRecord.placeholder.nextStep.heading": {
       "comment": "Placeholder next-step screen H1.",
       "extractionState": "manual",

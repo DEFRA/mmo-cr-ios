@@ -132,4 +132,90 @@ final class TripDateViewModelTests: XCTestCase {
         sut.value = DateEntryValue()
         XCTAssertNil(sut.errorKey)
     }
+
+    // MARK: - Submit: return date late-submission nudge
+
+    func test_submit_return_whenTripEndedMoreThan24HoursAgo_pushesSubmissionNudge() {
+        let router = CatchRecordRouter()
+        // Return date 31/03/2020; "now" is many days later, so the nudge is required.
+        let now = Calendar(identifier: .gregorian).date(from: DateComponents(year: 2020, month: 4, day: 3, hour: 12))!
+        let sut = TripDateViewModel(
+            phase: .return,
+            vessel: vessel,
+            referenceNumber: referenceNumber,
+            departureDate: Date(),
+            router: router,
+            now: { now }
+        )
+        sut.value = makeValidDate()
+
+        sut.submit()
+
+        XCTAssertNil(sut.errorKey)
+        XCTAssertEqual(
+            router.path,
+            [.submissionNudge(daysLate: 3, vessel: vessel, referenceNumber: referenceNumber)]
+        )
+    }
+
+    func test_submit_return_whenWithin24Hours_doesNotPushNudge() {
+        let router = CatchRecordRouter()
+        // "now" is 1 hour after the entered return date, so no nudge is interposed. The port
+        // sub-journey is exercised deterministically by the `enterPortSubJourney` tests above;
+        // here we assert only that no `submissionNudge` route is pushed synchronously.
+        let end = DateEntryField.parsedDate(from: makeValidDate())!
+        let sut = TripDateViewModel(
+            phase: .return,
+            vessel: vessel,
+            referenceNumber: referenceNumber,
+            departureDate: Date(),
+            router: router,
+            favouritePorts: StubFavouritePortsProvider(),
+            now: { end.addingTimeInterval(60 * 60) }
+        )
+        sut.value = makeValidDate()
+
+        sut.submit()
+
+        XCTAssertNil(sut.errorKey)
+        XCTAssertFalse(router.path.contains(.submissionNudge(daysLate: 0, vessel: vessel, referenceNumber: referenceNumber)))
+    }
+
+    // MARK: - Draft capture
+
+    func test_submit_departure_withValidDate_writesDepartureDateIntoDraft() {
+        let draft = CatchRecordDraft()
+        let sut = TripDateViewModel(
+            phase: .departure,
+            vessel: vessel,
+            referenceNumber: referenceNumber,
+            departureDate: nil,
+            router: CatchRecordRouter(),
+            draft: draft
+        )
+        sut.value = makeValidDate()
+
+        sut.submit()
+
+        XCTAssertEqual(draft.departureDate, DateEntryField.parsedDate(from: makeValidDate()))
+        XCTAssertNil(draft.returnDate)
+    }
+
+    func test_submit_return_withValidDate_writesReturnDateIntoDraft() {
+        let draft = CatchRecordDraft()
+        let sut = TripDateViewModel(
+            phase: .return,
+            vessel: vessel,
+            referenceNumber: referenceNumber,
+            departureDate: Date(),
+            router: CatchRecordRouter(),
+            draft: draft,
+            now: { DateEntryField.parsedDate(from: self.makeValidDate())!.addingTimeInterval(60 * 60) }
+        )
+        sut.value = makeValidDate()
+
+        sut.submit()
+
+        XCTAssertEqual(draft.returnDate, DateEntryField.parsedDate(from: makeValidDate()))
+    }
 }

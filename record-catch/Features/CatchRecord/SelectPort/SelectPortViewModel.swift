@@ -24,6 +24,8 @@ final class SelectPortViewModel {
     private let router: CatchRecordRouter
     private let favouritePorts: FavouritePortsProviding
     private let favouriteGears: FavouriteGearProviding
+    /// Shared journey draft; the selected port is written into it on submit (see `CatchRecordDraft`).
+    private let draft: CatchRecordDraft
 
     init(
         phase: SelectPortPhase,
@@ -31,7 +33,8 @@ final class SelectPortViewModel {
         referenceNumber: String,
         router: CatchRecordRouter,
         favouritePorts: FavouritePortsProviding = StubFavouritePortsProvider(),
-        favouriteGears: FavouriteGearProviding = StubFavouriteGearProvider()
+        favouriteGears: FavouriteGearProviding = StubFavouriteGearProvider(),
+        draft: CatchRecordDraft = CatchRecordDraft()
     ) {
         self.phase = phase
         self.vessel = vessel
@@ -39,6 +42,7 @@ final class SelectPortViewModel {
         self.router = router
         self.favouritePorts = favouritePorts
         self.favouriteGears = favouriteGears
+        self.draft = draft
     }
 
     /// Loads favourite ports for display. Failures leave the list empty.
@@ -56,10 +60,13 @@ final class SelectPortViewModel {
     func submit() {
         didAttemptSubmit = true
         guard selection != nil else { return }
+        let selectedPort = favourites.first { $0.name == selection }
         switch phase {
         case .departure:
+            draft.departurePort = selectedPort
             router.push(.selectPort(phase: .return, vessel: vessel, referenceNumber: referenceNumber))
         case .return:
+            draft.returnPort = selectedPort
             Task { await enterGearSubJourney() }
         }
     }

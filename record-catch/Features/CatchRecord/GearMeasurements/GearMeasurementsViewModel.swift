@@ -26,19 +26,24 @@ final class GearMeasurementsViewModel {
 
     private let router: CatchRecordRouter
     private let favouriteGears: FavouriteGearProviding
+    /// Shared journey draft; the gear with its captured measurements is written into it on submit
+    /// (see `CatchRecordDraft`).
+    private let draft: CatchRecordDraft
 
     init(
         gear: GearOption,
         vessel: String,
         referenceNumber: String,
         router: CatchRecordRouter,
-        favouriteGears: FavouriteGearProviding = StubFavouriteGearProvider()
+        favouriteGears: FavouriteGearProviding = StubFavouriteGearProvider(),
+        draft: CatchRecordDraft = CatchRecordDraft()
     ) {
         self.gear = gear
         self.vessel = vessel
         self.referenceNumber = referenceNumber
         self.router = router
         self.favouriteGears = favouriteGears
+        self.draft = draft
         self.entries = Dictionary(uniqueKeysWithValues: gear.measurements.map { ($0.id, "") })
     }
 
@@ -74,6 +79,7 @@ final class GearMeasurementsViewModel {
         defer { isSaving = false }
         do {
             try await favouriteGears.addFavourite(savedGear)
+            draft.gear = savedGear
             router.push(completionRoute)
         } catch {
             saveFailed = true

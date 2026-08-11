@@ -10,14 +10,23 @@ struct TripDateView: View {
     @Environment(AppLanguageStore.self) private var languageStore
     @State private var viewModel: TripDateViewModel
 
-    init(phase: TripDatePhase, vessel: String, referenceNumber: String, departureDate: Date?, router: CatchRecordRouter, favouritePorts: FavouritePortsProviding) {
+    init(
+        phase: TripDatePhase,
+        vessel: String,
+        referenceNumber: String,
+        departureDate: Date?,
+        router: CatchRecordRouter,
+        favouritePorts: FavouritePortsProviding,
+        draft: CatchRecordDraft = CatchRecordDraft()
+    ) {
         _viewModel = State(wrappedValue: TripDateViewModel(
             phase: phase,
             vessel: vessel,
             referenceNumber: referenceNumber,
             departureDate: departureDate,
             router: router,
-            favouritePorts: favouritePorts
+            favouritePorts: favouritePorts,
+            draft: draft
         ))
     }
 

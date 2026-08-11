@@ -23,6 +23,10 @@ final class TripDateViewModel {
 
     private let router: CatchRecordRouter
     private let favouritePorts: FavouritePortsProviding
+    /// Shared journey draft; the parsed date is written into it on submit (see `CatchRecordDraft`).
+    private let draft: CatchRecordDraft
+    /// Injectable "now" so the late-submission nudge decision is deterministic in tests.
+    private let now: () -> Date
 
     init(
         phase: TripDatePhase,
@@ -30,7 +34,9 @@ final class TripDateViewModel {
         referenceNumber: String,
         departureDate: Date?,
         router: CatchRecordRouter,
-        favouritePorts: FavouritePortsProviding = StubFavouritePortsProvider()
+        favouritePorts: FavouritePortsProviding = StubFavouritePortsProvider(),
+        draft: CatchRecordDraft = CatchRecordDraft(),
+        now: @escaping () -> Date = Date.init
     ) {
         self.phase = phase
         self.vessel = vessel
@@ -38,6 +44,8 @@ final class TripDateViewModel {
         self.departureDate = departureDate
         self.router = router
         self.favouritePorts = favouritePorts
+        self.draft = draft
+        self.now = now
     }
 
     /// String Catalog key for the screen's H1.
@@ -58,9 +66,20 @@ final class TripDateViewModel {
         guard let date = DateEntryField.parsedDate(from: value) else { return }
         switch phase {
         case .departure:
+            draft.departureDate = date
             router.push(.tripDate(phase: .return, vessel: vessel, referenceNumber: referenceNumber, departureDate: date))
         case .return:
-            Task { await enterPortSubJourney() }
+            draft.returnDate = date
+            // Records must be submitted within 24 hours of a trip ending. When the trip ended more
+            // than 24 hours ago, interpose the late-submission nudge before the port sub-journey so
+            // the user can double-check the trip end date (see `SubmissionNudge`).
+            let currentTime = now()
+            if SubmissionNudge.isNeeded(tripEndDate: date, now: currentTime) {
+                let daysLate = SubmissionNudge.daysLate(tripEndDate: date, now: currentTime)
+                router.push(.submissionNudge(daysLate: daysLate, vessel: vessel, referenceNumber: referenceNumber))
+            } else {
+                Task { await enterPortSubJourney() }
+            }
         }
     }
 

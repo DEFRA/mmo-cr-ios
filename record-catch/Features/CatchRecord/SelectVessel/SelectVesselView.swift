@@ -6,8 +6,12 @@ struct SelectVesselView: View {
     @Environment(AppLanguageStore.self) private var languageStore
     @State private var viewModel: SelectVesselViewModel
 
-    init(router: CatchRecordRouter, provider: VesselProviding = StaticVesselProvider()) {
-        _viewModel = State(wrappedValue: SelectVesselViewModel(router: router, provider: provider))
+    init(
+        router: CatchRecordRouter,
+        provider: VesselProviding = StaticVesselProvider(),
+        draft: CatchRecordDraft = CatchRecordDraft()
+    ) {
+        _viewModel = State(wrappedValue: SelectVesselViewModel(router: router, provider: provider, draft: draft))
     }
 
     var body: some View {

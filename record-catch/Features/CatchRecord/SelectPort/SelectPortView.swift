@@ -16,7 +16,8 @@ struct SelectPortView: View {
         referenceNumber: String,
         router: CatchRecordRouter,
         favouritePorts: FavouritePortsProviding,
-        favouriteGears: FavouriteGearProviding = StubFavouriteGearProvider()
+        favouriteGears: FavouriteGearProviding = StubFavouriteGearProvider(),
+        draft: CatchRecordDraft = CatchRecordDraft()
     ) {
         _viewModel = State(wrappedValue: SelectPortViewModel(
             phase: phase,
@@ -24,7 +25,8 @@ struct SelectPortView: View {
             referenceNumber: referenceNumber,
             router: router,
             favouritePorts: favouritePorts,
-            favouriteGears: favouriteGears
+            favouriteGears: favouriteGears,
+            draft: draft
         ))
     }
 

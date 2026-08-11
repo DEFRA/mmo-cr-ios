@@ -57,4 +57,22 @@ final class CatchLocationViewModelTests: XCTestCase {
             [.addSpecies(gear: .seineNets, vessel: vessel, referenceNumber: referenceNumber, returnPhase: .recordWeights)]
         )
     }
+
+    // MARK: - Draft capture
+
+    func test_submit_withSelection_writesStatisticalAreaIntoDraft() {
+        let draft = CatchRecordDraft()
+        let sut = CatchLocationViewModel(
+            gear: .seineNets,
+            vessel: vessel,
+            referenceNumber: referenceNumber,
+            router: CatchRecordRouter(),
+            draft: draft
+        )
+        sut.selectedArea = "38E96"
+
+        sut.submit()
+
+        XCTAssertEqual(draft.statisticalArea, "38E96")
+    }
 }

@@ -264,6 +264,63 @@ final class CatchRecordUITests: XCTestCase {
         XCTAssertTrue(element(app, "CatchRecord.addPort.heading").waitForExistence(timeout: 5))
     }
 
+    // MARK: - Check your answers
+
+    @MainActor
+    func test_checkYourAnswers_showsHeadingAndAllFourSections() {
+        let app = launch("-uiTestCatchRecordCheckYourAnswers")
+
+        XCTAssertTrue(element(app, "CatchRecord.checkYourAnswers.heading").waitForExistence(timeout: 5))
+        XCTAssertTrue(element(app, "CatchRecord.checkYourAnswers.section.trip").exists)
+        XCTAssertTrue(element(app, "CatchRecord.checkYourAnswers.section.gear").exists)
+        XCTAssertTrue(element(app, "CatchRecord.checkYourAnswers.section.speciesCaught").exists)
+        XCTAssertTrue(element(app, "CatchRecord.checkYourAnswers.section.speciesNotLanded").exists)
+    }
+
+    @MainActor
+    func test_checkYourAnswers_showsExpectedSeededValues() {
+        let app = launch("-uiTestCatchRecordCheckYourAnswers")
+
+        XCTAssertTrue(element(app, "CatchRecord.checkYourAnswers.heading").waitForExistence(timeout: 5))
+
+        XCTAssertTrue(app.staticTexts["ACHILLES"].exists)
+        XCTAssertTrue(app.staticTexts["Plymouth"].exists)
+        XCTAssertTrue(app.staticTexts["27.7.e"].exists)
+        XCTAssertTrue(app.staticTexts["Seine nets (not specified)"].exists)
+        XCTAssertTrue(app.staticTexts["80"].exists)
+        XCTAssertTrue(app.staticTexts["Atlantic cod (COD)"].firstMatch.exists)
+        XCTAssertTrue(app.staticTexts["250 kg"].exists)
+        XCTAssertTrue(app.staticTexts["5 kg"].exists)
+    }
+
+    @MainActor
+    func test_checkYourAnswers_tappingChange_navigatesAwayFromSummary() {
+        let app = launch("-uiTestCatchRecordCheckYourAnswers")
+
+        XCTAssertTrue(element(app, "CatchRecord.checkYourAnswers.heading").waitForExistence(timeout: 5))
+
+        let changeVessel = app.buttons["CatchRecord.checkYourAnswers.change.trip.vessel"]
+        XCTAssertTrue(changeVessel.waitForExistence(timeout: 5))
+        changeVessel.tap()
+
+        // Navigates forward into the journey, to the screen the vessel was captured on.
+        XCTAssertTrue(element(app, ID.vesselGroup).waitForExistence(timeout: 5))
+        XCTAssertFalse(element(app, "CatchRecord.checkYourAnswers.heading").exists)
+    }
+
+    @MainActor
+    func test_checkYourAnswers_tappingSaveAndContinue_navigatesToPlaceholderNextStep() {
+        let app = launch("-uiTestCatchRecordCheckYourAnswers")
+
+        XCTAssertTrue(element(app, "CatchRecord.checkYourAnswers.heading").waitForExistence(timeout: 5))
+
+        let saveContinue = app.buttons["CatchRecord.checkYourAnswers.saveContinue"]
+        XCTAssertTrue(saveContinue.waitForExistence(timeout: 5))
+        saveContinue.tap()
+
+        XCTAssertTrue(element(app, "CatchRecord.placeholderNextStep.heading").waitForExistence(timeout: 5))
+    }
+
     private func enterDate(_ app: XCUIApplication, day: String, month: String, year: String, headingID: String) {
         let dayField = app.textFields["Day"]
         XCTAssertTrue(dayField.waitForExistence(timeout: 5))

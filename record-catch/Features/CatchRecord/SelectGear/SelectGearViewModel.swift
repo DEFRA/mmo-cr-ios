@@ -22,17 +22,21 @@ final class SelectGearViewModel {
 
     private let router: CatchRecordRouter
     private let favouriteGears: FavouriteGearProviding
+    /// Shared journey draft; the confirmed gear is written into it on submit (see `CatchRecordDraft`).
+    private let draft: CatchRecordDraft
 
     init(
         vessel: String,
         referenceNumber: String,
         router: CatchRecordRouter,
-        favouriteGears: FavouriteGearProviding = StubFavouriteGearProvider()
+        favouriteGears: FavouriteGearProviding = StubFavouriteGearProvider(),
+        draft: CatchRecordDraft = CatchRecordDraft()
     ) {
         self.vessel = vessel
         self.referenceNumber = referenceNumber
         self.router = router
         self.favouriteGears = favouriteGears
+        self.draft = draft
     }
 
     /// Loads favourite gears for display. Failures leave the list empty.
@@ -55,6 +59,7 @@ final class SelectGearViewModel {
         didAttemptSubmit = true
         guard !selection.isEmpty else { return }
         guard let gear = favourites.first(where: { selection.contains($0.id) }) else { return }
+        draft.gear = gear
         router.push(.catchLocation(gear: gear, vessel: vessel, referenceNumber: referenceNumber))
     }
 

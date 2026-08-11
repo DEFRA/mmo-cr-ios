@@ -12,12 +12,14 @@ struct ViewHeader: View {
     @Environment(AppLanguageStore.self) private var languageStore
     /// Read optionally so `ViewHeader` still works in contexts without the
     /// "Create a catch record" journey stack (e.g. previews and demo screens).
-    @Environment(CatchRecordRouter.self) private var router: CatchRecordRouter?
+    /// Depends on the `HeaderNavigating` protocol, not the concrete `CatchRecordRouter`,
+    /// so `Common` stays decoupled from the `CatchRecord` feature layer.
+    @Environment(\.headerNavigator) private var navigator
 
     /// The back control is only shown when there is a screen to pop back to, so
     /// the journey root doesn't render a dead-end "Back" control.
     private var canGoBack: Bool {
-        (router?.path.isEmpty == false)
+        (navigator?.canGoBack == true)
     }
 
     var body: some View {
@@ -49,7 +51,7 @@ struct ViewHeader: View {
 
     private var backButton: some View {
         Button {
-            router?.pop()
+            navigator?.pop()
         } label: {
             HStack(spacing: AppSpacing.xSmall) {
                 Image(systemName: "chevron.left")

@@ -729,6 +729,96 @@
         }
       }
     },
+    "catchRecord.landingStorage.heading": {
+      "comment": "Landing storage screen H1.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "A oes unrhyw ddalfa o'r daith hon na fyddwch yn ei glanio ar unwaith?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Is there any catch from this trip that you will not be landing straight away?"
+          }
+        }
+      }
+    },
+    "catchRecord.landingStorage.hint": {
+      "comment": "Landing storage screen hint/example.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Er enghraifft, cadw pysgod gwyn ar y bwrdd fel abwyd neu storio pysgod cregyn mewn cewyll cadw."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For example, keeping white fish onboard for bait or storing shellfish in keep pots."
+          }
+        }
+      }
+    },
+    "catchRecord.landingStorage.option.no": {
+      "comment": "Landing storage no option.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Na"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No"
+          }
+        }
+      }
+    },
+    "catchRecord.landingStorage.option.yes": {
+      "comment": "Landing storage yes option.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ie"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yes"
+          }
+        }
+      }
+    },
+    "catchRecord.landingStorage.validation.none": {
+      "comment": "Landing storage inline error when no option chosen.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Dewiswch a fyddwch yn glanio'r holl ddalfa ar unwaith"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select whether you will be landing all the catch straight away"
+          }
+        }
+      }
+    },
     "catchRecord.placeholder.nextStep.heading": {
       "comment": "Placeholder next-step screen H1.",
       "extractionState": "manual",

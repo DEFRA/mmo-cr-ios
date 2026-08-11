@@ -50,6 +50,10 @@ enum CatchRecordRoute: Hashable {
     case addSpecies(gear: GearOption, vessel: String, referenceNumber: String, returnPhase: SpeciesReturnPhase)
     /// Review the recorded species and their weights, with per-species removal, before continuing.
     case speciesSummary(gear: GearOption, vessel: String, referenceNumber: String)
+    /// Ask whether any catch from this trip will not be landed straight away (e.g. bait or keep
+    /// pots). A Yes/No radio question reached after the species summary; carries the display-only
+    /// reference number shown at the top of the screen.
+    case landingStorage(referenceNumber: String)
     /// Minimal placeholder for the next step in the journey (future phase).
     case placeholderNextStep
 }

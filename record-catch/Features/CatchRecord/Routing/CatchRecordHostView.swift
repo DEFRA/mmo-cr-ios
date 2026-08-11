@@ -52,6 +52,7 @@ struct CatchRecordHostView: View {
                 }
         }
         .environment(router)
+        .environment(\.headerNavigator, router)
     }
 
     @ViewBuilder
@@ -143,6 +144,8 @@ struct CatchRecordHostView: View {
                 router: router,
                 favouriteSpecies: favouriteSpecies
             )
+        case .landingStorage(let referenceNumber):
+            LandingStorageView(referenceNumber: referenceNumber, router: router)
         case .placeholderNextStep:
             PlaceholderNextStepView()
         }

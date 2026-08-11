@@ -112,8 +112,9 @@ struct SubmissionsTable: View {
                 createdBy: headerCreatedBy
             )
 
-            Divider()
-                .overlay(AppColors.divider)
+            Rectangle()
+                .fill(AppColors.divider)
+                .frame(height: 2)
 
             ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
                 SubmissionTableRow(
@@ -130,10 +131,6 @@ struct SubmissionsTable: View {
                 }
             }
         }
-        .overlay(
-            Rectangle()
-                .stroke(AppColors.divider, lineWidth: 1)
-        )
     }
 }
 
@@ -150,9 +147,7 @@ private struct SubmissionTableHeader: View {
             headerCell(status, alignment: .leading)
             headerCell(createdBy, alignment: .leading)
         }
-        .padding(.horizontal, AppSpacing.small)
         .padding(.vertical, AppSpacing.small)
-        .background(AppColors.surfaceMuted)
     }
 
     private func headerCell(_ text: String, alignment: Alignment) -> some View {
@@ -197,8 +192,7 @@ private struct SubmissionTableRow: View {
                 .foregroundStyle(AppColors.textPrimary)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.horizontal, AppSpacing.small)
-        .padding(.vertical, AppSpacing.small)
+        .padding(.vertical, AppSpacing.medium)
     }
 }
 
@@ -209,6 +203,8 @@ private struct SubmissionStatusTag: View {
         Text(status.rawValue)
             .font(AppTypography.bodySmall)
             .foregroundStyle(status.textColor)
+            .lineLimit(1)
+            .fixedSize()
             .padding(.horizontal, AppSpacing.small)
             .padding(.vertical, AppSpacing.xSmall)
             .background(status.backgroundColor)

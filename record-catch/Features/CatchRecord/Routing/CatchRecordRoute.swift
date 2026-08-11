@@ -19,6 +19,12 @@ enum CatchRecordRoute: Hashable {
     /// return ≥ departure without redesigning the route; unused for validation in this UI-only
     /// phase).
     case tripDate(phase: TripDatePhase, vessel: String, referenceNumber: String, departureDate: Date?)
+    /// Warn that the record is being submitted more than 24 hours after the trip end date, so the
+    /// user can double-check the date before continuing (see `SubmissionNudge`). Reached from a
+    /// valid trip-return date that is more than 24 hours in the past. Carries the whole number of
+    /// days late (for the heading), the vessel and the display-only reference number, all threaded
+    /// onward into the port sub-journey when the user continues.
+    case submissionNudge(daysLate: Int, vessel: String, referenceNumber: String)
     /// Add a port via type-to-search and save it to the user's favourites (see ADR-0004). Shown
     /// when the user has no favourite ports yet, and reached from a select screen's "Add another
     /// port" button. `returnPhase` records which select screen to return to after saving

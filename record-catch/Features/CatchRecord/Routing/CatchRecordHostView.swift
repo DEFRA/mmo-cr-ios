@@ -73,6 +73,14 @@ struct CatchRecordHostView: View {
                 router: router,
                 favouritePorts: favouritePorts
             )
+        case .submissionNudge(let daysLate, let vessel, let referenceNumber):
+            SubmissionNudgeView(
+                daysLate: daysLate,
+                vessel: vessel,
+                referenceNumber: referenceNumber,
+                router: router,
+                favouritePorts: favouritePorts
+            )
         case .addPort(let vessel, let referenceNumber, let returnPhase):
             AddPortView(
                 vessel: vessel,

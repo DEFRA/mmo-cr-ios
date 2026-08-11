@@ -51,6 +51,16 @@ final class AppLanguageStore {
         LocalizedBundle.string(key, language: language)
     }
 
+    /// Resolves `key` in the currently selected language and substitutes an integer `count`.
+    ///
+    /// The stored value must contain a single `%lld` placeholder. Used for copy that carries a
+    /// count (e.g. "…submitted %lld days after the trip end date"). The count is formatted with a
+    /// fixed C-locale so a `%lld` placeholder is filled deterministically regardless of device
+    /// locale — the surrounding copy is already in the selected language.
+    func localized(_ key: String, count: Int) -> String {
+        String(format: LocalizedBundle.string(key, language: language), count)
+    }
+
     /// A safe, shared store for use in `#Preview`s so other features' previews
     /// don't crash when they forget to inject one. Backed by an isolated,
     /// throwaway `UserDefaults` suite so it never mutates real persisted state.

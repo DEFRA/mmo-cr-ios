@@ -1629,6 +1629,60 @@
         }
       }
     },
+    "catchRecord.submissionNudge.body": {
+      "comment": "Guidance paragraph on the late-submission nudge.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Rhaid cyflwyno cofnodion dalfa o fewn 24 awr i daith yn dod i ben."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Catch records must be submitted within 24 hours of a trip ending."
+          }
+        }
+      }
+    },
+    "catchRecord.submissionNudge.checkDateLink": {
+      "comment": "Link that returns to the trip end date screen to correct the date.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Gwiriwch fod dyddiad diwedd y daith yn gywir cyn i chi barhau"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check the trip end date is correct before you continue"
+          }
+        }
+      }
+    },
+    "catchRecord.submissionNudge.heading": {
+      "comment": "H1 for the late-submission nudge. %lld is the whole number of days after the trip end date.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Mae'r cofnod dalfa hwn yn cael ei gyflwyno %lld diwrnod ar ôl dyddiad diwedd y daith"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This catch record is being submitted %lld days after the trip end date"
+          }
+        }
+      }
+    },
     "catchRecord.tripDate.departure.hint": {
       "comment": "Hint for the trip departure date screen.",
       "extractionState": "manual",

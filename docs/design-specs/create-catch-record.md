@@ -47,6 +47,26 @@ Rendered via `ViewTemplate(title: "")` (empty title — the screen renders its o
 6. Continue → `router.push(.placeholderNextStep)` — a minimal placeholder screen ("Next step —
    coming soon") that ends Part 1 of the journey.
 
+## Screen — Late-submission nudge (`CatchRecord.submissionNudge.*`)
+
+Interposed after a valid **trip end (return) date** when the trip ended **more than 24 hours** before
+"now" (records must be submitted within 24 hours of a trip ending). The decision is pure
+(`SubmissionNudge.isNeeded` / `daysLate`) with an injectable clock, so it is deterministic in tests.
+
+1. Caption "New catch record", display-only reference number header (`.referenceNumber`).
+2. H1 "This catch record is being submitted **x days** after the trip end date"
+   (`.heading`, `x` = whole calendar days late via `%lld`).
+3. Guidance paragraph: "Catch records must be submitted within 24 hours of a trip ending."
+   (`.body`).
+4. Link "Check the trip end date is correct before you continue" (`.checkDateLink`) — a real
+   `Button` (44×44pt target, `.isLink` trait) that pops back to the trip end date screen to correct
+   the date.
+5. `PrimaryButton` "Save and continue" (`.saveContinue`) → acknowledges and continues into the port
+   sub-journey (the same next step the return date screen would have taken).
+
+When the trip ended **within** 24 hours (or the entered date is in the future), the nudge is skipped
+and the journey continues straight into the port sub-journey.
+
 ## States (per screen)
 
 | State | Trigger | Presentation |
@@ -92,6 +112,9 @@ String Catalog (never a `[CY-TODO]` prefix in rendered copy).
 | `catchRecord.tripToday.option.no` | No | Na |
 | `catchRecord.tripToday.validation.none` | Select whether your trip started and finished today | Dewiswch a wnaeth eich taith ddechrau a gorffen heddiw |
 | `catchRecord.saveContinue` | Save and continue | Cadw a pharhau |
+| `catchRecord.submissionNudge.heading` | This catch record is being submitted %lld days after the trip end date | Mae'r cofnod dalfa hwn yn cael ei gyflwyno %lld diwrnod ar ôl dyddiad diwedd y daith |
+| `catchRecord.submissionNudge.body` | Catch records must be submitted within 24 hours of a trip ending. | Rhaid cyflwyno cofnodion dalfa o fewn 24 awr i daith yn dod i ben. |
+| `catchRecord.submissionNudge.checkDateLink` | Check the trip end date is correct before you continue | Gwiriwch fod dyddiad diwedd y daith yn gywir cyn i chi barhau |
 | `catchRecord.placeholder.nextStep.heading` | Next step | Cam nesaf |
 | `catchRecord.placeholder.nextStep.message` | This part of the journey is coming soon. | Bydd y rhan hon o'r daith ar gael yn fuan. |
 | `a11y.errorPrefix` | (existing) Error: | Gwall: |

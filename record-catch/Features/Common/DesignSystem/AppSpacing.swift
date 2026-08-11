@@ -10,6 +10,8 @@ enum AppSpacing {
 }
 
 enum AppControlSize {
+    /// WCAG 2.2 (2.5.8) / Apple HIG minimum interactive target size.
+    static let minTapTarget: CGFloat = 44
     static let buttonHeight: CGFloat = 44
     static let dateFieldHeight: CGFloat = 44
     static let dateFieldShortWidth: CGFloat = 42

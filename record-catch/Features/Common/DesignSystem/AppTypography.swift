@@ -6,6 +6,7 @@ enum AppTypography {
     static let pageTitle = Font.system(size: 34, weight: .bold)
     static let body = Font.system(size: 19, weight: .regular)
     static let bodySmall = Font.system(size: 16, weight: .regular)
+    static let warningBox = Font.system(size: 18, weight: .bold)
     static let button = Font.system(size: 19, weight: .semibold)
     static let fieldLabel = Font.system(size: 16, weight: .regular)
     static let hint = Font.system(size: 16, weight: .regular)

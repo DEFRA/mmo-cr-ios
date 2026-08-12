@@ -22,7 +22,7 @@ struct WarningBox: View {
 
             // White body with the message.
             LocalizedText(messageKey)
-                .font(AppTypography.bodySmall)
+                .font(AppTypography.warningBox)
                 .foregroundStyle(AppColors.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)

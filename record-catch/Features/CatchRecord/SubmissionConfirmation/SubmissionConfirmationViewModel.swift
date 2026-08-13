@@ -5,8 +5,11 @@ import Foundation
 ///
 /// Requires the user to tick a single confirmation checkbox acknowledging the record is complete
 /// and accurate before "Accept and submit trip details" proceeds; declining to tick it shows an
-/// inline error and does not navigate. Actual submission to a backend is not yet implemented in
-/// this UI-only phase — a confirmed submit continues to the placeholder next step.
+/// inline error and does not navigate. Once ticked, "Accept and submit trip details" calls the
+/// (stubbed) `CatchRecordSubmissionServicing` — this is where the real submission API call will
+/// happen in a future phase — and only routes on to `submissionSuccess` once it succeeds. A
+/// transient/offline failure surfaces a recoverable inline error and does not navigate, matching
+/// the `saveFailed` pattern used elsewhere in this module (e.g. `GearMeasurementsViewModel`).
 @MainActor
 @Observable
 final class SubmissionConfirmationViewModel {
@@ -16,12 +19,22 @@ final class SubmissionConfirmationViewModel {
 
     var isConfirmed = false
     private(set) var didAttemptSubmit = false
+    private(set) var isSubmitting = false
+    /// Set when the (stubbed) submission API call fails, so the view can surface a recoverable,
+    /// accessible error rather than silently discarding the attempt.
+    private(set) var submitFailed = false
 
     private let router: CatchRecordRouter
+    private let submissionService: CatchRecordSubmissionServicing
 
-    init(referenceNumber: String, router: CatchRecordRouter) {
+    init(
+        referenceNumber: String,
+        router: CatchRecordRouter,
+        submissionService: CatchRecordSubmissionServicing = StubCatchRecordSubmissionService()
+    ) {
         self.referenceNumber = referenceNumber
         self.router = router
+        self.submissionService = submissionService
     }
 
     /// Current inline error, once a submit has been attempted.
@@ -30,10 +43,21 @@ final class SubmissionConfirmationViewModel {
         return SubmissionConfirmationValidation.errorKey(for: isConfirmed)
     }
 
-    /// Validates the confirmation checkbox and routes on to the next step once ticked.
-    func submit() {
+    /// Validates the confirmation checkbox, submits the record via the (stubbed) submission
+    /// service, and routes on to the success screen once it succeeds.
+    func submit() async {
         didAttemptSubmit = true
+        submitFailed = false
         guard isConfirmed else { return }
-        router.push(.placeholderNextStep)
+
+        isSubmitting = true
+        defer { isSubmitting = false }
+        do {
+            try await submissionService.submit(referenceNumber: referenceNumber)
+            router.push(.submissionSuccess(referenceNumber: referenceNumber))
+        } catch {
+            submitFailed = true
+        }
     }
 }
+

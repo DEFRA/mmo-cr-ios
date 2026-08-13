@@ -68,8 +68,8 @@ final class CatchRecordRouterTests: XCTestCase {
         let sut = CatchRecordRouter()
         sut.startNew()
 
-        sut.setPath([.placeholderNextStep])
+        sut.setPath([.submissionSuccess(referenceNumber: "REF")])
 
-        XCTAssertEqual(sut.path, [.placeholderNextStep])
+        XCTAssertEqual(sut.path, [.submissionSuccess(referenceNumber: "REF")])
     }
 }

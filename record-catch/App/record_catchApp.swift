@@ -73,6 +73,12 @@ struct record_catchApp: App {
             CatchRecordHostView(
                 initialRoute: .submissionConfirmation(referenceNumber: "A1234520260727150815")
             )
+        } else if arguments.contains("-uiTestCatchRecordSubmissionSuccess") {
+            // Seeds straight to the final "Submitted" screen, for UI testing the confirmation
+            // panel and "View your catch records" action without driving the whole journey by hand.
+            CatchRecordHostView(
+                initialRoute: .submissionSuccess(referenceNumber: "A1234520260727150815")
+            )
         } else if arguments.contains("-uiTestHome") {
             CatchRecordHostView()
         } else {

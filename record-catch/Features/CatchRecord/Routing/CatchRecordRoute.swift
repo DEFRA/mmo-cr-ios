@@ -70,12 +70,14 @@ enum CatchRecordRoute: Hashable {
     case checkYourAnswers(referenceNumber: String)
     /// Final confirmation before submitting a completed catch record. Reached from "Save and
     /// continue" on Check your answers; requires an explicit checkbox confirmation before
-    /// "Accept and submit trip details" proceeds (submission itself is not yet wired to a real
-    /// backend — see `SubmissionConfirmationViewModel`). Carries the display-only reference
-    /// number shown at the top of the screen.
+    /// "Accept and submit trip details" proceeds, which then calls the (stubbed)
+    /// `CatchRecordSubmissionServicing` and, on success, pushes `submissionSuccess`. Carries the
+    /// display-only reference number shown at the top of the screen.
     case submissionConfirmation(referenceNumber: String)
-    /// Minimal placeholder for the next step in the journey (future phase).
-    case placeholderNextStep
+    /// The final "Your catch record has been submitted" screen, reached once the (stubbed)
+    /// submission API call succeeds. Carries the reference number so it can be shown in the
+    /// green confirmation panel; "View your catch records" returns to Home (`popToRoot()`).
+    case submissionSuccess(referenceNumber: String)
 }
 
 /// Which species screen the Add-species screen should return to after a successful save.

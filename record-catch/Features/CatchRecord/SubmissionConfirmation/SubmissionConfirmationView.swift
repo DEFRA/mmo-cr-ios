@@ -60,11 +60,34 @@ struct SubmissionConfirmationView: View {
                 errorAccessibilityIdentifier: "\(identifierPrefix).error"
             )
 
-            PrimaryButton(title: languageStore.localized("catchRecord.submissionConfirmation.accept")) {
-                viewModel.submit()
+            if viewModel.submitFailed {
+                submitFailedBanner
+            }
+
+            PrimaryButton(
+                title: languageStore.localized("catchRecord.submissionConfirmation.accept"),
+                isDisabled: viewModel.isSubmitting
+            ) {
+                Task { await viewModel.submit() }
             }
             .accessibilityIdentifier("\(identifierPrefix).accept")
         }
+    }
+
+    private var submitFailedBanner: some View {
+        HStack(alignment: .top, spacing: AppSpacing.xSmall) {
+            Image(systemName: "exclamationmark.circle.fill")
+                .foregroundStyle(AppColors.errorRed)
+                .accessibilityHidden(true)
+            Text(languageStore.localized("catchRecord.submissionConfirmation.submitFailed"))
+                .font(AppTypography.error)
+                .foregroundStyle(AppColors.errorRed)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(
+            "\(languageStore.localized("a11y.errorPrefix")) \(languageStore.localized("catchRecord.submissionConfirmation.submitFailed"))"
+        )
+        .accessibilityIdentifier("\(identifierPrefix).submitError")
     }
 
     /// The bold "By submitting this record…" notice with a leading icon. Meaning is carried by the

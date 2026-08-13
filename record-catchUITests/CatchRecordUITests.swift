@@ -177,14 +177,19 @@ final class CatchRecordUITests: XCTestCase {
         element(app, ID.tripNo).tap()
         app.buttons[ID.tripContinue].tap()
 
-        // Departure date screen.
+        // Departure date screen. Dates are computed relative to "now" (rather than a fixed
+        // historical date) so a return date of "today" never falls outside the 24-hour
+        // submission window and triggers the Submission Nudge screen (see `SubmissionNudge`).
+        let departure = dateStrings(daysAgo: 1)
+        let returnValue = dateStrings(daysAgo: 0)
+
         XCTAssertTrue(element(app, ID.departureHeading).waitForExistence(timeout: 5))
-        enterDate(app, day: "31", month: "03", year: "2020", headingID: ID.departureHeading)
+        enterDate(app, day: departure.day, month: departure.month, year: departure.year, headingID: ID.departureHeading)
         app.buttons[ID.departureContinue].tap()
 
         // Return date screen.
         XCTAssertTrue(element(app, ID.returnHeading).waitForExistence(timeout: 5))
-        enterDate(app, day: "01", month: "04", year: "2020", headingID: ID.returnHeading)
+        enterDate(app, day: returnValue.day, month: returnValue.month, year: returnValue.year, headingID: ID.returnHeading)
         app.buttons[ID.returnContinue].tap()
 
         // With no favourites yet, enters the port sub-journey at the Add-port screen.
@@ -215,7 +220,7 @@ final class CatchRecordUITests: XCTestCase {
     // MARK: - Port journey
 
     @MainActor
-    func test_portJourney_addFirstPort_thenSelectDepartureAndReturn_reachesPlaceholder() {
+    func test_portJourney_addFirstPort_thenSelectDepartureAndReturn_reachesGearSubJourney() {
         let app = launch("-uiTestCatchRecordAddPort")
 
         // Add-port screen shown first (no favourites yet).
@@ -230,7 +235,12 @@ final class CatchRecordUITests: XCTestCase {
         XCTAssertTrue(field.waitForExistence(timeout: 5))
         field.tap()
         field.typeText("Hastings")
-        app.buttons["Hastings"].firstMatch.tap()
+        // Queried via the broad `element()` helper (any element type), not `app.buttons[...]`,
+        // to avoid a flaky "Automation type mismatch" accessibility-tree lookup failure seen with
+        // a type-specific button query on this Xcode/simulator combination.
+        let hastingsResult = element(app, "Hastings")
+        XCTAssertTrue(hastingsResult.waitForExistence(timeout: 5))
+        hastingsResult.tap()
 
         app.buttons["CatchRecord.addPort.saveContinue"].tap()
 
@@ -248,8 +258,8 @@ final class CatchRecordUITests: XCTestCase {
         element(app, "CatchRecord.selectPort.return.option.hastings").tap()
         app.buttons["CatchRecord.selectPort.return.saveContinue"].tap()
 
-        // Reaches the placeholder next-step screen.
-        XCTAssertTrue(element(app, "CatchRecord.placeholderNextStep.heading").waitForExistence(timeout: 5))
+        // With no favourite gears yet, enters the gear sub-journey at the Add-gear screen.
+        XCTAssertTrue(element(app, "CatchRecord.addGear.heading").waitForExistence(timeout: 5))
     }
 
     @MainActor
@@ -336,7 +346,7 @@ final class CatchRecordUITests: XCTestCase {
     }
 
     @MainActor
-    func test_submissionConfirmation_tickingCheckboxThenAccept_navigatesToPlaceholderNextStep() {
+    func test_submissionConfirmation_tickingCheckboxThenAccept_navigatesToSubmissionSuccess() {
         let app = launch("-uiTestCatchRecordSubmissionConfirmation")
 
         XCTAssertTrue(element(app, "CatchRecord.submissionConfirmation.heading").waitForExistence(timeout: 5))
@@ -344,7 +354,45 @@ final class CatchRecordUITests: XCTestCase {
         element(app, "CatchRecord.submissionConfirmation.confirmCheckbox").tap()
         app.buttons["CatchRecord.submissionConfirmation.accept"].tap()
 
-        XCTAssertTrue(element(app, "CatchRecord.placeholderNextStep.heading").waitForExistence(timeout: 5))
+        XCTAssertTrue(element(app, "CatchRecord.submissionSuccess.panel").waitForExistence(timeout: 10))
+    }
+
+    // MARK: - Submission success
+
+    @MainActor
+    func test_submissionSuccess_showsConfirmationPanelAndWhatHappensNext() {
+        let app = launch("-uiTestCatchRecordSubmissionSuccess")
+
+        XCTAssertTrue(element(app, "CatchRecord.submissionSuccess.panel").waitForExistence(timeout: 5))
+        XCTAssertTrue(element(app, "CatchRecord.submissionSuccess.whatHappensNextHeading").exists)
+        XCTAssertTrue(element(app, "CatchRecord.submissionSuccess.bulletList").exists)
+    }
+
+    @MainActor
+    func test_submissionSuccess_tappingViewCatchRecords_returnsToHome() {
+        let app = launch("-uiTestCatchRecordSubmissionSuccess")
+
+        let viewRecords = app.buttons["CatchRecord.submissionSuccess.viewRecords"]
+        XCTAssertTrue(viewRecords.waitForExistence(timeout: 5))
+        viewRecords.tap()
+
+        // Back at Home.
+        XCTAssertTrue(element(app, ID.warningBox).waitForExistence(timeout: 5))
+    }
+
+    /// Day/month/year components for a date `daysAgo` days before "now", zero-padded for the
+    /// date-entry fields. Used instead of a fixed historical date so trip-date UI tests stay
+    /// deterministic regardless of when they're run (see `SubmissionNudge.isNeeded`, which compares
+    /// against the real wall clock in the running app).
+    private func dateStrings(daysAgo: Int) -> (day: String, month: String, year: String) {
+        let calendar = Calendar(identifier: .gregorian)
+        let date = calendar.date(byAdding: .day, value: -daysAgo, to: Date()) ?? Date()
+        let components = calendar.dateComponents([.day, .month, .year], from: date)
+        return (
+            String(format: "%02d", components.day ?? 1),
+            String(format: "%02d", components.month ?? 1),
+            String(format: "%04d", components.year ?? 2020)
+        )
     }
 
     private func enterDate(_ app: XCUIApplication, day: String, month: String, year: String, headingID: String) {

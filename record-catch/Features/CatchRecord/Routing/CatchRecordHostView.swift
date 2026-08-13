@@ -179,6 +179,8 @@ struct CatchRecordHostView: View {
             )
         case .checkYourAnswers(let referenceNumber):
             CheckYourAnswersView(referenceNumber: referenceNumber, router: router, draft: draft)
+        case .submissionConfirmation(let referenceNumber):
+            SubmissionConfirmationView(referenceNumber: referenceNumber, router: router)
         case .placeholderNextStep:
             PlaceholderNextStepView()
         }

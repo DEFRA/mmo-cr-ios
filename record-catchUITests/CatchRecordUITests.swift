@@ -309,7 +309,7 @@ final class CatchRecordUITests: XCTestCase {
     }
 
     @MainActor
-    func test_checkYourAnswers_tappingSaveAndContinue_navigatesToPlaceholderNextStep() {
+    func test_checkYourAnswers_tappingSaveAndContinue_navigatesToSubmissionConfirmation() {
         let app = launch("-uiTestCatchRecordCheckYourAnswers")
 
         XCTAssertTrue(element(app, "CatchRecord.checkYourAnswers.heading").waitForExistence(timeout: 5))
@@ -317,6 +317,32 @@ final class CatchRecordUITests: XCTestCase {
         let saveContinue = app.buttons["CatchRecord.checkYourAnswers.saveContinue"]
         XCTAssertTrue(saveContinue.waitForExistence(timeout: 5))
         saveContinue.tap()
+
+        XCTAssertTrue(element(app, "CatchRecord.submissionConfirmation.heading").waitForExistence(timeout: 5))
+    }
+
+    // MARK: - Submission confirmation
+
+    @MainActor
+    func test_submissionConfirmation_acceptWithNoTick_showsInlineError_andDoesNotRoute() {
+        let app = launch("-uiTestCatchRecordSubmissionConfirmation")
+
+        XCTAssertTrue(element(app, "CatchRecord.submissionConfirmation.heading").waitForExistence(timeout: 5))
+
+        app.buttons["CatchRecord.submissionConfirmation.accept"].tap()
+
+        XCTAssertTrue(element(app, "CatchRecord.submissionConfirmation.error").waitForExistence(timeout: 5))
+        XCTAssertTrue(element(app, "CatchRecord.submissionConfirmation.heading").exists)
+    }
+
+    @MainActor
+    func test_submissionConfirmation_tickingCheckboxThenAccept_navigatesToPlaceholderNextStep() {
+        let app = launch("-uiTestCatchRecordSubmissionConfirmation")
+
+        XCTAssertTrue(element(app, "CatchRecord.submissionConfirmation.heading").waitForExistence(timeout: 5))
+
+        element(app, "CatchRecord.submissionConfirmation.confirmCheckbox").tap()
+        app.buttons["CatchRecord.submissionConfirmation.accept"].tap()
 
         XCTAssertTrue(element(app, "CatchRecord.placeholderNextStep.heading").waitForExistence(timeout: 5))
     }

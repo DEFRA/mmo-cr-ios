@@ -67,6 +67,12 @@ struct record_catchApp: App {
                 initialRoute: .checkYourAnswers(referenceNumber: "A1234520260727150815"),
                 draft: Self.seedCheckYourAnswersDraft
             )
+        } else if arguments.contains("-uiTestCatchRecordSubmissionConfirmation") {
+            // Seeds straight to the final Confirmation screen, for UI testing the checkbox
+            // validation and Accept action without driving the whole journey by hand.
+            CatchRecordHostView(
+                initialRoute: .submissionConfirmation(referenceNumber: "A1234520260727150815")
+            )
         } else if arguments.contains("-uiTestHome") {
             CatchRecordHostView()
         } else {

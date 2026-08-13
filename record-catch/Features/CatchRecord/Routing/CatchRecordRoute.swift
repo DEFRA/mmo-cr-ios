@@ -68,6 +68,12 @@ enum CatchRecordRoute: Hashable {
     /// landing-storage sub-journey; carries the display-only reference number shown at the top of
     /// the screen.
     case checkYourAnswers(referenceNumber: String)
+    /// Final confirmation before submitting a completed catch record. Reached from "Save and
+    /// continue" on Check your answers; requires an explicit checkbox confirmation before
+    /// "Accept and submit trip details" proceeds (submission itself is not yet wired to a real
+    /// backend — see `SubmissionConfirmationViewModel`). Carries the display-only reference
+    /// number shown at the top of the screen.
+    case submissionConfirmation(referenceNumber: String)
     /// Minimal placeholder for the next step in the journey (future phase).
     case placeholderNextStep
 }

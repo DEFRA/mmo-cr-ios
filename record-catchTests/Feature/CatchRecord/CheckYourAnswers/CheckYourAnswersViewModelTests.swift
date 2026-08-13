@@ -162,12 +162,12 @@ final class CheckYourAnswersViewModelTests: XCTestCase {
 
     // MARK: - Submit
 
-    func test_submit_pushesPlaceholderNextStepOntoRouter() {
+    func test_submit_pushesSubmissionConfirmationOntoRouter() {
         let router = CatchRecordRouter()
         let sut = CheckYourAnswersViewModel(referenceNumber: referenceNumber, router: router, draft: populatedDraft())
 
         sut.submit()
 
-        XCTAssertEqual(router.path, [.placeholderNextStep])
+        XCTAssertEqual(router.path, [.submissionConfirmation(referenceNumber: referenceNumber)])
     }
 }

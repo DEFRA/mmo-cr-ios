@@ -81,9 +81,9 @@ final class CheckYourAnswersViewModel {
         router.push(route)
     }
 
-    /// Confirms the summary and advances the journey to its next step.
+    /// Confirms the summary and advances to the final submission-confirmation screen.
     func submit() {
-        router.push(.placeholderNextStep)
+        router.push(.submissionConfirmation(referenceNumber: referenceNumber))
     }
 
     // MARK: - Trip

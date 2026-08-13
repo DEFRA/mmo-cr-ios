@@ -1953,6 +1953,168 @@
         }
       }
     },
+    "catchRecord.submissionConfirmation.accept": {
+      "comment": "Primary button label that submits the completed catch record.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Derbyn a chyflwyno manylion y daith"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accept and submit trip details"
+          }
+        }
+      }
+    },
+    "catchRecord.submissionConfirmation.body": {
+      "comment": "Intro line for the bullet list of what submission confirms.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Drwy gyflwyno'ch cofnod dalfa, rydych yn cadarnhau"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "By submitting your catch record, you're confirming"
+          }
+        }
+      }
+    },
+    "catchRecord.submissionConfirmation.bullet.action": {
+      "comment": "Third bullet — enforcement consequence of inaccurate recording.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Gall awdurdodau pysgota gymryd camau mewn perthynas â chofnodi dalfa anghywir"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fishing authorities may take action in respect of inaccurate catch recording"
+          }
+        }
+      }
+    },
+    "catchRecord.submissionConfirmation.bullet.tolerance": {
+      "comment": "Second bullet — within permitted tolerance levels.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bod hyn o fewn y lefelau goddefiant a ganiateir"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This is within permitted tolerance levels"
+          }
+        }
+      }
+    },
+    "catchRecord.submissionConfirmation.bullet.weight": {
+      "comment": "First bullet — accuracy of landed weight.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bod pwysau'r pysgod rydych wedi'u glanio yn gywir"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The weight of fish you have landed is accurate"
+          }
+        }
+      }
+    },
+    "catchRecord.submissionConfirmation.confirmCheckbox": {
+      "comment": "Label for the single required confirmation checkbox.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Rwy'n cadarnhau bod y wybodaeth yn gyflawn ac yn gywir"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I confirm the information is complete and accurate"
+          }
+        }
+      }
+    },
+    "catchRecord.submissionConfirmation.heading": {
+      "comment": "H1 for the final confirmation screen before submitting a completed catch record.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cadarnhad"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirmation"
+          }
+        }
+      }
+    },
+    "catchRecord.submissionConfirmation.notice": {
+      "comment": "Bold notice explaining what submitting the record means, shown with a leading icon.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Drwy gyflwyno'r cofnod hwn, rydych yn cytuno bod y wybodaeth a roddwyd gennych yn gyflawn ac yn gywir."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "By submitting this record, you agree that the information you've given is complete and correct."
+          }
+        }
+      }
+    },
+    "catchRecord.submissionConfirmation.validation.none": {
+      "comment": "Inline error shown when Accept and submit is tapped without ticking the checkbox.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cadarnhewch fod y wybodaeth yn gyflawn ac yn gywir cyn parhau"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirm that the information is complete and accurate before continuing"
+          }
+        }
+      }
+    },
     "catchRecord.submissionNudge.body": {
       "comment": "Guidance paragraph on the late-submission nudge.",
       "extractionState": "manual",

@@ -11,19 +11,16 @@ final class SignInUITests: XCTestCase {
 
     private enum ID {
         static let heading = "SignIn.heading"
-        static let email = "SignIn.emailField"
         // NOTE: There is no `SignIn.passwordField` identifier. `TextInputField` is a
         // composite and an outer identifier is swallowed by the inner secure input,
         // so the password field is addressed via `TextInputField.secureInput`.
         static let signIn = "SignIn.signInButton"
-        static let emailError = "SignIn.emailError"
-        static let passwordError = "SignIn.passwordError"
-        static let credentialError = "SignIn.credentialError"
         static let forgotten = "SignIn.forgottenPasswordLink"
         static let createAccount = "SignIn.createAccountLink"
         static let trouble = "SignIn.troubleHeading"
         static let languageToggle = "Header.languageToggle"
         static let secureInput = "TextInputField.secureInput"
+        static let homeCreateRecord = "Home.createRecordButton"
     }
 
     override func setUpWithError() throws {
@@ -48,27 +45,18 @@ final class SignInUITests: XCTestCase {
     }
 
     @MainActor
-    func test_emptySubmit_showsBothInlineErrors_thenClearOnInput() {
+    func test_signInButton_navigatesToHome_withEmptyForm() {
+        // DEMO-ONLY BYPASS: no real auth exists yet, so tapping "Sign in" always
+        // succeeds and continues to Home regardless of what's in the form.
         let app = XCUIApplication()
         app.launch()
 
         app.buttons[ID.signIn].tap()
 
-        XCTAssertTrue(element(app, ID.emailError).waitForExistence(timeout: 5))
-        XCTAssertTrue(element(app, ID.passwordError).exists)
-
-        let email = app.textFields.firstMatch
-        XCTAssertTrue(email.waitForExistence(timeout: 5))
-        email.tap()
-        email.typeText("skipper@example.com")
-
-        let password = app.secureTextFields.firstMatch
-        XCTAssertTrue(password.waitForExistence(timeout: 5))
-        password.tap()
-        password.typeText("hunter2")
-
-        XCTAssertFalse(element(app, ID.emailError).exists)
-        XCTAssertFalse(element(app, ID.passwordError).exists)
+        XCTAssertTrue(
+            element(app, ID.homeCreateRecord).waitForExistence(timeout: 5),
+            "Tapping Sign in should navigate to Home even with an empty form"
+        )
     }
 
     @MainActor
@@ -90,12 +78,12 @@ final class SignInUITests: XCTestCase {
     }
 
     @MainActor
-    func test_credentialError_appearsOnStubbedSubmit_thenClearsOnEdit() {
+    func test_signInButton_navigatesToHome_withFilledForm() {
         let app = XCUIApplication()
         app.launch()
 
-        // Type a valid-shaped email + password so field validation passes and the
-        // stubbed credential error path is taken on submit.
+        // Type a valid-shaped email + password to demonstrate the form still
+        // accepts input, but the sign-in bypass ignores it either way.
         let email = app.textFields.firstMatch
         XCTAssertTrue(email.waitForExistence(timeout: 5))
         email.tap()
@@ -108,19 +96,9 @@ final class SignInUITests: XCTestCase {
 
         app.buttons[ID.signIn].tap()
 
-        // Stubbed credential-error summary should appear.
         XCTAssertTrue(
-            element(app, ID.credentialError).waitForExistence(timeout: 5),
-            "Credential error summary should appear after a filled (stubbed) submit"
-        )
-
-        // Editing a field clears the credential error.
-        email.tap()
-        email.typeText("x")
-
-        XCTAssertFalse(
-            element(app, ID.credentialError).exists,
-            "Credential error should clear after editing a field"
+            element(app, ID.homeCreateRecord).waitForExistence(timeout: 5),
+            "Tapping Sign in should navigate to Home with a filled form"
         )
     }
 

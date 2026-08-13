@@ -11,6 +11,15 @@ struct SignInView: View {
     @Environment(AppLanguageStore.self) private var languageStore
     @State private var viewModel = SignInViewModel()
 
+    /// Called when the user taps "Sign in". DEMO-ONLY BYPASS: there is no real
+    /// authentication yet, so this fires unconditionally — regardless of what
+    /// (if anything) is entered in the form — to let the journey continue to
+    /// Home. Field/credential validation above remains in place purely to
+    /// demonstrate the error-state UI; it does not gate this callback.
+    /// TODO: replace with real OAuth2/OIDC sign-in (Keychain-backed) before
+    /// production — see security instructions.
+    var onSignIn: () -> Void = {}
+
     var body: some View {
         // The Sign In design has no GOV.UK header bar and no footer — just a
         // language toggle, the crown logo, heading, form and links on a plain
@@ -61,6 +70,8 @@ struct SignInView: View {
 
             PrimaryButton(title: languageStore.localized("signIn.button")) {
                 viewModel.submit()
+                // Demo bypass: always continue to Home, regardless of validation.
+                onSignIn()
             }
             .accessibilityIdentifier("SignIn.signInButton")
 

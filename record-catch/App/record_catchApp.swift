@@ -25,6 +25,10 @@ struct record_catchApp: App {
     
     let environment = AppEnvironment()
     @State private var languageStore = AppLanguageStore()
+    /// DEMO-ONLY BYPASS: no real authentication exists yet, so tapping "Sign in"
+    /// always succeeds regardless of form input. Once real auth lands this should
+    /// be driven by an authenticated-session check instead of local UI state.
+    @State private var isSignedIn = false
 
     var body: some Scene {
         WindowGroup {
@@ -81,8 +85,10 @@ struct record_catchApp: App {
             )
         } else if arguments.contains("-uiTestHome") {
             CatchRecordHostView()
+        } else if isSignedIn {
+            CatchRecordHostView()
         } else {
-            SignInView()
+            SignInView(onSignIn: { isSignedIn = true })
         }
     }
 

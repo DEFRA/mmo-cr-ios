@@ -1,0 +1,133 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "fetch-figma-design output",
+  "description": "Design-only, PII-stripped output produced by the fetch-figma-design skill. All identity metadata (creator, authors, comments, approvals) is excluded by construction.",
+  "oneOf": [
+    { "$ref": "#/definitions/figmaOutline" },
+    { "$ref": "#/definitions/figmaDesign" },
+    { "$ref": "#/definitions/figmaSection" }
+  ],
+  "definitions": {
+    "fileMeta": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "lastModified": { "type": "string" },
+        "version": { "type": "string" }
+      }
+    },
+    "figmaOutline": {
+      "type": "object",
+      "required": ["schemaVersion", "kind", "fileKey", "retrievedAt", "pages"],
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": { "type": "string" },
+        "kind": { "const": "figma-outline" },
+        "fileKey": { "type": "string" },
+        "file": { "$ref": "#/definitions/fileMeta" },
+        "retrievedAt": { "type": "string", "format": "date-time" },
+        "pageCount": { "type": "integer" },
+        "frameCount": { "type": "integer" },
+        "pages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["nodeId"],
+            "properties": {
+              "nodeId": { "type": "string" },
+              "name": { "type": ["string", "null"] },
+              "type": { "type": ["string", "null"] },
+              "frames": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "string" },
+                    "name": { "type": ["string", "null"] },
+                    "type": { "type": ["string", "null"] },
+                    "width": { "type": "number" },
+                    "height": { "type": "number" },
+                    "children": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "warnings": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "figmaDesign": {
+      "type": "object",
+      "required": ["schemaVersion", "kind", "fileKey", "requestedNodeIds", "retrievedAt", "nodes"],
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": { "type": "string" },
+        "kind": { "const": "figma-design" },
+        "fileKey": { "type": "string" },
+        "requestedNodeIds": { "type": "array", "items": { "type": "string" } },
+        "retrievedAt": { "type": "string", "format": "date-time" },
+        "file": { "$ref": "#/definitions/fileMeta" },
+        "nodes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "document": { "type": "object", "description": "Sanitised node subtree (plugin data removed; identity keys forbidden)." },
+              "components": { "type": "object" },
+              "componentSets": { "type": "object" },
+              "styles": { "type": "object" }
+            }
+          }
+        },
+        "warnings": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "figmaSection": {
+      "type": "object",
+      "required": ["schemaVersion", "kind", "fileKey", "retrievedAt", "sections", "frames"],
+      "additionalProperties": false,
+      "description": "Section-level index written when a requested node is a SECTION. Holds no design detail — it lists the frames extracted from the section(s), each written to its own subfolder as a figmaDesign document.",
+      "properties": {
+        "schemaVersion": { "type": "string" },
+        "kind": { "const": "figma-section" },
+        "fileKey": { "type": "string" },
+        "file": { "$ref": "#/definitions/fileMeta" },
+        "retrievedAt": { "type": "string", "format": "date-time" },
+        "sectionCount": { "type": "integer" },
+        "frameCount": { "type": "integer" },
+        "sections": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["sectionId"],
+            "properties": {
+              "sectionId": { "type": "string" },
+              "name": { "type": ["string", "null"] },
+              "frameIds": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "frames": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "dir"],
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": ["string", "null"] },
+              "type": { "type": ["string", "null"] },
+              "sectionId": { "type": ["string", "null"] },
+              "width": { "type": "number" },
+              "height": { "type": "number" },
+              "dir": { "type": "string", "description": "Path (relative to the section output dir) of the frame's own design.json/design.md/assets." }
+            }
+          }
+        },
+        "warnings": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

@@ -29,25 +29,28 @@ struct ViewTemplate<Content: View>: View {
     var body: some View {
         VStack(spacing: 0) {
             ViewHeader()
-            ScrollView {
-                VStack(alignment: .leading, spacing: AppSpacing.large) {
-                    if let warning {
-                        warning
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: AppSpacing.large) {
+                        if let warning {
+                            warning
+                        }
+                        // Render the page title only when non-empty, so a screen can
+                        // opt out (e.g. when it renders its own heading) without a
+                        // blank heading slot appearing.
+                        if !title.isEmpty {
+                            TitleText(text: title)
+                                .accessibilityAddTraits(.isHeader)
+                        }
+                        content
+                        ViewFooter()
                     }
-                    // Render the page title only when non-empty, so a screen can
-                    // opt out (e.g. when it renders its own heading) without a
-                    // blank heading slot appearing.
-                    if !title.isEmpty {
-                        TitleText(text: title)
-                            .accessibilityAddTraits(.isHeader)
-                    }
-                    content
-                    ViewFooter()
+                    .padding(.horizontal, AppSpacing.medium)
+                    .padding(.vertical, AppSpacing.large)
                 }
-                .padding(.horizontal, AppSpacing.medium)
-                .padding(.vertical, AppSpacing.large)
+                .environment(\.scrollViewProxy, proxy)
+                .background(AppColors.background)
             }
-            .background(AppColors.background)
         }
         .background(AppColors.background)
         // The custom `ViewHeader` is the single source of truth for back

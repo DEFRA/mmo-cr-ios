@@ -102,6 +102,7 @@ struct TextInputField: View {
                 .keyboardType(keyboardType)
                 .textInputAutocapitalization(textInputAutocapitalization)
                 .autocorrectionDisabled(autocorrectionDisabled)
+                .foregroundStyle(AppColors.textPrimary)
                 .formInputStyle(showError: shouldShowError)
                 .focused($isFocused)
         }
@@ -118,10 +119,11 @@ struct TextInputField: View {
                 }
             }
             .textContentType(secureTextContentType)
-            .textInputAutocapitalization(.never)
-            .autocorrectionDisabled(true)
-            .focused($isFocused)
-            .accessibilityIdentifier("TextInputField.secureInput")
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled(true)
+                .foregroundStyle(AppColors.textPrimary)
+                .focused($isFocused)
+                .accessibilityIdentifier("TextInputField.secureInput")
 
             Button {
                 isSecureTextVisible.toggle()

@@ -20,6 +20,11 @@ struct SearchDropdownField: View {
     @FocusState private var isFocused: Bool
     @State private var hasBlurred = false
     @State private var lastAnnouncedCount: Int?
+    /// Unique per-instance anchor so `ScrollViewProxy.scrollTo` targets this field's own results
+    /// list rather than another `SearchDropdownField` on the same screen.
+    private let resultsAnchorID = UUID()
+
+    @Environment(\.scrollViewProxy) private var scrollViewProxy
 
     init(
         label: String,
@@ -77,6 +82,7 @@ struct SearchDropdownField: View {
                 .font(AppTypography.bodySmall)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
+                .foregroundStyle(AppColors.textPrimary)
                 .padding(.horizontal, AppSpacing.small)
                 .frame(height: AppControlSize.dateFieldHeight)
                 .overlay(
@@ -118,12 +124,36 @@ struct SearchDropdownField: View {
                     Rectangle()
                         .stroke(AppColors.borderDefault, lineWidth: 1)
                 )
+                .id(resultsAnchorID)
             }
 
             if shouldShowError {
                 Text(errorMessage)
                     .font(AppTypography.error)
                     .foregroundStyle(AppColors.errorRed)
+            }
+        }
+        // The results list renders below the field as ordinary sibling content, so SwiftUI's
+        // built-in keyboard-avoidance (which only guarantees the *focused* control stays
+        // visible) can leave it hidden behind the keyboard. Once results appear, explicitly
+        // scroll the enclosing `ScrollView` (via the proxy `ViewTemplate` publishes) so the
+        // list is brought above the keyboard. Deferred to the next run loop pass so the results
+        // view has been laid out and has a frame to scroll to.
+        .onChange(of: showResults) { _, isShowing in
+            guard isShowing else { return }
+            scrollResultsIntoView()
+        }
+        // Also keep the results in view as the list changes size while the user keeps typing.
+        .onChange(of: filteredOptions.count) { _, _ in
+            guard showResults else { return }
+            scrollResultsIntoView()
+        }
+    }
+
+    private func scrollResultsIntoView() {
+        DispatchQueue.main.async {
+            withAnimation {
+                scrollViewProxy?.scrollTo(resultsAnchorID, anchor: .bottom)
             }
         }
     }

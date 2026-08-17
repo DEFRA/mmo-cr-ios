@@ -111,6 +111,7 @@ struct DateEntryField: View {
                 .keyboardType(.numberPad)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
+                .foregroundStyle(AppColors.textPrimary)
                 .frame(width: width, height: AppControlSize.dateFieldHeight)
                 .padding(.horizontal, AppSpacing.small)
                 .background(AppColors.background)

@@ -36,6 +36,15 @@ struct record_catchApp: App {
                 .environment(environment)
                 .environment(languageStore)
                 .environment(\.locale, languageStore.language.locale)
+                // The design system (`AppColors`) mirrors the GOV.UK Design System, which is
+                // light-only: every colour (backgrounds, borders, text) is a fixed literal
+                // rather than a Dark Mode-adaptive one. Without forcing `.light` here, controls
+                // that don't set an explicit foreground (e.g. `TextField`/`SecureField` typed
+                // text) fall back to the system's dynamic label colour, which renders white on
+                // the app's hardcoded white field backgrounds in Dark Mode — making entered text
+                // invisible. Forcing light appearance keeps the whole app consistent until/unless
+                // a Dark Mode variant of the design system is designed and an ADR records it.
+                .preferredColorScheme(.light)
         }
         .modelContainer(sharedModelContainer)
     }

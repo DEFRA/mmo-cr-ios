@@ -16,6 +16,15 @@ enum AppColors {
     static let linkText = govBlue
     static let divider = Color(red: 0.82, green: 0.82, blue: 0.82)
 
+    // MARK: - TabBar
+    //
+    // The Figma design's literal unselected-tab grey (`#B1B4B6`) is ~2.3:1 against white and
+    // fails WCAG 2.2 AA text contrast (4.5:1). Per the non-negotiable accessibility override in
+    // the working framework, we deviate from the literal design value and reuse the existing,
+    // already-verified `textSecondary` token instead (see ADR-0006 / settings.md deviation #2).
+    static let tabItemSelected = govBlue
+    static let tabItemUnselected = textSecondary
+
     static let statusSubmittedBackground = Color(red: 0.81, green: 0.91, blue: 0.87)
     static let statusSubmittedText = Color(red: 0.0, green: 0.31, blue: 0.21)
     static let statusAmendedBackground = Color(red: 0.80, green: 0.87, blue: 0.95)

@@ -57,7 +57,12 @@ struct CatchRecordHostView: View {
         NavigationStack(path: Binding(get: { router.path }, set: { router.setPath($0) })) {
             HomeView()
                 .navigationDestination(for: CatchRecordRoute.self) { route in
+                    // Single DRY call site (see ADR-0006 §3): hides the root tab bar for every
+                    // pushed journey screen, current and future, without touching each of the
+                    // 20+ individual destination views. `HomeView` (the un-pushed stack root)
+                    // is unaffected, so the tab bar stays visible there.
                     destination(for: route)
+                        .toolbar(.hidden, for: .tabBar)
                 }
         }
         .environment(router)

@@ -25,6 +25,7 @@ struct record_catchApp: App {
     
     let environment = AppEnvironment()
     @State private var languageStore = AppLanguageStore()
+    @State private var tabRouter = AppTabRouter(selection: Self.seedTabSelection)
     /// DEMO-ONLY BYPASS: no real authentication exists yet, so tapping "Sign in"
     /// always succeeds regardless of form input. Once real auth lands this should
     /// be driven by an authenticated-session check instead of local UI state.
@@ -35,6 +36,7 @@ struct record_catchApp: App {
             rootView
                 .environment(environment)
                 .environment(languageStore)
+                .environment(tabRouter)
                 .environment(\.locale, languageStore.language.locale)
                 // The design system (`AppColors`) mirrors the GOV.UK Design System, which is
                 // light-only: every colour (backgrounds, borders, text) is a fixed literal
@@ -49,11 +51,26 @@ struct record_catchApp: App {
         .modelContainer(sharedModelContainer)
     }
 
+    /// Seeds `AppTabRouter.selection` synchronously from a UI-test launch argument, before the
+    /// first `body` evaluation — mirroring how `CatchRecordRouter`'s `path` is seeded via
+    /// `initialRoute` (see ADR-0006).
+    private static var seedTabSelection: AppTab {
+        let arguments = ProcessInfo.processInfo.arguments
+        if arguments.contains("-uiTestSettings") {
+            return .settings
+        } else if arguments.contains("-uiTestNotifications") {
+            return .notifications
+        }
+        return .home
+    }
+
     // Default app root stays `SignInView`. UI-test launch arguments show the Home /
     // Create-a-catch-record journey instead, for lightweight UI-test hosting:
-    // `-uiTestHome` boots at Home; `-uiTestCatchRecordNew` seeds the stack at Select
-    // vessel (as if "Create a new catch record" was tapped); `-uiTestCatchRecordDraft`
-    // seeds the stack at Draft action for a stubbed unsent record.
+    // `-uiTestHome` boots the root `TabView` at Home (see ADR-0006); `-uiTestCatchRecordNew`
+    // seeds the journey's own stack at Select vessel (as if "Create a new catch record" was
+    // tapped) hosted as a BARE `CatchRecordHostView` with no tab bar at all, so the existing
+    // `CatchRecordUITests` continue to exercise the journey in isolation and do not regress;
+    // `-uiTestCatchRecordDraft` seeds the stack at Draft action for a stubbed unsent record.
     @ViewBuilder
     private var rootView: some View {
         let arguments = ProcessInfo.processInfo.arguments
@@ -93,9 +110,15 @@ struct record_catchApp: App {
                 initialRoute: .submissionSuccess(referenceNumber: "A1234520260727150815")
             )
         } else if arguments.contains("-uiTestHome") {
-            CatchRecordHostView()
+            RootTabView()
+        } else if arguments.contains("-uiTestSettings") {
+            RootTabView()
+        } else if arguments.contains("-uiTestNotifications") {
+            RootTabView()
+        } else if arguments.contains("-uiTestTabBar") {
+            RootTabView()
         } else if isSignedIn {
-            CatchRecordHostView()
+            RootTabView()
         } else {
             SignInView(onSignIn: { isSignedIn = true })
         }

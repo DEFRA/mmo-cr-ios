@@ -86,6 +86,15 @@ A future step is added by:
 No change to `CatchRecordRouter`, `CatchRecordRoute`'s underlying storage, or existing screens is
 required.
 
+### 5. Cross-reference: hosting inside the root `TabView` (ADR-0006)
+
+A later ADR ([ADR-0006](0006-tabbar-navigation-architecture.md)) introduces a root `TabView` with
+Home/Notifications/Settings tabs. `CatchRecordHostView`, `CatchRecordRouter` and `CatchRecordRoute`
+as decided here are **unchanged** by that ADR — only *where* `CatchRecordHostView` is mounted
+changes (inside the Home tab, rather than being the app's sole root view), and a single
+`.toolbar(.hidden, for: .tabBar)` wrapper is added at this file's `destination(for:)` switch so the
+tab bar hides while the journey is in progress. See ADR-0006 for the full rationale.
+
 ## Consequences
 
 - Navigation state is a plain, `Equatable`/`Hashable` value, so `CatchRecordRouterTests` can assert

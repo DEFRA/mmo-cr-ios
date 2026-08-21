@@ -3159,6 +3159,276 @@
         }
       }
     },
+    "manageAccount.address.label": {
+      "comment": "Label for the Address row on the Manage your account screen.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cyfeiriad"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Address"
+          }
+        }
+      }
+    },
+    "manageAccount.caption": {
+      "comment": "Caption shown above the 'Manage your account' page title. Literal design copy — not a data-bound business name (see design spec's deviation register).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Enw'r Busnes"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Business Name"
+          }
+        }
+      }
+    },
+    "manageAccount.change": {
+      "comment": "Trailing 'Change' link/action shown on every 'Your details' field row. SettingsValueRow composes this with the row's label for its accessibility label (e.g. 'Change first name').",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Newid"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change"
+          }
+        }
+      }
+    },
+    "manageAccount.contactNumber.label": {
+      "comment": "Label for the Contact number row on the Manage your account screen.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Rhif cyswllt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contact number"
+          }
+        }
+      }
+    },
+    "manageAccount.email.label": {
+      "comment": "Label for the Email row on the Manage your account screen.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "E-bost"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Email"
+          }
+        }
+      }
+    },
+    "manageAccount.faceID.heading": {
+      "comment": "Bold sub-heading introducing the Face ID sign-in row under the 'Sign in' section.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Mewngofnodi Face ID"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Face ID sign-in"
+          }
+        }
+      }
+    },
+    "manageAccount.faceID.hint": {
+      "comment": "Body hint under the Face ID sign-in heading.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Defnyddiwch eich Face ID yn lle eich cyfrinair."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use your Face ID instead of your password."
+          }
+        }
+      }
+    },
+    "manageAccount.faceID.toggle.hint": {
+      "comment": "Accessibility hint read after the Face ID toggle's label, explaining what double-tapping does. UI-only stub — no LocalAuthentication is wired up yet (see BiometricPreferenceStore).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Trewch ddwywaith i droi mewngofnodi Face ID ymlaen neu i ffwrdd"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Double tap to turn Face ID sign-in off or on"
+          }
+        }
+      }
+    },
+    "manageAccount.faceID.toggle.label": {
+      "comment": "Authored VoiceOver accessibility label for the Face ID toggle — mirrors the analytics toggle's authored-label pattern (settings.analytics.toggle.label).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Mewngofnodi Face ID"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Face ID sign-in"
+          }
+        }
+      }
+    },
+    "manageAccount.firstName.label": {
+      "comment": "Label for the First name row on the Manage your account screen.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Enw cyntaf"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "First name"
+          }
+        }
+      }
+    },
+    "manageAccount.lastName.label": {
+      "comment": "Label for the Last name row on the Manage your account screen.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cyfenw"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last name"
+          }
+        }
+      }
+    },
+    "manageAccount.signIn.heading": {
+      "comment": "Bold section heading introducing the 'Sign in' section (Face ID row).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Mewngofnodi"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign in"
+          }
+        }
+      }
+    },
+    "manageAccount.title": {
+      "comment": "Page title for the Manage your account screen.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Rheoli eich cyfrif"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manage your account"
+          }
+        }
+      }
+    },
+    "manageAccount.value.notProvided": {
+      "comment": "Authored empty-state copy for a 'Your details' field row when no value is recorded — defensive fallback; the stub fixture always populates every field.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Heb ei ddarparu"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not provided"
+          }
+        }
+      }
+    },
+    "manageAccount.yourDetails.heading": {
+      "comment": "Bold section heading introducing the 'Your details' field rows.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Eich manylion"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your details"
+          }
+        }
+      }
+    },
     "notifications.comingSoon.body": {
       "comment": "Body copy for the Notifications tab's placeholder empty state, shown until the feature is built in a later phase.",
       "extractionState": "manual",

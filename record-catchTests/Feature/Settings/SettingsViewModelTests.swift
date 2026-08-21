@@ -95,13 +95,13 @@ final class SettingsViewModelTests: XCTestCase {
         XCTAssertEqual(sut.gearUsed, "Seine nets")
     }
 
-    func test_myAccountTapped_hasNoSideEffects() {
-        let store = InMemoryAnalyticsPreferenceStore(initialValue: true)
-        let sut = SettingsViewModel(preferenceStore: store)
+    func test_myAccountTapped_pushesManageAccountRoute() {
+        let router = SettingsRouter()
+        let sut = SettingsViewModel(router: router, preferenceStore: InMemoryAnalyticsPreferenceStore())
 
         sut.myAccountTapped()
 
-        XCTAssertTrue(sut.analyticsEnabled)
+        XCTAssertEqual(router.path, [.manageAccount])
     }
 
     func test_privacyNoticeTapped_hasNoSideEffects() {

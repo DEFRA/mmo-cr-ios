@@ -9,27 +9,17 @@ import SwiftUI
 
 struct ViewFooter: View {
     var body: some View {
-        Divider()
+        Image("CrownLogoGrey")
+            .resizable()
+            .scaledToFit()
+            .frame(height: 64)
+            .frame(maxWidth: .infinity, alignment: .center)
             .padding(.top, AppSpacing.large)
-
-        VStack(alignment: .leading, spacing: AppSpacing.small) {
-            Text("Support")
-                .font(AppTypography.footerHeading)
-
-            Link(
-                "Contact Defra",
-                destination: URL(string: "https://www.gov.uk")!
-            )
-            .font(AppTypography.bodySmall)
-
-            Text("© Crown copyright")
-                .font(AppTypography.bodySmall)
-                .foregroundStyle(AppColors.textSecondary)
-        }
-        .padding(.top, AppSpacing.medium)
+            .accessibilityHidden(true)
     }
 }
 
 #Preview {
     ViewFooter()
+        .environment(AppLanguageStore.preview)
 }

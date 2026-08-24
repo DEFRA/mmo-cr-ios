@@ -64,7 +64,9 @@ final class AddSpeciesViewModel {
         case .recordWeights:
             return .recordSpeciesWeights(gear: gear, vessel: vessel, referenceNumber: referenceNumber)
         case .summary:
-            return .speciesSummary(gear: gear, vessel: vessel, referenceNumber: referenceNumber)
+            // The Species Summary screen has been removed from the journey; the (now unused)
+            // `.summary` return phase falls back to the record-weights screen.
+            return .recordSpeciesWeights(gear: gear, vessel: vessel, referenceNumber: referenceNumber)
         }
     }
 

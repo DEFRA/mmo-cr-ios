@@ -39,19 +39,24 @@ final class RecordSpeciesWeightsViewModel {
 
     private let router: CatchRecordRouter
     private let favouriteSpecies: FavouriteSpeciesProviding
+    /// Shared journey draft; the recorded species-caught list is written into it on submit (see
+    /// `CatchRecordDraft`).
+    private let draft: CatchRecordDraft
 
     init(
         gear: GearOption,
         vessel: String,
         referenceNumber: String,
         router: CatchRecordRouter,
-        favouriteSpecies: FavouriteSpeciesProviding = StubFavouriteSpeciesProvider()
+        favouriteSpecies: FavouriteSpeciesProviding = StubFavouriteSpeciesProvider(),
+        draft: CatchRecordDraft = CatchRecordDraft()
     ) {
         self.gear = gear
         self.vessel = vessel
         self.referenceNumber = referenceNumber
         self.router = router
         self.favouriteSpecies = favouriteSpecies
+        self.draft = draft
     }
 
     /// Loads favourite species and seeds any previously-captured weights into the fields (so
@@ -109,7 +114,7 @@ final class RecordSpeciesWeightsViewModel {
     /// The route to push after saving. Pure and independent of async work, so it is directly
     /// unit-testable.
     var completionRoute: CatchRecordRoute {
-        .speciesSummary(gear: gear, vessel: vessel, referenceNumber: referenceNumber)
+        .landingStorage(referenceNumber: referenceNumber)
     }
 
     /// Routes to the Add-species search screen, returning here afterwards.
@@ -131,7 +136,8 @@ final class RecordSpeciesWeightsViewModel {
         )
     }
 
-    /// Writes captured weights for ticked species back to favourites, then routes to the summary.
+    /// Writes captured weights for ticked species back to favourites and into the journey draft
+    /// (`draft.speciesCaught`), then routes on to the landing-storage sub-journey.
     ///
     /// Validation is deferred, so any ticked species (with or without entered weights) is saved.
     func submit() async {
@@ -139,9 +145,13 @@ final class RecordSpeciesWeightsViewModel {
         isSaving = true
         defer { isSaving = false }
         do {
+            var captured: [SpeciesOption] = []
             for species in favourites where selection.contains(species.id) {
-                try await favouriteSpecies.addFavourite(capturedSpecies(species))
+                let recorded = capturedSpecies(species)
+                try await favouriteSpecies.addFavourite(recorded)
+                captured.append(recorded)
             }
+            draft.speciesCaught = captured
             router.push(completionRoute)
         } catch {
             saveFailed = true

@@ -98,9 +98,6 @@ Home ──(Create new)───────────────────
                               RecordSpeciesWeights ◄───────────────────────────┘
                                         │ (Add a species ──► AddSpecies ──► back here)
                                         ▼
-                                SpeciesSummary (remove / add another / continue)
-                                        │
-                                        ▼
                                 LandingStorage  (Yes/No — kept onboard?)
                          ┌──────(Yes)───────┴───────(No)──────┐
                          ▼                                    │
@@ -135,14 +132,13 @@ namespaced `CatchRecord.<screenId>.*` throughout (e.g. `CatchRecord.selectVessel
 | 9 | `SelectGear/` | `.selectGear(...)` | Multi-select checkboxes of favourite gears, plus "Add another gear". Writes `draft.gear`. | `.catchLocation` |
 | 10 | `GearMeasurements/` | `.gearMeasurements(gear:...)` | Whole-number measurement entry for a gear (e.g. mesh size for seine nets); saves the gear (with values) to favourites. | `.selectGear` |
 | 11 | `CatchLocation/` | `.catchLocation(gear:...)` | Pick the statistical area on a map (`SeaMapView`). Writes `draft.statisticalArea`. | species sub-journey |
-| 12 | `AddSpecies/` | `.addSpecies(...returnPhase:)` | Type-to-search a species; shown when there are **no favourite species**. `returnPhase` records where to return (weights screen vs summary). | back to `returnPhase` screen |
-| 13 | `RecordSpeciesWeights/` | `.recordSpeciesWeights(gear:...)` | Tick favourite species and enter live weights (above minimum always shown; below-minimum/legally-discarded are reveal-able optional fields). Weight validation is deferred — free text for now. | `.speciesSummary` |
-| 14 | `SpeciesSummary/` | `.speciesSummary(gear:...)` | Read-only list of recorded species with remove/add-another. Writes `draft.speciesCaught`. | `.landingStorage` |
-| 15 | `LandingStorage/` | `.landingStorage(...)` | Yes/No — any catch not landed straight away (bait/keep pots)? | Yes → `.landingStorageSpecies`; No → `.checkYourAnswers` |
-| 16 | `LandingStorageSpecies/` | `.landingStorageSpecies(...)` | Tick species kept onboard/in keep pots and record one weight each. Writes `draft.speciesNotLanded`. | `.checkYourAnswers` |
-| 17 | `CheckYourAnswers/` | `.checkYourAnswers(...)` | Read-only summary of the whole `CatchRecordDraft` in four sections (Trip, Gear used, Species caught, Species not landed); each row's "Change" control pushes **forward** into the journey at the screen that captured it. | `.submissionConfirmation` |
-| 18 | `SubmissionConfirmation/` | `.submissionConfirmation(...)` | Final "Confirmation" screen: explains what submitting means (weight accuracy, tolerance levels, enforcement), requires a single confirmation checkbox before "Accept and submit trip details" proceeds. | `.placeholderNextStep` |
-| 19 | `PlaceholderNextStep/` | `.placeholderNextStep` | Minimal, no-view-model placeholder ending the journey until the next phase (real submission) is built. | — |
+| 12 | `AddSpecies/` | `.addSpecies(...returnPhase:)` | Type-to-search a species; shown when there are **no favourite species**. `returnPhase` records where to return (only the weights screen now the Species Summary screen has been removed; the `.summary` case is retained but unused). | back to `returnPhase` screen |
+| 13 | `RecordSpeciesWeights/` | `.recordSpeciesWeights(gear:...)` | Tick favourite species and enter live weights (above minimum always shown; below-minimum/legally-discarded are reveal-able optional fields). Includes an "Add a species" link and a **dummy "Remove species"** link (not yet implemented). Writes `draft.speciesCaught`. Weight validation is deferred — free text for now. | `.landingStorage` |
+| 14 | `LandingStorage/` | `.landingStorage(...)` | Yes/No — any catch not landed straight away (bait/keep pots)? | Yes → `.landingStorageSpecies`; No → `.checkYourAnswers` |
+| 15 | `LandingStorageSpecies/` | `.landingStorageSpecies(...)` | Tick species kept onboard/in keep pots and record one weight each. Writes `draft.speciesNotLanded`. | `.checkYourAnswers` |
+| 16 | `CheckYourAnswers/` | `.checkYourAnswers(...)` | Read-only summary of the whole `CatchRecordDraft` in four sections (Trip, Gear used, Species caught, Species not landed); each row's "Change" control pushes **forward** into the journey at the screen that captured it. | `.submissionConfirmation` |
+| 17 | `SubmissionConfirmation/` | `.submissionConfirmation(...)` | Final "Confirmation" screen: explains what submitting means (weight accuracy, tolerance levels, enforcement), requires a single confirmation checkbox before "Accept and submit trip details" proceeds. | `.placeholderNextStep` |
+| 18 | `PlaceholderNextStep/` | `.placeholderNextStep` | Minimal, no-view-model placeholder ending the journey until the next phase (real submission) is built. | — |
 
 ### 1. Draft action (`DraftAction/`)
 
@@ -193,7 +189,7 @@ statistical subzone. `CatchLocationValidation.errorKey(for:)` requires a non-nil
 continuing. On success, fetches favourite species and pushes the pure
 `CatchRecordRouting.speciesEntryRoute` decision (mirrors port/gear entry).
 
-### 12–14. Add species / Record species weights / Species summary
+### 12–13. Add species / Record species weights
 
 Same has-favourites pattern again. `RecordSpeciesWeights` is the richest screen in the module:
 per-species ticking plus three weight fields (`aboveEntries` always shown once ticked;
@@ -201,17 +197,20 @@ per-species ticking plus three weight fields (`aboveEntries` always shown once t
 `reveal…`/`remove…` methods) — all free-text for now, numeric validation deferred to a future
 phase. `loadFavourites()` re-seeds selection/reveal state from anything already captured, so
 returning to the screen (e.g. via a Check-your-answers "Change" link) shows prior answers.
-`SpeciesSummary` is the read-only list with remove/add-another, and is what actually writes
-`draft.speciesCaught` on continue.
+On "Save and continue" it writes the ticked species (with their captured weights) into
+`draft.speciesCaught` and routes straight to `LandingStorage`. The Species Summary screen that
+previously sat between here and Landing storage has been removed from the design; a dummy
+"Remove species" link now sits under "Add a species" as a placeholder for the eventual
+remove-species action.
 
-### 15–16. Landing storage / Landing storage species
+### 14–15. Landing storage / Landing storage species
 
 A Yes/No gate (`LandingStorageOption`) for whether any catch is being kept onboard/in keep pots
 rather than landed immediately. "Yes" branches into `LandingStorageSpecies` — the same
 tick-species-and-enter-weight shape as `RecordSpeciesWeights`, but with a single weight field per
 species — which writes `draft.speciesNotLanded`. Both branches converge on `.checkYourAnswers`.
 
-### 17. Check your answers (`CheckYourAnswers/`)
+### 16. Check your answers (`CheckYourAnswers/`)
 
 Purely a **projection** of `CatchRecordDraft` — the view model holds no mutable state of its own
 and performs no validation, so it's directly unit-testable against a seeded draft. Four ordered
@@ -220,7 +219,7 @@ sections (`Section`/`Row` structs): **Trip** and **Gear used** always render (ev
 `changeRoute` back to the screen where that value was captured; tapping "Change" **pushes forward**
 (not a pop) so the existing "Save and continue" flow naturally returns here.
 
-### 18. Submission confirmation (`SubmissionConfirmation/`)
+### 17. Submission confirmation (`SubmissionConfirmation/`)
 
 The final gate before "submission". A bold notice (icon + sentence, meaning never conveyed by
 colour/icon alone) explains what submitting means, followed by a three-point bullet list and a
@@ -229,7 +228,7 @@ details" validates the checkbox (`SubmissionConfirmationValidation`) — an inli
 screen does **not** navigate until it's ticked. A real submit action doesn't exist yet, so a
 confirmed accept continues to `.placeholderNextStep`.
 
-### 19. Placeholder next step (`PlaceholderNextStep/`)
+### 18. Placeholder next step (`PlaceholderNextStep/`)
 
 Deliberately has no view model — no state or behaviour yet. Marks where the next phase (a real
 submission/success screen, backed by a real API) will be built.

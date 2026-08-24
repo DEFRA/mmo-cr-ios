@@ -1615,6 +1615,24 @@
         }
       }
     },
+    "catchRecord.species.record.removeSpecies" : {
+      "comment" : "Dummy link to remove a species on the record-weights screen (not yet implemented).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "cy" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tynnu rhywogaeth"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove species"
+          }
+        }
+      }
+    },
     "catchRecord.species.saveFailed" : {
       "comment" : "Error when saving species to favourites fails.",
       "extractionState" : "manual",
@@ -1629,132 +1647,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Could not save these species. Check your connection and try again."
-          }
-        }
-      }
-    },
-    "catchRecord.species.summary.above" : {
-      "comment" : "Summary line: above minimum weight. %@ is the value in kg.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "cy" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "- Pwysau uwch na'r maint lleiaf a gedwir: %@ kg"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "- Weight above minimum size retained: %@ kg"
-          }
-        }
-      }
-    },
-    "catchRecord.species.summary.addAnother" : {
-      "comment" : "Secondary button to add another species from the summary.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "cy" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Ychwanegu rhywogaeth arall"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add another species"
-          }
-        }
-      }
-    },
-    "catchRecord.species.summary.below" : {
-      "comment" : "Summary line: below minimum weight. %@ is the value in kg.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "cy" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "- Pwysau is na'r maint lleiaf a gedwir: %@ kg"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "- Weight below minimum size retained: %@ kg"
-          }
-        }
-      }
-    },
-    "catchRecord.species.summary.body" : {
-      "comment" : "Species summary intro paragraph.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "cy" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Adolygwch y rhywogaethau a'r pwysau rydych wedi'u cofnodi. Gallwch ychwanegu mwy o rywogaethau neu dynnu unrhyw rai nad oes eu hangen arnoch."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Review the species and weights you've recorded. You can add more species or remove any you don't need."
-          }
-        }
-      }
-    },
-    "catchRecord.species.summary.discarded" : {
-      "comment" : "Summary line: legally discarded weight. %@ is the value in kg.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "cy" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "- Pwysau a daflwyd yn gyfreithlon: %@ kg"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "- Weight legally discarded: %@ kg"
-          }
-        }
-      }
-    },
-    "catchRecord.species.summary.heading" : {
-      "comment" : "Species summary H1. %1$@ is the gear name, %2$@ the vessel name.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "cy" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Rhywogaethau a ddaliwyd gyda %1$@ ar y llong %2$@"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Species caught with %1$@ on vessel %2$@"
-          }
-        }
-      }
-    },
-    "catchRecord.species.summary.remove" : {
-      "comment" : "Link to remove a recorded species from the summary.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "cy" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Tynnu"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Remove"
           }
         }
       }

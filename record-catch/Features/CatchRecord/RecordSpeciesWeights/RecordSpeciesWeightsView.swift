@@ -17,14 +17,16 @@ struct RecordSpeciesWeightsView: View {
         vessel: String,
         referenceNumber: String,
         router: CatchRecordRouter,
-        favouriteSpecies: FavouriteSpeciesProviding
+        favouriteSpecies: FavouriteSpeciesProviding,
+        draft: CatchRecordDraft = CatchRecordDraft()
     ) {
         _viewModel = State(wrappedValue: RecordSpeciesWeightsViewModel(
             gear: gear,
             vessel: vessel,
             referenceNumber: referenceNumber,
             router: router,
-            favouriteSpecies: favouriteSpecies
+            favouriteSpecies: favouriteSpecies,
+            draft: draft
         ))
     }
 
@@ -64,6 +66,11 @@ struct RecordSpeciesWeightsView: View {
                 viewModel.addSpecies()
             }
             .accessibilityIdentifier("\(identifierPrefix).addSpecies")
+
+            // Dummy link for now — remove-species behaviour is not yet implemented.
+            LinkButton(title: languageStore.localized("catchRecord.species.record.removeSpecies")) {
+            }
+            .accessibilityIdentifier("\(identifierPrefix).removeSpecies")
 
             if viewModel.saveFailed {
                 errorBanner

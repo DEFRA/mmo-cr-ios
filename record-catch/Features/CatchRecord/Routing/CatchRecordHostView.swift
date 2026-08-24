@@ -153,7 +153,8 @@ struct CatchRecordHostView: View {
                 vessel: vessel,
                 referenceNumber: referenceNumber,
                 router: router,
-                favouriteSpecies: favouriteSpecies
+                favouriteSpecies: favouriteSpecies,
+                draft: draft
             )
         case .addSpecies(let gear, let vessel, let referenceNumber, let returnPhase):
             AddSpeciesView(
@@ -163,15 +164,6 @@ struct CatchRecordHostView: View {
                 returnPhase: returnPhase,
                 router: router,
                 favouriteSpecies: favouriteSpecies
-            )
-        case .speciesSummary(let gear, let vessel, let referenceNumber):
-            SpeciesSummaryView(
-                gear: gear,
-                vessel: vessel,
-                referenceNumber: referenceNumber,
-                router: router,
-                favouriteSpecies: favouriteSpecies,
-                draft: draft
             )
         case .landingStorage(let referenceNumber):
             LandingStorageView(referenceNumber: referenceNumber, router: router)

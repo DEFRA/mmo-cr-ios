@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// "Is there any catch from this trip that you will not be landing straight away?" — a Yes/No
-/// question reached after the species summary. Mirrors the trip-started-today radio screen.
+/// question reached after the species weights screen. Mirrors the trip-started-today radio screen.
 struct LandingStorageView: View {
 
     @Environment(AppLanguageStore.self) private var languageStore

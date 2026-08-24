@@ -48,16 +48,14 @@ enum CatchRecordRoute: Hashable {
     /// Record the species caught and their live weights, from the user's favourite species
     /// (per-species checkboxes with reveal-able weight fields). Shown when the user already has
     /// favourite species; "Add a species" pushes `addSpecies`, "Save and continue" pushes
-    /// `speciesSummary`. Carries the gear (for the "with <gear>" heading), vessel and reference.
+    /// `landingStorage`. Carries the gear (for the "with <gear>" heading), vessel and reference.
     case recordSpeciesWeights(gear: GearOption, vessel: String, referenceNumber: String)
     /// Add a species via type-to-search and save it to the user's favourites (see ADR-0004). Shown
     /// when the user has no favourite species yet, and reached from "Add a species"/"Add another
     /// species". `returnPhase` records which screen to return to after saving.
     case addSpecies(gear: GearOption, vessel: String, referenceNumber: String, returnPhase: SpeciesReturnPhase)
-    /// Review the recorded species and their weights, with per-species removal, before continuing.
-    case speciesSummary(gear: GearOption, vessel: String, referenceNumber: String)
     /// Ask whether any catch from this trip will not be landed straight away (e.g. bait or keep
-    /// pots). A Yes/No radio question reached after the species summary; carries the display-only
+    /// pots). A Yes/No radio question reached after the species weights screen; carries the display-only
     /// reference number shown at the top of the screen.
     case landingStorage(referenceNumber: String)
     /// Ask which species from this trip are *not* being landed straight away, and the weight of

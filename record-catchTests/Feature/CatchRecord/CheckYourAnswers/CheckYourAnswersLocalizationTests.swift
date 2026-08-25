@@ -27,7 +27,7 @@ final class CheckYourAnswersLocalizationTests: XCTestCase {
         "catchRecord.checkYourAnswers.label.weightAbove",
         "catchRecord.checkYourAnswers.label.weightBelow",
         "catchRecord.checkYourAnswers.label.weightDiscarded",
-        "catchRecord.checkYourAnswers.label.weightNotLanded",
+        "catchRecord.checkYourAnswers.label.weightNotLanded"
     ]
 
     func test_checkYourAnswersKeys_resolveToNonEmptyEnglishStrings() {

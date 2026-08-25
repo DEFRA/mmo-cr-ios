@@ -12,7 +12,7 @@ import SwiftData
 struct record_catchApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            Item.self
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
@@ -22,7 +22,7 @@ struct record_catchApp: App {
             fatalError("Could not create ModelContainer: \(error)")
         }
     }()
-    
+
     let environment = AppEnvironment()
     @State private var languageStore = AppLanguageStore()
     @State private var tabRouter = AppTabRouter(selection: Self.seedTabSelection)

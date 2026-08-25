@@ -56,7 +56,7 @@ struct record_catchApp: App {
     /// `initialRoute` (see ADR-0006).
     private static var seedTabSelection: AppTab {
         let arguments = ProcessInfo.processInfo.arguments
-        if arguments.contains("-uiTestSettings") {
+        if arguments.contains("-uiTestSettings") || arguments.contains("-uiTestManageAccount") {
             return .settings
         } else if arguments.contains("-uiTestNotifications") {
             return .notifications
@@ -71,6 +71,8 @@ struct record_catchApp: App {
     // tapped) hosted as a BARE `CatchRecordHostView` with no tab bar at all, so the existing
     // `CatchRecordUITests` continue to exercise the journey in isolation and do not regress;
     // `-uiTestCatchRecordDraft` seeds the stack at Draft action for a stubbed unsent record.
+    // `-uiTestManageAccount` boots the root `TabView` on Settings with its own stack seeded
+    // straight to "Manage your account" (see ADR-0007).
     @ViewBuilder
     private var rootView: some View {
         let arguments = ProcessInfo.processInfo.arguments
@@ -113,6 +115,10 @@ struct record_catchApp: App {
             RootTabView()
         } else if arguments.contains("-uiTestSettings") {
             RootTabView()
+        } else if arguments.contains("-uiTestManageAccount") {
+            // Seeds the Settings tab's own stack straight to "Manage your account" (see
+            // ADR-0007), for UI testing that screen without driving Settings → My account by hand.
+            RootTabView(initialSettingsRoute: .manageAccount)
         } else if arguments.contains("-uiTestNotifications") {
             RootTabView()
         } else if arguments.contains("-uiTestTabBar") {

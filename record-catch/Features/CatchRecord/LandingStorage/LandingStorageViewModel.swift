@@ -2,7 +2,7 @@ import Foundation
 
 /// View model for the "Is there any catch you will not be landing straight away?" screen.
 ///
-/// A Yes/No radio question reached after the species summary. "Yes" continues to the
+/// A Yes/No radio question reached after the species weights screen. "Yes" continues to the
 /// "Which species are you not landing straight away?" screen; "No" continues to the placeholder
 /// next step. The answer is not yet persisted.
 @MainActor

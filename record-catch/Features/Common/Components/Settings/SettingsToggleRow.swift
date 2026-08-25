@@ -9,6 +9,10 @@ import SwiftUI
 /// State is conveyed by the standard iOS `Toggle`'s position/knob (and its "on"/"off"
 /// accessibility value) — never by colour alone — satisfying WCAG 2.2 AA.
 struct SettingsToggleRow: View {
+    /// Identifies this specific toggle instance for UI tests (e.g. the analytics-consent
+    /// toggle vs. the Manage-account screen's Face ID toggle) — parameterised so this one
+    /// reusable row can back multiple distinct toggles across the app.
+    let accessibilityIdentifier: String
     let accessibilityLabel: String
     let accessibilityHint: String
     @Binding var isOn: Bool
@@ -21,7 +25,7 @@ struct SettingsToggleRow: View {
         .toggleStyle(.switch)
         .tint(AppColors.govBlue)
         .frame(minHeight: AppControlSize.minTapTarget, alignment: .leading)
-        .accessibilityIdentifier("Settings.analyticsToggle")
+        .accessibilityIdentifier(accessibilityIdentifier)
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint(accessibilityHint)
     }
@@ -29,6 +33,7 @@ struct SettingsToggleRow: View {
 
 #Preview("On") {
     SettingsToggleRow(
+        accessibilityIdentifier: "Settings.analyticsToggle",
         accessibilityLabel: "Analytics data collection",
         accessibilityHint: "Double tap to turn analytics data collection off or on",
         isOn: .constant(true)
@@ -38,6 +43,7 @@ struct SettingsToggleRow: View {
 
 #Preview("Off") {
     SettingsToggleRow(
+        accessibilityIdentifier: "Settings.analyticsToggle",
         accessibilityLabel: "Analytics data collection",
         accessibilityHint: "Double tap to turn analytics data collection off or on",
         isOn: .constant(false)
@@ -47,6 +53,7 @@ struct SettingsToggleRow: View {
 
 #Preview("Max Dynamic Type") {
     SettingsToggleRow(
+        accessibilityIdentifier: "Settings.analyticsToggle",
         accessibilityLabel: "Analytics data collection",
         accessibilityHint: "Double tap to turn analytics data collection off or on",
         isOn: .constant(true)

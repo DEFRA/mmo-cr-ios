@@ -15,8 +15,14 @@ struct SettingsView: View {
     @Environment(AppLanguageStore.self) private var languageStore
     @State private var viewModel: SettingsViewModel
 
-    init(viewModel: SettingsViewModel? = nil) {
-        _viewModel = State(initialValue: viewModel ?? SettingsViewModel())
+    /// - Parameters:
+    ///   - router: the Settings tab's navigation router (see ADR-0007). Defaults to a fresh
+    ///     `SettingsRouter` for previews/tests that don't care about navigation; `RootTabView`
+    ///     always supplies the tab's real, shared instance so "My account" pushes onto the
+    ///     visible `NavigationStack`.
+    ///   - viewModel: injectable view model, used by previews/tests to seed preferences/gear used.
+    init(router: SettingsRouter? = nil, viewModel: SettingsViewModel? = nil) {
+        _viewModel = State(initialValue: viewModel ?? SettingsViewModel(router: router))
     }
 
     var body: some View {
@@ -58,6 +64,7 @@ struct SettingsView: View {
             }
 
             SettingsToggleRow(
+                accessibilityIdentifier: "Settings.analyticsToggle",
                 accessibilityLabel: languageStore.localized("settings.analytics.toggle.label"),
                 accessibilityHint: languageStore.localized("settings.analytics.toggle.hint"),
                 isOn: $viewModel.analyticsEnabled

@@ -4,13 +4,15 @@ import Foundation
 ///
 /// UI-only for this phase: the analytics toggle is backed by a local preference only (no
 /// analytics SDK, no networking), "Gear used" reflects a locally-known value with an
-/// authored empty state, and every link/action below is an inert seam — none has a real
-/// destination or side effect wired up yet.
+/// authored empty state. "My account" pushes the real "Manage your account" screen via
+/// `SettingsRouter` (see docs/adr/0007-settings-tab-navigation.md); every other link/action
+/// below remains an inert seam with no destination or side effect wired up yet.
 @MainActor
 @Observable
 final class SettingsViewModel {
 
     private let preferenceStore: AnalyticsPreferenceStoring
+    private let router: SettingsRouter
 
     /// Backed by `AnalyticsPreferenceStoring` — every write is persisted immediately.
     ///
@@ -28,9 +30,11 @@ final class SettingsViewModel {
     private(set) var gearUsed: String?
 
     init(
+        router: SettingsRouter? = nil,
         preferenceStore: AnalyticsPreferenceStoring = UserDefaultsAnalyticsPreferenceStore(),
         gearUsed: String? = nil
     ) {
+        self.router = router ?? SettingsRouter()
         self.preferenceStore = preferenceStore
         self.analyticsEnabled = preferenceStore.isAnalyticsEnabled()
         self.gearUsed = gearUsed
@@ -41,6 +45,13 @@ final class SettingsViewModel {
     /// docs/design-specs/settings.md deviation #5).
     func gearUsedDisplayValue(emptyState: String) -> String {
         SettingsValueRow.displayValue(gearUsed, emptyStateValue: emptyState)
+    }
+
+    /// Reached via the "My account" link. Pushes the "Manage your account" screen (see
+    /// `SettingsRoute.manageAccount` / docs/adr/0007-settings-tab-navigation.md). The only
+    /// non-inert navigation seam on this screen — every other seam below remains a no-op.
+    func myAccountTapped() {
+        router.push(.manageAccount)
     }
 
     // MARK: - Inert seams
@@ -58,10 +69,6 @@ final class SettingsViewModel {
     /// Reached via the Gear used row's "Change" link.
     /// - TODO: Navigate to a gear-editing destination once one exists.
     func changeGearTapped() {}
-
-    /// Reached via the "My account" link.
-    /// - TODO: Navigate to an account-details destination once one exists.
-    func myAccountTapped() {}
 
     /// Reached via the "Privacy notice" link.
     /// - TODO: Navigate to (or open) the real privacy-notice destination.

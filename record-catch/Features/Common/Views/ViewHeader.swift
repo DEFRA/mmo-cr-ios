@@ -16,6 +16,11 @@ struct ViewHeader: View {
     /// so `Common` stays decoupled from the `CatchRecord` feature layer.
     @Environment(\.headerNavigator) private var navigator
 
+    /// Scales the branding image with Dynamic Type (relative to `.headline`)
+    /// so it grows in step with the surrounding text and survives 200% text
+    /// sizes without clipping the 56pt header bar.
+    @ScaledMetric(relativeTo: .headline) private var logoHeight: CGFloat = 18
+
     /// The back control is only shown when there is a screen to pop back to, so
     /// the journey root doesn't render a dead-end "Back" control.
     private var canGoBack: Bool {
@@ -36,9 +41,12 @@ struct ViewHeader: View {
 
             Spacer()
 
-            LocalizedText("header.branding")
-                .font(AppTypography.headerTitle)
-                .foregroundStyle(.white)
+            Image("GovUKHeader")
+                .resizable()
+                .scaledToFit()
+                .frame(height: logoHeight)
+                .accessibilityLabel(languageStore.localized("header.branding"))
+                .accessibilityIdentifier("ViewHeader.branding")
 
             Spacer()
 

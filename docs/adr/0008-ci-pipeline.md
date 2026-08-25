@@ -1,4 +1,4 @@
-# ADR 0007 — Continuous integration (PR validation) pipeline
+# ADR 0008 — Continuous integration (PR validation) pipeline
 
 - Status: Accepted
 - Date: 2026-08

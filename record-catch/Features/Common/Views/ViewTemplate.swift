@@ -8,14 +8,14 @@
 import SwiftUI
 
 struct ViewTemplate<Content: View>: View {
-    
+
     let title: String
     /// Optional important-information box rendered at the very top of the
     /// content, above the page title. Opt-in per screen (defaults to `nil`) so
     /// existing screens are unaffected.
     let warning: WarningBox?
     let content: Content
-    
+
     init(
         title: String,
         warning: WarningBox? = nil,
@@ -25,7 +25,7 @@ struct ViewTemplate<Content: View>: View {
         self.warning = warning
         self.content = content()
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             ViewHeader()

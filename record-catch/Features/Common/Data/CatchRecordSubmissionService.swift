@@ -29,8 +29,6 @@ nonisolated protocol CatchRecordSubmissionServicing: Sendable {
 /// (to give the UI a realistic loading state to demo/test) rather than a real network call.
 nonisolated struct StubCatchRecordSubmissionService: CatchRecordSubmissionServicing {
 
-    init() {}
-
     func submit(referenceNumber: String) async throws {
         try? await Task.sleep(nanoseconds: 300_000_000)
     }

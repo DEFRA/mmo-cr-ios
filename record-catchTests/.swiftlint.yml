@@ -1,0 +1,62 @@
+# Standalone SwiftLint config for unit tests.
+#
+# SwiftLint's --config flag does not merge with a parent .swiftlint.yml, so
+# this duplicates the shared settings from the root config and relaxes a few
+# rules that don't fit test code:
+#   - force_try / force_cast disabled, force_unwrapping left un-opted-in:
+#     test fixtures are known-good, so forcing is acceptable and keeps
+#     Arrange/Act/Assert tests terse (testing.instructions.md).
+#   - identifier/type name length relaxed: short names (`ID`, `a`/`b`) are an
+#     established convention in this test suite (e.g. accessibility ID
+#     namespacing enums, comparison fixtures).
+
+excluded:
+  - .build
+
+line_length:
+  warning: 140
+  error: 220
+
+function_body_length:
+  warning: 150
+  error: 250
+
+file_length:
+  warning: 600
+  error: 900
+  ignore_comment_only_lines: true
+
+opt_in_rules:
+  - closure_spacing
+  - empty_count
+  - first_where
+  - last_where
+  - redundant_nil_coalescing
+  - unused_import
+
+disabled_rules:
+  - todo
+  - force_try
+  - force_cast
+
+identifier_name:
+  min_length:
+    warning: 1
+  excluded:
+    - id
+    - to
+    - x
+    - y
+    - a
+    - b
+    - c
+    - d
+    - m
+
+type_name:
+  min_length:
+    warning: 1
+  excluded:
+    - ID
+
+reporter: xcode

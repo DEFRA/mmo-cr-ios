@@ -1,0 +1,38 @@
+# Standalone SwiftLint config for XCUITests.
+#
+# SwiftLint's --config flag does not merge with a parent .swiftlint.yml, so
+# this duplicates the shared settings from the root config and relaxes a few
+# rules that don't fit UI test code:
+#   - force_try / force_cast disabled, force_unwrapping left un-opted-in:
+#     UI test fixtures/elements are known-good.
+#   - type_name relaxed for `ID`: an established convention in this test
+#     suite for namespacing accessibility identifiers per screen.
+#   - comment_spacing / large_tuple: not worth failing CI over in test code.
+
+excluded:
+  - .build
+
+line_length:
+  warning: 140
+  error: 220
+
+opt_in_rules:
+  - closure_spacing
+  - empty_count
+  - first_where
+  - last_where
+
+disabled_rules:
+  - todo
+  - force_try
+  - force_cast
+  - comment_spacing
+  - large_tuple
+
+type_name:
+  min_length:
+    warning: 1
+  excluded:
+    - ID
+
+reporter: xcode

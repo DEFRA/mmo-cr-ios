@@ -8,12 +8,6 @@ struct RadioGroupOption: Identifiable, Hashable {
     let title: String
     /// Accessibility identifier for the rendered `RadioOption`.
     let accessibilityIdentifier: String
-
-    init(id: String, title: String, accessibilityIdentifier: String) {
-        self.id = id
-        self.title = title
-        self.accessibilityIdentifier = accessibilityIdentifier
-    }
 }
 
 /// A single-select group of `RadioOption`s with an optional inline validation error.

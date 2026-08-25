@@ -7,8 +7,6 @@
 
 import SwiftUI
 
-
-
 struct MapView: View {
     @State private var selectedSubzone: String?
     var body: some View {
@@ -19,7 +17,6 @@ struct MapView: View {
             Text("Subzone: \(selectedSubzone ?? "none")")
             Spacer()
         }
-            
     }
 }
 

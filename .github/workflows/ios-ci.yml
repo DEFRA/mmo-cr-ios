@@ -63,6 +63,18 @@ jobs:
           fi
           swiftlint lint --reporter github-actions-logging
 
+      - name: Build
+        run: |
+          set -euo pipefail
+          if ! command -v xcbeautify >/dev/null 2>&1; then
+            brew install xcbeautify
+          fi
+          xcodebuild build \
+            -project record-catch.xcodeproj \
+            -scheme record-catch \
+            -destination "platform=iOS Simulator,name=iPhone 16" \
+            | xcbeautify
+
       - name: Run unit tests with coverage
         run: bundle exec fastlane test
 

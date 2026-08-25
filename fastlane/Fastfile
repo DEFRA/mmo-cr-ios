@@ -1,0 +1,17 @@
+default_platform(:ios)
+
+platform :ios do
+  desc "Build and run the unit tests with code coverage (used by CI). UI tests are excluded for now."
+  lane :test do
+    run_tests(
+      project: "record-catch.xcodeproj",
+      scheme: "record-catch",
+      devices: ["iPhone 16"],
+      skip_testing: ["record-catchUITests"],
+      code_coverage: true,
+      result_bundle: true,
+      output_directory: "fastlane/test_output",
+      derived_data_path: "DerivedData"
+    )
+  end
+end

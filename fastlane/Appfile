@@ -1,0 +1,5 @@
+# App identity for fastlane. Only the bundle identifier is needed by the CI `test`
+# lane. App Store Connect credentials (apple_id / team ids / API key) are added with
+# the release pipeline and supplied at runtime from Environment-scoped secrets —
+# never committed here.
+app_identifier("mmo.catchrecordingdev.ios")

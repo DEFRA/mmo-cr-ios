@@ -6,7 +6,7 @@ platform :ios do
     run_tests(
       project: "record-catch.xcodeproj",
       scheme: "record-catch",
-      devices: ["iPhone 16"],
+      devices: ["iPhone 17"],
       skip_testing: ["record-catchUITests"],
       code_coverage: true,
       result_bundle: true,

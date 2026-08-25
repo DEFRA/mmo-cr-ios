@@ -1,7 +1,7 @@
 # SwiftLint configuration — MMO Catch Recording iOS
 # Starting posture is deliberately conservative so the lint gate is useful without
 # blocking on a large backlog of pre-existing style nits. Ratchet rules up over time
-# (see docs/adr/0007-ci-pipeline.md).
+# (see docs/adr/0008-ci-pipeline.md).
 
 included:
   - record-catch

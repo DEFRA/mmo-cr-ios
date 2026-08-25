@@ -1,0 +1,88 @@
+name: iOS CI
+
+on:
+  pull_request:
+    branches: 
+      - main
+  push:
+  workflow_dispatch:      
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: Build, test & analyse
+    runs-on: macos-26
+    env:
+      SONAR_TOKEN: ${{ secrets.MMO_CR_SONAR_TOKEN }}
+      SONAR_HOST_URL: https://sonarcloud.io
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5.1.0
+        with:
+          fetch-depth: 0
+
+      - name: Select Xcode
+        run: |
+          set -euo pipefail
+          XCODE_APP=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -n1)
+          if [ -z "$XCODE_APP" ]; then
+            echo "::error::No Xcode 26.x found under /Applications" >&2
+            ls /Applications | grep -i xcode >&2 || true
+            exit 1
+          fi
+          echo "Selecting $XCODE_APP"
+          sudo xcode-select -s "$XCODE_APP/Contents/Developer"
+          xcodebuild -version
+
+      - name: Set up Ruby & Bundler
+        uses: ruby/setup-ruby@v1.321.0
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+
+      - name: Cache Swift Package Manager
+        uses: actions/cache@v4.3.0
+        with:
+          path: |
+            .build
+            ~/Library/Developer/Xcode/DerivedData/**/SourcePackages
+          key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
+
+      - name: SwiftLint
+        run: |
+          if ! command -v swiftlint >/dev/null 2>&1; then
+            brew install swiftlint
+          fi
+          swiftlint lint --reporter github-actions-logging
+
+      - name: Build
+        run: |
+          set -euo pipefail
+          if ! command -v xcbeautify >/dev/null 2>&1; then
+            brew install xcbeautify
+          fi
+          xcodebuild clean build \
+            -project record-catch.xcodeproj \
+            -scheme record-catch \
+            -destination "platform=iOS Simulator,name=iPhone 17" \
+            | xcbeautify
+
+      - name: Run unit tests with coverage
+        run: bundle exec fastlane test
+
+      - name: Convert coverage to SonarQube generic format
+        run: bash scripts/xccov-to-sonarqube-generic.sh fastlane/test_output/*.xcresult > sonar-coverage.xml
+
+      - name: SonarQube Cloud scan
+        uses: SonarSource/sonarqube-scan-action@v5.3.2
+        env:
+          SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ env.SONAR_HOST_URL }}

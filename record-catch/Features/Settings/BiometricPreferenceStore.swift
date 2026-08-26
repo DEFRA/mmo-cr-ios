@@ -3,21 +3,15 @@ import Foundation
 /// The user's local Face ID sign-in preference, shown as a toggle on the "Manage your account"
 /// screen's "Sign in" section.
 ///
-/// **UI-only stub for this phase — deliberately NOT wired to `LocalAuthentication`.** No
-/// `LAContext`/`evaluatePolicy` call is made anywhere in this app yet, and no biometric
-/// enrolment/consent has actually happened; this only persists a local on/off preference so the
-/// toggle has a real value to bind to and survives relaunches, mirroring
-/// `AnalyticsPreferenceStoring`. See docs/design-specs/manage-account.md and
-/// docs/adr/0007-settings-tab-navigation.md for the security follow-up this stub defers.
-///
-/// - TODO: Wiring real Face ID sign-in requires a dedicated security-reviewed ADR covering
-///   `LAContext` policy evaluation, Keychain-backed credential storage, `NSFaceIDUsageDescription`
-///   (currently absent — this app uses `GENERATE_INFOPLIST_FILE=YES` with no biometrics usage
-///   description, correctly, since no real biometric API is called), and graceful fallback when
-///   biometrics are unavailable/unenrolled. Do not let this preference drive any real
-///   authentication decision until that ADR lands.
+/// This preference is now the **real** opt-in switch for the offline biometric local re-entry
+/// gate (see ADR-0009, `AppLockView`/`AppLockViewModel`, and `Core/Security/`). It is still
+/// **not** backend authentication — no real backend authentication exists in this app yet; this
+/// only gates re-entry into an already-local "signed-in" app state. See
+/// `ManageAccountViewModel.faceIDEnabled` for the enrolment-gated write path — turning the
+/// preference on requires a live, successful biometric check first; it is never flipped on
+/// speculatively.
 nonisolated protocol BiometricPreferenceStoring: Sendable {
-    /// Whether the user has opted in to Face ID sign-in (UI preference only).
+    /// Whether the user has opted in to Face ID sign-in.
     func isFaceIDEnabled() -> Bool
     /// Persists the user's choice.
     func setFaceIDEnabled(_ enabled: Bool)

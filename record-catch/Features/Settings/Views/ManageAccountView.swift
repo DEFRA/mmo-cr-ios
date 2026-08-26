@@ -124,8 +124,6 @@ struct ManageAccountView: View {
 
     @ViewBuilder
     private var signInSection: some View {
-        @Bindable var viewModel = viewModel
-
         VStack(alignment: .leading, spacing: AppSpacing.medium) {
             Text(languageStore.localized("manageAccount.signIn.heading"))
                 .font(AppTypography.body.weight(.bold))
@@ -139,13 +137,52 @@ struct ManageAccountView: View {
 
             ParagraphText(text: languageStore.localized("manageAccount.faceID.hint"), isHint: true)
 
+            if viewModel.enableFailedMessage {
+                faceIDEnableFailedSummary
+            }
+
             SettingsToggleRow(
                 accessibilityIdentifier: "ManageAccount.faceIDToggle",
                 accessibilityLabel: languageStore.localized("manageAccount.faceID.toggle.label"),
                 accessibilityHint: languageStore.localized("manageAccount.faceID.toggle.hint"),
-                isOn: $viewModel.faceIDEnabled
+                isOn: faceIDToggleBinding
             )
         }
+    }
+
+    /// A live biometric enrolment check is required before the preference can turn on
+    /// (ADR-0009 §8), so the toggle's `Bool` binding drives async view-model calls rather than
+    /// writing straight to a stored property.
+    private var faceIDToggleBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.faceIDEnabled },
+            set: { newValue in
+                if newValue {
+                    Task { await viewModel.enableFaceID() }
+                } else {
+                    viewModel.disableFaceID()
+                }
+            }
+        )
+    }
+
+    private var faceIDEnableFailedSummary: some View {
+        HStack(alignment: .top, spacing: AppSpacing.xSmall) {
+            Image(systemName: "exclamationmark.circle.fill")
+                .foregroundStyle(AppColors.errorRed)
+                .accessibilityHidden(true)
+            LocalizedText("manageAccount.faceID.enableFailed")
+                .font(AppTypography.error)
+                .foregroundStyle(AppColors.errorRed)
+        }
+        .padding(AppSpacing.medium)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .overlay(Rectangle().stroke(AppColors.errorRed, lineWidth: 2))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(
+            "\(languageStore.localized("a11y.errorPrefix")) \(languageStore.localized("manageAccount.faceID.enableFailed"))"
+        )
+        .accessibilityIdentifier("ManageAccount.faceIDEnableFailed")
     }
 }
 
@@ -153,7 +190,9 @@ struct ManageAccountView: View {
     ManageAccountView(
         viewModel: ManageAccountViewModel(
             accountProvider: StubAccountProvider(),
-            biometricStore: InMemoryBiometricPreferenceStore()
+            biometricStore: InMemoryBiometricPreferenceStore(),
+            biometricAuthenticator: FakeBiometricAuthenticator(),
+            secretStore: InMemoryReentrySecretStore()
         )
     )
     .environment(AppLanguageStore.preview)
@@ -163,7 +202,9 @@ struct ManageAccountView: View {
     ManageAccountView(
         viewModel: ManageAccountViewModel(
             accountProvider: StubAccountProvider(),
-            biometricStore: InMemoryBiometricPreferenceStore()
+            biometricStore: InMemoryBiometricPreferenceStore(),
+            biometricAuthenticator: FakeBiometricAuthenticator(),
+            secretStore: InMemoryReentrySecretStore()
         )
     )
     .environment({
@@ -177,7 +218,24 @@ struct ManageAccountView: View {
     ManageAccountView(
         viewModel: ManageAccountViewModel(
             accountProvider: StubAccountProvider(),
-            biometricStore: InMemoryBiometricPreferenceStore(initialValue: true)
+            biometricStore: InMemoryBiometricPreferenceStore(initialValue: true),
+            biometricAuthenticator: FakeBiometricAuthenticator(),
+            secretStore: InMemoryReentrySecretStore(exists: true)
+        )
+    )
+    .environment(AppLanguageStore.preview)
+}
+
+#Preview("Face ID enable failed") {
+    ManageAccountView(
+        viewModel: ManageAccountViewModel(
+            accountProvider: StubAccountProvider(),
+            biometricStore: InMemoryBiometricPreferenceStore(),
+            biometricAuthenticator: FakeBiometricAuthenticator(
+                availability: .unavailable(.noBiometryEnrolled),
+                authenticateResult: .failure(.biometryNotEnrolled)
+            ),
+            secretStore: InMemoryReentrySecretStore()
         )
     )
     .environment(AppLanguageStore.preview)
@@ -187,7 +245,9 @@ struct ManageAccountView: View {
     ManageAccountView(
         viewModel: ManageAccountViewModel(
             accountProvider: StubAccountProvider(),
-            biometricStore: InMemoryBiometricPreferenceStore()
+            biometricStore: InMemoryBiometricPreferenceStore(),
+            biometricAuthenticator: FakeBiometricAuthenticator(),
+            secretStore: InMemoryReentrySecretStore()
         )
     )
     .environment(AppLanguageStore.preview)

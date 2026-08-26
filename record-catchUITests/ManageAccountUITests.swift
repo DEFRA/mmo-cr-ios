@@ -82,17 +82,22 @@ final class ManageAccountUITests: XCTestCase {
     }
 
     @MainActor
-    func test_faceIDToggle_flipsValue() {
+    func test_faceIDToggle_enableAttempt_withNoBiometricsEnrolled_staysOff_andShowsAccessibleFailure() {
+        // The toggle now drives a REAL biometric enrolment check (ADR-0009). The CI/simulator
+        // has no biometrics enrolled by default, so turning it on must fail gracefully: the
+        // toggle stays off (never a silent "looks enabled but isn't") and an accessible
+        // failure message appears — it must never crash or dead-end the user.
         let app = launch()
 
         let toggle = element(app, ID.faceIDToggle)
         XCTAssertTrue(toggle.waitForExistence(timeout: 5))
+        XCTAssertEqual(toggle.value as? String, "0", "Toggle should start off (-uiTestManageAccount resets the preference)")
 
-        let initialValue = toggle.value as? String
         toggle.tap()
 
-        let flippedValue = toggle.value as? String
-        XCTAssertNotEqual(initialValue, flippedValue, "Toggle's accessibility value should change after tapping")
+        let failureMessage = element(app, "ManageAccount.faceIDEnableFailed")
+        XCTAssertTrue(failureMessage.waitForExistence(timeout: 5), "Failed biometric check should surface an accessible error")
+        XCTAssertEqual(toggle.value as? String, "0", "Toggle must not flip on when the biometric check fails")
     }
 
     @MainActor

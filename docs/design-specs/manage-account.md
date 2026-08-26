@@ -169,10 +169,14 @@ placeholder and marked `needs_review` in the String Catalog pending a Welsh spea
    (`ManageAccount.faceIDToggle`) without a second, near-duplicate toggle component. The existing
    Settings analytics call site is updated to pass its identifier explicitly, with no behaviour
    change.
-3. **Face ID toggle is a UI-only preference stub with no `LocalAuthentication`/Keychain
-   integration** — a deliberate, ADR-recorded security scope decision (see ADR-0007 §3), not an
-   oversight. Flagged prominently so this is not mistaken for real biometric authentication in
-   review.
+3. **Face ID toggle is now the real opt-in switch for a device-local, offline-only re-entry
+   gate** — see **ADR-0009 (offline biometric local re-entry)**, which supersedes ADR-0007 §3's
+   deliberate UI-only stub. Enabling the toggle requires a live, successful biometric check before
+   the preference is persisted and a re-entry secret is provisioned; this is still **not** backend
+   authentication (none exists in this app yet) — it only gates re-entry into an already-local
+   "signed-in" app stateeference is persisted and a re-entry secret is provisioned; this is still **not** backend
+   authentication (none exists in this app yet) — it only gates re-entry into an already-local
+   "signed-in" app state.
 4. **Figma REST access hit a 429 rate limit** for this screen's source node (`1:6525`); built
    from a user-provided screenshot instead, per the skill's hard rule against retrying through a
    429. A follow-up read-only Figma fetch is owed (see Source & freshness).
@@ -186,8 +190,10 @@ placeholder and marked `needs_review` in the String Catalog pending a Welsh spea
   typography scale, spacing, icon choices) against this screenshot-derived build.
 - Confirm Welsh copy for all `manageAccount.*` strings with a Welsh speaker before shipping
   (currently `needs_review` placeholders, consistent with every other screen).
-- Confirm with product/security when real Face ID sign-in (LocalAuthentication + Keychain) should
-  be scheduled, and ensure the follow-up ADR from ADR-0007 §3 is raised before that work starts.
+- Real Face ID sign-in (LocalAuthentication + Keychain) has landed as a device-local re-entry gate
+  — see ADR-0009. Confirm with product/security when real *backend* credential-based biometric
+  sign-in (as opposed to local re-entry) should be scheduled, once real backend authentication
+  exists.
 
 ## Security notes
 - No secrets/tokens/endpoints were found in or copied from the screenshot; all copy above is
@@ -196,7 +202,8 @@ placeholder and marked `needs_review` in the String Catalog pending a Welsh spea
   source location, `Account.fixture` in `Features/Settings/ManageAccount/Account.swift` — never
   hard-coded again in any view, and never logged (no `Account` field is passed to
   `OSLog`/`Logger` anywhere in this change).
-- The Face ID toggle makes **no** biometric API call — see ADR-0007 §3 for the full security
-  scope decision and its required follow-up ADR before real biometrics land.
+- The Face ID toggle now makes a real biometric API call (device-local re-entry gate only) — see
+  ADR-0009 for the full security design (Keychain item design, `.biometryCurrentSet` invalidation,
+  `LAContext` policy, fallback). It is still not backend authentication.
 - No Figma write was performed and the Figma MCP server was not used; the only Figma interaction
   attempted was a read-only REST GET that was rate-limited (HTTP 429) and not retried.

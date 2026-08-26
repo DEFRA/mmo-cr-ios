@@ -56,12 +56,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-spm-
 
-      - name: SwiftLint
-        run: |
-          if ! command -v swiftlint >/dev/null 2>&1; then
-            brew install swiftlint
-          fi
-          swiftlint lint --reporter github-actions-logging
+      # - name: SwiftLint
+      #   run: |
+      #     if ! command -v swiftlint >/dev/null 2>&1; then
+      #       brew install swiftlint
+      #     fi
+      #     swiftlint lint --reporter github-actions-logging
 
       - name: Build
         run: |

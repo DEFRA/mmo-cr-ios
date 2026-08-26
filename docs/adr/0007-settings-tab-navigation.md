@@ -68,6 +68,9 @@ and `docs/design-specs/settings.md`). Toggling it persists a local on/off prefer
   MASVS-AUTH), graceful fallback when biometrics are unavailable/unenrolled/locked out, and the
   `NSFaceIDUsageDescription` string itself. Until that ADR lands, `faceIDEnabled` must not gate
   any real authentication decision — it is presentation-layer state only.
+  - **Landed:** see **ADR-0009 — Offline biometric local re-entry (app-lock gate)**, which covers
+    all of the above and makes this toggle the real opt-in switch for a device-local,
+    offline-only re-entry gate (not backend authentication).
 
 This mirrors the existing, already-accepted pattern for the analytics toggle (a genuine UI
 preference with a clearly documented "this is not the real thing yet" TODO), rather than
@@ -95,11 +98,11 @@ the screenshot and the live Figma node — see the Open questions in
   (`BiometricPreferenceStoreTests`, `ManageAccountViewModelTests`) without ever touching a real
   biometric API, keeping this phase's security surface unchanged (still zero biometric API calls
   in the codebase).
-- **Outstanding, tracked follow-up:** real Face ID sign-in (LocalAuthentication + Keychain +
-  `NSFaceIDUsageDescription`) requires its own security-reviewed ADR before `faceIDEnabled` can
-  gate any actual authentication — see §3 above. Flagged to Delivery Architecture per the
-  standards-precedence governance-exception process if this boundary is ever crossed without
-  that ADR.
+- **Outstanding, tracked follow-up — LANDED:** real Face ID sign-in (LocalAuthentication +
+  Keychain + `NSFaceIDUsageDescription`) required its own security-reviewed ADR before
+  `faceIDEnabled` could gate any actual authentication — see §3 above. This is now delivered as a
+  **device-local, offline-only re-entry gate** per **ADR-0009**; it is still not backend
+  authentication (none exists yet).
 - **Outstanding, tracked follow-up:** re-run the read-only `fetch-figma-design` skill on node
   `1:6525` once the Figma rate limit clears, and reconcile `docs/design-specs/manage-account.md`
   against the live design.

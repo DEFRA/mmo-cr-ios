@@ -26,10 +26,67 @@ struct record_catchApp: App {
     let environment = AppEnvironment()
     @State private var languageStore = AppLanguageStore()
     @State private var tabRouter = AppTabRouter(selection: Self.seedTabSelection)
-    /// DEMO-ONLY BYPASS: no real authentication exists yet, so tapping "Sign in"
-    /// always succeeds regardless of form input. Once real auth lands this should
-    /// be driven by an authenticated-session check instead of local UI state.
-    @State private var isSignedIn = false
+
+    // MARK: - Local session / offline biometric re-entry (ADR-0009)
+    //
+    // `isSignedIn` is gone: a device-local "session" now persists across relaunches via
+    // `localSessionStore` (Keychain-backed, NOT a backend session — no real authentication
+    // exists yet). `rootPhase` decides which of sign-in / app-lock / home to show, computed via
+    // the pure `BiometricReentryPolicy` helper so the logic is unit-tested, not duplicated here.
+    private let biometricAuthenticator: BiometricAuthenticating
+    private let localSessionStore: LocalSessionStoring
+    private let reentrySecretStore: ReentrySecretStoring
+    private let biometricPreferenceStore: BiometricPreferenceStoring
+
+    @State private var rootPhase: RootPhase
+    @Environment(\.scenePhase) private var scenePhase
+
+    init() {
+        let arguments = ProcessInfo.processInfo.arguments
+
+        // Deterministic starting point for Settings/Manage-account UI tests (mirrors
+        // `-uiTestResetLanguage`): the real `UserDefaultsBiometricPreferenceStore` persists
+        // across launches, and the toggle's "on" path now requires a real (simulator-absent)
+        // biometric check, so tests need a known "off" starting value.
+        if arguments.contains("-uiTestManageAccount") || arguments.contains("-uiTestSettings") {
+            UserDefaults.standard.removeObject(forKey: UserDefaultsBiometricPreferenceStore.storageKey)
+        }
+
+        let biometricAuthenticator: BiometricAuthenticating
+        let localSessionStore: LocalSessionStoring
+        let reentrySecretStore: ReentrySecretStoring
+        let biometricPreferenceStore: BiometricPreferenceStoring
+
+        // UI-test seams (ADR-0009): inject deterministic fakes so app-lock states can be driven
+        // without real biometric hardware, mirroring the existing `-uiTest*` launch-arg pattern.
+        if arguments.contains("-uiTestAppLockLocked") {
+            biometricAuthenticator = FakeBiometricAuthenticator(availability: .available(.faceID))
+            localSessionStore = InMemoryLocalSessionStore(hasSession: true)
+            reentrySecretStore = InMemoryReentrySecretStore(exists: true)
+            biometricPreferenceStore = InMemoryBiometricPreferenceStore(initialValue: true)
+        } else if arguments.contains("-uiTestAppLockFallback") {
+            biometricAuthenticator = FakeBiometricAuthenticator(availability: .unavailable(.noBiometryEnrolled))
+            localSessionStore = InMemoryLocalSessionStore(hasSession: true)
+            reentrySecretStore = InMemoryReentrySecretStore(exists: false)
+            biometricPreferenceStore = InMemoryBiometricPreferenceStore(initialValue: false)
+        } else {
+            biometricAuthenticator = LABiometricAuthenticator()
+            localSessionStore = KeychainLocalSessionStore()
+            reentrySecretStore = KeychainReentrySecretStore()
+            biometricPreferenceStore = UserDefaultsBiometricPreferenceStore()
+        }
+
+        self.biometricAuthenticator = biometricAuthenticator
+        self.localSessionStore = localSessionStore
+        self.reentrySecretStore = reentrySecretStore
+        self.biometricPreferenceStore = biometricPreferenceStore
+        _rootPhase = State(initialValue: Self.computeRootPhase(
+            biometricAuthenticator: biometricAuthenticator,
+            localSessionStore: localSessionStore,
+            reentrySecretStore: reentrySecretStore,
+            biometricPreferenceStore: biometricPreferenceStore
+        ))
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -47,8 +104,73 @@ struct record_catchApp: App {
                 // invisible. Forcing light appearance keeps the whole app consistent until/unless
                 // a Dark Mode variant of the design system is designed and an ADR records it.
                 .preferredColorScheme(.light)
+                .onChange(of: scenePhase) { oldPhase, newPhase in
+                    // Re-lock on return to foreground after backgrounding (ADR-0009 §4). Only
+                    // relevant once the user has actually reached Home this launch.
+                    guard newPhase == .active, oldPhase == .background, rootPhase == .home else { return }
+                    rootPhase = Self.computeRootPhase(
+                        biometricAuthenticator: biometricAuthenticator,
+                        localSessionStore: localSessionStore,
+                        reentrySecretStore: reentrySecretStore,
+                        biometricPreferenceStore: biometricPreferenceStore
+                    )
+                }
         }
         .modelContainer(sharedModelContainer)
+    }
+
+    /// Root-flow phase: which of sign-in / app-lock / home to show (ADR-0009).
+    private enum RootPhase: Equatable {
+        case signIn
+        case appLock
+        case home
+    }
+
+    /// Pure-computed (given the injected stores) root phase, via `BiometricReentryPolicy`.
+    private static func computeRootPhase(
+        biometricAuthenticator: BiometricAuthenticating,
+        localSessionStore: LocalSessionStoring,
+        reentrySecretStore: ReentrySecretStoring,
+        biometricPreferenceStore: BiometricPreferenceStoring
+    ) -> RootPhase {
+        guard localSessionStore.hasLocalSession() else { return .signIn }
+        let offer = BiometricReentryPolicy.offer(
+            hasLocalSession: true,
+            preferenceEnabled: biometricPreferenceStore.isFaceIDEnabled(),
+            availability: biometricAuthenticator.biometricAvailability(),
+            secretExists: reentrySecretStore.secretExists()
+        )
+        switch offer {
+        case .offer: return .appLock
+        case .fallToSignIn: return .signIn
+        }
+    }
+
+    /// Runs after the (currently stubbed) sign-in succeeds: begins the local session and,
+    /// if the user has previously opted in to Face ID re-entry, re-provisions the secret
+    /// defensively (idempotent — a no-op if one is already provisioned).
+    private func handleSignIn() {
+        try? localSessionStore.beginSession()
+        if biometricPreferenceStore.isFaceIDEnabled() {
+            try? reentrySecretStore.provisionSecret()
+        }
+        rootPhase = .home
+    }
+
+    /// Builds a fully-configured `AppLockViewModel` for the app-lock branch of `rootView`.
+    /// Kept as a plain (non-`@ViewBuilder`) method so the callback assignments below are
+    /// ordinary statements, not misread as view content by the `@ViewBuilder` DSL.
+    private func makeAppLockViewModel() -> AppLockViewModel {
+        let viewModel = AppLockViewModel(
+            biometricAuthenticator: biometricAuthenticator,
+            sessionStore: localSessionStore,
+            secretStore: reentrySecretStore,
+            preferenceStore: biometricPreferenceStore,
+            unlockReason: languageStore.localized("appLock.unlockReason")
+        )
+        viewModel.onUnlocked = { rootPhase = .home }
+        viewModel.onFallbackToSignIn = { rootPhase = .signIn }
+        return viewModel
     }
 
     /// Seeds `AppTabRouter.selection` synchronously from a UI-test launch argument, before the
@@ -123,10 +245,15 @@ struct record_catchApp: App {
             RootTabView()
         } else if arguments.contains("-uiTestTabBar") {
             RootTabView()
-        } else if isSignedIn {
-            RootTabView()
         } else {
-            SignInView(onSignIn: { isSignedIn = true })
+            switch rootPhase {
+            case .home:
+                RootTabView()
+            case .appLock:
+                AppLockView(viewModel: makeAppLockViewModel())
+            case .signIn:
+                SignInView(onSignIn: handleSignIn)
+            }
         }
     }
 

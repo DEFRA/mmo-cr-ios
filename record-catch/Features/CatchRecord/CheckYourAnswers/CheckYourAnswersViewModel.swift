@@ -182,25 +182,41 @@ final class CheckYourAnswersViewModel {
 
     private var gearRows: [Row] {
         guard let vessel = draft.vessel, let gear = draft.gear else { return [] }
-        let changeRoute = CatchRecordRoute.gearMeasurements(gear: gear, vessel: vessel, referenceNumber: referenceNumber)
+        // Required measurements are captured on the gear-measurements screen; variable (per-trip)
+        // measurements are captured on the select-gear screen, so each "Change" returns the user to
+        // the screen where that value was entered.
+        let measurementsRoute = CatchRecordRoute.gearMeasurements(gear: gear, vessel: vessel, referenceNumber: referenceNumber)
+        let selectGearRoute = CatchRecordRoute.selectGear(vessel: vessel, referenceNumber: referenceNumber)
 
         var rows: [Row] = [
             Row(
                 id: "gear.name",
                 labelKey: "catchRecord.checkYourAnswers.label.gear",
                 value: gear.name,
-                changeRoute: changeRoute
+                changeRoute: measurementsRoute
             )
         ]
 
-        for measurement in gear.measurements {
+        for measurement in gear.requiredMeasurements {
             guard let value = measurement.value else { continue }
             rows.append(
                 Row(
                     id: "gear.measurement.\(measurement.id)",
                     labelKey: measurement.labelKey,
                     value: String(value),
-                    changeRoute: changeRoute
+                    changeRoute: measurementsRoute
+                )
+            )
+        }
+
+        for measurement in gear.variableMeasurements {
+            guard let value = measurement.value else { continue }
+            rows.append(
+                Row(
+                    id: "gear.variableMeasurement.\(measurement.id)",
+                    labelKey: measurement.labelKey,
+                    value: String(value),
+                    changeRoute: selectGearRoute
                 )
             )
         }

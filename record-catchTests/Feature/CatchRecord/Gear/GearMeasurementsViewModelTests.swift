@@ -62,7 +62,7 @@ final class GearMeasurementsViewModelTests: XCTestCase {
 
         XCTAssertFalse(sut.saveFailed)
         let saved = try? await favourites.favouriteGears()
-        XCTAssertEqual(saved?.first?.measurements.first?.value, 100)
+        XCTAssertEqual(saved?.first?.requiredMeasurements.first?.value, 100)
         XCTAssertEqual(
             router.path,
             [.selectGear(vessel: vessel, referenceNumber: referenceNumber)]

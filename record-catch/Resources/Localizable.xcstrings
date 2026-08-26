@@ -1243,6 +1243,24 @@
         }
       }
     },
+    "catchRecord.gear.variableMeasurement.timesShot": {
+      "comment": "Label for the per-trip variable measurement capturing how many times the gear was shot.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Nifer y gweithiau y taflwyd yr offer ar y daith"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Number of times gear was shot on trip"
+          }
+        }
+      }
+    },
     "catchRecord.landingStorage.heading": {
       "comment": "Landing storage screen H1.",
       "extractionState": "manual",

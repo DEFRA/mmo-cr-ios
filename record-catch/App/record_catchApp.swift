@@ -214,6 +214,17 @@ struct record_catchApp: App {
                 initialRoute: .selectPort(phase: .departure, vessel: "ACHILLES", referenceNumber: "A1234520260727150815"),
                 favouritePorts: StubFavouritePortsProvider(initialFavourites: [PortOption(name: "Hastings")])
             )
+        } else if arguments.contains("-uiTestCatchRecordSelectGear") {
+            // Seeded favourite gear → "What gear did you use?" screen first, for UI testing the
+            // per-trip variable-measurement conditional reveal and its validation.
+            CatchRecordHostView(
+                initialRoute: .selectGear(vessel: "ACHILLES", referenceNumber: "A1234520260727150815"),
+                favouriteGears: StubFavouriteGearProvider(initialFavourites: [
+                    GearOption.seineNets.withRequiredMeasurements([
+                        GearMeasurement(id: "meshSize", labelKey: "catchRecord.gear.measurement.meshSize", value: 100)
+                    ])
+                ])
+            )
         } else if arguments.contains("-uiTestCatchRecordCheckYourAnswers") {
             // Fully-populated draft → Check your answers screen, for UI testing the summary/Change
             // links without driving the whole journey by hand.
@@ -277,9 +288,13 @@ struct record_catchApp: App {
         draft.departurePort = PortOption(name: "Plymouth")
         draft.returnPort = PortOption(name: "Plymouth")
         draft.statisticalArea = "27.7.e"
-        draft.gear = GearOption.seineNets.withMeasurements([
-            GearMeasurement(id: "meshSize", labelKey: "catchRecord.gear.measurement.meshSize", value: 80)
-        ])
+        draft.gear = GearOption.seineNets
+            .withRequiredMeasurements([
+                GearMeasurement(id: "meshSize", labelKey: "catchRecord.gear.measurement.meshSize", value: 80)
+            ])
+            .withVariableMeasurements([
+                GearMeasurement(id: "timesShot", labelKey: "catchRecord.gear.variableMeasurement.timesShot", value: 5)
+            ])
         draft.speciesCaught = [SpeciesOption(name: "Atlantic cod (COD)").withWeights(above: "250", below: nil, discarded: nil)]
         draft.speciesNotLanded = [SpeciesOption(name: "Atlantic cod (COD)").withWeights(above: "5", below: nil, discarded: nil)]
         return draft

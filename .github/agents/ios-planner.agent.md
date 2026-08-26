@@ -5,11 +5,11 @@ a complete, approval-ready implementation plan — sequencing, dependencies,: ''
 risks, a validation strategy — and does the single, risk-scoped open/internet: ''
 research behind it (via the deep-research-defra-alignment skill) to validate: ''
 APIs, patterns, security and policy against Apple, DEFRA/GDS guidance before: ''
-returning the plan to the parent agent. Scales its output to the task: a: ''
+returning the plan to the parent agent. Scales its output to the task: 'a: '''''
 short-form plan for Standard work, the full contract for Complex/architectural: ''
 work.: ''
 name: iOS Planner
-tools: ['read', 'search', 'web', 'agent', 'fetch_webpage', 'file_search', 'grep_search', 'get_errors', 'get_terminal_output', 'list_dir', 'read_file', 'run_subagent', 'run_in_terminal', 'validate_cves']
+tools: ['read', 'search', 'web', 'agent', 'fetch_webpage', 'file_search', 'grep_search', 'get_errors', 'get_terminal_output', 'list_dir', 'read_file', 'run_subagent', 'run_in_terminal', 'validate_cves', 'xcode/XcodeListNavigatorIssues', 'xcode/GetTestList', 'xcode/XcodeWrite', 'xcode/XcodeGrep', 'xcode/XcodeGetCurrentFile', 'xcode/RunSomeTests', 'xcode/XcodeRefreshCodeIssuesInFile', 'xcode/XcodeUpdate', 'xcode/XcodeMV', 'xcode/XcodeLS', 'xcode/RunAllTests', 'xcode/RenderPreview', 'xcode/XcodeMakeDir', 'xcode/GetBuildLog', 'xcode/XcodeListWindows', 'xcode/XcodeGlob', 'xcode/XcodeRM', 'xcode/XcodeRead', 'xcode/DocumentationSearch', 'xcode/BuildProject', 'xcode/RunCodeSnippet']
 model: Claude Opus 4.8 (copilot)
 argument-hint: Planning handoff payload from a parent agent.
 agents:

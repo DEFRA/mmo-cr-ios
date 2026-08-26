@@ -9,14 +9,24 @@ final class SelectGearViewModelTests: XCTestCase {
 
     private func makeSUT(
         router: CatchRecordRouter,
-        favourites: [GearOption] = [.seineNets]
+        favourites: [GearOption] = [.seineNets],
+        draft: CatchRecordDraft = CatchRecordDraft()
     ) -> SelectGearViewModel {
         SelectGearViewModel(
             vessel: vessel,
             referenceNumber: referenceNumber,
             router: router,
-            favouriteGears: StubFavouriteGearProvider(initialFavourites: favourites)
+            favouriteGears: StubFavouriteGearProvider(initialFavourites: favourites),
+            draft: draft
         )
+    }
+
+    /// Seine nets with a captured required mesh size and its per-trip variable measurement, mirroring
+    /// a real favourite loaded on this screen.
+    private var seineNetsFavourite: GearOption {
+        GearOption.seineNets.withRequiredMeasurements([
+            GearMeasurement(id: "meshSize", labelKey: "catchRecord.gear.measurement.meshSize", value: 100)
+        ])
     }
 
     func test_loadFavourites_populatesFavourites() async {
@@ -40,18 +50,57 @@ final class SelectGearViewModelTests: XCTestCase {
         XCTAssertNil(sut.errorKey)
     }
 
-    func test_submit_withSelection_routesToCatchLocationForSelectedGear() async {
+    func test_variableErrorKey_beforeSubmit_isNil() {
+        let sut = makeSUT(router: CatchRecordRouter())
+        XCTAssertNil(sut.variableErrorKey(gearID: GearOption.seineNets.id, measurementID: "timesShot"))
+    }
+
+    func test_submit_withSelection_butMissingVariableMeasurement_setsFieldError_andDoesNotRoute() async {
         let router = CatchRecordRouter()
-        let sut = makeSUT(router: router)
+        let sut = makeSUT(router: router, favourites: [seineNetsFavourite])
         await sut.loadFavourites()
-        sut.selection = ["Seine nets (not specified)"]
+        sut.selection = [GearOption.seineNets.id]
 
         sut.submit()
 
+        XCTAssertNil(sut.errorKey) // a gear is selected, so no group-level error
+        XCTAssertEqual(
+            sut.variableErrorKey(gearID: GearOption.seineNets.id, measurementID: "timesShot"),
+            "catchRecord.gear.measurement.validation.wholeNumber"
+        )
+        XCTAssertTrue(router.path.isEmpty)
+    }
+
+    func test_variableErrorKey_forUnselectedGear_isNil_evenAfterSubmit() async {
+        let router = CatchRecordRouter()
+        let sut = makeSUT(router: router, favourites: [seineNetsFavourite])
+        await sut.loadFavourites()
+
+        sut.submit() // no selection
+
+        XCTAssertNil(sut.variableErrorKey(gearID: GearOption.seineNets.id, measurementID: "timesShot"))
+    }
+
+    func test_submit_withValidVariableMeasurement_capturesValue_writesDraft_andRoutes() async {
+        let router = CatchRecordRouter()
+        let draft = CatchRecordDraft()
+        let sut = makeSUT(router: router, favourites: [seineNetsFavourite], draft: draft)
+        await sut.loadFavourites()
+        sut.selection = [GearOption.seineNets.id]
+        sut.variableEntries["\(GearOption.seineNets.id).timesShot"] = "5"
+
+        sut.submit()
+
+        let expectedGear = seineNetsFavourite.withVariableMeasurements([
+            GearMeasurement(id: "timesShot", labelKey: "catchRecord.gear.variableMeasurement.timesShot", value: 5)
+        ])
         XCTAssertNil(sut.errorKey)
+        XCTAssertNil(sut.variableErrorKey(gearID: GearOption.seineNets.id, measurementID: "timesShot"))
+        XCTAssertEqual(draft.gear, expectedGear)
+        XCTAssertEqual(draft.gear?.variableMeasurements.first?.value, 5)
         XCTAssertEqual(
             router.path,
-            [.catchLocation(gear: .seineNets, vessel: vessel, referenceNumber: referenceNumber)]
+            [.catchLocation(gear: expectedGear, vessel: vessel, referenceNumber: referenceNumber)]
         )
     }
 

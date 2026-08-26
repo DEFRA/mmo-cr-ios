@@ -53,7 +53,7 @@ struct GearMeasurementsView: View {
 
             ParagraphText(text: languageStore.localized("catchRecord.gear.measurement.hint"))
 
-            ForEach(viewModel.gear.measurements) { measurement in
+            ForEach(viewModel.gear.requiredMeasurements) { measurement in
                 TextInputField(
                     label: languageStore.localized(measurement.labelKey),
                     keyboardType: .numberPad,

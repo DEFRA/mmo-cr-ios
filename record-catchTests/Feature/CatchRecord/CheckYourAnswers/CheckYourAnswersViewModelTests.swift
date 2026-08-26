@@ -14,9 +14,13 @@ final class CheckYourAnswersViewModelTests: XCTestCase {
         draft.departurePort = PortOption(name: "Plymouth")
         draft.returnPort = PortOption(name: "Newlyn")
         draft.statisticalArea = "27.7.e"
-        draft.gear = GearOption.seineNets.withMeasurements([
-            GearMeasurement(id: "meshSize", labelKey: "catchRecord.gear.measurement.meshSize", value: 80)
-        ])
+        draft.gear = GearOption.seineNets
+            .withRequiredMeasurements([
+                GearMeasurement(id: "meshSize", labelKey: "catchRecord.gear.measurement.meshSize", value: 80)
+            ])
+            .withVariableMeasurements([
+                GearMeasurement(id: "timesShot", labelKey: "catchRecord.gear.variableMeasurement.timesShot", value: 5)
+            ])
         draft.speciesCaught = [
             SpeciesOption(name: "Atlantic cod (COD)").withWeights(above: "250", below: nil, discarded: nil)
         ]
@@ -124,6 +128,13 @@ final class CheckYourAnswersViewModelTests: XCTestCase {
         let meshRow = gearRows.first { $0.id == "gear.measurement.meshSize" }
         XCTAssertEqual(meshRow?.value, "80")
         XCTAssertEqual(meshRow?.changeRoute, expectedRoute)
+
+        // Variable (per-trip) measurements are captured on the select-gear screen, so their
+        // "Change" returns there rather than to the gear-measurements screen.
+        let selectGearRoute = CatchRecordRoute.selectGear(vessel: "ACHILLES", referenceNumber: referenceNumber)
+        let timesShotRow = gearRows.first { $0.id == "gear.variableMeasurement.timesShot" }
+        XCTAssertEqual(timesShotRow?.value, "5")
+        XCTAssertEqual(timesShotRow?.changeRoute, selectGearRoute)
     }
 
     // MARK: - Species caught section

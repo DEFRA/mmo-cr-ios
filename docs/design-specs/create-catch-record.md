@@ -202,3 +202,66 @@ The Select vessel → Trip-started-today reference number is a **static placehol
 existing internal demo value `A1234520260727150815`) generated client-side with no format
 guarantee. It is not derived from any backend and must be replaced once a real submission/reference
 API exists — tracked as a future-phase dependency, not part of this UI-only slice.
+
+## Screen — What gear did you use? — variable (per-trip) measurements (`CatchRecord.selectGear.*`)
+
+Reached in the gear sub-journey when the user already has favourite gears. The user ticks each gear
+used on the trip (multi-select checkboxes). See ADR-0010 for the required-vs-variable measurement
+model.
+
+Gears carry two kinds of measurement, both from gear reference data:
+
+- **Required** (e.g. mesh size) — fixed to the gear, captured once on the gear-measurements screen
+  when the gear is added to favourites, and shown here as the checkbox subtitle (e.g. "100mm mesh").
+- **Variable** (e.g. number of times shot) — change per trip, captured **here**.
+
+### Conditional reveal
+
+Ticking a gear reveals its variable-measurement field(s) directly beneath the checkbox, indented
+with a grey left rule — the GOV.UK "conditionally revealing a related question" pattern. Seine nets
+reveals a single whole-number field, "Number of times gear was shot on trip"
+(`.variable.<gearId>.timesShot`). Unticking hides the field again.
+
+### Validation
+
+"Save and continue" (`.saveContinue`):
+
+1. At least one gear must be ticked, else the group-level inline error
+   `catchRecord.selectGear.validation.none` (`.error`).
+2. Every **ticked** gear's variable measurements must be valid whole numbers, else an inline field
+   error `catchRecord.gear.measurement.validation.wholeNumber` under the offending field. Unticked
+   gears are never validated.
+
+On success the selected gear (with its captured variable values attached) is written to
+`CatchRecordDraft.gear` and the journey routes to the catch-location screen. "Add another gear"
+(`.addAnother`) opens the Add-gear search screen.
+
+### Check your answers
+
+The gear section shows the gear name, then required-measurement rows (Change → gear-measurements),
+then variable-measurement rows with their captured values (Change → this select-gear screen).
+
+### Copy additions (en / cy)
+
+| Key | English | Welsh (placeholder, `needs_review`) |
+|---|---|---|
+| `catchRecord.gear.variableMeasurement.timesShot` | Number of times gear was shot on trip | Nifer y gweithiau y taflwyd yr offer ar y daith |
+
+### Accessibility annotations
+
+- The revealed field is a **single simple question** placed immediately after its checkbox in the
+  accessibility tree, per GOV.UK guidance. GOV.UK documents a known WCAG 2.2 SC 4.1.2 (Name, Role,
+  Value) limitation that screen-reader users are not always notified when a reveal appears/hides;
+  simple reveals (one field) tested acceptably, so this is followed rather than blocked.
+- The field has a visible label (`Number of times gear was shot on trip`), a stable identifier, and a
+  number-pad keyboard. Errors are text + icon and announced with the "Error:" / "Gwall:" prefix
+  (WCAG 3.3.1); submitting invalid does not navigate (WCAG 3.3.4).
+- Checkbox state is conveyed by the tick glyph and `.isSelected` trait, never colour alone. Tap
+  targets meet 44×44pt; Dynamic Type is honoured (a "seine nets selected" preview covers the revealed
+  field at accessibility sizes).
+
+### Deviation register
+
+- The shared `CheckboxGroup` component was extended with an optional per-option conditional reveal
+  (generic + backwards-compatible convenience init) — no existing DesignSystem component rendered a
+  conditional reveal. Logged for governance (Delivery Architecture).

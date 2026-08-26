@@ -413,4 +413,64 @@ final class CatchRecordUITests: XCTestCase {
         // which stays near the top and never scrolls the continue button out of reach.
         element(app, headingID).tap()
     }
+
+    // MARK: - Select gear — variable (per-trip) measurement conditional reveal
+
+    private enum GearID {
+        static let heading = "CatchRecord.selectGear.heading"
+        static let option = "CatchRecord.selectGear.option.seine nets (not specified)"
+        static let timesShotField = "CatchRecord.selectGear.variable.seine nets (not specified).timesShot"
+        static let saveContinue = "CatchRecord.selectGear.saveContinue"
+        static let catchLocationHeading = "CatchRecord.catchLocation.heading"
+    }
+
+    @MainActor
+    func test_selectGear_tickingGear_revealsVariableMeasurementField() {
+        let app = launch("-uiTestCatchRecordSelectGear")
+
+        let option = element(app, GearID.option)
+        XCTAssertTrue(option.waitForExistence(timeout: 5))
+
+        // Field is hidden until the gear is ticked (GOV.UK conditional-reveal pattern).
+        XCTAssertFalse(element(app, GearID.timesShotField).exists)
+
+        option.tap()
+
+        XCTAssertTrue(element(app, GearID.timesShotField).waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    func test_selectGear_continueWithoutVariableMeasurement_doesNotNavigate() {
+        let app = launch("-uiTestCatchRecordSelectGear")
+
+        let option = element(app, GearID.option)
+        XCTAssertTrue(option.waitForExistence(timeout: 5))
+        option.tap()
+
+        app.buttons[GearID.saveContinue].tap()
+
+        // Required variable measurement is empty → stays on the gear screen.
+        XCTAssertTrue(element(app, GearID.heading).exists)
+        XCTAssertFalse(element(app, GearID.catchLocationHeading).exists)
+    }
+
+    @MainActor
+    func test_selectGear_withValidVariableMeasurement_navigatesToCatchLocation() {
+        let app = launch("-uiTestCatchRecordSelectGear")
+
+        let option = element(app, GearID.option)
+        XCTAssertTrue(option.waitForExistence(timeout: 5))
+        option.tap()
+
+        let field = app.textFields[GearID.timesShotField]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.typeText("5")
+
+        // Dismiss the number pad by tapping the heading, then continue.
+        element(app, GearID.heading).tap()
+        app.buttons[GearID.saveContinue].tap()
+
+        XCTAssertTrue(element(app, GearID.catchLocationHeading).waitForExistence(timeout: 5))
+    }
 }

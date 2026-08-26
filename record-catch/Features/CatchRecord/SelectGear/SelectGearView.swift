@@ -2,9 +2,11 @@ import SwiftUI
 
 /// "What gear did you use?" — tick one or more of the user's favourite gears (multi-select).
 ///
-/// Shown when the user already has favourite gears. "Save and continue" validates that at least one
-/// is selected; "Add another gear" opens the search screen. Mirrors `SelectPortView` but uses
-/// checkboxes for many-of-many selection.
+/// Shown when the user already has favourite gears. Ticking a gear reveals its per-trip **variable**
+/// measurement field(s) (e.g. "Number of times gear was shot on trip") beneath the checkbox, using
+/// the GOV.UK conditional-reveal pattern. "Save and continue" validates that at least one gear is
+/// selected and that each ticked gear's variable measurements are whole numbers; "Add another gear"
+/// opens the search screen. Mirrors `SelectPortView` but uses checkboxes for many-of-many selection.
 struct SelectGearView: View {
 
     @Environment(AppLanguageStore.self) private var languageStore
@@ -66,7 +68,8 @@ struct SelectGearView: View {
                 selectedIDs: Binding(get: { viewModel.selection }, set: { viewModel.selection = $0 }),
                 errorKey: viewModel.errorKey,
                 groupAccessibilityIdentifier: "\(identifierPrefix).checkboxGroup",
-                errorAccessibilityIdentifier: "\(identifierPrefix).error"
+                errorAccessibilityIdentifier: "\(identifierPrefix).error",
+                revealedContent: { option in variableMeasurementFields(forGearID: option.id) }
             )
 
             VStack(spacing: AppSpacing.small) {
@@ -83,10 +86,36 @@ struct SelectGearView: View {
         }
     }
 
-    /// Builds an already-localised one-line summary of a gear's captured measurements, e.g.
+    /// The per-trip variable-measurement input fields revealed under a ticked gear.
+    @ViewBuilder
+    private func variableMeasurementFields(forGearID gearID: String) -> some View {
+        if let gear = viewModel.favourites.first(where: { $0.id == gearID }) {
+            VStack(alignment: .leading, spacing: AppSpacing.medium) {
+                ForEach(gear.variableMeasurements) { measurement in
+                    TextInputField(
+                        label: languageStore.localized(measurement.labelKey),
+                        keyboardType: .numberPad,
+                        text: Binding(
+                            get: { viewModel.variableEntries["\(gearID).\(measurement.id)"] ?? "" },
+                            set: { viewModel.variableEntries["\(gearID).\(measurement.id)"] = $0 }
+                        ),
+                        didAttemptSubmit: false,
+                        errorMessage: viewModel
+                            .variableErrorKey(gearID: gearID, measurementID: measurement.id)
+                            .map { languageStore.localized($0) }
+                    )
+                    .accessibilityIdentifier(
+                        "\(identifierPrefix).variable.\(gearID.lowercased()).\(measurement.id)"
+                    )
+                }
+            }
+        }
+    }
+
+    /// Builds an already-localised one-line summary of a gear's captured required measurements, e.g.
     /// "100mm mesh", or `nil` when it has none.
     private func measurementSummary(for gear: GearOption) -> String? {
-        let parts = gear.measurements.compactMap { measurement -> String? in
+        let parts = gear.requiredMeasurements.compactMap { measurement -> String? in
             guard let value = measurement.value else { return nil }
             return String(
                 format: languageStore.localized("catchRecord.gear.measurement.meshSize.summary"),
@@ -103,7 +132,7 @@ struct SelectGearView: View {
         referenceNumber: "A1234520260727150815",
         router: CatchRecordRouter(),
         favouriteGears: StubFavouriteGearProvider(
-            initialFavourites: [GearOption.seineNets.withMeasurements([
+            initialFavourites: [GearOption.seineNets.withRequiredMeasurements([
                 GearMeasurement(id: "meshSize", labelKey: "catchRecord.gear.measurement.meshSize", value: 100)
             ])]
         )

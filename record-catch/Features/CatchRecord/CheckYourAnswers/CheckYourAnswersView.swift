@@ -113,9 +113,13 @@ private func previewDraft() -> CatchRecordDraft {
     draft.departurePort = PortOption(name: "Plymouth")
     draft.returnPort = PortOption(name: "Plymouth")
     draft.statisticalArea = "27.7.e"
-    draft.gear = GearOption.seineNets.withMeasurements([
-        GearMeasurement(id: "meshSize", labelKey: "catchRecord.gear.measurement.meshSize", value: 80)
-    ])
+    draft.gear = GearOption.seineNets
+        .withRequiredMeasurements([
+            GearMeasurement(id: "meshSize", labelKey: "catchRecord.gear.measurement.meshSize", value: 80)
+        ])
+        .withVariableMeasurements([
+            GearMeasurement(id: "timesShot", labelKey: "catchRecord.gear.variableMeasurement.timesShot", value: 5)
+        ])
     draft.speciesCaught = [SpeciesOption(id: "cod", name: "Atlantic cod (COD)", weightAboveMinimumKg: "250")]
     draft.speciesNotLanded = [SpeciesOption(id: "cod", name: "Atlantic cod (COD)", weightAboveMinimumKg: "5")]
     return draft

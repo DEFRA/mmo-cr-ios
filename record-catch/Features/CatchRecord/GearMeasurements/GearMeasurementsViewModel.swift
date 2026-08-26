@@ -44,7 +44,7 @@ final class GearMeasurementsViewModel {
         self.router = router
         self.favouriteGears = favouriteGears
         self.draft = draft
-        self.entries = Dictionary(uniqueKeysWithValues: gear.measurements.map { ($0.id, "") })
+        self.entries = Dictionary(uniqueKeysWithValues: gear.requiredMeasurements.map { ($0.id, "") })
     }
 
     /// The inline error key for a given measurement, once a submit has been attempted.
@@ -55,7 +55,7 @@ final class GearMeasurementsViewModel {
 
     /// Whether every measurement currently parses to a valid whole number.
     var isValid: Bool {
-        gear.measurements.allSatisfy { GearMeasurementValidation.parse(entries[$0.id] ?? "") != nil }
+        gear.requiredMeasurements.allSatisfy { GearMeasurementValidation.parse(entries[$0.id] ?? "") != nil }
     }
 
     /// The route to return to after saving. Pure and independent of async work, so it is directly
@@ -70,10 +70,10 @@ final class GearMeasurementsViewModel {
         saveFailed = false
         guard isValid else { return }
 
-        let captured = gear.measurements.map { measurement in
+        let captured = gear.requiredMeasurements.map { measurement in
             measurement.withValue(GearMeasurementValidation.parse(entries[measurement.id] ?? ""))
         }
-        let savedGear = gear.withMeasurements(captured)
+        let savedGear = gear.withRequiredMeasurements(captured)
 
         isSaving = true
         defer { isSaving = false }

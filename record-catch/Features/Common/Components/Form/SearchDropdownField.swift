@@ -116,6 +116,12 @@ struct SearchDropdownField: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, AppSpacing.small)
                         .padding(.vertical, AppSpacing.small)
+                        // An explicit, stable identifier for UI tests to target, independent of
+                        // the option's own label text: a plain `VStack`/`Button` combination
+                        // doesn't otherwise reliably expose a container-level identifier to
+                        // XCUITest, and matching by label text alone can collide with the
+                        // `TextField` above once its typed value equals the same text.
+                        .accessibilityIdentifier(Self.resultIdentifier(for: option))
 
                         Divider()
                     }
@@ -199,6 +205,13 @@ struct SearchDropdownField: View {
         }
 
         return options.contains(selectedOption) && selectedOption == query
+    }
+
+    /// Stable, unambiguous accessibility identifier for a results-list row, keyed by the option's
+    /// own text. UI tests should target this rather than the option's label text directly (see the
+    /// identifier modifier above for why).
+    static func resultIdentifier(for option: String) -> String {
+        "SearchDropdownField.result.\(option)"
     }
 }
 

@@ -1,8 +1,8 @@
 import MapKit
 
-/// Lightweight annotation used solely to place a `SubzoneAnnotationView` (a
-/// UILabel-based badge) at a subzone's centroid.
-final class SubzoneAnnotation: NSObject, MKAnnotation {
+/// Lightweight annotation used solely to place a `SubrectangleAnnotationView` (a UILabel-based
+/// badge) at a subrectangle's label coordinate.
+final class SubrectangleAnnotation: NSObject, MKAnnotation {
 
     let subCode: String
     let coordinate: CLLocationCoordinate2D

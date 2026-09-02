@@ -14,6 +14,15 @@ struct CatchLocationView: View {
     /// `selectedArea: String?` (the only part of the selection the rest of the journey needs —
     /// see `CatchRecordDraft.statisticalArea`).
     @State private var selectedSubrectangle: SubrectangleProperties?
+    /// The map's initial camera position, computed once at init (see `PortMapCamera`) — framed on
+    /// the trip's departure port when one is known, otherwise the whole-UK default view.
+    @State private var mapRegion: MKCoordinateRegion
+
+    /// Whole-UK view shown when there's no departure port with a known location to frame on.
+    private static let defaultMapRegion = MKCoordinateRegion(
+        center: CLLocationCoordinate2D(latitude: 55.0, longitude: -3.5),
+        span: MKCoordinateSpan(latitudeDelta: 12.0, longitudeDelta: 8.0)
+    )
 
     init(
         gear: GearOption,
@@ -30,6 +39,10 @@ struct CatchLocationView: View {
             router: router,
             favouriteSpecies: favouriteSpecies,
             draft: draft
+        ))
+        _mapRegion = State(wrappedValue: PortMapCamera.initialRegion(
+            forPort: draft.departurePort?.coordinate,
+            defaultRegion: Self.defaultMapRegion
         ))
     }
 
@@ -78,8 +91,8 @@ struct CatchLocationView: View {
 
     private var map: some View {
         OfflineMapView(
-            initialCoordinate: CLLocationCoordinate2D(latitude: 55.0, longitude: -3.5),
-            initialSpan: MKCoordinateSpan(latitudeDelta: 12.0, longitudeDelta: 8.0),
+            initialCoordinate: mapRegion.center,
+            initialSpan: mapRegion.span,
             selectedSubrectangle: Binding(
                 get: { selectedSubrectangle },
                 set: { newValue in

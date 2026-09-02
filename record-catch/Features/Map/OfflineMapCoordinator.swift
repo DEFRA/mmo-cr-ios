@@ -132,6 +132,17 @@ final class OfflineMapCoordinator: NSObject, MKMapViewDelegate {
         }
 
         portsOverlayRenderer?.showsLabels = showLabels
+
+        #if DEBUG
+        // Debug-only: prints the current zoom level so `OfflineMapView`'s hard
+        // `maxZoomInDistance`/`maxZoomOutDistance` limits can be tuned by eye. `camera
+        // .centerCoordinateDistance` is the same unit `MKMapView.CameraZoomRange` is configured in
+        // (metres from the camera to the centre coordinate), so the printed value can be compared
+        // directly against those constants. Compiled out of release builds entirely.
+        let distance = mapView.camera.centerCoordinateDistance
+        let span = mapView.region.span
+        OfflineMapLogger.logZoomLevel(distanceMetres: distance, latitudeDelta: span.latitudeDelta, longitudeDelta: span.longitudeDelta)
+        #endif
     }
 
     // MARK: - Tap handling

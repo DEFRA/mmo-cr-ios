@@ -15,6 +15,10 @@ import SwiftUI
 /// - **The initial camera position is set once**, from `initialCoordinate`/`initialSpan`, in
 ///   `makeUIView` — never in `updateUIView` — so the caller's subsequent pan/zoom is preserved
 ///   across SwiftUI view updates and the map is never refit to the GeoJSON extent.
+/// - **Zoom is hard-limited** to a fixed distance range (see `maxZoomOutDistance`/
+///   `maxZoomInDistance`) so a pinch/double-tap gesture can never zoom out past a near-global,
+///   context-free view or in past a single flat-shaded polygon's fill — both of which would just
+///   show a blank, uninformative screen given these are static vector layers, not real imagery.
 ///
 /// Usage:
 /// ```swift
@@ -27,6 +31,20 @@ import SwiftUI
 /// )
 /// ```
 struct OfflineMapView: UIViewRepresentable {
+
+    /// Hard zoom-out limit. The offline layers are three fixed, bundled GeoJSON datasets — beyond
+    /// this distance there's nothing more to see: just a shrinking sliver of the UK's coastline
+    /// adrift in a mostly blank white "sea" (see `BlankOfflineTileOverlay`), with no real-world
+    /// basemap context to make that useful. Comfortably covers the whole-UK default view (see
+    /// `CatchLocationView`'s ~12°×8° default span) with room to spare, while still stopping a pinch
+    /// gesture well short of a near-global view.
+    private static let maxZoomOutDistance: CLLocationDistance = 200_000
+
+    /// Hard zoom-in limit. Every layer here is flat-shaded vector geometry with no finer detail to
+    /// reveal (no imagery, no street-level content) — zooming in past this just shows an
+    /// increasingly large blank fill of whichever single subrectangle/land polygon the user is
+    /// inside, which is never useful and makes it easy to lose all on-screen context.
+    private static let maxZoomInDistance: CLLocationDistance = 60_000
 
     let initialCoordinate: CLLocationCoordinate2D
     let initialSpan: MKCoordinateSpan
@@ -75,6 +93,18 @@ struct OfflineMapView: UIViewRepresentable {
 
         map.layer.borderColor = MapColorPalette.mapBorder.cgColor
         map.layer.borderWidth = 1.5
+
+        // Hard zoom limits (see the doc comments on `maxZoomOutDistance`/`maxZoomInDistance`) — set
+        // once, here, alongside the initial camera position; unlike the region itself this never
+        // needs to change on subsequent SwiftUI updates, so `updateUIView` never touches it either.
+        // The initialiser is failable only if `min > max`, which these fixed constants never are,
+        // but a `nil` result is handled instead of force-unwrapped (see swift-swiftui instructions).
+        if let zoomRange = MKMapView.CameraZoomRange(
+            minCenterCoordinateDistance: Self.maxZoomInDistance,
+            maxCenterCoordinateDistance: Self.maxZoomOutDistance
+        ) {
+            map.setCameraZoomRange(zoomRange, animated: false)
+        }
 
         // Entirely offline base layer — see `BlankOfflineTileOverlay`. Added first/lowest so the
         // main map, subrectangle and port layers (added by `loadLayers`) draw on top of it.

@@ -24,7 +24,7 @@ final class AddPortViewModelTests: XCTestCase {
             referenceNumber: referenceNumber,
             returnPhase: returnPhase,
             router: router,
-            portSearch: StubPortSearchProvider(),
+            portSearch: BundledPortSearchProvider(names: ["Aberdeen", "Hastings"]),
             favouritePorts: favouritePorts
         )
     }

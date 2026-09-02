@@ -24,8 +24,12 @@ final class AddPortViewModel {
     /// Set when saving to favourites fails, so the view can surface a recoverable error.
     private(set) var saveFailed = false
 
-    /// Port names available to the search field (loaded from the ports provider).
-    private(set) var portNames: [String] = []
+    /// Ports available to the search field, loaded from the ports provider (includes coordinates
+    /// for later use once a catch record needs them — see `PortOption.coordinate`).
+    private(set) var ports: [PortOption] = []
+
+    /// Port names available to the search field, derived from `ports`.
+    var portNames: [String] { ports.map(\.name) }
 
     private let router: CatchRecordRouter
     private let portSearch: PortSearchProviding
@@ -36,7 +40,7 @@ final class AddPortViewModel {
         referenceNumber: String,
         returnPhase: SelectPortPhase?,
         router: CatchRecordRouter,
-        portSearch: PortSearchProviding = StubPortSearchProvider(),
+        portSearch: PortSearchProviding = BundledPortSearchProvider(),
         favouritePorts: FavouritePortsProviding = StubFavouritePortsProvider()
     ) {
         self.vessel = vessel
@@ -47,9 +51,12 @@ final class AddPortViewModel {
         self.favouritePorts = favouritePorts
     }
 
-    /// The selected `PortOption`, if the user has chosen one from the list.
+    /// The selected `PortOption`, if the user has chosen one from the list. Matched against the
+    /// loaded `ports` (by name) so the saved favourite carries its real coordinate; falls back to
+    /// a coordinate-less option if the loaded list doesn't (yet) contain a match.
     var selectedPort: PortOption? {
-        selectedName.map(PortOption.init(name:))
+        guard let selectedName else { return nil }
+        return ports.first { $0.name == selectedName } ?? PortOption(name: selectedName)
     }
 
     /// Current inline error, once a submit has been attempted.
@@ -68,7 +75,7 @@ final class AddPortViewModel {
     /// Loads the searchable port list up front so the field can filter locally. Failures leave the
     /// list empty (the search simply returns no results) rather than blocking the screen.
     func loadPorts() async {
-        portNames = ((try? await portSearch.allPorts()) ?? []).map(\.name)
+        ports = (try? await portSearch.allPorts()) ?? []
     }
 
     /// Validates, adds the selected port to favourites, and routes to the correct select screen.

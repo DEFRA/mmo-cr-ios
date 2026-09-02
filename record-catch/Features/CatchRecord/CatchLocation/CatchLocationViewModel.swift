@@ -21,6 +21,11 @@ final class CatchLocationViewModel {
     var selectedArea: String?
     private(set) var didAttemptSubmit = false
 
+    /// The trip's departure port, read once from the shared journey draft. Lets the map open
+    /// framed on that port (see `PortMapCamera`) rather than the whole-UK default view; `nil` when
+    /// no port has a known location (or none has been selected yet).
+    let departurePort: PortOption?
+
     private let router: CatchRecordRouter
     private let favouriteSpecies: FavouriteSpeciesProviding
     /// Shared journey draft; the selected area is written into it on submit (see `CatchRecordDraft`).
@@ -40,6 +45,7 @@ final class CatchLocationViewModel {
         self.router = router
         self.favouriteSpecies = favouriteSpecies
         self.draft = draft
+        self.departurePort = draft.departurePort
     }
 
     /// Current inline error, once a submit has been attempted.

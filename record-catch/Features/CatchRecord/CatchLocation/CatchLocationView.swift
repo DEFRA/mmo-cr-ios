@@ -1,14 +1,19 @@
+import MapKit
 import SwiftUI
 
 /// "Where was most of your catch caught using <gear>?" — pick a single statistical area on a map.
 ///
-/// Renders the shared journey chrome (caption, reference number, heading, hints) then the existing
-/// `SeaMapView` map component for area selection; its cartographic style intentionally need not
-/// match the design mock. "Save and continue" validates that an area was chosen and routes on.
+/// Renders the shared journey chrome (caption, reference number, heading, hints) then the
+/// `OfflineMapView` map component for area selection; its cartographic style intentionally need
+/// not match the design mock. "Save and continue" validates that an area was chosen and routes on.
 struct CatchLocationView: View {
 
     @Environment(AppLanguageStore.self) private var languageStore
     @State private var viewModel: CatchLocationViewModel
+    /// Bridges `OfflineMapView`'s `SubrectangleProperties?` selection to the view model's plain
+    /// `selectedArea: String?` (the only part of the selection the rest of the journey needs —
+    /// see `CatchRecordDraft.statisticalArea`).
+    @State private var selectedSubrectangle: SubrectangleProperties?
 
     init(
         gear: GearOption,
@@ -72,13 +77,34 @@ struct CatchLocationView: View {
     }
 
     private var map: some View {
-        SeaMapView(selectedSubzone: Binding(
-            get: { viewModel.selectedArea },
-            set: { viewModel.selectedArea = $0 }
-        ))
+        OfflineMapView(
+            initialCoordinate: CLLocationCoordinate2D(latitude: 55.0, longitude: -3.5),
+            initialSpan: MKCoordinateSpan(latitudeDelta: 12.0, longitudeDelta: 8.0),
+            selectedSubrectangle: Binding(
+                get: { selectedSubrectangle },
+                set: { newValue in
+                    selectedSubrectangle = newValue
+                    viewModel.selectedArea = newValue?.subCode
+                }
+            )
+        )
         .frame(maxWidth: .infinity)
         .aspectRatio(1, contentMode: .fit)
         .accessibilityIdentifier("\(identifierPrefix).map")
+        .onAppear {
+            // Reflects any pre-existing selection (e.g. returning via a "Change" link) back into
+            // the map's own selection state — see `SubrectangleProperties` doc comment: only
+            // `subCode` is guaranteed, which is all the renderer needs to highlight it.
+            if let existingArea = viewModel.selectedArea, selectedSubrectangle == nil {
+                selectedSubrectangle = SubrectangleProperties(
+                    subCode: existingArea,
+                    icesName: nil,
+                    areaKM2: nil,
+                    statX: nil,
+                    statY: nil
+                )
+            }
+        }
     }
 
     @ViewBuilder

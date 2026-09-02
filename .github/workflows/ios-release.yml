@@ -1,0 +1,74 @@
+name: iOS Release
+
+on:
+  push:
+    tags:
+      - "ios-v*"
+  workflow_dispatch:
+    inputs:
+      marketing_version:
+        description: "Marketing version (e.g. 1.4.0) — used when running without a tag"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+# Release runs must never be auto-cancelled.
+concurrency:
+  group: ios-release-${{ github.ref }}
+  cancel-in-progress: false
+
+# Tag-triggered release pipeline. Scope: DEV environment only (see docs/adr/0011-release-pipeline.md).
+# The test/prod build, external-promotion and App Store jobs from the design (Sections 11-12) are
+# deferred until their bundle IDs, .xcconfig/schemes, App Store Connect apps, signing assets and
+# GitHub Environments/secrets are provisioned.
+jobs:
+  dev-build-internal:
+    name: Dev → build, sign & internal TestFlight
+    runs-on: macos-26
+    timeout-minutes: 45
+    # Ungated environment; scopes the Dev signing and App Store Connect credentials to this job only.
+    environment: dev
+    permissions:
+      contents: read
+    env:
+      # App Store Connect API key (dev environment secrets).
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
+      # Fastlane Match read-only signing store (dev environment secrets).
+      MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+      MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+      MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5.1.0
+        with:
+          fetch-depth: 0
+
+      - name: Set up Ruby and Fastlane
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Derive marketing version
+        id: ident
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" == ios-v* ]]; then
+            MARKETING_VERSION="${GITHUB_REF_NAME#ios-v}"
+          else
+            MARKETING_VERSION="${{ github.event.inputs.marketing_version }}"
+          fi
+          if [[ -z "${MARKETING_VERSION}" ]]; then
+            echo "::error::No marketing version — push an ios-vX.Y.Z tag or supply the workflow_dispatch input" >&2
+            exit 1
+          fi
+          echo "marketing_version=${MARKETING_VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Build, sign & upload DEV to internal TestFlight
+        env:
+          MARKETING_VERSION: ${{ steps.ident.outputs.marketing_version }}
+        run: bundle exec fastlane release_dev

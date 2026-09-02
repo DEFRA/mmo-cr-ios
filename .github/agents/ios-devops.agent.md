@@ -75,22 +75,24 @@ Do not run a second, separate validation round — the plan is checked against t
 
 - **CI pipelines** — PR validation (SwiftLint, build, unit/UI tests + coverage), the SonarCloud scan, and
   branch-protection-friendly checks.
-- **Release pipelines** — tag-triggered build → sign → version → upload via Fastlane; TestFlight (internal
-  then external) and App Store phased release, on a **build-once-and-promote** model (the same App Store
-  Connect build flows through internal QA → external UAT → production with no rebuild).
+- **Release pipelines** — one tag-triggered `ios-release.yml` (Fastlane) that builds **three separate
+  apps** (dev/test/prod bundle IDs) from the **same tagged commit**; TestFlight internal + external per app
+  and App Store phased release, on a **build-per-environment** model (promote the commit, not a single
+  binary; external-TestFlight promotion is a no-rebuild App Store Connect operation).
 - **Fastlane** — `Fastfile` lanes, `Appfile`, `Matchfile`/signing config, `Gemfile` pinning.
 - **Signing & secrets** — App Store Connect API key auth, temporary keychains, Match vs manual `.p12` vs
   Xcode Cloud managed signing (decided in your plan + an ADR), Environment-scoped encrypted secrets.
-- **GitHub Environments & approvals** — **three** gated Environments `mobile-internal-beta`,
-  `mobile-uat` and `mobile-production`, each gated by required reviewers (self-approval prevented where
-  supported); secrets scoped per stage.
+- **GitHub Environments & approvals** — **six** gated Environments `dev` (ungated), `test`,
+  `test-external`, `prod`, `prod-external` and `prod-appstore`, each (except `dev`) gated by required
+  reviewers (self-approval prevented where supported); secrets scoped per stage.
 - **Versioning** — SemVer marketing version from the tag; build number derived from the **release**
   `GITHUB_RUN_NUMBER` (no App Store Connect query); `GitCommitSHA` embedded as `Info.plist` traceability
   metadata (never the build number).
-- **Configuration & identity (ADR-gated)** — flag and drive the gating **configuration strategy** (runtime
-  Option A build-once-and-promote vs build-time Option B rebuild-per-environment) and the **bundle-ID /
-  versioning reconciliation** against the current single hard-coded `mmo.catchrecordingdev.ios`; these
-  reshape the whole release model and must be settled as ADRs first.
+- **Configuration & identity (frozen)** — **build-time configuration (Option B)** with **three** bundle
+  IDs (`mmo.catchrecordingdev.ios` / `mmo.catchrecordingtest.ios` / `mmo.catchrecording.ios`) as three
+  separate App Store Connect apps; drive the `.xcconfig`/scheme split and the versioning reconciliation
+  (marketing version from the tag, `CFBundleVersion` from the run number) against the current single
+  hard-coded `mmo.catchrecordingdev.ios`.
 - **Security setup** — the **CodeQL advanced-setup workflow** and the **Dependabot config** as their own
   separate files; confirming secret scanning + push protection are on; pinning Actions to full commit SHAs.
 - **Config** — `.xcconfig` (non-sensitive), `exportOptions.plist`, and pipeline docs/ADRs.
@@ -121,12 +123,11 @@ the iOS Developer.
 ## ADRs
 
 When a change **establishes or alters** the delivery architecture — the **configuration strategy**
-(runtime vs build-time, which gates the build/release model), the **bundle-ID / environment model**, the
-signing strategy, the release model, the environment/approval topology, or first-time pipeline scaffolding
-— **create or update the relevant ADR under `docs/adr/` first**, then build against it. Resolve the
-configuration strategy **before** finalising the pipeline. Also remind the team that the native-iOS
-decision itself, and any Xcode Cloud / cloud real-device (UK data residency) adoption, must be recorded as
-governed ADRs.
+(build-time Option B, now frozen), the **bundle-ID / environment model**, the signing strategy, the
+release model, the environment/approval topology, or first-time pipeline scaffolding — **create or update
+the relevant ADR under `docs/adr/` first**, then build against it. Also remind the team that the
+native-iOS decision itself, and any Xcode Cloud / cloud real-device (UK data residency) adoption, must be
+recorded as governed ADRs.
 
 ## Validate (§4.7)
 
@@ -147,10 +148,10 @@ governed ADRs.
   Actions.
 - **DO NOT** commit certificates, provisioning profiles, `.p12`, private keys or any secret; store secrets
   as Environment-scoped encrypted GitHub secrets and never echo them to logs.
-- **DO NOT** remove or weaken the manual-approval gates on `mobile-internal-beta`, `mobile-uat` or
-  `mobile-production`.
-- **DO NOT** query App Store Connect for the build number, or rebuild between UAT approval and production
-  release — preserve build-once-and-promote (under runtime config).
+- **DO NOT** remove or weaken the manual-approval gates on `test`, `test-external`, `prod`,
+  `prod-external` or `prod-appstore`.
+- **DO NOT** query App Store Connect for the build number. Do not rebuild when promoting a build to its
+  external TestFlight group — external promotion is a no-rebuild App Store Connect metadata action.
 - **DO NOT** perform a real production/TestFlight upload to "test" a pipeline.
 - **DO NOT** write application/feature code or tests — that is the iOS Developer's role.
 - **DO NOT** silently deviate from a DEFRA standard — flag it and recommend a governance exception

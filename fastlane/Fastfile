@@ -1,17 +1,78 @@
 default_platform(:ios)
 
+PROJECT = "record-catch.xcodeproj".freeze
+SCHEME = "record-catch".freeze
+SIMULATOR = "iPhone 17".freeze
+
 platform :ios do
+  desc "Compile the app and test bundle without running tests — the CI compile gate."
+  lane :build do
+    run_tests(
+      project: PROJECT,
+      scheme: SCHEME,
+      devices: [SIMULATOR],
+      build_for_testing: true,
+      skip_testing: ["record-catchUITests"],
+      derived_data_path: "DerivedData"
+    )
+  end
+
   desc "Build and run the unit tests with code coverage (used by CI). UI tests are excluded for now."
   lane :test do
     run_tests(
-      project: "record-catch.xcodeproj",
-      scheme: "record-catch",
-      devices: ["iPhone 17"],
+      project: PROJECT,
+      scheme: SCHEME,
+      devices: [SIMULATOR],
       skip_testing: ["record-catchUITests"],
       code_coverage: true,
       result_bundle: true,
       output_directory: "fastlane/test_output",
       derived_data_path: "DerivedData"
+    )
+  end
+
+  desc "Build, sign and upload the DEV app to its internal TestFlight group."
+  lane :release_dev do
+    build_and_upload(
+      app_identifier: "mmo.catchrecordingdev.ios",
+      # Dev build configuration. The per-environment .xcconfig split is a follow-up owned by the iOS Developer.
+      configuration: "Release"
+    )
+  end
+
+  # Parametrised so the future test/prod release lanes reuse the same signed-build-and-upload flow.
+  private_lane :build_and_upload do |options|
+    api_key = app_store_connect_api_key(
+      key_id: ENV.fetch("ASC_KEY_ID"),
+      issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+      key_content: ENV.fetch("ASC_KEY_CONTENT"),
+      is_key_content_base64: true
+    )
+
+    # Signing assets are pulled read-only; the encrypted Match store is provisioned out of band.
+    match(
+      type: "appstore",
+      app_identifier: options[:app_identifier],
+      readonly: true,
+      api_key: api_key
+    )
+
+    build_app(
+      project: PROJECT,
+      scheme: SCHEME,
+      configuration: options[:configuration],
+      export_method: "app-store",
+      output_directory: "build",
+      clean: true,
+      # Version from the release tag, build number from the CI run number — the tagged commit is built unchanged.
+      xcargs: "MARKETING_VERSION=#{ENV.fetch('MARKETING_VERSION')} CURRENT_PROJECT_VERSION=#{ENV.fetch('GITHUB_RUN_NUMBER')}"
+    )
+
+    upload_to_testflight(
+      api_key: api_key,
+      app_identifier: options[:app_identifier],
+      distribute_external: false,
+      skip_waiting_for_build_processing: true
     )
   end
 end

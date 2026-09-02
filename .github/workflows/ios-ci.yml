@@ -74,32 +74,27 @@ jobs:
       #     fi
       #     swiftlint lint --reporter github-actions-logging
 
-      - name: Build
-        run: |
-          set -euo pipefail
-          if ! command -v xcbeautify >/dev/null 2>&1; then
-            brew install xcbeautify
-          fi
-          xcodebuild clean build \
-            -project record-catch.xcodeproj \
-            -scheme record-catch \
-            -destination "platform=iOS Simulator,name=iPhone 17" \
-            | xcbeautify
+      - name: Set up Ruby and Fastlane
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
 
-      - name: Run unit tests with coverage
-        run: |
-          set -euo pipefail
-          xcodebuild test \
-            -project record-catch.xcodeproj \
-            -scheme record-catch \
-            -destination "platform=iOS Simulator,name=iPhone 17" \
-            -skip-testing:record-catchUITests \
-            -enableCodeCoverage YES \
-            -resultBundlePath TestResults.xcresult \
-            | xcbeautify
+      - name: Build (Fastlane)
+        run: bundle exec fastlane build
+
+      - name: Run unit tests with coverage (Fastlane)
+        run: bundle exec fastlane test
 
       - name: Convert coverage to SonarQube generic format
-        run: bash scripts/xccov-to-sonarqube-generic.sh TestResults.xcresult > sonar-coverage.xml
+        run: |
+          set -euo pipefail
+          XCRESULT="$(find fastlane/test_output -maxdepth 2 -name '*.xcresult' | head -n1)"
+          if [ -z "$XCRESULT" ]; then
+            echo "::error::No .xcresult bundle found under fastlane/test_output" >&2
+            exit 1
+          fi
+          bash scripts/xccov-to-sonarqube-generic.sh "$XCRESULT" > sonar-coverage.xml
 
       - name: Upload test results artifact
         if: always()

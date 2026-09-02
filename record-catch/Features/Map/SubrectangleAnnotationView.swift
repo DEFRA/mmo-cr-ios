@@ -14,8 +14,8 @@ final class SubrectangleAnnotationView: MKAnnotationView {
 
     private let label = UILabel()
 
-    private static let horizontalPadding: CGFloat = 7
-    private static let verticalPadding: CGFloat = 4
+    private static let horizontalPadding: CGFloat = 5
+    private static let verticalPadding: CGFloat = 2
 
     override init(annotation: MKAnnotation?, reuseIdentifier: String?) {
         super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
@@ -39,18 +39,42 @@ final class SubrectangleAnnotationView: MKAnnotationView {
         collisionMode = .none
 
         label.textAlignment = .center
+        label.numberOfLines = 1
         label.layer.masksToBounds = true
         addSubview(label)
     }
 
     /// Applies the visual style for the current selection state and sizes the badge to fit its text.
+    ///
+    /// Unselected labels deliberately have **no solid background** — they render as coloured text
+    /// with a white halo (the same technique `PortsOverlayRenderer` uses for port names) so a dense
+    /// grid of subrectangle codes doesn't sit on top of, and obscure, port names underneath. Only
+    /// the *selected* subrectangle gets a solid pill, so the current selection still reads clearly.
     func configure(subCode: String, isSelected: Bool) {
-        label.text = subCode
-        label.font = .systemFont(ofSize: isSelected ? 22 : 20, weight: isSelected ? .bold : .semibold)
-        label.textColor = isSelected ? .white : MapColorPalette.subrectangleGrid
-        label.backgroundColor = isSelected
-            ? MapColorPalette.subrectangleSelected
-            : UIColor.white.withAlphaComponent(0.9)
+        let font = UIFont.systemFont(ofSize: isSelected ? 18 : 16, weight: isSelected ? .bold : .semibold)
+
+        if isSelected {
+            label.attributedText = nil
+            label.text = subCode
+            label.font = font
+            label.textColor = .white
+            label.backgroundColor = MapColorPalette.subrectangleSelected
+        } else {
+            label.text = nil
+            label.backgroundColor = .clear
+            label.attributedText = NSAttributedString(
+                string: subCode,
+                attributes: [
+                    .font: font,
+                    .foregroundColor: MapColorPalette.subrectangleGrid,
+                    .strokeColor: UIColor.white,
+                    // See PortsOverlayRenderer.drawLabel — now that the font is a more readable
+                    // 16pt, -7 gives a legible halo over both the sea and the dark landmass
+                    // without eating the fill.
+                    .strokeWidth: -3
+                ]
+            )
+        }
 
         let textSize = label.sizeThatFits(
             CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
@@ -62,7 +86,7 @@ final class SubrectangleAnnotationView: MKAnnotationView {
         )
 
         label.frame = CGRect(origin: .zero, size: badgeSize)
-        label.layer.cornerRadius = 6
+        label.layer.cornerRadius = isSelected ? 5 : 0
 
         bounds = CGRect(origin: .zero, size: badgeSize)
     }

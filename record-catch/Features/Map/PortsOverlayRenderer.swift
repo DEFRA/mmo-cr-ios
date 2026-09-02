@@ -25,8 +25,8 @@ final class PortsOverlayRenderer: MKOverlayRenderer {
     }
 
     private static let markerRadius: CGFloat = 5
-    private static let labelFont = UIFont.systemFont(ofSize: 13, weight: .semibold)
-    private static let labelOffset: CGFloat = 7
+    private static let labelFont = UIFont.systemFont(ofSize: 18, weight: .semibold)
+    private static let labelOffset: CGFloat = 9
 
     init(overlay: PortsOverlay) {
         self.portsOverlay = overlay
@@ -70,7 +70,11 @@ final class PortsOverlayRenderer: MKOverlayRenderer {
             .foregroundColor: UIColor.black,
             .strokeColor: UIColor.white,
             // Negative width draws both a stroke (halo, for legibility over any background) and a
-            // fill in one pass.
+            // fill in one pass. The magnitude is a percentage of the font's point size: -3
+            // rendered a sub-half-point halo — effectively invisible against the dark land fill —
+            // while -14 (~1.8pt) swallowed the glyph fill entirely at the previous, smaller 13pt
+            // font size. Now that the font itself is a more readable 16pt, -7 (~1.1pt) gives a
+            // halo that reads clearly over both the sea and the landmass without eating the fill.
             .strokeWidth: -3
         ]
 

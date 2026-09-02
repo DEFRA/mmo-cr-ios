@@ -5,7 +5,10 @@ import MapKit
 ///
 /// Takes raw `Data` rather than a bundle/file URL so it can be unit tested with inline sample
 /// GeoJSON.
-enum PortLoader {
+///
+/// `nonisolated` — pure data parsing with no UI/mutable state — so it can also be called from the
+/// (`nonisolated`) `BundledPortSearchProvider` in `Features/Common/Data`, not just MainActor code.
+nonisolated enum PortLoader {
 
     /// Raw `ports.geojson` properties. `lat`/`long_` duplicate the geometry's coordinate in the
     /// source data; they're decoded as a fallback for the (unexpected) case where the geometry

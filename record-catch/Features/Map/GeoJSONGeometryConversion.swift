@@ -14,7 +14,10 @@ import MapKit
 /// malformed ring/feature can be skipped individually while every other feature still loads —
 /// satisfying the "don't crash the whole layer over one optional feature" requirement in practice,
 /// not just in principle.
-enum RawGeoJSON {
+///
+/// `nonisolated` — pure parsing with no UI/mutable state — so callers outside MainActor code (e.g.
+/// `BundledPortSearchProvider`) can use it too.
+nonisolated enum RawGeoJSON {
 
     /// One `Feature` from a `FeatureCollection`, with its properties re-serialised back to `Data`
     /// (so `GeoJSONPropertiesDecoder`/`Decodable` property models are unaffected by this change)
@@ -66,7 +69,9 @@ enum RawGeoJSON {
 /// Every function here is defensive: malformed input (wrong shape, non-numeric values, or a
 /// coordinate that fails `CLLocationCoordinate2DIsValid`) returns `nil` rather than throwing, so
 /// callers can skip just the offending ring/geometry/feature.
-enum RawGeoJSONGeometry {
+///
+/// `nonisolated` for the same reason as `RawGeoJSON` above.
+nonisolated enum RawGeoJSONGeometry {
 
     /// Parses a single `[longitude, latitude]` pair. GeoJSON orders coordinates as
     /// longitude-then-latitude — this is the one place that ordering is applied.

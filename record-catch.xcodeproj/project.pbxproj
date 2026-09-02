@@ -292,30 +292,6 @@
         };
 /* End PBXProject section */
 
-/* Begin PBXShellScriptBuildPhase section */
-        DA6ABF102FFE87DD00B7A0AB /* Generate Precomputed Map Data */ = {
-            isa = PBXShellScriptBuildPhase;
-            buildActionMask = 2147483647;
-            files = (
-            );
-            inputPaths = (
-                "$(SRCROOT)/scripts/generate-offline-map-data.sh",
-                "$(SRCROOT)/record-catch/Resources/map.geojson",
-                "$(SRCROOT)/record-catch/Resources/subrectangles.geojson",
-                "$(SRCROOT)/record-catch/Resources/ports.geojson",
-            );
-            name = "Generate Precomputed Map Data";
-            outputPaths = (
-                "$(SRCROOT)/record-catch/Features/Map/Data/map-precomputed.plist",
-                "$(SRCROOT)/record-catch/Features/Map/Data/subrectangles-precomputed.plist",
-                "$(SRCROOT)/record-catch/Features/Map/Data/ports-precomputed.plist",
-            );
-            runOnlyForDeploymentPostprocessing = 0;
-            shellPath = /bin/sh;
-            shellScript = "\"${SRCROOT}/scripts/generate-offline-map-data.sh\"\n";
-        };
-/* End PBXShellScriptBuildPhase section */
-
 /* Begin PBXResourcesBuildPhase section */
         DA6ABEDB2FFE87DC00B7A0AB /* Resources */ = {
             isa = PBXResourcesBuildPhase;
@@ -568,6 +544,12 @@
                 SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
                 SWIFT_VERSION = 5.0;
                 TARGETED_DEVICE_FAMILY = "1,2";
+                // Scoped to this target only (project-level sandboxing stays YES). Required so
+                // the "Generate Precomputed Map Data" run script phase can read
+                // scripts/generate-offline-map-data.sh and its .swift sources, and invoke swiftc
+                // — a build-time-only data generation step with no runtime/app security impact.
+                // See docs/development/offline-map-precomputed-data.md.
+                ENABLE_USER_SCRIPT_SANDBOXING = NO;
             };
             name = Release;
         };

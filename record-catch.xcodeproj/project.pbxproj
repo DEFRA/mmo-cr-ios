@@ -53,11 +53,11 @@
                 Features/Common/Views/ViewHeader.swift,
                 Features/Common/Views/ViewTemplate.swift,
                 Features/Map/BlankOfflineTileOverlay.swift,
-                Features/Map/Data/map-precomputed.plist,
+                "Features/Map/Data/map-precomputed.plist",
                 Features/Map/Data/map.geojson,
-                Features/Map/Data/ports-precomputed.plist,
+                "Features/Map/Data/ports-precomputed.plist",
                 Features/Map/Data/ports.geojson,
-                Features/Map/Data/subrectangles-precomputed.plist,
+                "Features/Map/Data/subrectangles-precomputed.plist",
                 Features/Map/Data/subrectangles.geojson,
                 Features/Map/GeoJSONBundleLoader.swift,
                 Features/Map/GeoJSONGeometryConversion.swift,
@@ -74,12 +74,14 @@
                 Features/Map/OfflineMapView.swift,
                 Features/Map/OverlayPathRendererPolygons.swift,
                 Features/Map/PointInPolygon.swift,
+                Features/Map/PortLabelAnnotation.swift,
+                Features/Map/PortLabelAnnotationView.swift,
                 Features/Map/PortLoader.swift,
                 Features/Map/PortMarker.swift,
-                Features/Map/PrecomputedMapData.swift,
-                Features/Map/PrecomputedMapLoader.swift,
                 Features/Map/PortsOverlay.swift,
                 Features/Map/PortsOverlayRenderer.swift,
+                Features/Map/PrecomputedMapData.swift,
+                Features/Map/PrecomputedMapLoader.swift,
                 Features/Map/SubrectangleAnnotation.swift,
                 Features/Map/SubrectangleAnnotationView.swift,
                 Features/Map/SubrectangleHitTester.swift,
@@ -183,7 +185,6 @@
             isa = PBXNativeTarget;
             buildConfigurationList = DA6ABF002FFE87DD00B7A0AB /* Build configuration list for PBXNativeTarget "record-catch" */;
             buildPhases = (
-                DA6ABF102FFE87DD00B7A0AB /* Generate Precomputed Map Data */,
                 DA6ABED92FFE87DC00B7A0AB /* Sources */,
                 DA6ABEDA2FFE87DC00B7A0AB /* Frameworks */,
                 DA6ABEDB2FFE87DC00B7A0AB /* Resources */,
@@ -479,9 +480,10 @@
                 ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
                 ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
                 CODE_SIGN_STYLE = Automatic;
-                CURRENT_PROJECT_VERSION = 4;
+                CURRENT_PROJECT_VERSION = 6;
                 DEVELOPMENT_TEAM = XBP2KL858T;
                 ENABLE_PREVIEWS = YES;
+                ENABLE_USER_SCRIPT_SANDBOXING = NO;
                 GENERATE_INFOPLIST_FILE = YES;
                 INFOPLIST_KEY_NSFaceIDUsageDescription = "We use Face ID to let you sign back in to your catch records quickly and securely on this device.";
                 INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -504,12 +506,6 @@
                 SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
                 SWIFT_VERSION = 5.0;
                 TARGETED_DEVICE_FAMILY = "1,2";
-                // Scoped to this target only (project-level sandboxing stays YES). Required so
-                // the "Generate Precomputed Map Data" run script phase can read
-                // scripts/generate-offline-map-data.sh and its .swift sources, and invoke swiftc
-                // — a build-time-only data generation step with no runtime/app security impact.
-                // See docs/development/offline-map-precomputed-data.md.
-                ENABLE_USER_SCRIPT_SANDBOXING = NO;
             };
             name = Debug;
         };
@@ -519,9 +515,10 @@
                 ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
                 ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
                 CODE_SIGN_STYLE = Automatic;
-                CURRENT_PROJECT_VERSION = 4;
+                CURRENT_PROJECT_VERSION = 6;
                 DEVELOPMENT_TEAM = XBP2KL858T;
                 ENABLE_PREVIEWS = YES;
+                ENABLE_USER_SCRIPT_SANDBOXING = NO;
                 GENERATE_INFOPLIST_FILE = YES;
                 INFOPLIST_KEY_NSFaceIDUsageDescription = "We use Face ID to let you sign back in to your catch records quickly and securely on this device.";
                 INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -544,12 +541,6 @@
                 SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
                 SWIFT_VERSION = 5.0;
                 TARGETED_DEVICE_FAMILY = "1,2";
-                // Scoped to this target only (project-level sandboxing stays YES). Required so
-                // the "Generate Precomputed Map Data" run script phase can read
-                // scripts/generate-offline-map-data.sh and its .swift sources, and invoke swiftc
-                // — a build-time-only data generation step with no runtime/app security impact.
-                // See docs/development/offline-map-precomputed-data.md.
-                ENABLE_USER_SCRIPT_SANDBOXING = NO;
             };
             name = Release;
         };

@@ -253,4 +253,96 @@ final class OfflineMapCoordinatorTests: XCTestCase {
         coordinator.select(SubrectangleHitTester.subrectangle(at: coordinate, in: [seaZone])?.properties)
         XCTAssertNil(binding.wrappedValue)
     }
+
+    // MARK: - Port name labels
+
+    func testViewForPortLabelAnnotationReturnsConfiguredNonInteractiveView() {
+        let (binding, _) = makeBinding(initial: nil)
+        let coordinator = OfflineMapCoordinator(selectedSubrectangle: binding)
+        let mapView = MKMapView()
+
+        let portAnnotation = PortLabelAnnotation(
+            portCode: 678,
+            name: "Abbotsbury",
+            coordinate: CLLocationCoordinate2D(latitude: 50.667, longitude: -2.6)
+        )
+        coordinator.load(
+            landOverlays: [], subrectangleOverlays: [], selectableSubrectangleOverlays: [], subrectangleAnnotations: [],
+            portsOverlay: PortsOverlay(markers: []), portLabelAnnotations: [portAnnotation], into: mapView
+        )
+
+        let view = coordinator.mapView(mapView, viewFor: portAnnotation) as? PortLabelAnnotationView
+
+        XCTAssertNotNil(view)
+        XCTAssertFalse(view?.canShowCallout ?? true)
+        XCTAssertFalse(view?.isEnabled ?? true)
+        XCTAssertFalse(view?.isUserInteractionEnabled ?? true)
+    }
+
+    func testPortLabelViewVisibilityFollowsRegionZoom() {
+        let (binding, _) = makeBinding(initial: nil)
+        let coordinator = OfflineMapCoordinator(selectedSubrectangle: binding)
+        let mapView = MKMapView()
+        // MKMapView computes its region/span from its pixel bounds, so a zero-frame map view
+        // (the default for a view never added to a window) can't reliably reflect a requested
+        // region back out via `region.span` — give it a realistic on-screen size first.
+        mapView.frame = CGRect(x: 0, y: 0, width: 390, height: 844)
+
+        let portAnnotation = PortLabelAnnotation(
+            portCode: 678,
+            name: "Abbotsbury",
+            coordinate: CLLocationCoordinate2D(latitude: 50.667, longitude: -2.6)
+        )
+        coordinator.load(
+            landOverlays: [], subrectangleOverlays: [], selectableSubrectangleOverlays: [], subrectangleAnnotations: [],
+            portsOverlay: PortsOverlay(markers: []), portLabelAnnotations: [portAnnotation], into: mapView
+        )
+
+        let view = coordinator.mapView(mapView, viewFor: portAnnotation) as? PortLabelAnnotationView
+
+        mapView.setRegion(
+            MKCoordinateRegion(center: portAnnotation.coordinate, span: MKCoordinateSpan(latitudeDelta: 5.0, longitudeDelta: 5.0)),
+            animated: false
+        )
+        coordinator.mapView(mapView, regionDidChangeAnimated: false)
+        XCTAssertEqual(view?.isHidden, true, "Zoomed out past the threshold, port names should be hidden")
+
+        mapView.setRegion(
+            MKCoordinateRegion(center: portAnnotation.coordinate, span: MKCoordinateSpan(latitudeDelta: 0.5, longitudeDelta: 0.5)),
+            animated: false
+        )
+        coordinator.mapView(mapView, regionDidChangeAnimated: false)
+        XCTAssertEqual(view?.isHidden, false, "Zoomed in past the threshold, port names should be shown")
+    }
+
+    func testRendererForPortsOverlayNoLongerExposesShowsLabels() {
+        let (binding, _) = makeBinding(initial: nil)
+        let coordinator = OfflineMapCoordinator(selectedSubrectangle: binding)
+        let mapView = MKMapView()
+
+        let portsOverlay = PortsOverlay(markers: [])
+        XCTAssertTrue(coordinator.mapView(mapView, rendererFor: portsOverlay) is PortsOverlayRenderer)
+    }
+
+    func testTappingAPortCoordinateNeverSelectsAnything() {
+        // Ports must never be selectable: `handleMapTap`'s hit-testing only ever consults
+        // `subrectangleOverlays`, so a port's coordinate — even one that isn't inside any
+        // subrectangle — must never populate the selection binding.
+        let (binding, currentValue) = makeBinding(initial: nil)
+        let coordinator = OfflineMapCoordinator(selectedSubrectangle: binding)
+        let mapView = MKMapView()
+
+        let zoneA = makeRectangleOverlay(subCode: "A1", minLat: 54.0, maxLat: 55.0, minLon: -4.0, maxLon: -3.0)
+        let portMarker = PortMarker(portCode: 678, name: "Abbotsbury", coordinate: CLLocationCoordinate2D(latitude: 50.667, longitude: -2.6))
+        coordinator.load(
+            landOverlays: [], subrectangleOverlays: [zoneA], selectableSubrectangleOverlays: [zoneA], subrectangleAnnotations: [],
+            portsOverlay: PortsOverlay(markers: [portMarker]),
+            portLabelAnnotations: PortLabelAnnotation.annotations(for: [portMarker]),
+            into: mapView
+        )
+
+        coordinator.select(SubrectangleHitTester.subrectangle(at: portMarker.coordinate, in: [zoneA])?.properties)
+
+        XCTAssertNil(currentValue())
+    }
 }

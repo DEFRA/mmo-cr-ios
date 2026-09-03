@@ -36,7 +36,12 @@ final class SubrectangleAnnotationView: MKAnnotationView {
         // labels are also display-only: selection happens via the map's tap gesture against the
         // polygon layer, not by tapping the label itself.
         canShowCallout = false
-        collisionMode = .none
+
+        // `.required` so a subrectangle code is never hidden by MapKit's collision handling — in
+        // particular, it always wins over an overlapping port name (`PortLabelAnnotationView` is
+        // `.defaultLow`), per the agreed label priority.
+        collisionMode = .rectangle
+        displayPriority = .required
 
         label.textAlignment = .center
         label.numberOfLines = 1
@@ -47,9 +52,10 @@ final class SubrectangleAnnotationView: MKAnnotationView {
     /// Applies the visual style for the current selection state and sizes the badge to fit its text.
     ///
     /// Unselected labels deliberately have **no solid background** — they render as coloured text
-    /// with a white halo (the same technique `PortsOverlayRenderer` uses for port names) so a dense
-    /// grid of subrectangle codes doesn't sit on top of, and obscure, port names underneath. Only
-    /// the *selected* subrectangle gets a solid pill, so the current selection still reads clearly.
+    /// with a white halo (the same technique `PortLabelAnnotationView` uses for port names) so a
+    /// dense grid of subrectangle codes doesn't sit on top of, and obscure, port names underneath.
+    /// Only the *selected* subrectangle gets a solid pill, so the current selection still reads
+    /// clearly.
     func configure(subCode: String, isSelected: Bool) {
         let font = UIFont.systemFont(ofSize: isSelected ? 18 : 16, weight: isSelected ? .bold : .semibold)
 
@@ -68,9 +74,9 @@ final class SubrectangleAnnotationView: MKAnnotationView {
                     .font: font,
                     .foregroundColor: MapColorPalette.subrectangleGrid,
                     .strokeColor: UIColor.white,
-                    // See PortsOverlayRenderer.drawLabel — now that the font is a more readable
-                    // 16pt, -7 gives a legible halo over both the sea and the dark landmass
-                    // without eating the fill.
+                    // See `PortLabelAnnotationView.configure` — a negative stroke width both
+                    // fills and strokes the glyphs in one pass, giving a halo that stays legible
+                    // over both the sea and the dark landmass.
                     .strokeWidth: -3
                 ]
             )

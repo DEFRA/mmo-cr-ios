@@ -4,8 +4,8 @@ import Foundation
 /// A single display-only port location, preserved from a `ports.geojson` feature.
 ///
 /// Deliberately not `MKAnnotation`/`MKOverlay` itself — ports are rendered in a single
-/// `PortsOverlay` (see its doc comment for why), so this is a plain, MapKit-independent value
-/// that's easy to unit test.
+/// `PortsOverlay` (dots) plus one `PortLabelAnnotation` per port (its name; see those types' doc
+/// comments), so this is a plain, MapKit-independent value that's easy to unit test.
 struct PortMarker: Equatable {
 
     /// `port_code` — numeric port identifier.

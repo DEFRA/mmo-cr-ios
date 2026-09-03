@@ -40,7 +40,7 @@ New [.github/workflows/ios-release.yml](../../.github/workflows/ios-release.yml)
 - **Non-cancelling** concurrency so an in-flight release is never auto-cancelled.
 - Least-privilege `permissions: contents: read`.
 - A single `dev-build-internal` job on the ungated `dev` GitHub Environment, which scopes the Dev
-  App Store Connect and Match secrets to this job only.
+  App Store Connect and signing secrets to this job only.
 - Marketing version is derived from the tag (`ios-v1.4.0` → `1.4.0`); the build number is the
   `GITHUB_RUN_NUMBER`.
 
@@ -49,25 +49,32 @@ New [.github/workflows/ios-release.yml](../../.github/workflows/ios-release.yml)
 `release_dev` calls a parametrised private `build_and_upload` lane (so future test/prod lanes reuse it):
 
 - App Store Connect **API-key** auth from `ASC_KEY_ID` / `ASC_ISSUER_ID` / `ASC_KEY_CONTENT` (base64).
-- **Fastlane Match, read-only** (`type: "appstore"`, `readonly: true`) for signing — the preferred design
-  approach; the encrypted store is provisioned out of band.
+- **Signing (POC):** a manual `.p12` certificate + DEV provisioning profile imported into a temporary
+  keychain by the workflow; the `match` call is commented out (see decision 4).
 - `build_app` (app-store export) with `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` passed as `xcargs`,
   so the **tagged commit is built unchanged** (no project mutation).
 - `upload_to_testflight(distribute_external: false)` → the Dev app's internal TestFlight group.
 
-### 4. Signing = Fastlane Match (read-only)
+### 4. Signing — Fastlane Match (target) with a manual `.p12` POC deviation for DEV
 
-Per design §8.2, in preference to manual `.p12` injection. Only the release job receives signing secrets;
-PR CI never does.
+Fastlane Match (read-only, per design §8.2) is the **target** signing approach. **For the initial DEV
+proof-of-concept, however, the pipeline signs with a manual `.p12` certificate + provisioning profile
+(design §8.3), bypassing Match**: the release workflow decodes the certificate and profile from secrets,
+imports them into a **temporary keychain** on the runner (deleted at job end), and `build_app` signs
+manually (`CODE_SIGN_STYLE=Manual` with the DEV distribution profile). The `match(...)` call in the
+`build_and_upload` lane is **commented out, not removed**, so the full test/prod rollout can switch back to
+Match without rework. Only the release job receives signing secrets; PR CI never does.
 
 ## Consequences
 
 - The Dev release path exists as reviewable, version-controlled pipeline-as-code and extends ADR-0008’s
   single automation model.
-- **Prerequisites before this workflow can run green** (provisioning, not code): the `dev`
-  Environment with `ASC_KEY_ID`/`ASC_ISSUER_ID`/`ASC_KEY_CONTENT` and `MATCH_GIT_URL`/`MATCH_PASSWORD`/
-  `MATCH_GIT_BASIC_AUTHORIZATION` secrets; a Match store holding the Dev `appstore` profile; and the Dev
-  App Store Connect app record with an internal TestFlight group.
+- **Prerequisites before this workflow can run green** (provisioning, not code): the `dev` Environment
+  with the App Store Connect API-key secrets `ASC_KEY_ID` / `ASC_ISSUER_ID` / `ASC_KEY_CONTENT`, and — for
+  the manual `.p12` POC — `BUILD_CERTIFICATE_BASE64`, `P12_PASSWORD`, `BUILD_PROVISION_PROFILE_BASE64`,
+  `KEYCHAIN_PASSWORD`, `APPLE_TEAM_ID` and `PROVISIONING_PROFILE_NAME`; plus the Dev App Store Connect app
+  record with an internal TestFlight group. (The `MATCH_*` secrets are not needed while the POC bypasses
+  Match.)
 - **Follow-ups (out of scope here):** the three `.xcconfig`/schemes and test/prod identities (iOS
   Developer app-code work); embedding `GitCommitSHA` as read-only `Info.plist` metadata (needs an
   `Info.plist` key wired in the project); the remaining `test`/`prod` build, external-promotion and App

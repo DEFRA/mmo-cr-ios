@@ -49,13 +49,15 @@ platform :ios do
       is_key_content_base64: true
     )
 
-    # Signing assets are pulled read-only; the encrypted Match store is provisioned out of band.
-    match(
-      type: "appstore",
-      app_identifier: options[:app_identifier],
-      readonly: true,
-      api_key: api_key
-    )
+    # POC (DEV): manual .p12 signing — Fastlane Match is bypassed (see docs/adr/0011-release-pipeline.md).
+    # The signing certificate and provisioning profile are imported into a temporary keychain by the
+    # release workflow before this lane runs. Match remains the target for the full test/prod rollout.
+    # match(
+    #   type: "appstore",
+    #   app_identifier: options[:app_identifier],
+    #   readonly: true,
+    #   api_key: api_key
+    # )
 
     build_app(
       project: PROJECT,
@@ -64,8 +66,23 @@ platform :ios do
       export_method: "app-store",
       output_directory: "build",
       clean: true,
-      # Version from the release tag, build number from the CI run number — the tagged commit is built unchanged.
-      xcargs: "MARKETING_VERSION=#{ENV.fetch('MARKETING_VERSION')} CURRENT_PROJECT_VERSION=#{ENV.fetch('GITHUB_RUN_NUMBER')}"
+      # Version from the release tag, build number from the CI run number — the tagged commit is built
+      # unchanged. Manual signing is supplied for the archive; the profile is installed by the workflow.
+      xcargs: [
+        "MARKETING_VERSION=#{ENV.fetch('MARKETING_VERSION')}",
+        "CURRENT_PROJECT_VERSION=#{ENV.fetch('GITHUB_RUN_NUMBER')}",
+        "DEVELOPMENT_TEAM=#{ENV.fetch('APPLE_TEAM_ID')}",
+        "CODE_SIGN_STYLE=Manual",
+        "CODE_SIGN_IDENTITY=\"Apple Distribution\"",
+        "PROVISIONING_PROFILE_SPECIFIER=\"#{ENV.fetch('PROVISIONING_PROFILE_NAME')}\""
+      ].join(" "),
+      export_options: {
+        signingStyle: "manual",
+        teamID: ENV.fetch("APPLE_TEAM_ID"),
+        provisioningProfiles: {
+          options[:app_identifier] => ENV.fetch("PROVISIONING_PROFILE_NAME")
+        }
+      }
     )
 
     upload_to_testflight(

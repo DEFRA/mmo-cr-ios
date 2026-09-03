@@ -11,7 +11,7 @@ description: >-
   not delegate planning to the iOS Planner.
 name: iOS DevOps
 tools: [vscode/askQuestions, vscode/memory, vscode/resolveMemoryFileUri, vscode/runCommand, vscode/toolSearch, execute, read, agent, vscodeGeneral/rename, vscodeGeneral/usages, vscodeGeneral/toolSearch, vscodeNotebooks/createJupyterNotebook, vscodeNotebooks/editNotebook, edit, search, web, todo]
-model: Claude Sonnet 5 (copilot)
+model: Claude Opus 4.8 (copilot)
 argument-hint: Describe the CI/CD, signing, versioning, release or pipeline task you want.
 agents:
   - Explore

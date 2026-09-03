@@ -45,6 +45,12 @@ enum CatchRecordRoute: Hashable {
     /// Carries the gear (for the "using <gear>" heading), the vessel and the display-only reference
     /// number, all threaded onward unchanged.
     case catchLocation(gear: GearOption, vessel: String, referenceNumber: String)
+    /// Manually enter the statistical sub area by typing a code (search dropdown), rather than
+    /// tapping the map. Reached from `catchLocation`'s "Other" button, overlaid on the map, for
+    /// when the correct area either isn't visible or isn't easy to tap accurately. Carries the
+    /// same gear/vessel/reference number and, on save, continues into the same species
+    /// sub-journey as picking on the map.
+    case catchLocationManualEntry(gear: GearOption, vessel: String, referenceNumber: String)
     /// Record the species caught and their live weights, from the user's favourite species
     /// (per-species checkboxes with reveal-able weight fields). Shown when the user already has
     /// favourite species; "Add a species" pushes `addSpecies`, "Save and continue" pushes

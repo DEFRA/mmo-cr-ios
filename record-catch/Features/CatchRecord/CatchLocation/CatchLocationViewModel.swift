@@ -63,15 +63,21 @@ final class CatchLocationViewModel {
         Task { await enterSpeciesSubJourney() }
     }
 
-    /// Fetches favourite species, then pushes the pure species-entry route (Record weights vs Add
-    /// species). Mirrors `SelectPortViewModel.enterGearSubJourney()`.
+    /// Pushes the manual, type-to-search alternative to tapping the map — reached from the
+    /// "Other" button overlaid on the map (see `CatchLocationView.otherButton`).
+    func enterManualEntry() {
+        router.push(.catchLocationManualEntry(gear: gear, vessel: vessel, referenceNumber: referenceNumber))
+    }
+
+    /// Enters the species sub-journey once an area has been chosen — delegates to the shared
+    /// `SpeciesSubJourneyEntry` helper (also used by `CatchLocationManualEntryViewModel`).
     func enterSpeciesSubJourney() async {
-        let favourites = (try? await favouriteSpecies.favouriteSpecies()) ?? []
-        router.push(CatchRecordRouting.speciesEntryRoute(
-            hasFavourites: !favourites.isEmpty,
+        await SpeciesSubJourneyEntry.enter(
+            router: router,
+            favouriteSpecies: favouriteSpecies,
             gear: gear,
             vessel: vessel,
             referenceNumber: referenceNumber
-        ))
+        )
     }
 }

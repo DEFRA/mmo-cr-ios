@@ -70,7 +70,9 @@ struct AddSpeciesView: View {
                         : String(format: languageStore.localized("catchRecord.species.add.search.resultCount"), count)
                 }
             )
-            .accessibilityIdentifier("\(identifierPrefix).search")
+            // No container-level `.accessibilityIdentifier` here: applying one to the whole
+            // `SearchDropdownField` overrides each result row's own explicit identifier — see
+            // `AddPortView`'s equivalent comment for the root-cause detail.
 
             LinkButton(title: languageStore.localized("catchRecord.species.add.mistakenLink")) {
                 // Reference content link — no navigation target in this phase.

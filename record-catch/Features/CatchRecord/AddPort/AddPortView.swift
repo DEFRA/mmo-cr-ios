@@ -66,7 +66,11 @@ struct AddPortView: View {
                         : String(format: languageStore.localized("catchRecord.addPort.search.resultCount"), count)
                 }
             )
-            .accessibilityIdentifier("CatchRecord.addPort.search")
+            // No container-level `.accessibilityIdentifier` here: applying one to the whole
+            // `SearchDropdownField` overrides each result row's own explicit identifier (see
+            // `SearchDropdownField.resultIdentifier(for:)`), breaking UI-test lookup by row
+            // identifier — diagnosed while building `CatchLocationManualEntryView`'s equivalent
+            // screen (see its UI test for the root-cause detail).
 
             if viewModel.saveFailed {
                 errorBanner

@@ -7,8 +7,10 @@ import SwiftUI
 /// ports — entirely from local resources, with no Apple Maps tiles and no network requests (see
 /// `BlankOfflineTileOverlay`).
 ///
-/// - **Ports are display-only**: they're never selectable and never show a callout (see
-///   `PortsOverlay`/`PortsOverlayRenderer`) — the parent never learns about a port tap.
+/// - **Ports are display-only**: they're never selectable and never show a callout — their dot is
+///   drawn by `PortsOverlay`/`PortsOverlayRenderer` and their name by a non-interactive
+///   `PortLabelAnnotationView` (see those types' doc comments) — the parent never learns about a
+///   port tap.
 /// - **Subrectangles are selectable**: tapping one highlights it and reports its
 ///   `SubrectangleProperties` via `selectedSubrectangle`. Tapping somewhere that isn't inside any
 ///   subrectangle clears the selection.
@@ -154,6 +156,7 @@ struct OfflineMapView: UIViewRepresentable {
                 selectableSubrectangleOverlays: subrectangleResult.selectableOverlays,
                 subrectangleAnnotations: subrectangleResult.annotations,
                 portsOverlay: PortsOverlay(markers: portMarkers),
+                portLabelAnnotations: PortLabelAnnotation.annotations(for: portMarkers),
                 into: map
             )
             return
@@ -202,6 +205,7 @@ struct OfflineMapView: UIViewRepresentable {
             selectableSubrectangleOverlays: selectableOverlays,
             subrectangleAnnotations: subrectangleResult.annotations.filter { selectableSubCodes.contains($0.subCode) },
             portsOverlay: PortsOverlay(markers: portMarkers),
+            portLabelAnnotations: PortLabelAnnotation.annotations(for: portMarkers),
             into: map
         )
     }

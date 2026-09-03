@@ -589,6 +589,42 @@
         }
       }
     },
+    "catchRecord.catchLocation.otherButton" : {
+      "comment" : "Floating button overlaid on the bottom-left of the catch-location map, offering a manual type-to-search alternative to tapping the map.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "cy" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Arall"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Other"
+          }
+        }
+      }
+    },
+    "catchRecord.catchLocation.otherButton.hint" : {
+      "comment" : "Accessibility hint for the map's \"Other\" button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "cy" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Chwiliwch am ardal ystadegol â llaw"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search for a statistical area manually"
+          }
+        }
+      }
+    },
     "catchRecord.catchLocation.selectedArea" : {
       "comment" : "Read-out of the currently selected statistical area. %@ is the area code or the none placeholder.",
       "extractionState" : "manual",
@@ -1377,6 +1413,78 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Weight above minimum size kept onboard or in keep pots (kg)"
+          }
+        }
+      }
+    },
+    "catchRecord.manualEntry.heading" : {
+      "comment" : "Heading for the manual statistical-area entry screen, reached via the catch-location map's \"Other\" button. %@ is the gear name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "cy" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Rhowch yr is-ardal ystadegol lle cafodd y rhan fwyaf o'ch dalfa ei ddal gan ddefnyddio %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter the statistical sub area where most of your catch was caught using %@"
+          }
+        }
+      }
+    },
+    "catchRecord.manualEntry.search.noResults" : {
+      "comment" : "VoiceOver announcement when a manual statistical-area search returns no matches.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "cy" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dim canlyniadau"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No results"
+          }
+        }
+      }
+    },
+    "catchRecord.manualEntry.search.placeholder" : {
+      "comment" : "Placeholder text for the manual statistical-area search field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "cy" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Teipiwch i chwilio"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Type to search"
+          }
+        }
+      }
+    },
+    "catchRecord.manualEntry.search.resultCount" : {
+      "comment" : "VoiceOver announcement of the number of matches for a manual statistical-area search. %d is the count.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "cy" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%d canlyniad"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d results"
           }
         }
       }

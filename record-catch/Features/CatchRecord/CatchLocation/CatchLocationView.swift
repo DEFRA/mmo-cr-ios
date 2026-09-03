@@ -104,6 +104,10 @@ struct CatchLocationView: View {
         .frame(maxWidth: .infinity)
         .aspectRatio(1, contentMode: .fit)
         .accessibilityIdentifier("\(identifierPrefix).map")
+        .overlay(alignment: .bottomLeading) {
+            otherButton
+                .padding(AppSpacing.small)
+        }
         .onAppear {
             // Reflects any pre-existing selection (e.g. returning via a "Change" link) back into
             // the map's own selection state — see `SubrectangleProperties` doc comment: only
@@ -119,6 +123,33 @@ struct CatchLocationView: View {
             }
         }
     }
+
+    /// Floating button overlaid on the bottom-left corner of the map, offering a manual,
+    /// type-to-search alternative (`CatchLocationManualEntryView`) to tapping an area directly —
+    /// for when the correct subrectangle either isn't visible at the current zoom or is awkward to
+    /// tap accurately. No Figma design was supplied for this control, so it is built entirely from
+    /// existing DesignSystem tokens (no bespoke deviation): an opaque, high-contrast pill that
+    /// meets the WCAG 2.2 44×44pt minimum target size sitting on top of the map.
+    private var otherButton: some View {
+        Button {
+            viewModel.enterManualEntry()
+        } label: {
+            Text(languageStore.localized("catchRecord.catchLocation.otherButton"))
+                .font(AppTypography.button)
+                .foregroundStyle(AppColors.textPrimary)
+                .padding(.horizontal, AppSpacing.medium)
+                .frame(minHeight: AppControlSize.buttonHeight)
+                .background(AppColors.background)
+                .overlay(
+                    Rectangle().stroke(AppColors.borderStrong, lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(languageStore.localized("catchRecord.catchLocation.otherButton"))
+        .accessibilityHint(languageStore.localized("catchRecord.catchLocation.otherButton.hint"))
+        .accessibilityIdentifier("\(identifierPrefix).otherButton")
+    }
+
 
     @ViewBuilder
     private var selectedAreaReadout: some View {

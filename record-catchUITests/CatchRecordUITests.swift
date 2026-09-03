@@ -226,9 +226,11 @@ final class CatchRecordUITests: XCTestCase {
         // Add-port screen shown first (no favourites yet).
         XCTAssertTrue(element(app, "CatchRecord.addPort.heading").waitForExistence(timeout: 5))
 
-        // Submitting with no selection shows the inline error and does not route.
+        // Submitting with no selection shows the inline error and does not route — still on the
+        // Add-port screen (no container-level identifier on the search field itself: see
+        // `AddPortView`'s comment on why one isn't applied there).
         app.buttons["CatchRecord.addPort.saveContinue"].tap()
-        XCTAssertTrue(element(app, "CatchRecord.addPort.search").exists)
+        XCTAssertTrue(element(app, "CatchRecord.addPort.heading").exists)
 
         // Type a port and pick it from the results. "Newlyn" is a real entry in
         // `StubPortOptionProvider`'s list — the previous "Hastings" never matched any port, so

@@ -19,9 +19,10 @@ final class OfflineMapCoordinator: NSObject, MKMapViewDelegate {
     /// Annotation view lookup keyed by sub_code, populated as MapKit requests views.
     private var annotationViewsBySubCode: [String: SubrectangleAnnotationView] = [:]
 
-    /// Set once MapKit requests a renderer for the ports overlay, so `regionDidChangeAnimated`
-    /// can toggle its `showsLabels` in step with the subrectangle labels.
-    private weak var portsOverlayRenderer: PortsOverlayRenderer?
+    /// Port name label view lookup keyed by port_code, populated as MapKit requests views —
+    /// mirrors `annotationViewsBySubCode`, so both label layers show/hide together in
+    /// `regionDidChangeAnimated`.
+    private var portLabelViewsByCode: [Double: PortLabelAnnotationView] = [:]
 
     /// The sub_code currently reflected in the renderers/annotation views.
     /// Used to no-op `syncSelection(_:)` when SwiftUI calls `updateUIView` without the selection
@@ -52,12 +53,17 @@ final class OfflineMapCoordinator: NSObject, MKMapViewDelegate {
     /// overlap the sea is the caller's job (`OfflineMapView`) — normally read straight from the
     /// bundled precomputed data (see `PrecomputedMapLoader`), so this method itself never repeats
     /// that (comparatively expensive) point-sampling work.
+    ///
+    /// `portLabelAnnotations` defaults to empty so existing call sites (and tests) that don't care
+    /// about port names keep compiling unchanged; `OfflineMapView` always supplies the full set
+    /// derived from its loaded `PortMarker`s.
     func load(
         landOverlays: [MapLandOverlay],
         subrectangleOverlays: [SubrectangleOverlay],
         selectableSubrectangleOverlays: [SubrectangleOverlay],
         subrectangleAnnotations: [SubrectangleAnnotation],
         portsOverlay: PortsOverlay,
+        portLabelAnnotations: [PortLabelAnnotation] = [],
         into mapView: MKMapView
     ) {
         // Only selectable overlays participate in tap hit-testing (see `handleMapTap`) — a purely
@@ -69,6 +75,7 @@ final class OfflineMapCoordinator: NSObject, MKMapViewDelegate {
         mapView.addOverlays(subrectangleOverlays, level: .aboveLabels)
         mapView.addAnnotations(subrectangleAnnotations)
         mapView.addOverlay(portsOverlay, level: .aboveLabels)
+        mapView.addAnnotations(portLabelAnnotations)
     }
 
     // MARK: - MKMapViewDelegate
@@ -90,38 +97,51 @@ final class OfflineMapCoordinator: NSObject, MKMapViewDelegate {
         }
 
         if let portsOverlay = overlay as? PortsOverlay {
-            let renderer = PortsOverlayRenderer(overlay: portsOverlay)
-            renderer.showsLabels = LabelVisibility.shouldShowLabels(forLatitudeDelta: mapView.region.span.latitudeDelta)
-            portsOverlayRenderer = renderer
-            return renderer
+            return PortsOverlayRenderer(overlay: portsOverlay)
         }
 
         return MKOverlayRenderer(overlay: overlay)
     }
 
     func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
-        // Ports are rendered via `PortsOverlay`/`PortsOverlayRenderer`, never as annotations, so
-        // this only ever needs to handle subrectangle labels — there's nothing here that could
-        // accidentally make a port selectable or callout-able.
-        guard let subrectangleAnnotation = annotation as? SubrectangleAnnotation else {
-            return nil
+        if let subrectangleAnnotation = annotation as? SubrectangleAnnotation {
+            let view = mapView.dequeueReusableAnnotationView(
+                withIdentifier: SubrectangleAnnotationView.reuseIdentifier
+            ) as? SubrectangleAnnotationView ?? SubrectangleAnnotationView(
+                annotation: subrectangleAnnotation,
+                reuseIdentifier: SubrectangleAnnotationView.reuseIdentifier
+            )
+
+            view.annotation = subrectangleAnnotation
+
+            let isSelected = subrectangleAnnotation.subCode == selectedSubrectangle.wrappedValue?.subCode
+            view.configure(subCode: subrectangleAnnotation.subCode, isSelected: isSelected)
+            view.isHidden = !LabelVisibility.shouldShowLabels(forLatitudeDelta: mapView.region.span.latitudeDelta)
+
+            annotationViewsBySubCode[subrectangleAnnotation.subCode] = view
+            return view
         }
 
-        let view = mapView.dequeueReusableAnnotationView(
-            withIdentifier: SubrectangleAnnotationView.reuseIdentifier
-        ) as? SubrectangleAnnotationView ?? SubrectangleAnnotationView(
-            annotation: subrectangleAnnotation,
-            reuseIdentifier: SubrectangleAnnotationView.reuseIdentifier
-        )
+        // Ports' marker dots are rendered via `PortsOverlay`/`PortsOverlayRenderer`, never as
+        // annotations — only their name labels are annotation views, and those are structurally
+        // prevented from being selectable/callout-able (see `PortLabelAnnotationView`).
+        if let portLabelAnnotation = annotation as? PortLabelAnnotation {
+            let view = mapView.dequeueReusableAnnotationView(
+                withIdentifier: PortLabelAnnotationView.reuseIdentifier
+            ) as? PortLabelAnnotationView ?? PortLabelAnnotationView(
+                annotation: portLabelAnnotation,
+                reuseIdentifier: PortLabelAnnotationView.reuseIdentifier
+            )
 
-        view.annotation = subrectangleAnnotation
+            view.annotation = portLabelAnnotation
+            view.configure(name: portLabelAnnotation.name)
+            view.isHidden = !LabelVisibility.shouldShowLabels(forLatitudeDelta: mapView.region.span.latitudeDelta)
 
-        let isSelected = subrectangleAnnotation.subCode == selectedSubrectangle.wrappedValue?.subCode
-        view.configure(subCode: subrectangleAnnotation.subCode, isSelected: isSelected)
-        view.isHidden = !LabelVisibility.shouldShowLabels(forLatitudeDelta: mapView.region.span.latitudeDelta)
+            portLabelViewsByCode[portLabelAnnotation.portCode] = view
+            return view
+        }
 
-        annotationViewsBySubCode[subrectangleAnnotation.subCode] = view
-        return view
+        return nil
     }
 
     func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
@@ -131,7 +151,9 @@ final class OfflineMapCoordinator: NSObject, MKMapViewDelegate {
             view.isHidden = !showLabels
         }
 
-        portsOverlayRenderer?.showsLabels = showLabels
+        for view in portLabelViewsByCode.values {
+            view.isHidden = !showLabels
+        }
 
         #if DEBUG
         // Debug-only: prints the current zoom level so `OfflineMapView`'s hard

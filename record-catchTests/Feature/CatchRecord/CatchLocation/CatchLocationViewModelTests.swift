@@ -75,4 +75,18 @@ final class CatchLocationViewModelTests: XCTestCase {
 
         XCTAssertEqual(draft.statisticalArea, "38E96")
     }
+
+    // MARK: - Manual entry ("Other" button)
+
+    func test_enterManualEntry_pushesManualEntryRoute() {
+        let router = CatchRecordRouter()
+        let sut = makeSUT(router: router)
+
+        sut.enterManualEntry()
+
+        XCTAssertEqual(
+            router.path,
+            [.catchLocationManualEntry(gear: .seineNets, vessel: vessel, referenceNumber: referenceNumber)]
+        )
+    }
 }

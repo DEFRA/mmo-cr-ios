@@ -147,6 +147,15 @@ struct CatchRecordHostView: View {
                 favouriteSpecies: favouriteSpecies,
                 draft: draft
             )
+        case .catchLocationManualEntry(let gear, let vessel, let referenceNumber):
+            CatchLocationManualEntryView(
+                gear: gear,
+                vessel: vessel,
+                referenceNumber: referenceNumber,
+                router: router,
+                favouriteSpecies: favouriteSpecies,
+                draft: draft
+            )
         case .recordSpeciesWeights(let gear, let vessel, let referenceNumber):
             RecordSpeciesWeightsView(
                 gear: gear,

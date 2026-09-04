@@ -1,14 +1,28 @@
+import MapKit
 import SwiftUI
 
 /// "Where was most of your catch caught using <gear>?" — pick a single statistical area on a map.
 ///
-/// Renders the shared journey chrome (caption, reference number, heading, hints) then the existing
-/// `SeaMapView` map component for area selection; its cartographic style intentionally need not
-/// match the design mock. "Save and continue" validates that an area was chosen and routes on.
+/// Renders the shared journey chrome (caption, reference number, heading, hints) then the
+/// `OfflineMapView` map component for area selection; its cartographic style intentionally need
+/// not match the design mock. "Save and continue" validates that an area was chosen and routes on.
 struct CatchLocationView: View {
 
     @Environment(AppLanguageStore.self) private var languageStore
     @State private var viewModel: CatchLocationViewModel
+    /// Bridges `OfflineMapView`'s `SubrectangleProperties?` selection to the view model's plain
+    /// `selectedArea: String?` (the only part of the selection the rest of the journey needs —
+    /// see `CatchRecordDraft.statisticalArea`).
+    @State private var selectedSubrectangle: SubrectangleProperties?
+    /// The map's initial camera position, computed once at init (see `PortMapCamera`) — framed on
+    /// the trip's departure port when one is known, otherwise the whole-UK default view.
+    @State private var mapRegion: MKCoordinateRegion
+
+    /// Whole-UK view shown when there's no departure port with a known location to frame on.
+    private static let defaultMapRegion = MKCoordinateRegion(
+        center: CLLocationCoordinate2D(latitude: 55.0, longitude: -3.5),
+        span: MKCoordinateSpan(latitudeDelta: 12.0, longitudeDelta: 8.0)
+    )
 
     init(
         gear: GearOption,
@@ -25,6 +39,10 @@ struct CatchLocationView: View {
             router: router,
             favouriteSpecies: favouriteSpecies,
             draft: draft
+        ))
+        _mapRegion = State(wrappedValue: PortMapCamera.initialRegion(
+            forPort: draft.departurePort?.coordinate,
+            defaultRegion: Self.defaultMapRegion
         ))
     }
 
@@ -72,14 +90,66 @@ struct CatchLocationView: View {
     }
 
     private var map: some View {
-        SeaMapView(selectedSubzone: Binding(
-            get: { viewModel.selectedArea },
-            set: { viewModel.selectedArea = $0 }
-        ))
+        OfflineMapView(
+            initialCoordinate: mapRegion.center,
+            initialSpan: mapRegion.span,
+            selectedSubrectangle: Binding(
+                get: { selectedSubrectangle },
+                set: { newValue in
+                    selectedSubrectangle = newValue
+                    viewModel.selectedArea = newValue?.subCode
+                }
+            )
+        )
         .frame(maxWidth: .infinity)
         .aspectRatio(1, contentMode: .fit)
         .accessibilityIdentifier("\(identifierPrefix).map")
+        .overlay(alignment: .bottomLeading) {
+            otherButton
+                .padding(AppSpacing.small)
+        }
+        .onAppear {
+            // Reflects any pre-existing selection (e.g. returning via a "Change" link) back into
+            // the map's own selection state — see `SubrectangleProperties` doc comment: only
+            // `subCode` is guaranteed, which is all the renderer needs to highlight it.
+            if let existingArea = viewModel.selectedArea, selectedSubrectangle == nil {
+                selectedSubrectangle = SubrectangleProperties(
+                    subCode: existingArea,
+                    icesName: nil,
+                    areaKM2: nil,
+                    statX: nil,
+                    statY: nil
+                )
+            }
+        }
     }
+
+    /// Floating button overlaid on the bottom-left corner of the map, offering a manual,
+    /// type-to-search alternative (`CatchLocationManualEntryView`) to tapping an area directly —
+    /// for when the correct subrectangle either isn't visible at the current zoom or is awkward to
+    /// tap accurately. No Figma design was supplied for this control, so it is built entirely from
+    /// existing DesignSystem tokens (no bespoke deviation): an opaque, high-contrast pill that
+    /// meets the WCAG 2.2 44×44pt minimum target size sitting on top of the map.
+    private var otherButton: some View {
+        Button {
+            viewModel.enterManualEntry()
+        } label: {
+            Text(languageStore.localized("catchRecord.catchLocation.otherButton"))
+                .font(AppTypography.button)
+                .foregroundStyle(AppColors.textPrimary)
+                .padding(.horizontal, AppSpacing.medium)
+                .frame(minHeight: AppControlSize.buttonHeight)
+                .background(AppColors.background)
+                .overlay(
+                    Rectangle().stroke(AppColors.borderStrong, lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(languageStore.localized("catchRecord.catchLocation.otherButton"))
+        .accessibilityHint(languageStore.localized("catchRecord.catchLocation.otherButton.hint"))
+        .accessibilityIdentifier("\(identifierPrefix).otherButton")
+    }
+
 
     @ViewBuilder
     private var selectedAreaReadout: some View {

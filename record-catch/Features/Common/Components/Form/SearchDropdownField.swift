@@ -17,6 +17,12 @@ struct SearchDropdownField: View {
         count == 0 ? "No results" : "\(count) results"
     }
 
+    /// Caps how many results are visible at once before the list scrolls, rather than growing to
+    /// fit every match and pushing the rest of the screen (e.g. the "Save and continue" button)
+    /// out of view. Matching results beyond this count remain reachable by scrolling — none are
+    /// discarded — so this only bounds on-screen height, not the result set itself.
+    private static let maxVisibleResults = 6
+
     @FocusState private var isFocused: Bool
     @State private var hasBlurred = false
     @State private var lastAnnouncedCount: Int?
@@ -103,23 +109,39 @@ struct SearchDropdownField: View {
                 }
 
             if showResults {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(filteredOptions, id: \.self) { option in
-                        Button(option) {
-                            selectedOption = option
-                            query = option
-                            isFocused = false
-                        }
-                        .buttonStyle(.plain)
-                        .font(AppTypography.bodySmall)
-                        .foregroundStyle(AppColors.textPrimary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, AppSpacing.small)
-                        .padding(.vertical, AppSpacing.small)
+                // A plain `ScrollView` (rather than `List`/`ScrollViewReader` on the row content)
+                // keeps every match reachable while capping the visible height to roughly
+                // `maxVisibleResults` rows, so a large result set can never push the rest of the
+                // screen (e.g. the "Save and continue" button) out of view. VoiceOver/Voice
+                // Control users can still reach every row by scrolling; nothing is discarded, only
+                // the on-screen height is bounded.
+                ScrollView(.vertical) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(filteredOptions, id: \.self) { option in
+                            Button(option) {
+                                selectedOption = option
+                                query = option
+                                isFocused = false
+                            }
+                            .buttonStyle(.plain)
+                            .font(AppTypography.bodySmall)
+                            .foregroundStyle(AppColors.textPrimary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, AppSpacing.small)
+                            .padding(.vertical, AppSpacing.small)
+                            .frame(minHeight: AppControlSize.minTapTarget)
+                            // An explicit, stable identifier for UI tests to target, independent of
+                            // the option's own label text: a plain `VStack`/`Button` combination
+                            // doesn't otherwise reliably expose a container-level identifier to
+                            // XCUITest, and matching by label text alone can collide with the
+                            // `TextField` above once its typed value equals the same text.
+                            .accessibilityIdentifier(Self.resultIdentifier(for: option))
 
-                        Divider()
+                            Divider()
+                        }
                     }
                 }
+                .frame(maxHeight: AppControlSize.minTapTarget * CGFloat(Self.maxVisibleResults))
                 .overlay(
                     Rectangle()
                         .stroke(AppColors.borderDefault, lineWidth: 1)
@@ -199,6 +221,13 @@ struct SearchDropdownField: View {
         }
 
         return options.contains(selectedOption) && selectedOption == query
+    }
+
+    /// Stable, unambiguous accessibility identifier for a results-list row, keyed by the option's
+    /// own text. UI tests should target this rather than the option's label text directly (see the
+    /// identifier modifier above for why).
+    static func resultIdentifier(for option: String) -> String {
+        "SearchDropdownField.result.\(option)"
     }
 }
 

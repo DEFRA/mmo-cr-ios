@@ -184,7 +184,7 @@ into `draft.gear` (single-gear support in this phase).
 
 ### 11. Catch location (`CatchLocation/`)
 
-Renders the existing `SeaMapView`/`SeaMapCoordinator` (see `Features/Map/`) so the user taps a
+Renders the `OfflineMapView`/`OfflineMapCoordinator` (see `Features/Map/`) so the user taps a
 statistical subzone. `CatchLocationValidation.errorKey(for:)` requires a non-nil selection before
 continuing. On success, fetches favourite species and pushes the pure
 `CatchRecordRouting.speciesEntryRoute` decision (mirrors port/gear entry).

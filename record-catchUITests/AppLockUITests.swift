@@ -29,11 +29,19 @@ final class AppLockUITests: XCTestCase {
         app.descendants(matching: .any).matching(identifier: identifier).firstMatch
     }
 
+    /// Launches with `-uiTestResetLanguage` alongside `argument`, mirroring `CatchRecordUITests`.
+    /// Without this, a language preference toggled Welsh by an earlier UI test in the same run
+    /// persists in `UserDefaults` and bleeds into these tests' expected English copy.
+    private func launch(_ argument: String) -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments += ["-uiTestResetLanguage", argument]
+        app.launch()
+        return app
+    }
+
     @MainActor
     func test_eligibleReentry_showsAppLockScreen_withFaceIDCopy() {
-        let app = XCUIApplication()
-        app.launchArguments += ["-uiTestAppLockLocked"]
-        app.launch()
+        let app = launch("-uiTestAppLockLocked")
 
         XCTAssertTrue(app.staticTexts[ID.heading].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons[ID.unlockButton].exists)
@@ -44,9 +52,7 @@ final class AppLockUITests: XCTestCase {
 
     @MainActor
     func test_unlockButton_onSuccess_navigatesToHome() {
-        let app = XCUIApplication()
-        app.launchArguments += ["-uiTestAppLockLocked"]
-        app.launch()
+        let app = launch("-uiTestAppLockLocked")
 
         let unlock = app.buttons[ID.unlockButton]
         XCTAssertTrue(unlock.waitForExistence(timeout: 5))
@@ -62,9 +68,7 @@ final class AppLockUITests: XCTestCase {
     func test_manualFallbackLink_alwaysReachable_navigatesToSignIn() {
         // Never a dead end: the manual "sign in instead" path must work even while biometric
         // re-entry is being offered (accessibility.instructions.md).
-        let app = XCUIApplication()
-        app.launchArguments += ["-uiTestAppLockLocked"]
-        app.launch()
+        let app = launch("-uiTestAppLockLocked")
 
         let fallback = app.buttons[ID.fallbackLink]
         XCTAssertTrue(fallback.waitForExistence(timeout: 5))
@@ -80,9 +84,7 @@ final class AppLockUITests: XCTestCase {
     func test_ineligibleReentry_skipsAppLock_showsSignInDirectly() {
         // No biometrics enrolled + preference off + no secret provisioned: the app must never
         // show a stuck/broken app-lock screen — it should go straight to sign-in (ADR-0009 §1).
-        let app = XCUIApplication()
-        app.launchArguments += ["-uiTestAppLockFallback"]
-        app.launch()
+        let app = launch("-uiTestAppLockFallback")
 
         XCTAssertTrue(app.staticTexts[ID.signInHeading].waitForExistence(timeout: 5))
         XCTAssertFalse(app.staticTexts[ID.heading].exists, "App-lock screen should not appear when re-entry isn't eligible")

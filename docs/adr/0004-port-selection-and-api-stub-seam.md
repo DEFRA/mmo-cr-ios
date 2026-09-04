@@ -122,6 +122,22 @@ resolution.
 - Standing obligation (per ADR-0001): the real networking/persistence/sync work will each get their
   own ADR, and the native-app governance exception remains current.
 
+## Update (2026-09) — port search now sourced from the real bundled port list
+
+The port **search** side (`PortSearchProviding`) has been re-pointed at the real, bundled
+`ports.geojson` list — the same GeoJSON file the offline map's `PortLoader` already parses —
+instead of the original 12-port placeholder list. `BundledPortSearchProvider` (renamed from
+`StubPortSearchProvider`, which no longer describes what it does) loads, deduplicates (by the
+stable `port_code` — a handful of ports repeat identically in the source file) and alphabetically
+sorts the ~493 real UK ports once at construction; this is synchronous, bundled data, not a
+network call, so the `async throws` shape is unaffected. `PortOption` gained a `coordinate:
+PortCoordinate?` field (plain `latitude`/`longitude` `Double`s, not `CLLocationCoordinate2D`, so
+the model stays trivially `Hashable`/`Sendable`) populated from the GeoJSON geometry, so a port's
+location is available wherever a selected `PortOption` flows (favourites, `CatchRecordDraft`) for
+later use (e.g. showing the port on a map). `FavouritePortsProviding` remains an in-memory stub —
+this update only replaces the *search* list's data source, not favourites persistence, which is
+still deferred to the future real Ports/Favourites API ADR referenced in §5 above.
+
 ## References
 
 - DEFRA, *Mobile application standards* (offline-first) —

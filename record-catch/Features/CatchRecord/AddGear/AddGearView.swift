@@ -66,7 +66,9 @@ struct AddGearView: View {
                         : String(format: languageStore.localized("catchRecord.addGear.search.resultCount"), count)
                 }
             )
-            .accessibilityIdentifier("CatchRecord.addGear.search")
+            // No container-level `.accessibilityIdentifier` here: applying one to the whole
+            // `SearchDropdownField` overrides each result row's own explicit identifier — see
+            // `AddPortView`'s equivalent comment for the root-cause detail.
 
             PrimaryButton(title: languageStore.localized("catchRecord.saveContinue")) {
                 viewModel.submit()

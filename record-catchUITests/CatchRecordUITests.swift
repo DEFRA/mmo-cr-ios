@@ -226,36 +226,40 @@ final class CatchRecordUITests: XCTestCase {
         // Add-port screen shown first (no favourites yet).
         XCTAssertTrue(element(app, "CatchRecord.addPort.heading").waitForExistence(timeout: 5))
 
-        // Submitting with no selection shows the inline error and does not route.
+        // Submitting with no selection shows the inline error and does not route — still on the
+        // Add-port screen (no container-level identifier on the search field itself: see
+        // `AddPortView`'s comment on why one isn't applied there).
         app.buttons["CatchRecord.addPort.saveContinue"].tap()
-        XCTAssertTrue(element(app, "CatchRecord.addPort.search").exists)
+        XCTAssertTrue(element(app, "CatchRecord.addPort.heading").exists)
 
-        // Type a port and pick it from the results.
+        // Type a port and pick it from the results. "Newlyn" is a real entry in
+        // `StubPortOptionProvider`'s list — the previous "Hastings" never matched any port, so
+        // the results list never actually rendered and the test's "successful" tap was silently
+        // landing on the search `TextField` instead (its value happens to equal the typed text).
         let field = app.textFields.firstMatch
         XCTAssertTrue(field.waitForExistence(timeout: 5))
         field.tap()
-        field.typeText("Hastings")
-        // Queried via the broad `element()` helper (any element type), not `app.buttons[...]`,
-        // to avoid a flaky "Automation type mismatch" accessibility-tree lookup failure seen with
-        // a type-specific button query on this Xcode/simulator combination.
-        let hastingsResult = element(app, "Hastings")
-        XCTAssertTrue(hastingsResult.waitForExistence(timeout: 5))
-        hastingsResult.tap()
-
-        app.buttons["CatchRecord.addPort.saveContinue"].tap()
+        field.typeText("Newlyn")
+        // Queried by the result row's own stable identifier, not its label text: without one, a
+        // broad `.any`-type query for the label can also resolve to the `TextField` above once
+        // its typed value matches the same text, silently mistapping it instead of the row.
+        let newlynResult = element(app, "SearchDropdownField.result.Newlyn")
+        XCTAssertTrue(newlynResult.waitForExistence(timeout: 5))
+        newlynResult.tap()
 
         // Lands on the departure select screen with the new favourite present.
+        app.buttons["CatchRecord.addPort.saveContinue"].tap()
         XCTAssertTrue(element(app, "CatchRecord.selectPort.departure.heading").waitForExistence(timeout: 5))
         app.buttons["CatchRecord.selectPort.departure.saveContinue"].tap()
         // No selection → inline error.
         XCTAssertTrue(element(app, "CatchRecord.selectPort.departure.error").waitForExistence(timeout: 5))
 
-        element(app, "CatchRecord.selectPort.departure.option.hastings").tap()
+        element(app, "CatchRecord.selectPort.departure.option.newlyn").tap()
         app.buttons["CatchRecord.selectPort.departure.saveContinue"].tap()
 
         // Return select screen.
         XCTAssertTrue(element(app, "CatchRecord.selectPort.return.heading").waitForExistence(timeout: 5))
-        element(app, "CatchRecord.selectPort.return.option.hastings").tap()
+        element(app, "CatchRecord.selectPort.return.option.newlyn").tap()
         app.buttons["CatchRecord.selectPort.return.saveContinue"].tap()
 
         // With no favourite gears yet, enters the gear sub-journey at the Add-gear screen.

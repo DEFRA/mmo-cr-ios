@@ -91,8 +91,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.MMO_CR_SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
         with:
-          args: >
-            ${{ github.event_name != 'pull_request' && format('-Dsonar.branch.name={0}', github.ref_name) || '' }}
+          args: ${{ github.event_name != 'pull_request' && format('-Dsonar.branch.name={0}', github.ref_name) || '' }}
 
       - name: Create and push release tag
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'

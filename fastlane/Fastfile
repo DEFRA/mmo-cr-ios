@@ -40,6 +40,26 @@ platform :ios do
     )
   end
 
+  desc "Distribute the latest uploaded DEV build to the External Testers V2 group on TestFlight."
+  lane :distribute_dev_external do
+    api_key = app_store_connect_api_key(
+      key_id: ENV.fetch("ASC_KEY_ID"),
+      issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+      key_content: ENV.fetch("ASC_KEY_CONTENT"),
+      is_key_content_base64: true
+    )
+
+    upload_to_testflight(
+      api_key: api_key,
+      app_identifier: "mmo.catchrecordingdev.ios",
+      distribute_only: true,
+      distribute_external: true,
+      groups: ["External Testers V2"],
+      notify_external_testers: true,
+      skip_waiting_for_build_processing: false
+    )
+  end
+
   # Parametrised so the future test/prod release lanes reuse the same signed-build-and-upload flow.
   private_lane :build_and_upload do |options|
     api_key = app_store_connect_api_key(

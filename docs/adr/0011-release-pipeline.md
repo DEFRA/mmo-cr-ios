@@ -52,6 +52,7 @@ New [.github/workflows/ios-release.yml](../../.github/workflows/ios-release.yml)
   keychain by the workflow; the `match` call is commented out (see decision 4).
 - `build_app` (app-store export) without automatic build number incrementing (`GITHUB_RUN_NUMBER` is not used). The `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` baked into `project.pbxproj` are used directly unless overridden at runtime via `workflow_dispatch` inputs.
 - `upload_to_testflight(distribute_external: false)` → the Dev app's internal TestFlight group.
+- `distribute_dev_external` lane → waits for App Store Connect build processing and assigns the uploaded build to the "External Testers V2" external group (`distribute_only: true`).
 
 ### 3a. Versioning — project.pbxproj is the single source of truth in code & automated tag creation
 

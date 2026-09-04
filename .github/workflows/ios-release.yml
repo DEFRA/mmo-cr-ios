@@ -145,6 +145,14 @@ jobs:
           PROVISIONING_PROFILE_NAME: ${{ secrets.PROVISIONING_PROFILE_NAME }}
         run: bundle exec fastlane release_dev
 
+      - name: Submit to External Testers V2 on TestFlight
+        env:
+          # App Store Connect API key — used to assign build to external group.
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
+        run: bundle exec fastlane distribute_dev_external
+
       - name: Clean up temporary keychain and provisioning profile
         if: ${{ always() }}
         run: |

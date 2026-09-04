@@ -24,6 +24,10 @@ import SwiftUI
 ///   not real imagery. `CameraZoomRange` is enforced by MapKit itself, continuously, for the
 ///   whole duration of the gesture — not corrected afterwards — so the limit is a genuine hard
 ///   stop with no overshoot/bounce-back.
+/// - **Panning is hard-limited** to roughly 100 miles from the map's *initial* centre (see
+///   `MapPanLimit`) via `MKMapView.cameraBoundary` — the same "MapKit enforces it natively,
+///   continuously" approach as the zoom limit, so a user can't pan away to an empty, unrelated
+///   part of the world and lose all context relative to where the screen opened.
 ///
 /// Usage:
 /// ```swift
@@ -127,6 +131,19 @@ struct OfflineMapView: UIViewRepresentable {
         // Hard zoom limit — see `minZoomDistance`/`maxZoomDistance`. Enforced natively by MapKit
         // itself, continuously, for the whole gesture — never overshoots and snaps back.
         map.cameraZoomRange = Self.cameraZoomRange
+
+        // Hard pan limit — see `MapPanLimit`. Same native-enforcement approach as the zoom limit
+        // above. `CameraBoundary(coordinateRegion:)` is failable (only for a degenerate region,
+        // never expected for a real coordinate here); fail-soft rather than crash, matching this
+        // file's existing fail-soft loading philosophy — a missing boundary just means unlimited
+        // panning, not a broken map.
+        if let boundary = MKMapView.CameraBoundary(
+            coordinateRegion: MapPanLimit.boundaryRegion(center: initialCoordinate)
+        ) {
+            map.cameraBoundary = boundary
+        } else {
+            OfflineMapLogger.logLoadFailure(layer: "panBoundary", error: OfflineMapDataError.invalidGeoJSON)
+        }
 
         // Entirely offline base layer — see `BlankOfflineTileOverlay`. Added first/lowest so the
         // main map, subrectangle and port layers (added by `loadLayers`) draw on top of it.

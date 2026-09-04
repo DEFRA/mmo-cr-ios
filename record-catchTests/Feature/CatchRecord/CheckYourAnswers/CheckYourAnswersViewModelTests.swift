@@ -158,7 +158,6 @@ final class CheckYourAnswersViewModelTests: XCTestCase {
         let nameRow = gearRows.first { $0.id == "gear.\(seineNets.id).name" }
         XCTAssertEqual(nameRow?.value, seineNets.name)
         XCTAssertEqual(nameRow?.changeRoute, expectedRoute)
-        XCTAssertFalse(nameRow?.resumesAtCheckYourAnswers ?? true)
 
         let meshRow = gearRows.first { $0.id == "gear.\(seineNets.id).measurement.meshSize" }
         XCTAssertEqual(meshRow?.value, "80")
@@ -179,7 +178,6 @@ final class CheckYourAnswersViewModelTests: XCTestCase {
         XCTAssertEqual(row?.value, "27.7.e")
         XCTAssertEqual(row?.changeRoute, .catchLocation(gear: seineNets, vessel: "ACHILLES", referenceNumber: referenceNumber))
         XCTAssertEqual(row?.gearName, seineNets.name)
-        XCTAssertTrue(row?.resumesAtCheckYourAnswers ?? false)
     }
 
     func test_gearSection_showsSpeciesCaughtRows_routingToRecordSpeciesWeights_andResumingAtCheckYourAnswers() {
@@ -190,7 +188,6 @@ final class CheckYourAnswersViewModelTests: XCTestCase {
         let speciesRows = sut.sections[1].rows.filter { $0.id.contains("speciesCaught") }
         XCTAssertEqual(speciesRows.map(\.value), ["Atlantic cod (COD)", "250 kg"])
         XCTAssertTrue(speciesRows.allSatisfy { $0.changeRoute == expectedRoute })
-        XCTAssertTrue(speciesRows.allSatisfy { $0.resumesAtCheckYourAnswers })
         XCTAssertTrue(speciesRows.allSatisfy { $0.gearName == seineNets.name })
     }
 
@@ -213,7 +210,6 @@ final class CheckYourAnswersViewModelTests: XCTestCase {
         XCTAssertEqual(section?.rows.map(\.value), ["Hake (HKE)", "5 kg"])
         let expectedRoute = CatchRecordRoute.landingStorageSpecies(referenceNumber: referenceNumber)
         XCTAssertTrue(section?.rows.allSatisfy { $0.changeRoute == expectedRoute } ?? false)
-        XCTAssertTrue(section?.rows.allSatisfy { !$0.resumesAtCheckYourAnswers } ?? false)
     }
 
     // MARK: - Change navigation
@@ -227,25 +223,24 @@ final class CheckYourAnswersViewModelTests: XCTestCase {
         XCTAssertEqual(router.path, [.selectVessel])
     }
 
-    func test_change_withResumingAtCheckYourAnswers_setsDraftFlag() {
+    func test_change_alwaysSetsReturnToCheckYourAnswersDraftFlag() {
         let router = CatchRecordRouter()
         let draft = populatedDraft()
         let sut = CheckYourAnswersViewModel(referenceNumber: referenceNumber, router: router, draft: draft)
 
-        sut.change(to: .catchLocation(gear: seineNets, vessel: "ACHILLES", referenceNumber: referenceNumber), resumingAtCheckYourAnswers: true)
+        sut.change(to: .catchLocation(gear: seineNets, vessel: "ACHILLES", referenceNumber: referenceNumber))
 
-        XCTAssertTrue(draft.returnToCheckYourAnswersAfterSpecies)
+        XCTAssertTrue(draft.returnToCheckYourAnswers)
     }
 
-    func test_change_withoutResumingAtCheckYourAnswers_clearsDraftFlag() {
+    func test_change_forATripLevelRoute_alsoSetsReturnToCheckYourAnswersDraftFlag() {
         let router = CatchRecordRouter()
         let draft = populatedDraft()
-        draft.returnToCheckYourAnswersAfterSpecies = true
         let sut = CheckYourAnswersViewModel(referenceNumber: referenceNumber, router: router, draft: draft)
 
         sut.change(to: .selectVessel)
 
-        XCTAssertFalse(draft.returnToCheckYourAnswersAfterSpecies)
+        XCTAssertTrue(draft.returnToCheckYourAnswers)
     }
 
     // MARK: - Submit

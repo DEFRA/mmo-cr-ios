@@ -40,14 +40,14 @@ final class CatchRecordDraft {
     /// after every gear's catch has been recorded — unlike `gearCatches`, this is not split per
     /// gear (see ADR-0011).
     var speciesNotLanded: [SpeciesOption] = []
-    /// Set by `CheckYourAnswersViewModel.change(to:resumingAtCheckYourAnswers:)` when a "Change"
-    /// link for a gear's statistical area or species-caught is tapped from Check your answers, so
-    /// that once its onward mini-journey (which may re-enter the catch-location and species
-    /// screens for that one gear) completes, the journey returns straight back to Check your
-    /// answers rather than continuing through any other selected gears (see ADR-0011). Reset
-    /// whenever `change(to:)` is called again, and consumed by
-    /// `RecordSpeciesWeightsViewModel.submit()`.
-    var returnToCheckYourAnswersAfterSpecies = false
+    /// Set by `CheckYourAnswersViewModel.change(to:)` whenever **any** "Change" link is tapped
+    /// from Check your answers, so that once that link's own mini-journey (which may be a single
+    /// screen, or a short chain such as the catch-location→species pair for a per-gear field)
+    /// completes, the journey returns straight back to Check your answers rather than continuing
+    /// forward through the rest of the create-a-catch-record journey (see ADR-0011, generalised to
+    /// every field by ADR-0013). Consumed and reset by whichever screen's `submit()` is reached
+    /// once that mini-journey completes.
+    var returnToCheckYourAnswers = false
 
     /// `nonisolated` so `CatchRecordDraft()` can be used as a default parameter value from any
     /// isolation context (e.g. non-`@MainActor` `View` initializers) without a hop to the main

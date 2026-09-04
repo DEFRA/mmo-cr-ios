@@ -57,4 +57,32 @@ final class SelectVesselViewModelTests: XCTestCase {
 
         XCTAssertEqual(draft.vessel, "ACHILLES")
     }
+
+    // MARK: - Resume at Check your answers (see ADR-0013)
+
+    func test_submit_whenResumingAtCheckYourAnswers_pushesCheckYourAnswers_insteadOfTripStartedToday() {
+        let router = CatchRecordRouter()
+        let draft = CatchRecordDraft()
+        draft.returnToCheckYourAnswers = true
+        let sut = SelectVesselViewModel(router: router, provider: StaticVesselProvider(), draft: draft)
+        sut.selection = "ACHILLES"
+
+        sut.submit()
+
+        XCTAssertEqual(
+            router.path,
+            [.checkYourAnswers(referenceNumber: SelectVesselViewModel.placeholderReferenceNumber)]
+        )
+    }
+
+    func test_submit_whenResumingAtCheckYourAnswers_clearsDraftFlag() {
+        let draft = CatchRecordDraft()
+        draft.returnToCheckYourAnswers = true
+        let sut = SelectVesselViewModel(router: CatchRecordRouter(), provider: StaticVesselProvider(), draft: draft)
+        sut.selection = "ACHILLES"
+
+        sut.submit()
+
+        XCTAssertFalse(draft.returnToCheckYourAnswers)
+    }
 }

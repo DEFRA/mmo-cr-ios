@@ -1,6 +1,6 @@
 # ADR 0011 — Per-gear catch grouping and multi-gear journey loop
 
-- Status: Accepted
+- Status: Accepted (§5's "Change" resume mechanism generalised to every row by ADR-0013)
 - Date: 2026-09
 - Deciders: iOS engineering
 - Context tags: architecture, domain-model, navigation, offline-first, native-iOS
@@ -77,12 +77,13 @@ Editing a gear's statistical area or species caught from Check your answers is a
 correction than editing a trip-level field: the normal "Change" pattern **pushes forward** through
 the remaining journey (so "Save and continue" naturally returns to Check your answers), but for a
 per-gear field that would otherwise walk the user through every other gear's catch-location/species
-screens again before returning. Instead, `CatchRecordDraft.returnToCheckYourAnswersAfterSpecies` is
-set (via `CheckYourAnswersViewModel.change(to:resumingAtCheckYourAnswers:)`) whenever a per-gear
-row's "Change" is tapped, and consumed by `speciesCompletionRoute` to return **straight back** to
-Check your answers once that one gear's mini re-entry (map → species) completes, regardless of how
-many other gears exist. The flag is reset as soon as it is consumed (or whenever `change(to:)` is
-called again), so it never leaks into a normal forward-journey save.
+screens again before returning. Instead, `CatchRecordDraft.returnToCheckYourAnswersAfterSpecies` (renamed
+`returnToCheckYourAnswers` and generalised to **every** row by ADR-0013) is set (via
+`CheckYourAnswersViewModel.change(to:)`) whenever any row's "Change" is tapped, and consumed by
+`speciesCompletionRoute` to return **straight back** to Check your answers once that one gear's
+mini re-entry (map → species) completes, regardless of how many other gears exist. The flag is
+reset as soon as it is consumed (or whenever `change(to:)` is called again), so it never leaks into
+a normal forward-journey save.
 
 ## Consequences
 

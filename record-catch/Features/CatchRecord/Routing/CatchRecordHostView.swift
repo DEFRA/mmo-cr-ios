@@ -136,7 +136,8 @@ struct CatchRecordHostView: View {
             AddGearView(
                 vessel: vessel,
                 referenceNumber: referenceNumber,
-                router: router
+                router: router,
+                favouriteGears: favouriteGears
             )
         case .gearMeasurements(let gear, let vessel, let referenceNumber):
             GearMeasurementsView(

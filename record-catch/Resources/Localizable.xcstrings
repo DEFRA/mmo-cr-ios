@@ -1333,20 +1333,74 @@
         }
       }
     },
-    "catchRecord.gear.measurement.meshSize.summary": {
-      "comment": "Summary of a captured mesh size shown under a selected gear. %d is the size in mm.",
+    "catchRecord.gear.measurement.numberOfBeams": {
+      "comment": "Label for the number-of-beams measurement field (beam trawl). [CY-TODO] machine-assisted translation of specialist gear term — needs professional Welsh review.",
       "extractionState": "manual",
       "localizations": {
         "cy": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "rhwyll %dmm"
+            "value": "Nifer y trawstiau"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%dmm mesh"
+            "value": "Number of beams"
+          }
+        }
+      }
+    },
+    "catchRecord.gear.measurement.numberOfBeamsOrTrawls": {
+      "comment": "Label for the number-of-beams-or-trawls measurement field (shrimp trawls). [CY-TODO] machine-assisted translation of specialist gear term — needs professional Welsh review.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Nifer y trawstiau neu rwydi llusgo"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Number of beams or trawls"
+          }
+        }
+      }
+    },
+    "catchRecord.gear.measurement.numberOfDredges": {
+      "comment": "Label for the number-of-dredges measurement field (dredge gear). [CY-TODO] machine-assisted translation of specialist gear term — needs professional Welsh review.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Nifer y dreджys"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Number of dredges"
+          }
+        }
+      }
+    },
+    "catchRecord.gear.measurement.numberOfTrawlNets": {
+      "comment": "Label for the number-of-trawl-nets measurement field (trawl gears). [CY-TODO] machine-assisted translation of specialist gear term — needs professional Welsh review.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Nifer y rhwydi llusgo"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Number of trawl nets"
           }
         }
       }
@@ -1365,6 +1419,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "Could not save this gear. Check your connection and try again."
+          }
+        }
+      }
+    },
+    "catchRecord.gear.measurement.summary": {
+      "comment": "Summary of a captured required measurement shown under a selected gear favourite. %@ is the measurement label, %d is the captured whole-number value.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: %d"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: %d"
           }
         }
       }
@@ -1400,7 +1472,133 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Number of times gear was shot on trip"
+            "value": "Number of times gear was shot on the trip"
+          }
+        }
+      }
+    },
+    "catchRecord.gear.variableMeasurement.hooksHauled": {
+      "comment": "Label for the per-trip variable measurement capturing hooks hauled during the trip. [CY-TODO] machine-assisted translation — needs professional Welsh review.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cyfanswm nifer y bachau a dynnwyd i mewn yn ystod y daith"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Total number of hooks hauled during the trip"
+          }
+        }
+      }
+    },
+    "catchRecord.gear.variableMeasurement.hooksLeft": {
+      "comment": "Label for the per-trip variable measurement capturing hooks left in the water at trip end. [CY-TODO] machine-assisted translation — needs professional Welsh review.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cyfanswm nifer y bachau a adawyd yn y dŵr ar ddiwedd y daith"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Total number of hooks left in the water at the end of the trip"
+          }
+        }
+      }
+    },
+    "catchRecord.gear.variableMeasurement.netLengthHauled": {
+      "comment": "Label for the per-trip variable measurement capturing net length hauled during the trip. [CY-TODO] machine-assisted translation — needs professional Welsh review.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cyfanswm hyd y rhwyd a dynnwyd i mewn yn ystod y daith (m)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Total length of net hauled during the trip (m)"
+          }
+        }
+      }
+    },
+    "catchRecord.gear.variableMeasurement.netLengthLeft": {
+      "comment": "Label for the per-trip variable measurement capturing net length left in the water at trip end. [CY-TODO] machine-assisted translation — needs professional Welsh review.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cyfanswm hyd y rhwydi a adawyd yn y dŵr ar ddiwedd y daith (m)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Total length of nets left in the water at the end of the trip (m)"
+          }
+        }
+      }
+    },
+    "catchRecord.gear.variableMeasurement.potsHauled": {
+      "comment": "Label for the per-trip variable measurement capturing pots/traps hauled during the trip. [CY-TODO] machine-assisted translation — needs professional Welsh review.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cyfanswm nifer y potiau neu'r trapiau a dynnwyd i mewn yn ystod y daith"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Total number of pots or traps hauled during the trip"
+          }
+        }
+      }
+    },
+    "catchRecord.gear.variableMeasurement.potsLeft": {
+      "comment": "Label for the per-trip variable measurement capturing pots/traps left at trip end. [CY-TODO] machine-assisted translation — needs professional Welsh review.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cyfanswm nifer y potiau neu'r trapiau a adawyd yn y dŵr ar ddiwedd y daith"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Total number of pots or traps left in the water at the end of the trip"
+          }
+        }
+      }
+    },
+    "catchRecord.gear.variableMeasurement.rodsAndLines": {
+      "comment": "Label for the per-trip variable measurement capturing rods and lines used on the trip (handlines/pole lines). [CY-TODO] machine-assisted translation — needs professional Welsh review.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Nifer y gwialenni a llinellau a ddefnyddiwyd ar y daith"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Number of rods and lines used on the trip"
           }
         }
       }

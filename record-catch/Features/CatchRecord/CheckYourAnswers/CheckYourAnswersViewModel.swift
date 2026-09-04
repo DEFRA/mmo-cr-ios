@@ -39,26 +39,19 @@ final class CheckYourAnswersViewModel {
         /// area") repeats once per gear section (see GOV.UK Design System — Check answers: a
         /// summary-card's Change link must say what it changes).
         var gearName: String?
-        /// Whether "Change" for this row should return straight to Check your answers once its
-        /// onward mini-journey (which may re-enter the catch-location/species screens for this one
-        /// gear) completes, rather than continuing through any other selected gears (see
-        /// ADR-0011). True only for a gear's statistical-area and species-caught rows.
-        var resumesAtCheckYourAnswers = false
 
         init(
             id: String,
             labelKey: String,
             value: String,
             changeRoute: CatchRecordRoute,
-            gearName: String? = nil,
-            resumesAtCheckYourAnswers: Bool = false
+            gearName: String? = nil
         ) {
             self.id = id
             self.labelKey = labelKey
             self.value = value
             self.changeRoute = changeRoute
             self.gearName = gearName
-            self.resumesAtCheckYourAnswers = resumesAtCheckYourAnswers
         }
     }
 
@@ -116,12 +109,13 @@ final class CheckYourAnswersViewModel {
         return result
     }
 
-    /// Pushes the destination for a row's "Change" control, first recording whether the journey
-    /// should return straight here (rather than continue through the normal multi-gear loop) once
-    /// its onward mini-journey completes — see `CatchRecordDraft.returnToCheckYourAnswersAfterSpecies`
-    /// and ADR-0011.
-    func change(to route: CatchRecordRoute, resumingAtCheckYourAnswers: Bool = false) {
-        draft.returnToCheckYourAnswersAfterSpecies = resumingAtCheckYourAnswers
+    /// Pushes the destination for a row's "Change" control. Every "Change" link returns straight
+    /// back to Check your answers once its own onward mini-journey completes, rather than
+    /// continuing forward through the rest of the create-a-catch-record journey — see
+    /// `CatchRecordDraft.returnToCheckYourAnswers` and ADR-0013 (which generalises the per-gear
+    /// pattern first introduced by ADR-0011 to every row).
+    func change(to route: CatchRecordRoute) {
+        draft.returnToCheckYourAnswers = true
         router.push(route)
     }
 
@@ -226,10 +220,10 @@ final class CheckYourAnswersViewModel {
     private func gearCatchRows(for gearCatch: GearCatch, vessel: String) -> [Row] {
         let gear = gearCatch.gear
         // Required measurements are captured on the gear-measurements screen; variable (per-trip)
-        // measurements are captured on the select-gear screen, so each "Change" returns the user to
-        // the screen where that value was entered. The statistical area and species caught are
-        // captured per gear (ADR-0011), so their "Change" returns straight to Check your answers
-        // once saved, rather than continuing through any other selected gears.
+        // measurements are captured on the select-gear screen; the statistical area and species
+        // caught are captured per gear (ADR-0011) via the catch-location/species screens. Every
+        // "Change" returns the user to the screen where that value was entered, then straight back
+        // to Check your answers once saved (see ADR-0013).
         let measurementsRoute = CatchRecordRoute.gearMeasurements(gear: gear, vessel: vessel, referenceNumber: referenceNumber)
         let selectGearRoute = CatchRecordRoute.selectGear(vessel: vessel, referenceNumber: referenceNumber)
         let locationRoute = CatchRecordRoute.catchLocation(gear: gear, vessel: vessel, referenceNumber: referenceNumber)
@@ -278,8 +272,7 @@ final class CheckYourAnswersViewModel {
                     labelKey: "catchRecord.checkYourAnswers.label.statisticalArea",
                     value: statisticalArea,
                     changeRoute: locationRoute,
-                    gearName: gear.name,
-                    resumesAtCheckYourAnswers: true
+                    gearName: gear.name
                 )
             )
         }
@@ -291,8 +284,7 @@ final class CheckYourAnswersViewModel {
                     idPrefix: "gear.\(gearCatch.id).speciesCaught.\($0.id)",
                     aboveLabelKey: "catchRecord.checkYourAnswers.label.weightAbove",
                     changeRoute: speciesRoute,
-                    gearName: gear.name,
-                    resumesAtCheckYourAnswers: true
+                    gearName: gear.name
                 )
             }
         )
@@ -321,8 +313,7 @@ final class CheckYourAnswersViewModel {
         idPrefix: String,
         aboveLabelKey: String,
         changeRoute: CatchRecordRoute,
-        gearName: String? = nil,
-        resumesAtCheckYourAnswers: Bool = false
+        gearName: String? = nil
     ) -> [Row] {
         var rows: [Row] = [
             Row(
@@ -330,8 +321,7 @@ final class CheckYourAnswersViewModel {
                 labelKey: "catchRecord.checkYourAnswers.label.speciesName",
                 value: species.name,
                 changeRoute: changeRoute,
-                gearName: gearName,
-                resumesAtCheckYourAnswers: resumesAtCheckYourAnswers
+                gearName: gearName
             )
         ]
 
@@ -342,8 +332,7 @@ final class CheckYourAnswersViewModel {
                     labelKey: aboveLabelKey,
                     value: "\(species.weightAboveMinimumKg) kg",
                     changeRoute: changeRoute,
-                    gearName: gearName,
-                    resumesAtCheckYourAnswers: resumesAtCheckYourAnswers
+                    gearName: gearName
                 )
             )
         }
@@ -355,8 +344,7 @@ final class CheckYourAnswersViewModel {
                     labelKey: "catchRecord.checkYourAnswers.label.weightBelow",
                     value: "\(below) kg",
                     changeRoute: changeRoute,
-                    gearName: gearName,
-                    resumesAtCheckYourAnswers: resumesAtCheckYourAnswers
+                    gearName: gearName
                 )
             )
         }
@@ -368,8 +356,7 @@ final class CheckYourAnswersViewModel {
                     labelKey: "catchRecord.checkYourAnswers.label.weightDiscarded",
                     value: "\(discarded) kg",
                     changeRoute: changeRoute,
-                    gearName: gearName,
-                    resumesAtCheckYourAnswers: resumesAtCheckYourAnswers
+                    gearName: gearName
                 )
             )
         }

@@ -123,6 +123,32 @@ final class SelectGearViewModelTests: XCTestCase {
         )
     }
 
+    // MARK: - Pre-population from an existing draft (see ADR-0013)
+
+    /// Regression test: reaching this screen with gears already confirmed for the trip (e.g. via
+    /// "Change" on a gear's variable measurements from Check your answers) must show every one of
+    /// them ticked with its previously-entered variable-measurement value, not blank.
+    func test_loadFavourites_withGearsAlreadyInDraft_preSelectsThem_andPrefillsVariableMeasurements() async {
+        let trawl = GearOption(name: "Trawl nets", variableMeasurements: [.timesShot])
+        let draft = CatchRecordDraft()
+        draft.gearCatches = [
+            GearCatch(gear: seineNetsFavourite.withVariableMeasurements([
+                GearMeasurement(id: "timesShot", labelKey: "catchRecord.gear.variableMeasurement.timesShot", value: 5)
+            ])),
+            GearCatch(gear: trawl.withVariableMeasurements([
+                GearMeasurement(id: "timesShot", labelKey: "catchRecord.gear.variableMeasurement.timesShot", value: 3)
+            ]))
+        ]
+        let sut = makeSUT(router: CatchRecordRouter(), favourites: [seineNetsFavourite, trawl], draft: draft)
+
+        await sut.loadFavourites()
+
+        XCTAssertTrue(sut.selection.contains(GearOption.seineNets.id))
+        XCTAssertTrue(sut.selection.contains(trawl.id))
+        XCTAssertEqual(sut.variableEntries["\(GearOption.seineNets.id).timesShot"], "5")
+        XCTAssertEqual(sut.variableEntries["\(trawl.id).timesShot"], "3")
+    }
+
     func test_addAnotherGear_pushesAddGear() {
         let router = CatchRecordRouter()
         let sut = makeSUT(router: router)
@@ -130,5 +156,46 @@ final class SelectGearViewModelTests: XCTestCase {
         sut.addAnotherGear()
 
         XCTAssertEqual(router.path, [.addGear(vessel: vessel, referenceNumber: referenceNumber)])
+    }
+
+    // MARK: - Preserving already-captured progress (see ADR-0013)
+
+    func test_submit_withGearAlreadyInDraft_preservesItsStatisticalAreaAndSpeciesCaught() async {
+        let router = CatchRecordRouter()
+        let draft = CatchRecordDraft()
+        draft.gearCatches = [
+            GearCatch(
+                gear: seineNetsFavourite,
+                statisticalArea: "27.7.e",
+                speciesCaught: [SpeciesOption(name: "Atlantic cod (COD)").withWeights(above: "250", below: nil, discarded: nil)]
+            )
+        ]
+        let sut = makeSUT(router: router, favourites: [seineNetsFavourite], draft: draft)
+        await sut.loadFavourites()
+        sut.selection = [GearOption.seineNets.id]
+        sut.variableEntries["\(GearOption.seineNets.id).timesShot"] = "9"
+
+        sut.submit()
+
+        XCTAssertEqual(draft.gearCatches.first?.statisticalArea, "27.7.e")
+        XCTAssertEqual(draft.gearCatches.first?.speciesCaught.first?.name, "Atlantic cod (COD)")
+        XCTAssertEqual(draft.gearCatches.first?.gear.variableMeasurements.first?.value, 9)
+    }
+
+    // MARK: - Resume at Check your answers
+
+    func test_submit_whenResumingAtCheckYourAnswers_pushesCheckYourAnswers_insteadOfCatchLocation() async {
+        let router = CatchRecordRouter()
+        let draft = CatchRecordDraft()
+        draft.returnToCheckYourAnswers = true
+        let sut = makeSUT(router: router, favourites: [seineNetsFavourite], draft: draft)
+        await sut.loadFavourites()
+        sut.selection = [GearOption.seineNets.id]
+        sut.variableEntries["\(GearOption.seineNets.id).timesShot"] = "5"
+
+        sut.submit()
+
+        XCTAssertEqual(router.path, [.checkYourAnswers(referenceNumber: referenceNumber)])
+        XCTAssertFalse(draft.returnToCheckYourAnswers)
     }
 }

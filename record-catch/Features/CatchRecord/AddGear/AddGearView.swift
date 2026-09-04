@@ -3,8 +3,9 @@ import SwiftUI
 /// "Add gear to vessel <VESSEL>" — type-to-search a gear used by this vessel.
 ///
 /// Shown when the user has no favourite gears yet, and reached via the select screen's "Add another
-/// gear" button. On save the journey continues to the measurements screen for the chosen gear.
-/// Mirrors `AddPortView`.
+/// gear" button. On save the journey continues to the measurements screen for the chosen gear — or,
+/// for a gear with no required measurements at all, straight back to the select screen once it has
+/// been saved to favourites (see ADR-0012). Mirrors `AddPortView`.
 struct AddGearView: View {
 
     @Environment(AppLanguageStore.self) private var languageStore
@@ -14,13 +15,15 @@ struct AddGearView: View {
         vessel: String,
         referenceNumber: String,
         router: CatchRecordRouter,
-        gearSearch: GearSearchProviding = StubGearSearchProvider()
+        gearSearch: GearSearchProviding = StubGearSearchProvider(),
+        favouriteGears: FavouriteGearProviding = StubFavouriteGearProvider()
     ) {
         _viewModel = State(wrappedValue: AddGearViewModel(
             vessel: vessel,
             referenceNumber: referenceNumber,
             router: router,
-            gearSearch: gearSearch
+            gearSearch: gearSearch,
+            favouriteGears: favouriteGears
         ))
     }
 
@@ -70,8 +73,15 @@ struct AddGearView: View {
             // `SearchDropdownField` overrides each result row's own explicit identifier — see
             // `AddPortView`'s equivalent comment for the root-cause detail.
 
-            PrimaryButton(title: languageStore.localized("catchRecord.saveContinue")) {
-                viewModel.submit()
+            if viewModel.saveFailed {
+                errorBanner
+            }
+
+            PrimaryButton(
+                title: languageStore.localized("catchRecord.saveContinue"),
+                isDisabled: viewModel.isSaving
+            ) {
+                Task { await viewModel.submit() }
             }
             .accessibilityIdentifier("CatchRecord.addGear.saveContinue")
         }
@@ -82,6 +92,22 @@ struct AddGearView: View {
             format: languageStore.localized("catchRecord.addGear.heading"),
             viewModel.vessel
         )
+    }
+
+    private var errorBanner: some View {
+        HStack(alignment: .top, spacing: AppSpacing.xSmall) {
+            Image(systemName: "exclamationmark.circle.fill")
+                .foregroundStyle(AppColors.errorRed)
+                .accessibilityHidden(true)
+            Text(languageStore.localized("catchRecord.gear.measurement.saveFailed"))
+                .font(AppTypography.error)
+                .foregroundStyle(AppColors.errorRed)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(
+            "\(languageStore.localized("a11y.errorPrefix")) \(languageStore.localized("catchRecord.gear.measurement.saveFailed"))"
+        )
+        .accessibilityIdentifier("CatchRecord.addGear.saveError")
     }
 }
 

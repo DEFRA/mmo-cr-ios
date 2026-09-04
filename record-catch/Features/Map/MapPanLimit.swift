@@ -10,12 +10,13 @@ import MapKit
 /// a small, pure, unit-testable helper rather than a `static let` on `OfflineMapView` itself.
 enum MapPanLimit {
 
-    /// Hard pan limit, in metres from the map's initial centre — "about 15 miles" per product
-    /// ask. Converted to metres up front so `boundaryRegion` can drive
+    /// Hard pan limit, in metres from the map's initial centre — "about 100 miles" per product
+    /// ask (see `OfflineMapView`'s "Panning is hard-limited" note). Converted to metres up front
+    /// so `boundaryRegion` can drive
     /// `MKCoordinateRegion(center:latitudinalMeters:longitudinalMeters:)` directly, rather than a
     /// hand-rolled degrees-per-mile conversion (which isn't constant for longitude — it varies
     /// with latitude). Plain hardcoded metres; adjust freely.
-    static let maxPanDistance: CLLocationDistance = 15 * 1_609.344 // ≈ 160,934m
+    static let maxPanDistance: CLLocationDistance = 100 * 1_609.344 // ≈ 160,934m
 
     /// The boundary region MapKit uses to restrict panning (see
     /// `MKMapView.CameraBoundary(coordinateRegion:)`), centred on `center` and sized so the

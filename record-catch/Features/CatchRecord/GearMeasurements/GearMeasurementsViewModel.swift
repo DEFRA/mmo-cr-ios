@@ -64,7 +64,12 @@ final class GearMeasurementsViewModel {
         .selectGear(vessel: vessel, referenceNumber: referenceNumber)
     }
 
-    /// Validates, attaches values, saves the gear to favourites, then returns to the select screen.
+    /// Validates, attaches values, saves the gear to favourites, then returns to the select
+    /// screen — or, when reached via "Change" from Check your answers
+    /// (`draft.returnToCheckYourAnswers`), straight back there instead (see ADR-0013). Either way,
+    /// if this gear is already part of the trip's confirmed `gearCatches` (ADR-0011), its entry is
+    /// updated in place so the new measurement values are reflected immediately, without losing
+    /// that gear's already-captured statistical area/species caught.
     func submit() async {
         didAttemptSubmit = true
         saveFailed = false
@@ -79,7 +84,15 @@ final class GearMeasurementsViewModel {
         defer { isSaving = false }
         do {
             try await favouriteGears.addFavourite(savedGear)
-            router.push(completionRoute)
+            if let index = draft.gearCatchIndex(forGearID: savedGear.id) {
+                draft.gearCatches[index].gear = savedGear
+            }
+            if draft.returnToCheckYourAnswers {
+                draft.returnToCheckYourAnswers = false
+                router.push(.checkYourAnswers(referenceNumber: referenceNumber))
+            } else {
+                router.push(completionRoute)
+            }
         } catch {
             saveFailed = true
         }

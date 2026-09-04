@@ -42,9 +42,22 @@ final class SelectGearViewModel {
         self.draft = draft
     }
 
-    /// Loads favourite gears for display. Failures leave the list empty.
+    /// Loads favourite gears for display, then ticks and pre-fills every gear already confirmed for
+    /// this trip (`draft.gearCatches` — see ADR-0011), so returning to this screen (e.g. via
+    /// "Change" on a gear's variable measurements from Check your answers) shows every previously
+    /// selected gear ticked with its own captured variable-measurement values ready to edit, rather
+    /// than starting blank. Uses each `GearCatch`'s own captured `gear` (not the favourites list) as
+    /// the source of the previously-entered values, since favourites do not carry per-trip variable
+    /// measurements. Failures leave the list empty.
     func loadFavourites() async {
         favourites = (try? await favouriteGears.favouriteGears()) ?? []
+        for gearCatch in draft.gearCatches {
+            selection.insert(gearCatch.gear.id)
+            for measurement in gearCatch.gear.variableMeasurements {
+                guard let value = measurement.value else { continue }
+                variableEntries[entryKey(gearID: gearCatch.gear.id, measurementID: measurement.id)] = String(value)
+            }
+        }
     }
 
     /// The dictionary key for a gear's variable-measurement field text.
@@ -81,11 +94,17 @@ final class SelectGearViewModel {
     /// gear's variable measurements are valid whole numbers.
     ///
     /// Captures **every** ticked gear (in favourites order), each with its own captured variable
-    /// measurements attached, into `draft.gearCatches` — one entry per gear, ready for the
-    /// catch-location/species screens to fill in that gear's own statistical area and species
-    /// caught (see ADR-0011). Routes to the catch-location screen for the **first** confirmed gear;
-    /// the journey loops back here for each subsequent gear once its species screen is saved
-    /// (`CatchRecordRouting.speciesCompletionRoute`).
+    /// measurements attached, into `draft.gearCatches` — one entry per gear (see ADR-0011). A gear
+    /// that already has a `GearCatch` in the draft (e.g. re-ticked after "Add another gear", or
+    /// edited via "Change" from Check your answers) keeps its already-captured statistical
+    /// area/species caught rather than losing that progress; a newly-ticked gear starts a fresh,
+    /// empty entry ready for the catch-location/species screens to fill in.
+    ///
+    /// Normally routes to the catch-location screen for the **first** confirmed gear, and the
+    /// journey loops back here for each subsequent gear once its species screen is saved
+    /// (`CatchRecordRouting.speciesCompletionRoute`). When reached via "Change" from Check your
+    /// answers (`draft.returnToCheckYourAnswers`), returns straight there instead, skipping the
+    /// catch-location/species screens (see ADR-0013).
     func submit() {
         didAttemptSubmit = true
         guard !selection.isEmpty, selectedVariableMeasurementsAreValid else { return }
@@ -101,7 +120,20 @@ final class SelectGearViewModel {
             }
         guard let firstGear = confirmedGears.first else { return }
 
-        draft.gearCatches = confirmedGears.map { GearCatch(gear: $0) }
+        draft.gearCatches = confirmedGears.map { gear in
+            if let existingIndex = draft.gearCatchIndex(forGearID: gear.id) {
+                let existing = draft.gearCatches[existingIndex]
+                return GearCatch(gear: gear, statisticalArea: existing.statisticalArea, speciesCaught: existing.speciesCaught)
+            }
+            return GearCatch(gear: gear)
+        }
+
+        if draft.returnToCheckYourAnswers {
+            draft.returnToCheckYourAnswers = false
+            router.push(.checkYourAnswers(referenceNumber: referenceNumber))
+            return
+        }
+
         router.push(.catchLocation(gear: firstGear, vessel: vessel, referenceNumber: referenceNumber))
     }
 

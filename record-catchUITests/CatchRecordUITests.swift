@@ -341,7 +341,7 @@ final class CatchRecordUITests: XCTestCase {
 
         XCTAssertTrue(element(app, "CatchRecord.checkYourAnswers.heading").waitForExistence(timeout: 5))
         XCTAssertTrue(element(app, "CatchRecord.checkYourAnswers.section.trip").exists)
-        XCTAssertTrue(element(app, "CatchRecord.checkYourAnswers.section.gear.Seine nets (not specified)").exists)
+        XCTAssertTrue(element(app, "CatchRecord.checkYourAnswers.section.gear.SX").exists)
         XCTAssertTrue(element(app, "CatchRecord.checkYourAnswers.section.speciesNotLanded").exists)
     }
 
@@ -476,8 +476,8 @@ final class CatchRecordUITests: XCTestCase {
 
     private enum GearID {
         static let heading = "CatchRecord.selectGear.heading"
-        static let option = "CatchRecord.selectGear.option.seine nets (not specified)"
-        static let timesShotField = "CatchRecord.selectGear.variable.seine nets (not specified).timesShot"
+        static let option = "CatchRecord.selectGear.option.sx"
+        static let timesShotField = "CatchRecord.selectGear.variable.sx.timesShot"
         static let saveContinue = "CatchRecord.selectGear.saveContinue"
         static let catchLocationHeading = "CatchRecord.catchLocation.heading"
     }

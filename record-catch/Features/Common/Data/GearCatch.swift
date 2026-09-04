@@ -14,8 +14,10 @@ import Foundation
 /// from view models on the main actor but has no isolation needs of its own.
 nonisolated struct GearCatch: Identifiable, Hashable, Sendable {
     /// The confirmed gear, including any captured required (per-favourite) and variable (per-trip)
-    /// measurements.
-    let gear: GearOption
+    /// measurements. `var` so a later edit to this gear's measurements (e.g. via "Change" on Check
+    /// your answers) can update it in place without disturbing the already-captured
+    /// `statisticalArea`/`speciesCaught` for this same gear (see ADR-0013).
+    var gear: GearOption
     /// The statistical (sub)area picked on the map (or entered manually) for this gear's catch,
     /// `nil` until captured.
     var statisticalArea: String?

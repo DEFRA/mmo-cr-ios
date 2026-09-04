@@ -94,7 +94,7 @@ struct CheckYourAnswersView: View {
             Spacer(minLength: AppSpacing.small)
 
             Button {
-                viewModel.change(to: row.changeRoute, resumingAtCheckYourAnswers: row.resumesAtCheckYourAnswers)
+                viewModel.change(to: row.changeRoute)
             } label: {
                 Text(languageStore.localized("catchRecord.checkYourAnswers.change"))
                     .font(AppTypography.bodySmall)

@@ -86,7 +86,7 @@ jobs:
           retention-days: 14
 
       - name: SonarQube Cloud scan
-        uses: SonarSource/sonarqube-scan-action@v5.3.2
+        uses: SonarSource/sonarqube-scan-action@v8.2.1
         env:
           SONAR_TOKEN: ${{ secrets.MMO_CR_SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io

@@ -7,11 +7,11 @@ on:
   workflow_dispatch:
     inputs:
       marketing_version:
-        description: "Marketing version to validate against project.pbxproj (e.g. 1.4.0) — required for manual runs"
-        required: true
+        description: "Marketing version override (CFBundleShortVersionString, e.g. 2.0.0) — optional"
+        required: false
       project_version:
-        description: "Build number (CFBundleVersion / CURRENT_PROJECT_VERSION, e.g. 8) — required for manual runs"
-        required: true
+        description: "Build number override (CFBundleVersion / CURRENT_PROJECT_VERSION, e.g. 8) — optional"
+        required: false
 
 permissions:
   contents: read
@@ -88,34 +88,35 @@ jobs:
             exit 1
           fi
 
-          # Keyed off event_name (not the ref) so manual runs validate consistently from any branch.
-          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
-            EXPECTED_VERSION="${{ github.event.inputs.marketing_version }}"
-            if [[ -z "${EXPECTED_VERSION}" ]]; then
-              echo "::error::marketing_version input is required for manual (workflow_dispatch) runs" >&2
-              exit 1
-            fi
-            MANUAL_PROJECT_VERSION="${{ github.event.inputs.project_version }}"
-            if [[ -z "${MANUAL_PROJECT_VERSION}" ]]; then
-              echo "::error::project_version input is required for manual (workflow_dispatch) runs" >&2
-              exit 1
-            fi
-          elif [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" == v* ]]; then
+          # On tag pushes, validate tag matches project MARKETING_VERSION.
+          # On workflow_dispatch, log any manual overrides or confirm fallback to project.pbxproj.
+          if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" == v* ]]; then
             EXPECTED_VERSION="${GITHUB_REF_NAME#v}"
+            if [[ "${EXPECTED_VERSION}" != "${PROJECT_VERSION}" ]]; then
+              echo "::error::Tag version ${EXPECTED_VERSION} does not match project MARKETING_VERSION ${PROJECT_VERSION} — align the tag with the app version in project.pbxproj" >&2
+              exit 1
+            fi
+            echo "Tag version ${EXPECTED_VERSION} matches project MARKETING_VERSION ${PROJECT_VERSION}"
+          elif [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            if [[ -n "${{ github.event.inputs.marketing_version }}" ]]; then
+              echo "Using manual marketing_version override: ${{ github.event.inputs.marketing_version }}"
+            else
+              echo "Using project MARKETING_VERSION: ${PROJECT_VERSION}"
+            fi
+            if [[ -n "${{ github.event.inputs.project_version }}" ]]; then
+              echo "Using manual project_version override: ${{ github.event.inputs.project_version }}"
+            else
+              echo "Using project CURRENT_PROJECT_VERSION from project.pbxproj"
+            fi
           else
             echo "::error::Unsupported trigger '${GITHUB_EVENT_NAME}' for ${GITHUB_REF_TYPE} '${GITHUB_REF_NAME}' — push a v* tag or use workflow_dispatch" >&2
             exit 1
           fi
 
-          if [[ "${EXPECTED_VERSION}" != "${PROJECT_VERSION}" ]]; then
-            echo "::error::Version ${EXPECTED_VERSION} (from ${GITHUB_EVENT_NAME}) does not match project MARKETING_VERSION ${PROJECT_VERSION} — align the tag/input with the app version in project.pbxproj" >&2
-            exit 1
-          fi
-          echo "Version ${EXPECTED_VERSION} matches project MARKETING_VERSION ${PROJECT_VERSION}"
-
       - name: Build, sign & upload DEV to internal TestFlight
         env:
-          # Optional build number override for manual workflow_dispatch runs.
+          # Optional version overrides for manual workflow_dispatch runs.
+          MARKETING_VERSION: ${{ github.event.inputs.marketing_version }}
           CURRENT_PROJECT_VERSION: ${{ github.event.inputs.project_version }}
           # App Store Connect API key — used for the TestFlight upload.
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}

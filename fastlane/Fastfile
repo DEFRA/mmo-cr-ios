@@ -59,10 +59,20 @@ platform :ios do
     #   api_key: api_key
     # )
 
-    # Build number: use explicit CURRENT_PROJECT_VERSION override (e.g. from workflow_dispatch)
-    # or fallback to monotonic GITHUB_RUN_NUMBER.
+    # Version overrides: only set xcargs when explicit environment variables are provided
+    # (e.g. via manual workflow_dispatch). Otherwise, use project.pbxproj build settings directly.
+    xcargs = [
+      "DEVELOPMENT_TEAM=#{ENV.fetch('APPLE_TEAM_ID')}",
+      "CODE_SIGN_STYLE=Manual",
+      "CODE_SIGN_IDENTITY=\"Apple Distribution\"",
+      "PROVISIONING_PROFILE_SPECIFIER=\"#{ENV.fetch('PROVISIONING_PROFILE_NAME')}\""
+    ]
+
     project_version = ENV["CURRENT_PROJECT_VERSION"].to_s.strip
-    build_number = project_version.empty? ? ENV.fetch("GITHUB_RUN_NUMBER") : project_version
+    xcargs << "CURRENT_PROJECT_VERSION=#{project_version}" unless project_version.empty?
+
+    marketing_version = ENV["MARKETING_VERSION"].to_s.strip
+    xcargs << "MARKETING_VERSION=#{marketing_version}" unless marketing_version.empty?
 
     build_app(
       project: PROJECT,
@@ -71,13 +81,7 @@ platform :ios do
       export_method: "app-store",
       output_directory: "build",
       clean: true,
-      xcargs: [
-        "CURRENT_PROJECT_VERSION=#{build_number}",
-        "DEVELOPMENT_TEAM=#{ENV.fetch('APPLE_TEAM_ID')}",
-        "CODE_SIGN_STYLE=Manual",
-        "CODE_SIGN_IDENTITY=\"Apple Distribution\"",
-        "PROVISIONING_PROFILE_SPECIFIER=\"#{ENV.fetch('PROVISIONING_PROFILE_NAME')}\""
-      ].join(" "),
+      xcargs: xcargs.join(" "),
       export_options: {
         signingStyle: "manual",
         teamID: ENV.fetch("APPLE_TEAM_ID"),

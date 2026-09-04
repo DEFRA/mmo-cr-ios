@@ -36,13 +36,13 @@ with the release pipeline.
 
 New [.github/workflows/ios-release.yml](../../.github/workflows/ios-release.yml):
 
-- Triggers on `ios-v*` tags (plus `workflow_dispatch` with a `marketing_version` input for dry runs).
+- Triggers on `v*` tags (plus `workflow_dispatch` with a `marketing_version` input for dry runs).
 - **Non-cancelling** concurrency so an in-flight release is never auto-cancelled.
 - Least-privilege `permissions: contents: read`.
 - A single `dev-build-internal` job on the ungated `dev` GitHub Environment, which scopes the Dev
   App Store Connect and signing secrets to this job only.
-- Marketing version is derived from the tag (`ios-v1.4.0` → `1.4.0`); the build number is the
-  `GITHUB_RUN_NUMBER`.
+- Marketing version is sourced from the Xcode project's `MARKETING_VERSION` (single source of truth,
+  see decision 3a); the build number is the `GITHUB_RUN_NUMBER`.
 
 ### 3. Fastlane `release_dev` lane
 
@@ -51,9 +51,27 @@ New [.github/workflows/ios-release.yml](../../.github/workflows/ios-release.yml)
 - App Store Connect **API-key** auth from `ASC_KEY_ID` / `ASC_ISSUER_ID` / `ASC_KEY_CONTENT` (base64).
 - **Signing (POC):** a manual `.p12` certificate + DEV provisioning profile imported into a temporary
   keychain by the workflow; the `match` call is commented out (see decision 4).
-- `build_app` (app-store export) with `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` passed as `xcargs`,
-  so the **tagged commit is built unchanged** (no project mutation).
+- `build_app` (app-store export) with only `CURRENT_PROJECT_VERSION` passed as an `xcarg` — the
+  `MARKETING_VERSION` baked into `project.pbxproj` is used unchanged (decision 3a) — so the
+  **tagged commit is built unchanged** (no project mutation).
 - `upload_to_testflight(distribute_external: false)` → the Dev app's internal TestFlight group.
+
+### 3a. Marketing version — project.pbxproj is the single source of truth (tag validated against it)
+
+The Xcode project's `MARKETING_VERSION` (`record-catch.xcodeproj/project.pbxproj`, app target
+`mmo.catchrecordingdev.ios`) is the **single source of truth** for the marketing version, not the git tag.
+A "Validate tag matches project MARKETING_VERSION" step in `ios-release.yml` reads the app target's
+`MARKETING_VERSION` (guarding against the test targets' unrelated `MARKETING_VERSION = 1.0`) and validates
+it against the triggering event: for a `v*` tag push it fails the job with `::error::` if the tag does not
+equal it; for `workflow_dispatch` the `marketing_version` input is **mandatory** (`required: true`, no
+default) and is always validated against the project value, regardless of which branch the run was
+dispatched from — the guard keys off `github.event_name`, not `github.ref`, so it behaves consistently for
+manual runs from any branch. This is a deliberate deviation from the
+ci-cd standard's "derive marketing version from the tag" preference (see
+[ci-cd instructions](../../.github/instructions/ci-cd.instructions.md)), chosen for this DEV POC so the
+Xcode project remains the single source of truth for the version baked into the app; the team should log
+this deviation with Delivery Architecture (delivery.architecture@defra.gov.uk) if it should be formally
+recorded.
 
 ### 4. Signing — Fastlane Match (target) with a manual `.p12` POC deviation for DEV
 

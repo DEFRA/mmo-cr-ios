@@ -50,8 +50,8 @@ This is a **small team practising trunk-based development**. The model is delibe
   merge; no direct pushes.
 - **Short-lived feature branches** (`feature/*`) merge back into `main` via PR, then are deleted.
 - **Releases are cut from a Git tag on `main`**, never from a long-lived branch. Tag format:
-  **`ios-vMAJOR.MINOR.PATCH`** (e.g. `ios-v1.4.0`). Pushing a matching tag triggers the release workflow.
-- **Hotfixes** are a normal fix on `main` plus a **new higher patch tag** (e.g. `ios-v1.4.1`). Because
+  **`vMAJOR.MINOR.PATCH`** (e.g. `v1.4.0`). Pushing a matching tag triggers the release workflow.
+- **Hotfixes** are a normal fix on `main` plus a **new higher patch tag** (e.g. `v1.4.1`). Because
   the trunk is always releasable, there is no separate hotfix branch to maintain.
 - **Release branches are NOT used and MUST NOT be introduced** for this app. They only earn their keep
   when a release must be hardened/stabilised while `main` keeps moving, or when several past versions are
@@ -62,7 +62,7 @@ This is a **small team practising trunk-based development**. The model is delibe
 ## Versioning
 
 - **Marketing version** (`CFBundleShortVersionString`, e.g. `1.4.0`) is derived from the release **tag**
-  (`ios-v1.4.0` → `1.4.0`). It is the single human-facing SemVer.
+  (`v1.4.0` → `1.4.0`). It is the single human-facing SemVer.
 - **Build number** (`CFBundleVersion`) is derived **deterministically** from the **release workflow's**
   `GITHUB_RUN_NUMBER` (which increments by one on every release run). **Do not query App Store Connect for
   the latest build number** — a network lookup adds a race condition between concurrent releases and pulls
@@ -138,7 +138,7 @@ short-lived feature branch  ──PR──▶  main (trunk, always releasable)
   ▼
 main CI: full tests + SonarCloud main analysis
   ▼
-tag  ios-vX.Y.Z  ──▶  single release workflow (Fastlane); one run, six sequential gated jobs
+tag  vX.Y.Z  ──▶  single release workflow (Fastlane); one run, six sequential gated jobs
   ├─ dev-build-internal      [env: dev — no gate]  build+sign Dev → Dev internal TestFlight
   ├─ test-build-internal     [env: test — APPROVAL A]  build+sign Test → Test internal TestFlight
   ├─ test-promote-external   [env: test-external — APPROVAL B]  assign SAME Test build → external UAT (no rebuild)
@@ -167,7 +167,7 @@ only once the preceding gate is approved, enforcing the promotion order.
 
 - Scope each stage's release secrets to its **own** Environment, not the repo, so they are only exposed
   after that stage's approval. Do not mix SonarCloud credentials with signing/release credentials.
-- Restrict all six Environments' deployments to `main` and the `ios-v*` tags. Keep workflow
+- Restrict all six Environments' deployments to `main` and the `v*` tags. Keep workflow
   `permissions:` least-privilege even after environment approval.
 - **Use phased release** for App Store production; monitor crash-free rate and key metrics before
   completing the roll-out. Keep the ability to pause the phased release.

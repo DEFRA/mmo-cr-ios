@@ -66,10 +66,7 @@ platform :ios do
       export_method: "app-store",
       output_directory: "build",
       clean: true,
-      # Version from the release tag, build number from the CI run number — the tagged commit is built
-      # unchanged. Manual signing is supplied for the archive; the profile is installed by the workflow.
       xcargs: [
-        "MARKETING_VERSION=#{ENV.fetch('MARKETING_VERSION')}",
         "CURRENT_PROJECT_VERSION=#{ENV.fetch('GITHUB_RUN_NUMBER')}",
         "DEVELOPMENT_TEAM=#{ENV.fetch('APPLE_TEAM_ID')}",
         "CODE_SIGN_STYLE=Manual",

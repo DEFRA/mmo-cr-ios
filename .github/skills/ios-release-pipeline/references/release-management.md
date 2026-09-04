@@ -22,7 +22,7 @@ governing standards.
 2. Integrate      merge to main (trunk, always releasable)
                     main CI: full tests + SonarCloud (main) + quality gate
 
-3. Cut a release  push tag  ios-vX.Y.Z  on main
+3. Cut a release  push tag  vX.Y.Z  on main
                     marketing version = X.Y.Z (from tag)
                     build number      = release GITHUB_RUN_NUMBER (no App Store Connect query)
                     GitCommitSHA      = read-only Info.plist metadata (traceability only)
@@ -46,7 +46,7 @@ governing standards.
 8. Monitor        App Store Connect metrics + crash reporting during the phased roll-out
                     pause the phased release if regressions appear
 
-9. Hotfix         fix on main  →  new higher patch tag  ios-vX.Y.(Z+1)
+9. Hotfix         fix on main  →  new higher patch tag  vX.Y.(Z+1)
                     (no hotfix/release branch — the trunk is always releasable)
 ```
 
@@ -64,7 +64,7 @@ release while `main` moves on, or to support multiple live versions in parallel 
 future need is an ADR + governance discussion, not an ad hoc branch.
 
 ## Versioning rules
-- **Marketing version** (`CFBundleShortVersionString`): SemVer from the tag (`ios-v1.4.0` → `1.4.0`).
+- **Marketing version** (`CFBundleShortVersionString`): SemVer from the tag (`v1.4.0` → `1.4.0`).
 - **Build number** (`CFBundleVersion`): from the **release** `GITHUB_RUN_NUMBER`; **not** queried from App
   Store Connect. Must be **unique and higher** than the previous upload for a given marketing version
   (global cross-version monotonicity is not enforced); never reused or hand-edited.
@@ -76,7 +76,7 @@ future need is an ADR + governance discussion, not an ad hoc branch.
 **`prod-external`** (D) and **`prod-appstore`** (E) — each gated (except `dev`) by a **manual reviewer
 approval** before its job runs (prevent self-approval where supported), and each scopes its release secrets
 to the Environment (exposed only after that stage's approval). A stage is only reachable once the preceding
-gate is approved. Restrict deployments to `main` and `ios-v*` tags.
+gate is approved. Restrict deployments to `main` and `v*` tags.
 
 ## Traceability
 Every production build is traceable end to end: **tag → commit SHA → workflow run → marketing version →

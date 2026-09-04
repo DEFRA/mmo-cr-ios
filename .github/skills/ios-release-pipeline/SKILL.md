@@ -74,7 +74,7 @@ Sonar-readable report and run the scan in `ios-ci.yml`. The SonarCloud quality g
 source of truth; wire it as a required check on `main`.
 
 ### 4. Release workflow — `.github/workflows/ios-release.yml`
-- Triggers: `push` tags matching `ios-v*`, plus `workflow_dispatch` (with a marketing-version input).
+- Triggers: `push` tags matching `v*`, plus `workflow_dispatch` (with a marketing-version input).
 - **One workflow run, six sequential gated jobs.** A GitHub Environment approval gates the **start of a
   job**, so each distinct manual approval is its own job/environment. Every build job builds from the
   **same tagged commit**; the promotion jobs never rebuild.
@@ -116,7 +116,7 @@ source of truth; wire it as a required check on `main`.
 ### 6. GitHub Environments & secrets
 - Create **six** Environments — **`dev`** (ungated), **`test`** (A), **`test-external`** (B), **`prod`**
   (C), **`prod-external`** (D) and **`prod-appstore`** (E) — each gated (except `dev`) by **required
-  reviewer(s)** (prevent self-approval where supported) and restrict deployments to `main` + `ios-v*` tags.
+  reviewer(s)** (prevent self-approval where supported) and restrict deployments to `main` + `v*` tags.
 - Scope release secrets to each Environment (not the repo), exposing only what that stage needs:
   `APP_STORE_CONNECT_KEY_ID`, `APP_STORE_CONNECT_ISSUER_ID`, `APP_STORE_CONNECT_API_KEY_BASE64`, and — if
   using Match — `MATCH_PASSWORD`, `MATCH_GIT_BASIC_AUTHORIZATION`; plus `SONAR_TOKEN` (keep SonarCloud

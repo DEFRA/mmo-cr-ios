@@ -15,16 +15,14 @@ final class SubrectangleAnnotationViewTests: XCTestCase {
         XCTAssertFalse(view.canShowCallout)
     }
 
-    /// Subrectangle codes must always win collision priority over an overlapping port name (see
-    /// `PortLabelAnnotationView`, `.defaultLow`) — `.required` is the only priority MapKit never
-    /// hides, so switching this layer to participate in collision (`.rectangle`, previously
-    /// `.none`) must not cause any subrectangle code to disappear.
-    func testCollisionConfigurationAlwaysWinsOverPortLabels() {
+    /// Collision handling is deliberately off (see `SubrectangleAnnotationView.configureLabel`) —
+    /// a subrectangle code must always render, never be silently hidden by MapKit's own collision
+    /// system.
+    func testCollisionIsDisabled() {
         let annotation = makeAnnotation()
         let view = SubrectangleAnnotationView(annotation: annotation, reuseIdentifier: SubrectangleAnnotationView.reuseIdentifier)
 
-        XCTAssertEqual(view.collisionMode, .rectangle)
-        XCTAssertEqual(view.displayPriority, .required)
+        XCTAssertEqual(view.collisionMode, .none)
     }
 
     func testConfigureSizesBadgeToFitTheCode() {

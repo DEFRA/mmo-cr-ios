@@ -203,6 +203,49 @@ existing internal demo value `A1234520260727150815`) generated client-side with 
 guarantee. It is not derived from any backend and must be replaced once a real submission/reference
 API exists — tracked as a future-phase dependency, not part of this UI-only slice.
 
+## Screen — Was `<port>` your departure and return port? (`CatchRecord.confirmSamePort.*`)
+
+Reached only from **`AddPortView`'s first-time entry** (`returnPhase == nil` — no favourite ports
+saved yet), immediately after the searched port is saved to favourites. Lets a user whose trip left
+from and returned to the same port skip answering the departure/return port questions separately.
+
+1. Caption "New catch record", display-only reference number header (`.referenceNumber`).
+2. H1 "Was `<port>` your departure and return port?" (`.heading`, `%@` = the port just saved).
+3. Hint paragraph (`.hint`): "Select yes if you left from and returned to the same port. Select no
+   if you used a different port for departure and return."
+4. `RadioGroup` Yes (`.option.yes`) / No (`.option.no`).
+5. `PrimaryButton` "Save and continue" (`.saveContinue`) and `SecondaryButton` "Add another port"
+   (`.addAnother`, reuses `catchRecord.addAnotherPort`) if the saved port was wrong.
+6. **Yes** → writes the same `PortOption` into both `CatchRecordDraft.departurePort` and
+   `.returnPort`, then enters the gear sub-journey directly (`CatchRecordRouting.gearEntryRoute`),
+   **bypassing** both "Which port did you leave from?"/"Which port did you return to?" screens.
+7. **No** → continues to `.selectPort(phase: .departure, …)` as before, so the user can pick (or
+   add) different ports for each leg.
+8. **Add another port** → returns to `AddPortView` (`returnPhase: nil`) to search again.
+
+Reaching this screen from an existing select screen's "Add another port" button
+(`returnPhase != nil`) is **unaffected** — that flow still routes straight back to the originating
+select screen, since one port may already be fixed by the time that button is used.
+
+### Copy additions (en / cy)
+
+| Key | English | Welsh (placeholder, `needs_review`) |
+|---|---|---|
+| `catchRecord.confirmSamePort.heading` | Was %@ your departure and return port? | Ai %@ oedd eich porthladd ymadael a dychwelyd? |
+| `catchRecord.confirmSamePort.hint` | Select yes if you left from and returned to the same port. Select no if you used a different port for departure and return. | Dewiswch ie os wnaethoch chi adael a dychwelyd i'r un porthladd. Dewiswch na os defnyddiwyd porthladd gwahanol ar gyfer ymadael a dychwelyd. |
+| `catchRecord.confirmSamePort.option.yes` | Yes | Ie |
+| `catchRecord.confirmSamePort.option.no` | No | Na |
+| `catchRecord.confirmSamePort.validation.none` | Select whether this was your departure and return port | Dewiswch ai dyma oedd eich porthladd ymadael a dychwelyd |
+
+### Accessibility annotations
+
+Identical pattern to `LandingStorageView`/`SelectPortView`: single accessibility container for the
+`RadioGroup` labelled by the H1; `.isSelected` trait conveys the chosen option (never colour alone);
+inline error is icon + `errorRed` text + red border with the "Error:"/"Gwall:" prefix and does not
+navigate on submit (WCAG 3.3.1/3.3.4); `PrimaryButton`/`SecondaryButton` meet the 44×44pt minimum;
+all copy renders via `LocalizedText`/`TitleText`/`ParagraphText` so Dynamic Type scales to 200%/
+accessibility sizes without clipping.
+
 ## Screen — What gear did you use? — variable (per-trip) measurements (`CatchRecord.selectGear.*`)
 
 Reached in the gear sub-journey when the user already has favourite gears. The user ticks each gear

@@ -1099,6 +1099,96 @@
         }
       }
     },
+    "catchRecord.confirmSamePort.heading": {
+      "comment": "Confirm-same-port screen H1. %@ is the port name just saved to favourites.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ai %@ oedd eich porthladd ymadael a dychwelyd?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was %@ your departure and return port?"
+          }
+        }
+      }
+    },
+    "catchRecord.confirmSamePort.hint": {
+      "comment": "Confirm-same-port screen hint paragraph.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Dewiswch ie os wnaethoch chi adael a dychwelyd i'r un porthladd. Dewiswch na os defnyddiwyd porthladd gwahanol ar gyfer ymadael a dychwelyd."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select yes if you left from and returned to the same port. Select no if you used a different port for departure and return."
+          }
+        }
+      }
+    },
+    "catchRecord.confirmSamePort.option.yes": {
+      "comment": "Confirm-same-port Yes option.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ie"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yes"
+          }
+        }
+      }
+    },
+    "catchRecord.confirmSamePort.option.no": {
+      "comment": "Confirm-same-port No option.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Na"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No"
+          }
+        }
+      }
+    },
+    "catchRecord.confirmSamePort.validation.none": {
+      "comment": "Confirm-same-port inline error when no option chosen.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Dewiswch ai dyma oedd eich porthladd ymadael a dychwelyd"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select whether this was your departure and return port"
+          }
+        }
+      }
+    },
     "catchRecord.draftAction.heading": {
       "comment": "Draft action screen H1.",
       "extractionState": "manual",

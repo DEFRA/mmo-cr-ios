@@ -30,6 +30,13 @@ enum CatchRecordRoute: Hashable {
     /// port" button. `returnPhase` records which select screen to return to after saving
     /// (`nil` = first-time entry, which proceeds to the departure select screen).
     case addPort(vessel: String, referenceNumber: String, returnPhase: SelectPortPhase?)
+    /// Ask whether the port just added on `addPort` (first-time entry, no favourites yet) was both
+    /// the departure **and** return port for the trip. Reached only when `returnPhase == nil` on
+    /// the Add-port screen — carries the saved `PortOption` so the heading can name it and, on
+    /// "Yes", both draft port fields can be set without asking again. "Yes" bypasses the separate
+    /// departure/return select screens and enters the gear sub-journey directly; "No" continues to
+    /// the departure select screen as before.
+    case confirmSamePort(vessel: String, referenceNumber: String, port: PortOption)
     /// Pick a port (departure or return) from the user's favourite ports.
     case selectPort(phase: SelectPortPhase, vessel: String, referenceNumber: String)
     /// Choose the gear(s) used, from the user's favourite gears (multi-select checkboxes). Shown

@@ -43,6 +43,17 @@ struct UITestRootView<ProductionRoot: View>: View {
                 initialRoute: .addPort(vessel: "ACHILLES", referenceNumber: "A1234520260727150815", returnPhase: nil),
                 favouritePorts: StubFavouritePortsProvider()
             )
+        } else if launchArguments.contains(.catchRecordConfirmSamePort) {
+            // Seeds straight to the "Was <port> your departure and return port?" confirmation
+            // screen, for UI testing its Yes/No branching without driving the search flow by hand.
+            CatchRecordHostView(
+                initialRoute: .confirmSamePort(
+                    vessel: "ACHILLES",
+                    referenceNumber: "A1234520260727150815",
+                    port: PortOption(name: "Hastings")
+                ),
+                favouritePorts: StubFavouritePortsProvider()
+            )
         } else if launchArguments.contains(.catchRecordSelectPort) {
             // Seeded favourites → Select-departure-port screen first.
             CatchRecordHostView(

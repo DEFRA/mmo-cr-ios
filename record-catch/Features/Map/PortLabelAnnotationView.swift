@@ -48,11 +48,11 @@ final class PortLabelAnnotationView: MKAnnotationView {
         isEnabled = false
         isUserInteractionEnabled = false
 
-        // Cheap collision avoidance: let MapKit hide overlapping port names for us instead of
-        // hand-rolling occupied-rect tracking. `.defaultLow` so subrectangle codes
-        // (`SubrectangleAnnotationView`, `.required`) always win when the two would overlap.
-        collisionMode = .rectangle
-        displayPriority = .defaultLow
+        // Collision handling deliberately turned off: `.rectangle`/`.defaultLow` (MapKit hiding
+        // overlapping port names automatically) was causing ports to silently disappear at
+        // certain zoom levels/label densities. `.none` guarantees every port name that
+        // `LabelVisibility` decides should be visible actually renders.
+        collisionMode = .none
 
         label.numberOfLines = 1
         addSubview(label)

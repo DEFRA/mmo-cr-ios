@@ -17,6 +17,8 @@ final class HomeUITests: XCTestCase {
         static let paginationPage1 = "Home.pagination.page.1"
         static let createRecord = "Home.createRecordButton"
         static let firstRowDate = "Home.table.row.0.date"
+        static let howToRecord = "Home.howToRecord"
+        static let statusHelp = "Home.statusHelp"
     }
 
     override func setUpWithError() throws {
@@ -71,5 +73,39 @@ final class HomeUITests: XCTestCase {
         // No longer inert: routes straight to Select vessel.
         let selectVesselHeading = element(app, "CatchRecord.selectVessel.radioGroup")
         XCTAssertTrue(selectVesselHeading.waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    func test_howToRecordSection_isCollapsedByDefaultAndExpandsOnTap() {
+        let app = launchHome()
+
+        let disclosure = element(app, ID.howToRecord)
+        XCTAssertTrue(disclosure.waitForExistence(timeout: 5))
+
+        // Collapsed by default: sub-heading content is not yet on screen.
+        XCTAssertFalse(app.staticTexts["What you need to do"].exists)
+
+        disclosure.tap()
+
+        XCTAssertTrue(app.staticTexts["What you need to do"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["When to create your record"].exists)
+        XCTAssertTrue(app.staticTexts["Special cases: ICES areas"].exists)
+        XCTAssertTrue(app.staticTexts["Get help with your record"].exists)
+    }
+
+    @MainActor
+    func test_howToRecordAndStatusHelpSections_expandIndependently() {
+        let app = launchHome()
+
+        let howToRecord = element(app, ID.howToRecord)
+        let statusHelp = element(app, ID.statusHelp)
+        XCTAssertTrue(howToRecord.waitForExistence(timeout: 5))
+        XCTAssertTrue(statusHelp.exists)
+
+        statusHelp.tap()
+
+        XCTAssertTrue(app.staticTexts["Unsent:"].waitForExistence(timeout: 5))
+        // Expanding the status-help section doesn't also reveal How to record.
+        XCTAssertFalse(app.staticTexts["What you need to do"].exists)
     }
 }

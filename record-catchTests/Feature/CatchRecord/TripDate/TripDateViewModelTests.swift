@@ -218,4 +218,50 @@ final class TripDateViewModelTests: XCTestCase {
 
         XCTAssertEqual(draft.returnDate, DateEntryField.parsedDate(from: makeValidDate()))
     }
+
+    // MARK: - Resume at Check your answers (see ADR-0013)
+
+    func test_submit_departure_whenResumingAtCheckYourAnswers_pushesCheckYourAnswers_insteadOfReturnPhase() {
+        let router = CatchRecordRouter()
+        let draft = CatchRecordDraft()
+        draft.returnToCheckYourAnswers = true
+        let sut = TripDateViewModel(
+            phase: .departure,
+            vessel: vessel,
+            referenceNumber: referenceNumber,
+            departureDate: nil,
+            router: router,
+            draft: draft
+        )
+        sut.value = makeValidDate()
+
+        sut.submit()
+
+        XCTAssertEqual(router.path, [.checkYourAnswers(referenceNumber: referenceNumber)])
+        XCTAssertFalse(draft.returnToCheckYourAnswers)
+    }
+
+    func test_submit_return_whenResumingAtCheckYourAnswers_pushesCheckYourAnswers_insteadOfNudgeOrPorts() {
+        let router = CatchRecordRouter()
+        let draft = CatchRecordDraft()
+        draft.returnToCheckYourAnswers = true
+        // "now" is far past the entered return date, so a nudge would otherwise be interposed —
+        // resuming at Check your answers must still take priority.
+        let now = Calendar(identifier: .gregorian).date(from: DateComponents(year: 2020, month: 4, day: 3, hour: 12))!
+        let sut = TripDateViewModel(
+            phase: .return,
+            vessel: vessel,
+            referenceNumber: referenceNumber,
+            departureDate: Date(),
+            router: router,
+            draft: draft,
+            now: { now }
+        )
+        sut.value = makeValidDate()
+
+        sut.submit()
+
+        XCTAssertEqual(router.path, [.checkYourAnswers(referenceNumber: referenceNumber)])
+        XCTAssertFalse(draft.returnToCheckYourAnswers)
+    }
 }

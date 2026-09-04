@@ -74,8 +74,11 @@ struct HomeView: View {
 
             PaginationControls(state: paginationState)
 
+            howToRecordSection
+
             ExpandableHelpSection(
                 title: languageStore.localized("home.help.title"),
+                accessibilityIdentifier: "Home.statusHelp",
                 items: [
                     HelpItem(
                         heading: languageStore.localized("home.help.unsent.heading"),
@@ -101,6 +104,66 @@ struct HomeView: View {
             }
             .accessibilityIdentifier("Home.createRecordButton")
         }
+    }
+
+    /// "How to record a catch" — a richer disclosure section (multiple
+    /// sub-headings, paragraphs and a bullet list) explaining what/when to
+    /// record and how to get help. Uses the generic `content:` initializer of
+    /// `ExpandableHelpSection` since its shape doesn't fit the flat
+    /// heading+paragraph `HelpItem` list used by the status-help section.
+    private var howToRecordSection: some View {
+        ExpandableHelpSection(
+            title: languageStore.localized("home.howToRecord.title"),
+            accessibilityIdentifier: "Home.howToRecord"
+        ) {
+            VStack(alignment: .leading, spacing: AppSpacing.medium) {
+                howToRecordHeading(languageStore.localized("home.howToRecord.whatYouNeedToDo.heading"))
+                ParagraphText(text: languageStore.localized("home.howToRecord.whatYouNeedToDo.body1"))
+                ParagraphText(text: languageStore.localized("home.howToRecord.whatYouNeedToDo.body2"))
+
+                howToRecordHeading(languageStore.localized("home.howToRecord.whenToCreate.heading"))
+                ParagraphText(text: languageStore.localized("home.howToRecord.whenToCreate.intro"))
+                howToRecordBulletList([
+                    languageStore.localized("home.howToRecord.whenToCreate.bullet.quota"),
+                    languageStore.localized("home.howToRecord.whenToCreate.bullet.nonQuota"),
+                    languageStore.localized("home.howToRecord.whenToCreate.bullet.icesBoundary")
+                ])
+                ParagraphText(text: languageStore.localized("home.howToRecord.whenToCreate.deadline"))
+
+                howToRecordHeading(languageStore.localized("home.howToRecord.icesAreas.heading"))
+                ParagraphText(text: languageStore.localized("home.howToRecord.icesAreas.body1"))
+                ParagraphText(text: languageStore.localized("home.howToRecord.icesAreas.body2"))
+
+                howToRecordHeading(languageStore.localized("home.howToRecord.getHelp.heading"))
+                ParagraphText(text: languageStore.localized("home.howToRecord.getHelp.phone"))
+                ParagraphText(text: languageStore.localized("home.howToRecord.getHelp.callCost"))
+                ParagraphText(text: languageStore.localized("home.howToRecord.getHelp.outOfHours"))
+            }
+        }
+    }
+
+    private func howToRecordHeading(_ text: String) -> some View {
+        Text(text)
+            .font(AppTypography.bodySmall)
+            .fontWeight(.bold)
+            .foregroundStyle(AppColors.textPrimary)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    /// Renders a simple bullet list, matching the established "•" + text row
+    /// pattern used by `SubmissionConfirmationView`/`SubmissionSuccessView`.
+    private func howToRecordBulletList(_ items: [String]) -> some View {
+        VStack(alignment: .leading, spacing: AppSpacing.small) {
+            ForEach(items, id: \.self) { item in
+                HStack(alignment: .top, spacing: AppSpacing.xSmall) {
+                    Text("•")
+                        .font(AppTypography.body)
+                        .foregroundStyle(AppColors.textPrimary)
+                    ParagraphText(text: item)
+                }
+            }
+        }
+        .accessibilityElement(children: .contain)
     }
 
     // Reflow strategy: at accessibility sizes the 4-column table would clip, so

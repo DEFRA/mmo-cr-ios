@@ -57,6 +57,10 @@ final class SelectPortViewModel {
     }
 
     /// Validates "Save and continue" and routes on when a port is selected.
+    ///
+    /// When reached via "Change" from Check your answers (`draft.returnToCheckYourAnswers`), only
+    /// this one port is being corrected, so the journey returns straight there instead of
+    /// continuing into the other port/gear screens (see ADR-0013).
     func submit() {
         didAttemptSubmit = true
         guard selection != nil else { return }
@@ -64,9 +68,20 @@ final class SelectPortViewModel {
         switch phase {
         case .departure:
             draft.departurePort = selectedPort
-            router.push(.selectPort(phase: .return, vessel: vessel, referenceNumber: referenceNumber))
         case .return:
             draft.returnPort = selectedPort
+        }
+
+        if draft.returnToCheckYourAnswers {
+            draft.returnToCheckYourAnswers = false
+            router.push(.checkYourAnswers(referenceNumber: referenceNumber))
+            return
+        }
+
+        switch phase {
+        case .departure:
+            router.push(.selectPort(phase: .return, vessel: vessel, referenceNumber: referenceNumber))
+        case .return:
             Task { await enterGearSubJourney() }
         }
     }

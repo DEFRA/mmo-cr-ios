@@ -142,4 +142,48 @@ final class SelectPortViewModelTests: XCTestCase {
 
         XCTAssertEqual(draft.returnPort, PortOption(name: "Hastings"))
     }
+
+    // MARK: - Resume at Check your answers (see ADR-0013)
+
+    func test_submit_departure_whenResumingAtCheckYourAnswers_pushesCheckYourAnswers_insteadOfReturnPhase() async {
+        let router = CatchRecordRouter()
+        let draft = CatchRecordDraft()
+        draft.returnToCheckYourAnswers = true
+        let sut = SelectPortViewModel(
+            phase: .departure,
+            vessel: vessel,
+            referenceNumber: referenceNumber,
+            router: router,
+            favouritePorts: StubFavouritePortsProvider(initialFavourites: [PortOption(name: "Hastings")]),
+            draft: draft
+        )
+        await sut.loadFavourites()
+        sut.selection = "Hastings"
+
+        sut.submit()
+
+        XCTAssertEqual(router.path, [.checkYourAnswers(referenceNumber: referenceNumber)])
+        XCTAssertFalse(draft.returnToCheckYourAnswers)
+    }
+
+    func test_submit_return_whenResumingAtCheckYourAnswers_pushesCheckYourAnswers_insteadOfGearSubJourney() async {
+        let router = CatchRecordRouter()
+        let draft = CatchRecordDraft()
+        draft.returnToCheckYourAnswers = true
+        let sut = SelectPortViewModel(
+            phase: .return,
+            vessel: vessel,
+            referenceNumber: referenceNumber,
+            router: router,
+            favouritePorts: StubFavouritePortsProvider(initialFavourites: [PortOption(name: "Hastings")]),
+            draft: draft
+        )
+        await sut.loadFavourites()
+        sut.selection = "Hastings"
+
+        sut.submit()
+
+        XCTAssertEqual(router.path, [.checkYourAnswers(referenceNumber: referenceNumber)])
+        XCTAssertFalse(draft.returnToCheckYourAnswers)
+    }
 }

@@ -64,4 +64,36 @@ enum CatchRecordRouting {
             ? .recordSpeciesWeights(gear: gear, vessel: vessel, referenceNumber: referenceNumber)
             : .addSpecies(gear: gear, vessel: vessel, referenceNumber: referenceNumber, returnPhase: .recordWeights)
     }
+
+    /// Resolves where "Save and continue" on the "Which species did you catch with `<gear>`?"
+    /// screen goes next (see ADR-0011).
+    ///
+    /// - When editing a single gear's catch from Check your answers
+    ///   (`resumingAtCheckYourAnswers`), always return straight to Check your answers rather than
+    ///   continuing through any other selected gears.
+    /// - Otherwise, when more selected gears remain after `currentGearID` (a multi-gear journey),
+    ///   loop back to the catch-location (map) screen for the **next** gear.
+    /// - Otherwise (a single selected gear, or this was the last of several), continue to the
+    ///   trip-level landing-storage question exactly as before multi-gear support.
+    ///
+    /// Pure so it is trivially unit-testable, mirroring the other `CatchRecordRouting` decisions.
+    static func speciesCompletionRoute(
+        currentGearID: String,
+        orderedGears: [GearOption],
+        vessel: String,
+        referenceNumber: String,
+        resumingAtCheckYourAnswers: Bool
+    ) -> CatchRecordRoute {
+        guard !resumingAtCheckYourAnswers else {
+            return .checkYourAnswers(referenceNumber: referenceNumber)
+        }
+        guard let currentIndex = orderedGears.firstIndex(where: { $0.id == currentGearID }) else {
+            return .landingStorage(referenceNumber: referenceNumber)
+        }
+        let nextIndex = orderedGears.index(after: currentIndex)
+        guard orderedGears.indices.contains(nextIndex) else {
+            return .landingStorage(referenceNumber: referenceNumber)
+        }
+        return .catchLocation(gear: orderedGears[nextIndex], vessel: vessel, referenceNumber: referenceNumber)
+    }
 }

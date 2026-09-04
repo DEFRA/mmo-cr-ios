@@ -62,6 +62,7 @@ final class CatchLocationViewModelTests: XCTestCase {
 
     func test_submit_withSelection_writesStatisticalAreaIntoDraft() {
         let draft = CatchRecordDraft()
+        draft.gearCatches = [GearCatch(gear: .seineNets)]
         let sut = CatchLocationViewModel(
             gear: .seineNets,
             vessel: vessel,
@@ -73,7 +74,26 @@ final class CatchLocationViewModelTests: XCTestCase {
 
         sut.submit()
 
-        XCTAssertEqual(draft.statisticalArea, "38E96")
+        XCTAssertEqual(draft.gearCatches.first?.statisticalArea, "38E96")
+    }
+
+    func test_submit_withMultipleGears_writesAreaOnlyIntoMatchingGear() {
+        let draft = CatchRecordDraft()
+        let otherGear = GearOption(name: "Trawl nets")
+        draft.gearCatches = [GearCatch(gear: .seineNets), GearCatch(gear: otherGear)]
+        let sut = CatchLocationViewModel(
+            gear: .seineNets,
+            vessel: vessel,
+            referenceNumber: referenceNumber,
+            router: CatchRecordRouter(),
+            draft: draft
+        )
+        sut.selectedArea = "38E96"
+
+        sut.submit()
+
+        XCTAssertEqual(draft.gearCatches[0].statisticalArea, "38E96")
+        XCTAssertNil(draft.gearCatches[1].statisticalArea)
     }
 
     // MARK: - Manual entry ("Other" button)

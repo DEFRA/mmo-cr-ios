@@ -66,11 +66,15 @@ final class CatchLocationManualEntryViewModel {
     }
 
     /// Validates "Save and continue" and, when a code has been selected, enters the species
-    /// sub-journey — mirrors `CatchLocationViewModel.submit()`.
+    /// sub-journey — mirrors `CatchLocationViewModel.submit()`. Writes the code into this gear's
+    /// own `GearCatch` entry (see ADR-0011) rather than a single trip-level field, since the
+    /// subrectangle is captured per gear.
     func submit() {
         didAttemptSubmit = true
         guard CatchLocationValidation.errorKey(for: selectedCode) == nil else { return }
-        draft.statisticalArea = selectedCode
+        if let index = draft.gearCatchIndex(forGearID: gear.id) {
+            draft.gearCatches[index].statisticalArea = selectedCode
+        }
         Task { await enterSpeciesSubJourney() }
     }
 

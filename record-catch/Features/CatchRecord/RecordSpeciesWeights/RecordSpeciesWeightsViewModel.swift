@@ -59,23 +59,37 @@ final class RecordSpeciesWeightsViewModel {
         self.draft = draft
     }
 
-    /// Loads favourite species and seeds any previously-captured weights into the fields (so
-    /// returning to this screen shows what was already recorded). Failures leave the list empty.
+    /// Loads favourite species and seeds the fields with **this gear's own** previously-captured
+    /// species, if any (`draft.gearCatches[…].speciesCaught` — see ADR-0011), so returning to edit
+    /// this same gear's catch (e.g. via "Change" from Check your answers) shows what was already
+    /// recorded for it.
+    ///
+    /// Deliberately does **not** seed from the shared `FavouriteSpeciesProviding` store's own
+    /// weights: that store is shared across every gear in the trip and `addFavourite` overwrites a
+    /// species' weights by id regardless of which gear recorded them, so on a multi-gear journey it
+    /// would carry the *previous* gear's weights onto this gear's screen. Each gear's catch starts
+    /// blank until captured for that gear specifically. Failures leave the list empty.
     func loadFavourites() async {
         let loaded = (try? await favouriteSpecies.favouriteSpecies()) ?? []
         favourites = loaded
+
+        let recordedForThisGear = draft.gearCatchIndex(forGearID: gear.id)
+            .map { draft.gearCatches[$0].speciesCaught } ?? []
+        let recordedByID = Dictionary(uniqueKeysWithValues: recordedForThisGear.map { ($0.id, $0) })
+
         for species in loaded {
-            if !species.weightAboveMinimumKg.isEmpty
-                || species.weightBelowMinimumKg != nil
-                || species.weightLegallyDiscardedKg != nil {
+            guard let recorded = recordedByID[species.id] else { continue }
+            if !recorded.weightAboveMinimumKg.isEmpty
+                || recorded.weightBelowMinimumKg != nil
+                || recorded.weightLegallyDiscardedKg != nil {
                 selection.insert(species.id)
             }
-            aboveEntries[species.id] = species.weightAboveMinimumKg
-            if let below = species.weightBelowMinimumKg {
+            aboveEntries[species.id] = recorded.weightAboveMinimumKg
+            if let below = recorded.weightBelowMinimumKg {
                 belowEntries[species.id] = below
                 belowRevealed.insert(species.id)
             }
-            if let discarded = species.weightLegallyDiscardedKg {
+            if let discarded = recorded.weightLegallyDiscardedKg {
                 discardedEntries[species.id] = discarded
                 discardedRevealed.insert(species.id)
             }
@@ -113,8 +127,19 @@ final class RecordSpeciesWeightsViewModel {
 
     /// The route to push after saving. Pure and independent of async work, so it is directly
     /// unit-testable.
+    ///
+    /// See `CatchRecordRouting.speciesCompletionRoute(...)`: returns straight to Check your answers
+    /// when this gear's catch was reached by "Change" from there; otherwise loops back to the
+    /// catch-location screen for the next selected gear when more than one gear was chosen, or
+    /// continues to the trip-level landing-storage question once every gear is done (see ADR-0011).
     var completionRoute: CatchRecordRoute {
-        .landingStorage(referenceNumber: referenceNumber)
+        CatchRecordRouting.speciesCompletionRoute(
+            currentGearID: gear.id,
+            orderedGears: draft.orderedGears,
+            vessel: vessel,
+            referenceNumber: referenceNumber,
+            resumingAtCheckYourAnswers: draft.returnToCheckYourAnswers
+        )
     }
 
     /// Routes to the Add-species search screen, returning here afterwards.
@@ -136,8 +161,8 @@ final class RecordSpeciesWeightsViewModel {
         )
     }
 
-    /// Writes captured weights for ticked species back to favourites and into the journey draft
-    /// (`draft.speciesCaught`), then routes on to the landing-storage sub-journey.
+    /// Writes captured weights for ticked species back to favourites and into this gear's own
+    /// `GearCatch` entry (`draft.gearCatches[…].speciesCaught` - see ADR-0011), then routes on.
     ///
     /// Validation is deferred, so any ticked species (with or without entered weights) is saved.
     func submit() async {
@@ -151,8 +176,12 @@ final class RecordSpeciesWeightsViewModel {
                 try await favouriteSpecies.addFavourite(recorded)
                 captured.append(recorded)
             }
-            draft.speciesCaught = captured
-            router.push(completionRoute)
+            if let index = draft.gearCatchIndex(forGearID: gear.id) {
+                draft.gearCatches[index].speciesCaught = captured
+            }
+            let route = completionRoute
+            draft.returnToCheckYourAnswers = false
+            router.push(route)
         } catch {
             saveFailed = true
         }

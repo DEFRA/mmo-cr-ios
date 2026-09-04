@@ -12,9 +12,8 @@ final class CheckYourAnswersLocalizationTests: XCTestCase {
     private let keys = [
         "catchRecord.checkYourAnswers.heading",
         "catchRecord.checkYourAnswers.change",
+        "catchRecord.checkYourAnswers.change.accessibilityForGear",
         "catchRecord.checkYourAnswers.section.trip",
-        "catchRecord.checkYourAnswers.section.gear",
-        "catchRecord.checkYourAnswers.section.speciesCaught",
         "catchRecord.checkYourAnswers.section.speciesNotLanded",
         "catchRecord.checkYourAnswers.label.vessel",
         "catchRecord.checkYourAnswers.label.departureDate",

@@ -57,15 +57,13 @@ final class PortLabelAnnotationViewTests: XCTestCase {
         XCTAssertFalse(view.isUserInteractionEnabled)
     }
 
-    /// Cheap collision avoidance: port labels deconflict via MapKit's own collision handling, and
-    /// sit below subrectangle codes' priority so subrectangle codes always win (see
-    /// `SubrectangleAnnotationView`'s matching `.required` priority).
-    func testCollisionConfiguration() {
+    /// Collision handling is deliberately off (see `PortLabelAnnotationView.configureView`) — a
+    /// port name must always render, never be silently hidden by MapKit's own collision system.
+    func testCollisionIsDisabled() {
         let annotation = makeAnnotation()
         let view = PortLabelAnnotationView(annotation: annotation, reuseIdentifier: PortLabelAnnotationView.reuseIdentifier)
 
-        XCTAssertEqual(view.collisionMode, .rectangle)
-        XCTAssertEqual(view.displayPriority, .defaultLow)
+        XCTAssertEqual(view.collisionMode, .none)
     }
 
     func testConfigureSizesBoundsToFitTheName() {

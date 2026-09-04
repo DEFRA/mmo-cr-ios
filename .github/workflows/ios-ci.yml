@@ -42,20 +42,7 @@ jobs:
       #     xcodebuild -version
 
       - name: Verify iOS Simulator
-        run: |
-          set -euo pipefail
-          xcodebuild -version
-
-          # The default Xcode's iOS Simulator runtime isn't always pre-cached on the runner image, so fetch it on demand.
-          if ! xcrun simctl list devices available 2>/dev/null | grep -qE "iPhone 17 \("; then
-            echo "iPhone 17 simulator not found — downloading the iOS Simulator platform..."
-            xcodebuild -downloadPlatform iOS || true
-            if ! xcrun simctl list devices available 2>/dev/null | grep -qE "iPhone 17 \("; then
-              echo "::error::iPhone 17 Simulator still unavailable after downloading the iOS platform" >&2
-              xcrun simctl list devices available >&2 || true
-              exit 1
-            fi
-          fi
+        run: bash .github/workflows/scripts/verify-simulator.sh
 
       - name: Cache Swift Package Manager
         uses: actions/cache@v4.3.0
@@ -67,6 +54,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-spm-
 
+      # TO BE UNCOMMENTED WHEN LINTING ISSUES ARE FIXED IN REPO
       # - name: SwiftLint
       #   run: |
       #     if ! command -v swiftlint >/dev/null 2>&1; then
@@ -87,14 +75,7 @@ jobs:
         run: bundle exec fastlane test
 
       - name: Convert coverage to SonarQube generic format
-        run: |
-          set -euo pipefail
-          XCRESULT="$(find fastlane/test_output -maxdepth 2 -name '*.xcresult' | head -n1)"
-          if [ -z "$XCRESULT" ]; then
-            echo "::error::No .xcresult bundle found under fastlane/test_output" >&2
-            exit 1
-          fi
-          bash scripts/xccov-to-sonarqube-generic.sh "$XCRESULT" > sonar-coverage.xml
+        run: bash .github/workflows/scripts/convert-coverage.sh
 
       - name: Upload test results artifact
         if: always()
@@ -115,33 +96,4 @@ jobs:
 
       - name: Create and push release tag
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          set -euo pipefail
-          MARKETING_VERSION=$(awk '
-            /MARKETING_VERSION = / { line=$0; sub(/^.*MARKETING_VERSION = /, "", line); sub(/;.*$/, "", line); last=line }
-            /PRODUCT_BUNDLE_IDENTIFIER = mmo\.catchrecordingdev\.ios;/ { print last; exit }
-          ' record-catch.xcodeproj/project.pbxproj)
-
-          PROJECT_BUILD=$(awk '
-            /CURRENT_PROJECT_VERSION = / { line=$0; sub(/^.*CURRENT_PROJECT_VERSION = /, "", line); sub(/;.*$/, "", line); last=line }
-            /PRODUCT_BUNDLE_IDENTIFIER = mmo\.catchrecordingdev\.ios;/ { print last; exit }
-          ' record-catch.xcodeproj/project.pbxproj)
-
-          if [[ -z "${MARKETING_VERSION}" || -z "${PROJECT_BUILD}" ]]; then
-            echo "::error::Could not read MARKETING_VERSION or CURRENT_PROJECT_VERSION from project.pbxproj" >&2
-            exit 1
-          fi
-
-          TAG_NAME="v${MARKETING_VERSION}-BUILD_${PROJECT_BUILD}"
-
-          # Validate if tag already exists on remote
-          if git ls-remote --tags origin "refs/tags/${TAG_NAME}" | grep -q "refs/tags/${TAG_NAME}$"; then
-            echo "::error::Tag '${TAG_NAME}' already exists on remote. Increment CURRENT_PROJECT_VERSION in project.pbxproj before merging to main." >&2
-            exit 1
-          fi
-
-          echo "Creating and pushing release tag: ${TAG_NAME}"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "${TAG_NAME}"
-          git push origin "${TAG_NAME}"
+        run: bash .github/workflows/scripts/create-release-tag.sh

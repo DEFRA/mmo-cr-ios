@@ -21,16 +21,11 @@ concurrency:
   group: ios-release-${{ github.ref }}
   cancel-in-progress: false
 
-# Tag-triggered release pipeline. Scope: DEV environment only (see docs/adr/0011-release-pipeline.md).
-# The test/prod build, external-promotion and App Store jobs from the design (Sections 11-12) are
-# deferred until their bundle IDs, .xcconfig/schemes, App Store Connect apps, signing assets and
-# GitHub Environments/secrets are provisioned.
 jobs:
   dev-build-internal:
     name: Dev → build, sign & internal TestFlight
     runs-on: macos-26
     timeout-minutes: 45
-    # Ungated environment; scopes the Dev signing and App Store Connect credentials to this job only.
     environment: dev
     permissions:
       contents: read
@@ -52,84 +47,13 @@ jobs:
           P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
           BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-        run: |
-          set -euo pipefail
-          CERT_PATH="$RUNNER_TEMP/dev_signing.p12"
-          PROFILE_PATH="$RUNNER_TEMP/dev.mobileprovision"
-          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
-
-          # Decode the certificate and provisioning profile from secrets.
-          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o "$CERT_PATH"
-          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o "$PROFILE_PATH"
-
-          # Create and unlock a temporary keychain, then import the signing certificate.
-          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security import "$CERT_PATH" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
-          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH" >/dev/null
-          security list-keychain -d user -s "$KEYCHAIN_PATH" login.keychain-db
-
-          # Install the provisioning profile where Xcode looks for it.
-          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-          cp "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/"
+        run: bash .github/workflows/scripts/install-signing-certificate.sh
 
       - name: Validate tag matches project MARKETING_VERSION
-        run: |
-          set -euo pipefail
-          # Read the app target's MARKETING_VERSION & CURRENT_PROJECT_VERSION
-          PROJECT_VERSION=$(awk '
-            /MARKETING_VERSION = / { line=$0; sub(/^.*MARKETING_VERSION = /, "", line); sub(/;.*$/, "", line); last=line }
-            /PRODUCT_BUNDLE_IDENTIFIER = mmo\.catchrecordingdev\.ios;/ { print last; exit }
-          ' record-catch.xcodeproj/project.pbxproj)
-          PROJECT_BUILD=$(awk '
-            /CURRENT_PROJECT_VERSION = / { line=$0; sub(/^.*CURRENT_PROJECT_VERSION = /, "", line); sub(/;.*$/, "", line); last=line }
-            /PRODUCT_BUNDLE_IDENTIFIER = mmo\.catchrecordingdev\.ios;/ { print last; exit }
-          ' record-catch.xcodeproj/project.pbxproj)
-
-          if [[ -z "${PROJECT_VERSION}" || -z "${PROJECT_BUILD}" ]]; then
-            echo "::error::Could not read MARKETING_VERSION or CURRENT_PROJECT_VERSION from project.pbxproj" >&2
-            exit 1
-          fi
-
-          # On tag pushes, validate tag matches project MARKETING_VERSION and optional BUILD suffix.
-          # Convention: v<marketing_version>-BUILD_<current_project_version> (e.g. v2.0.0-BUILD_9) or v<marketing_version>
-          if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" == v* ]]; then
-            TAG_RAW="${GITHUB_REF_NAME#v}"
-            if [[ "${TAG_RAW}" =~ ^([^-]+)-BUILD_(.+)$ ]]; then
-              TAG_VERSION="${BASH_REMATCH[1]}"
-              TAG_BUILD="${BASH_REMATCH[2]}"
-              if [[ "${TAG_VERSION}" != "${PROJECT_VERSION}" ]]; then
-                echo "::error::Tag marketing version ${TAG_VERSION} does not match project MARKETING_VERSION ${PROJECT_VERSION}" >&2
-                exit 1
-              fi
-              if [[ "${TAG_BUILD}" != "${PROJECT_BUILD}" ]]; then
-                echo "::error::Tag build number ${TAG_BUILD} does not match project CURRENT_PROJECT_VERSION ${PROJECT_BUILD}" >&2
-                exit 1
-              fi
-              echo "Tag ${GITHUB_REF_NAME} matches project version ${PROJECT_VERSION} and build ${PROJECT_BUILD}"
-            else
-              if [[ "${TAG_RAW}" != "${PROJECT_VERSION}" ]]; then
-                echo "::error::Tag version ${TAG_RAW} does not match project MARKETING_VERSION ${PROJECT_VERSION} — align the tag with the app version in project.pbxproj" >&2
-                exit 1
-              fi
-              echo "Tag version ${TAG_RAW} matches project MARKETING_VERSION ${PROJECT_VERSION}"
-            fi
-          elif [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
-            if [[ -n "${{ github.event.inputs.marketing_version }}" ]]; then
-              echo "Using manual marketing_version override: ${{ github.event.inputs.marketing_version }}"
-            else
-              echo "Using project MARKETING_VERSION: ${PROJECT_VERSION}"
-            fi
-            if [[ -n "${{ github.event.inputs.project_version }}" ]]; then
-              echo "Using manual project_version override: ${{ github.event.inputs.project_version }}"
-            else
-              echo "Using project CURRENT_PROJECT_VERSION from project.pbxproj"
-            fi
-          else
-            echo "::error::Unsupported trigger '${GITHUB_EVENT_NAME}' for ${GITHUB_REF_TYPE} '${GITHUB_REF_NAME}' — push a v* tag or use workflow_dispatch" >&2
-            exit 1
-          fi
+        env:
+          INPUT_MARKETING_VERSION: ${{ github.event.inputs.marketing_version }}
+          INPUT_PROJECT_VERSION: ${{ github.event.inputs.project_version }}
+        run: bash .github/workflows/scripts/validate-release-tag.sh
 
       - name: Build, sign & upload DEV to internal TestFlight
         env:
@@ -155,6 +79,4 @@ jobs:
 
       - name: Clean up temporary keychain and provisioning profile
         if: ${{ always() }}
-        run: |
-          security delete-keychain "$RUNNER_TEMP/app-signing.keychain-db" || true
-          rm -f "$HOME/Library/MobileDevice/Provisioning Profiles/dev.mobileprovision" || true
+        run: bash .github/workflows/scripts/cleanup-signing-assets.sh

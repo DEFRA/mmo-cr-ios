@@ -20,11 +20,11 @@ governing standards.
                     Branch protection: green CI + review required to merge
 
 2. Integrate      merge to main (trunk, always releasable)
-                    main CI: full tests + SonarCloud (main) + quality gate
+                    main CI: full tests + SonarCloud (main) + automated tag creation
 
-3. Cut a release  push tag  vX.Y.Z  on main
-                    marketing version = X.Y.Z (from tag)
-                    build number      = release GITHUB_RUN_NUMBER (no App Store Connect query)
+3. Cut a release  automated tag  vX.Y.Z-BUILD_N  on main
+                    marketing version = X.Y.Z (from project / tag)
+                    build number      = N (from project / tag)
                     GitCommitSHA      = read-only Info.plist metadata (traceability only)
 
 4. Dev            [env: dev — no gate]

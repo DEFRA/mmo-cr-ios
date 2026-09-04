@@ -53,13 +53,13 @@ New [.github/workflows/ios-release.yml](../../.github/workflows/ios-release.yml)
 - `build_app` (app-store export) without automatic build number incrementing (`GITHUB_RUN_NUMBER` is not used). The `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` baked into `project.pbxproj` are used directly unless overridden at runtime via `workflow_dispatch` inputs.
 - `upload_to_testflight(distribute_external: false)` → the Dev app's internal TestFlight group.
 
-### 3a. Versioning — project.pbxproj is the single source of truth in code
+### 3a. Versioning — project.pbxproj is the single source of truth in code & automated tag creation
 
 The Xcode project's `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` (`record-catch.xcodeproj/project.pbxproj`, app target
 `mmo.catchrecordingdev.ios`) are the **single source of truth** for versioning in code.
-A "Validate tag matches project MARKETING_VERSION" step in `ios-release.yml` reads the app target's
-`MARKETING_VERSION` (guarding against the test targets' unrelated `MARKETING_VERSION = 1.0`) and validates
-it against the triggering tag on push events; for `workflow_dispatch` manual runs, users can optionally
+When a PR is merged into `main`, the CI workflow automatically creates and pushes a release tag in the format
+`v<marketing_version>-BUILD_<current_project_version>` (e.g. `v2.0.0-BUILD_9`), checking first that the tag does not already exist (and failing if it does, requiring a build number increment).
+A "Validate tag matches project MARKETING_VERSION" step in `ios-release.yml` parses the tag and validates both marketing version and build number against the project settings; for `workflow_dispatch` manual runs, users can optionally
 supply `marketing_version` and `project_version` overrides directly at runtime. If omitted, builds default
 to the exact versions configured in `project.pbxproj`. This is a deliberate deviation from the
 ci-cd standard's "derive marketing version from tag / build number from GITHUB_RUN_NUMBER" preference (see

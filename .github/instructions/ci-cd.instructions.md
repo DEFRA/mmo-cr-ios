@@ -49,9 +49,9 @@ This is a **small team practising trunk-based development**. The model is delibe
 - **`main` is the trunk** and is always releasable. Protect it: require PRs, green CI and review before
   merge; no direct pushes.
 - **Short-lived feature branches** (`feature/*`) merge back into `main` via PR, then are deleted.
-- **Releases are cut from a Git tag on `main`**, never from a long-lived branch. Tag format:
-  **`vMAJOR.MINOR.PATCH`** (e.g. `v1.4.0`). Pushing a matching tag triggers the release workflow.
-- **Hotfixes** are a normal fix on `main` plus a **new higher patch tag** (e.g. `v1.4.1`). Because
+- **Releases are cut from an automated Git tag created on `main`** after merging a PR, never from a long-lived branch. Tag format:
+  **`vMAJOR.MINOR.PATCH-BUILD_BUILDNUMBER`** (e.g. `v2.0.0-BUILD_9`), derived from `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` in `project.pbxproj`. Pushing or generating a matching tag triggers the release workflow.
+- **Hotfixes** are a normal fix on `main` with incremented version/build numbers merged via PR, which triggers the automated tag creation. Because
   the trunk is always releasable, there is no separate hotfix branch to maintain.
 - **Release branches are NOT used and MUST NOT be introduced** for this app. They only earn their keep
   when a release must be hardened/stabilised while `main` keeps moving, or when several past versions are

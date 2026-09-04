@@ -85,13 +85,11 @@ Do not run a second, separate validation round — the plan is checked against t
 - **GitHub Environments & approvals** — **six** gated Environments `dev` (ungated), `test`,
   `test-external`, `prod`, `prod-external` and `prod-appstore`, each (except `dev`) gated by required
   reviewers (self-approval prevented where supported); secrets scoped per stage.
-- **Versioning** — SemVer marketing version from the tag; build number derived from the **release**
-  `GITHUB_RUN_NUMBER` (no App Store Connect query); `GitCommitSHA` embedded as `Info.plist` traceability
-  metadata (never the build number).
+- **Versioning** — Marketing version and build number sourced from `project.pbxproj` and automated tag generation (`v<marketing_version>-BUILD_<current_project_version>`); `GitCommitSHA` embedded as `Info.plist` traceability metadata (never the build number).
 - **Configuration & identity (frozen)** — **build-time configuration (Option B)** with **three** bundle
   IDs (`mmo.catchrecordingdev.ios` / `mmo.catchrecordingtest.ios` / `mmo.catchrecording.ios`) as three
   separate App Store Connect apps; drive the `.xcconfig`/scheme split and the versioning reconciliation
-  (marketing version from the tag, `CFBundleVersion` from the run number) against the current single
+  (marketing version and `CFBundleVersion` from code / tags) against the current single
   hard-coded `mmo.catchrecordingdev.ios`.
 - **Security setup** — the **CodeQL advanced-setup workflow** and the **Dependabot config** as their own
   separate files; confirming secret scanning + push protection are on; pinning Actions to full commit SHAs.

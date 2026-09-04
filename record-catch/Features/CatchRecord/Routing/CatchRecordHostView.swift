@@ -105,6 +105,15 @@ struct CatchRecordHostView: View {
                 router: router,
                 favouritePorts: favouritePorts
             )
+        case .confirmSamePort(let vessel, let referenceNumber, let port):
+            ConfirmSamePortView(
+                vessel: vessel,
+                referenceNumber: referenceNumber,
+                port: port,
+                router: router,
+                favouriteGears: favouriteGears,
+                draft: draft
+            )
         case .selectPort(let phase, let vessel, let referenceNumber):
             SelectPortView(
                 phase: phase,
@@ -127,7 +136,8 @@ struct CatchRecordHostView: View {
             AddGearView(
                 vessel: vessel,
                 referenceNumber: referenceNumber,
-                router: router
+                router: router,
+                favouriteGears: favouriteGears
             )
         case .gearMeasurements(let gear, let vessel, let referenceNumber):
             GearMeasurementsView(

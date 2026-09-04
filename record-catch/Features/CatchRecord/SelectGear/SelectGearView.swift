@@ -112,13 +112,15 @@ struct SelectGearView: View {
         }
     }
 
-    /// Builds an already-localised one-line summary of a gear's captured required measurements, e.g.
-    /// "100mm mesh", or `nil` when it has none.
+    /// Builds an already-localised one-line summary of a gear's captured required measurements,
+    /// e.g. "Mesh size (mm): 100, Number of trawl nets: 2", or `nil` when it has none. Generic over
+    /// every gear in the catalogue (see ADR-0012) rather than assuming mesh size specifically.
     private func measurementSummary(for gear: GearOption) -> String? {
         let parts = gear.requiredMeasurements.compactMap { measurement -> String? in
             guard let value = measurement.value else { return nil }
             return String(
-                format: languageStore.localized("catchRecord.gear.measurement.meshSize.summary"),
+                format: languageStore.localized("catchRecord.gear.measurement.summary"),
+                languageStore.localized(measurement.labelKey),
                 value
             )
         }

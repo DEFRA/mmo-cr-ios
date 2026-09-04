@@ -2,8 +2,9 @@ import Foundation
 
 /// View model for the "Check your answers" screen, ending the "Create a catch record" journey.
 ///
-/// Presents every value captured in `CatchRecordDraft` as four ordered, read-only sections — Trip,
-/// Gear used, Species caught, Species not landed — each row pairing a label with an
+/// Presents every value captured in `CatchRecordDraft` as ordered, read-only sections — Trip, one
+/// section **per selected gear** (that gear's details, its statistical area and the species caught
+/// with it — see ADR-0011), then Species not landed — each row pairing a label with an
 /// already-formatted display value and a `changeRoute` that returns the user to the screen where
 /// that value was captured. Purely a projection of the draft: it holds no mutable state of its own
 /// and performs no validation, so it is directly unit-testable against a seeded `CatchRecordDraft`.
@@ -32,14 +33,54 @@ final class CheckYourAnswersViewModel {
         /// the view performs no further formatting logic).
         let value: String
         let changeRoute: CatchRecordRoute
+        /// The gear this row belongs to, when it is part of a per-gear section — `nil` for
+        /// trip-level/species-not-landed rows. Used to build a gear-disambiguated accessibility
+        /// label for the row's "Change" control, since the same field label (e.g. "Statistical
+        /// area") repeats once per gear section (see GOV.UK Design System — Check answers: a
+        /// summary-card's Change link must say what it changes).
+        var gearName: String?
+
+        init(
+            id: String,
+            labelKey: String,
+            value: String,
+            changeRoute: CatchRecordRoute,
+            gearName: String? = nil
+        ) {
+            self.id = id
+            self.labelKey = labelKey
+            self.value = value
+            self.changeRoute = changeRoute
+            self.gearName = gearName
+        }
     }
 
     /// A titled group of rows, rendered under its own heading.
     struct Section: Identifiable, Hashable {
         let id: String
-        /// String Catalog key for the section heading.
-        let titleKey: String
+        /// String Catalog key for the section heading, looked up via `AppLanguageStore`. `nil`
+        /// when `literalTitle` supplies the heading directly instead.
+        let titleKey: String?
+        /// A literal (non-localized) heading, used instead of `titleKey` when non-nil — e.g. a
+        /// gear's name, which is untranslated reference data rather than app copy (mirrors how
+        /// `Row.value` already shows raw gear/species names directly rather than via a catalog
+        /// key).
+        let literalTitle: String?
         let rows: [Row]
+
+        init(id: String, titleKey: String, rows: [Row]) {
+            self.id = id
+            self.titleKey = titleKey
+            self.literalTitle = nil
+            self.rows = rows
+        }
+
+        init(id: String, literalTitle: String, rows: [Row]) {
+            self.id = id
+            self.titleKey = nil
+            self.literalTitle = literalTitle
+            self.rows = rows
+        }
     }
 
     /// Long-style, numeric-free date formatting (e.g. "27 July 2026") shared by both trip dates.
@@ -50,20 +91,12 @@ final class CheckYourAnswersViewModel {
         return formatter
     }()
 
-    /// The four sections of the journey summary, in display order. Trip and Gear used are always
-    /// present (even with zero rows, if nothing has been captured yet); the species sections are
-    /// omitted entirely when their list is empty.
+    /// The journey summary's sections, in display order: Trip, then one section per selected gear
+    /// (each only shown once its gear/vessel are known — see `gearCatchSections`), then Species not
+    /// landed (omitted entirely when empty).
     var sections: [Section] {
-        var result = [tripSection, gearSection]
-        if !speciesCaughtRows.isEmpty {
-            result.append(
-                Section(
-                    id: "speciesCaught",
-                    titleKey: "catchRecord.checkYourAnswers.section.speciesCaught",
-                    rows: speciesCaughtRows
-                )
-            )
-        }
+        var result = [tripSection]
+        result.append(contentsOf: gearCatchSections)
         if !speciesNotLandedRows.isEmpty {
             result.append(
                 Section(
@@ -76,8 +109,13 @@ final class CheckYourAnswersViewModel {
         return result
     }
 
-    /// Pushes the destination for a row's "Change" control.
+    /// Pushes the destination for a row's "Change" control. Every "Change" link returns straight
+    /// back to Check your answers once its own onward mini-journey completes, rather than
+    /// continuing forward through the rest of the create-a-catch-record journey — see
+    /// `CatchRecordDraft.returnToCheckYourAnswers` and ADR-0013 (which generalises the per-gear
+    /// pattern first introduced by ADR-0011 to every row).
     func change(to route: CatchRecordRoute) {
+        draft.returnToCheckYourAnswers = true
         router.push(route)
     }
 
@@ -160,40 +198,44 @@ final class CheckYourAnswersViewModel {
             )
         }
 
-        if let vessel = draft.vessel, let gear = draft.gear, let statisticalArea = draft.statisticalArea {
-            rows.append(
-                Row(
-                    id: "trip.statisticalArea",
-                    labelKey: "catchRecord.checkYourAnswers.label.statisticalArea",
-                    value: statisticalArea,
-                    changeRoute: .catchLocation(gear: gear, vessel: vessel, referenceNumber: referenceNumber)
-                )
-            )
-        }
-
         return rows
     }
 
-    // MARK: - Gear used
+    // MARK: - Per-gear sections (gear used, statistical area, species caught — see ADR-0011)
 
-    private var gearSection: Section {
-        Section(id: "gear", titleKey: "catchRecord.checkYourAnswers.section.gear", rows: gearRows)
+    /// One section per selected gear (`CatchRecordDraft.gearCatches`), titled by the gear's name.
+    private var gearCatchSections: [Section] {
+        guard let vessel = draft.vessel else { return [] }
+        return draft.gearCatches.map { gearCatchSection(for: $0, vessel: vessel) }
     }
 
-    private var gearRows: [Row] {
-        guard let vessel = draft.vessel, let gear = draft.gear else { return [] }
+    private func gearCatchSection(for gearCatch: GearCatch, vessel: String) -> Section {
+        Section(
+            id: "gear.\(gearCatch.id)",
+            literalTitle: gearCatch.gear.name,
+            rows: gearCatchRows(for: gearCatch, vessel: vessel)
+        )
+    }
+
+    private func gearCatchRows(for gearCatch: GearCatch, vessel: String) -> [Row] {
+        let gear = gearCatch.gear
         // Required measurements are captured on the gear-measurements screen; variable (per-trip)
-        // measurements are captured on the select-gear screen, so each "Change" returns the user to
-        // the screen where that value was entered.
+        // measurements are captured on the select-gear screen; the statistical area and species
+        // caught are captured per gear (ADR-0011) via the catch-location/species screens. Every
+        // "Change" returns the user to the screen where that value was entered, then straight back
+        // to Check your answers once saved (see ADR-0013).
         let measurementsRoute = CatchRecordRoute.gearMeasurements(gear: gear, vessel: vessel, referenceNumber: referenceNumber)
         let selectGearRoute = CatchRecordRoute.selectGear(vessel: vessel, referenceNumber: referenceNumber)
+        let locationRoute = CatchRecordRoute.catchLocation(gear: gear, vessel: vessel, referenceNumber: referenceNumber)
+        let speciesRoute = CatchRecordRoute.recordSpeciesWeights(gear: gear, vessel: vessel, referenceNumber: referenceNumber)
 
         var rows: [Row] = [
             Row(
-                id: "gear.name",
+                id: "gear.\(gearCatch.id).name",
                 labelKey: "catchRecord.checkYourAnswers.label.gear",
                 value: gear.name,
-                changeRoute: measurementsRoute
+                changeRoute: measurementsRoute,
+                gearName: gear.name
             )
         ]
 
@@ -201,10 +243,11 @@ final class CheckYourAnswersViewModel {
             guard let value = measurement.value else { continue }
             rows.append(
                 Row(
-                    id: "gear.measurement.\(measurement.id)",
+                    id: "gear.\(gearCatch.id).measurement.\(measurement.id)",
                     labelKey: measurement.labelKey,
                     value: String(value),
-                    changeRoute: measurementsRoute
+                    changeRoute: measurementsRoute,
+                    gearName: gear.name
                 )
             )
         }
@@ -213,31 +256,43 @@ final class CheckYourAnswersViewModel {
             guard let value = measurement.value else { continue }
             rows.append(
                 Row(
-                    id: "gear.variableMeasurement.\(measurement.id)",
+                    id: "gear.\(gearCatch.id).variableMeasurement.\(measurement.id)",
                     labelKey: measurement.labelKey,
                     value: String(value),
-                    changeRoute: selectGearRoute
+                    changeRoute: selectGearRoute,
+                    gearName: gear.name
                 )
             )
         }
 
+        if let statisticalArea = gearCatch.statisticalArea {
+            rows.append(
+                Row(
+                    id: "gear.\(gearCatch.id).statisticalArea",
+                    labelKey: "catchRecord.checkYourAnswers.label.statisticalArea",
+                    value: statisticalArea,
+                    changeRoute: locationRoute,
+                    gearName: gear.name
+                )
+            )
+        }
+
+        rows.append(
+            contentsOf: gearCatch.speciesCaught.flatMap {
+                weightRows(
+                    for: $0,
+                    idPrefix: "gear.\(gearCatch.id).speciesCaught.\($0.id)",
+                    aboveLabelKey: "catchRecord.checkYourAnswers.label.weightAbove",
+                    changeRoute: speciesRoute,
+                    gearName: gear.name
+                )
+            }
+        )
+
         return rows
     }
 
-    // MARK: - Species caught / not landed
-
-    private var speciesCaughtRows: [Row] {
-        guard let vessel = draft.vessel, let gear = draft.gear else { return [] }
-        let changeRoute = CatchRecordRoute.recordSpeciesWeights(gear: gear, vessel: vessel, referenceNumber: referenceNumber)
-        return draft.speciesCaught.flatMap {
-            weightRows(
-                for: $0,
-                idPrefix: "speciesCaught.\($0.id)",
-                aboveLabelKey: "catchRecord.checkYourAnswers.label.weightAbove",
-                changeRoute: changeRoute
-            )
-        }
-    }
+    // MARK: - Species not landed
 
     private var speciesNotLandedRows: [Row] {
         let changeRoute = CatchRecordRoute.landingStorageSpecies(referenceNumber: referenceNumber)
@@ -257,14 +312,16 @@ final class CheckYourAnswersViewModel {
         for species: SpeciesOption,
         idPrefix: String,
         aboveLabelKey: String,
-        changeRoute: CatchRecordRoute
+        changeRoute: CatchRecordRoute,
+        gearName: String? = nil
     ) -> [Row] {
         var rows: [Row] = [
             Row(
                 id: "\(idPrefix).name",
                 labelKey: "catchRecord.checkYourAnswers.label.speciesName",
                 value: species.name,
-                changeRoute: changeRoute
+                changeRoute: changeRoute,
+                gearName: gearName
             )
         ]
 
@@ -274,7 +331,8 @@ final class CheckYourAnswersViewModel {
                     id: "\(idPrefix).above",
                     labelKey: aboveLabelKey,
                     value: "\(species.weightAboveMinimumKg) kg",
-                    changeRoute: changeRoute
+                    changeRoute: changeRoute,
+                    gearName: gearName
                 )
             )
         }
@@ -285,7 +343,8 @@ final class CheckYourAnswersViewModel {
                     id: "\(idPrefix).below",
                     labelKey: "catchRecord.checkYourAnswers.label.weightBelow",
                     value: "\(below) kg",
-                    changeRoute: changeRoute
+                    changeRoute: changeRoute,
+                    gearName: gearName
                 )
             )
         }
@@ -296,7 +355,8 @@ final class CheckYourAnswersViewModel {
                     id: "\(idPrefix).discarded",
                     labelKey: "catchRecord.checkYourAnswers.label.weightDiscarded",
                     value: "\(discarded) kg",
-                    changeRoute: changeRoute
+                    changeRoute: changeRoute,
+                    gearName: gearName
                 )
             )
         }

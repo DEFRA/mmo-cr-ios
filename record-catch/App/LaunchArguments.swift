@@ -30,6 +30,7 @@ struct LaunchArguments {
         case catchRecordDraft = "-uiTestCatchRecordDraft"
         case catchRecordNew = "-uiTestCatchRecordNew"
         case catchRecordAddPort = "-uiTestCatchRecordAddPort"
+        case catchRecordConfirmSamePort = "-uiTestCatchRecordConfirmSamePort"
         case catchRecordSelectPort = "-uiTestCatchRecordSelectPort"
         case catchRecordSelectGear = "-uiTestCatchRecordSelectGear"
         case catchRecordCheckYourAnswers = "-uiTestCatchRecordCheckYourAnswers"

@@ -66,10 +66,21 @@ final class AddPortViewModel {
     }
 
     /// The route to push after a successful save. Pure and independent of async work, so it is
-    /// unit-testable directly (first entry and departure both return to departure).
+    /// unit-testable directly.
+    ///
+    /// First-time entry (`returnPhase == nil`, no favourites yet) routes to the new
+    /// "Was `<port>` your departure and return port?" confirmation screen, since neither port has
+    /// been decided yet. Returning from an existing select screen (`returnPhase` set) keeps the
+    /// previous behaviour and routes straight back to that screen — by then one port may already
+    /// be fixed, so the same-port question no longer applies.
     var completionRoute: CatchRecordRoute {
-        let phase = returnPhase ?? .departure
-        return .selectPort(phase: phase, vessel: vessel, referenceNumber: referenceNumber)
+        guard let returnPhase else {
+            guard let selectedPort else {
+                return .selectPort(phase: .departure, vessel: vessel, referenceNumber: referenceNumber)
+            }
+            return .confirmSamePort(vessel: vessel, referenceNumber: referenceNumber, port: selectedPort)
+        }
+        return .selectPort(phase: returnPhase, vessel: vessel, referenceNumber: referenceNumber)
     }
 
     /// Loads the searchable port list up front so the field can filter locally. Failures leave the

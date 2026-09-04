@@ -102,7 +102,11 @@ struct CatchLocationView: View {
             )
         )
         .frame(maxWidth: .infinity)
-        .aspectRatio(1, contentMode: .fit)
+        // Taller than square (3:4 width:height) so more of the subrectangle grid is visible at
+        // once. The map's zoom limits (see `OfflineMapView.minZoomDistance`/`maxZoomDistance`) are
+        // a hard, hardcoded metre range enforced natively by MapKit, independent of this view's
+        // aspect ratio.
+        .aspectRatio(3.0 / 4.0, contentMode: .fit)
         .accessibilityIdentifier("\(identifierPrefix).map")
         .overlay(alignment: .bottomLeading) {
             otherButton

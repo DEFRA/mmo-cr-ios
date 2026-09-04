@@ -37,11 +37,11 @@ final class SubrectangleAnnotationView: MKAnnotationView {
         // polygon layer, not by tapping the label itself.
         canShowCallout = false
 
-        // `.required` so a subrectangle code is never hidden by MapKit's collision handling — in
-        // particular, it always wins over an overlapping port name (`PortLabelAnnotationView` is
-        // `.defaultLow`), per the agreed label priority.
-        collisionMode = .rectangle
-        displayPriority = .required
+        // Collision handling deliberately turned off: MapKit's own collision system
+        // (`.rectangle`/`.required`, intended to always win over an overlapping port name) was
+        // causing subrectangle codes to be hidden unpredictably instead. `.none` guarantees every
+        // subrectangle code that `LabelVisibility` decides should be visible actually renders.
+        collisionMode = .none
 
         label.textAlignment = .center
         label.numberOfLines = 1

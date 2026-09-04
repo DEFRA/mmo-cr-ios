@@ -721,6 +721,24 @@
         }
       }
     },
+    "catchRecord.checkYourAnswers.change.accessibilityForGear": {
+      "comment": "Accessibility label for a per-gear Change link on Check your answers. %1$@ is the field label (e.g. Statistical area), %2$@ is the gear name.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Newid %1$@ ar gyfer %2$@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change %1$@ for %2$@"
+          }
+        }
+      }
+    },
     "catchRecord.checkYourAnswers.heading": {
       "comment": "H1 for the final read-only summary screen.",
       "extractionState": "manual",

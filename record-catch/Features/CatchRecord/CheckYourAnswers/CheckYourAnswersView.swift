@@ -57,7 +57,7 @@ struct CheckYourAnswersView: View {
     @ViewBuilder
     private func sectionView(_ section: CheckYourAnswersViewModel.Section) -> some View {
         VStack(alignment: .leading, spacing: AppSpacing.medium) {
-            Text(languageStore.localized(section.titleKey))
+            Text(sectionTitle(section))
                 .font(AppTypography.footerHeading)
                 .foregroundStyle(AppColors.textPrimary)
                 .accessibilityAddTraits(.isHeader)
@@ -67,6 +67,15 @@ struct CheckYourAnswersView: View {
                 rowView(row)
             }
         }
+    }
+
+    /// A section's heading text — looked up via `AppLanguageStore` for `titleKey`, or shown
+    /// directly for a `literalTitle` (e.g. a gear name, which is untranslated reference data).
+    private func sectionTitle(_ section: CheckYourAnswersViewModel.Section) -> String {
+        if let titleKey = section.titleKey {
+            return languageStore.localized(titleKey)
+        }
+        return section.literalTitle ?? ""
     }
 
     @ViewBuilder
@@ -85,7 +94,7 @@ struct CheckYourAnswersView: View {
             Spacer(minLength: AppSpacing.small)
 
             Button {
-                viewModel.change(to: row.changeRoute)
+                viewModel.change(to: row.changeRoute, resumingAtCheckYourAnswers: row.resumesAtCheckYourAnswers)
             } label: {
                 Text(languageStore.localized("catchRecord.checkYourAnswers.change"))
                     .font(AppTypography.bodySmall)
@@ -96,12 +105,24 @@ struct CheckYourAnswersView: View {
             }
             .buttonStyle(.plain)
             .accessibilityAddTraits(.isLink)
-            .accessibilityLabel(
-                "\(languageStore.localized("catchRecord.checkYourAnswers.change")) \(label)"
-            )
+            .accessibilityLabel(changeAccessibilityLabel(for: row, label: label))
             .accessibilityIdentifier("\(identifierPrefix).change.\(row.id)")
         }
         .accessibilityElement(children: .contain)
+    }
+
+    /// The "Change" control's accessibility label — disambiguated with the gear name for per-gear
+    /// rows (see GOV.UK Design System — Check answers), since the same field label (e.g.
+    /// "Statistical area") repeats once per gear section.
+    private func changeAccessibilityLabel(for row: CheckYourAnswersViewModel.Row, label: String) -> String {
+        guard let gearName = row.gearName else {
+            return "\(languageStore.localized("catchRecord.checkYourAnswers.change")) \(label)"
+        }
+        return String(
+            format: languageStore.localized("catchRecord.checkYourAnswers.change.accessibilityForGear"),
+            label,
+            gearName
+        )
     }
 }
 
@@ -112,15 +133,20 @@ private func previewDraft() -> CatchRecordDraft {
     draft.returnDate = Date()
     draft.departurePort = PortOption(name: "Plymouth")
     draft.returnPort = PortOption(name: "Plymouth")
-    draft.statisticalArea = "27.7.e"
-    draft.gear = GearOption.seineNets
+    let gear = GearOption.seineNets
         .withRequiredMeasurements([
             GearMeasurement(id: "meshSize", labelKey: "catchRecord.gear.measurement.meshSize", value: 80)
         ])
         .withVariableMeasurements([
             GearMeasurement(id: "timesShot", labelKey: "catchRecord.gear.variableMeasurement.timesShot", value: 5)
         ])
-    draft.speciesCaught = [SpeciesOption(id: "cod", name: "Atlantic cod (COD)", weightAboveMinimumKg: "250")]
+    draft.gearCatches = [
+        GearCatch(
+            gear: gear,
+            statisticalArea: "27.7.e",
+            speciesCaught: [SpeciesOption(id: "cod", name: "Atlantic cod (COD)", weightAboveMinimumKg: "250")]
+        )
+    ]
     draft.speciesNotLanded = [SpeciesOption(id: "cod", name: "Atlantic cod (COD)", weightAboveMinimumKg: "5")]
     return draft
 }

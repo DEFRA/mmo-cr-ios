@@ -80,22 +80,29 @@ final class SelectGearViewModel {
     /// Validates "Save and continue" and routes on when at least one gear is ticked and every ticked
     /// gear's variable measurements are valid whole numbers.
     ///
-    /// Routes to the catch-location screen for the selected gear (the first, in favourites order,
-    /// while only a single gear is implemented) with its captured variable measurements attached, so
-    /// later screens and "Check your answers" can read them from the draft.
+    /// Captures **every** ticked gear (in favourites order), each with its own captured variable
+    /// measurements attached, into `draft.gearCatches` — one entry per gear, ready for the
+    /// catch-location/species screens to fill in that gear's own statistical area and species
+    /// caught (see ADR-0011). Routes to the catch-location screen for the **first** confirmed gear;
+    /// the journey loops back here for each subsequent gear once its species screen is saved
+    /// (`CatchRecordRouting.speciesCompletionRoute`).
     func submit() {
         didAttemptSubmit = true
         guard !selection.isEmpty, selectedVariableMeasurementsAreValid else { return }
-        guard let gear = favourites.first(where: { selection.contains($0.id) }) else { return }
 
-        let captured = gear.variableMeasurements.map { measurement in
-            let raw = variableEntries[entryKey(gearID: gear.id, measurementID: measurement.id)] ?? ""
-            return measurement.withValue(GearMeasurementValidation.parse(raw))
-        }
-        let confirmedGear = gear.withVariableMeasurements(captured)
+        let confirmedGears: [GearOption] = favourites
+            .filter { selection.contains($0.id) }
+            .map { gear in
+                let captured = gear.variableMeasurements.map { measurement in
+                    let raw = variableEntries[entryKey(gearID: gear.id, measurementID: measurement.id)] ?? ""
+                    return measurement.withValue(GearMeasurementValidation.parse(raw))
+                }
+                return gear.withVariableMeasurements(captured)
+            }
+        guard let firstGear = confirmedGears.first else { return }
 
-        draft.gear = confirmedGear
-        router.push(.catchLocation(gear: confirmedGear, vessel: vessel, referenceNumber: referenceNumber))
+        draft.gearCatches = confirmedGears.map { GearCatch(gear: $0) }
+        router.push(.catchLocation(gear: firstGear, vessel: vessel, referenceNumber: referenceNumber))
     }
 
     /// Routes to the Add-gear search screen.

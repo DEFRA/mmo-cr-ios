@@ -71,26 +71,38 @@ and the journey continues straight into the port sub-journey.
 
 Ends the journey. Reached from the landing-storage sub-journey; a read-only summary of every value
 captured in `CatchRecordDraft`, each row pairing a label with a "Change" control that returns the
-user into the journey at the screen where that value was captured.
+user into the journey at the screen where that value was captured. See ADR-0011 for the per-gear
+model (`GearCatch`) this section renders.
 
 1. Caption "New catch record", display-only reference number header (`.referenceNumber`).
 2. H1 "Check your answers" (`.heading`).
-3. Four ordered sections (`.section.<id>`), each an H2-level heading:
+3. Ordered sections (`.section.<id>`), each an H2-level heading:
    - **Trip** (`.section.trip`) — vessel, departure date, return date, departure port, return
-     port, statistical area. Always rendered, even with zero rows if nothing has been captured yet.
-   - **Gear used** (`.section.gear`) — gear name plus its captured measurements (e.g. mesh size).
-     Always rendered.
-   - **Species caught** (`.section.speciesCaught`) — one row set per species landed (name + weight
-     above minimum size, plus below-minimum/discarded weights where captured). Omitted entirely
-     when no species have been recorded.
+     port. Always rendered, even with zero rows if nothing has been captured yet.
+   - **One section per selected gear** (`.section.gear.<gearId>`, titled by the gear's own name,
+     e.g. "Seine nets", since it is untranslated reference data rather than app copy) — that
+     gear's name, its captured required measurements (e.g. mesh size, Change → gear-measurements)
+     and variable measurements (e.g. times shot, Change → select-gear), **its own** statistical
+     area and the species caught **using that gear** (name + weight above minimum size, plus
+     below-minimum/discarded weights where captured). The subrectangle and species caught are
+     captured **per gear**, not once for the whole trip (ADR-0011) — a trip using two gears shows
+     two of these sections, one per gear.
    - **Species not landed** (`.section.speciesNotLanded`) — one row set per species kept
-     onboard/in keep pots (name + weight). Omitted entirely when empty.
+     onboard/in keep pots (name + weight). This remains a single, trip-level section (unlike
+     species caught) since it is asked once, after every gear's catch has been recorded. Omitted
+     entirely when empty.
 4. Each row (`.change.<rowId>`) shows a label + formatted value and a "Change" link
    (`AppColors.linkText`, underlined) that pushes the route for the screen where that value was
    captured (e.g. dates → trip-date screen, ports → select-port screen, area → catch-location map,
    vessel → select-vessel, gear → gear-measurements, species → the relevant weights screen).
-   Tapping Change **pushes forward** into the journey (not a pop) so the existing "Save and
-   continue" flow naturally returns here once the user re-confirms the changed value.
+   - For **trip-level** rows, tapping Change **pushes forward** into the journey (not a pop) so the
+     existing "Save and continue" flow naturally returns here once the user re-confirms the changed
+     value.
+   - For a **gear's statistical area or species-caught** row, tapping Change instead returns
+     **straight back** to Check your answers once that one gear's mini re-entry (catch-location map
+     → species screen) is saved, rather than continuing through any other selected gears' screens
+     (ADR-0011) — since walking through every other gear again would be a disproportionate
+     detour for what is usually a single-field correction.
 5. This is a **UI-only, unsubmitted** summary in this phase — there is no further "Submit" action
    past this screen; see the design spec's placeholder-next-step note for what comes after.
 
@@ -275,14 +287,33 @@ reveals a single whole-number field, "Number of times gear was shot on trip"
    error `catchRecord.gear.measurement.validation.wholeNumber` under the offending field. Unticked
    gears are never validated.
 
-On success the selected gear (with its captured variable values attached) is written to
-`CatchRecordDraft.gear` and the journey routes to the catch-location screen. "Add another gear"
-(`.addAnother`) opens the Add-gear search screen.
+On success **every** ticked gear (with its own captured variable values attached) is written to
+`CatchRecordDraft.gearCatches` — one entry per gear, in favourites order — and the journey routes
+to the catch-location screen for the **first** confirmed gear. "Add another gear" (`.addAnother`)
+opens the Add-gear search screen.
+
+### Multi-gear loop (see ADR-0011)
+
+The statistical area and species caught are captured **per gear**, not once for the whole trip:
+after "Which species did you catch with `<gear>`?" is saved, the journey checks whether more
+selected gears remain —
+
+- If so, it loops back to the catch-location map for the **next** gear (so the user repeats
+  "Where was most of your catch caught using `<gear>`?" → "Which species did you catch with
+  `<gear>`?" once per selected gear).
+- Otherwise (a single selected gear, or the last of several), it continues to the trip-level
+  "Will any of the catch not be landed straight away?" question, exactly as for a single gear.
+
+No numeric "gear 2 of 3" progress indicator is shown between loops — the gear-named heading on
+each screen is enough to orient the user.
 
 ### Check your answers
 
-The gear section shows the gear name, then required-measurement rows (Change → gear-measurements),
-then variable-measurement rows with their captured values (Change → this select-gear screen).
+One section per selected gear (titled by the gear's own name) shows that gear's name, then
+required-measurement rows (Change → gear-measurements), then variable-measurement rows with their
+captured values (Change → this select-gear screen), then that gear's own statistical area and
+species caught. Change on the area/species rows returns straight back to Check your answers once
+resaved, rather than looping through any other gears again (ADR-0011).
 
 ### Copy additions (en / cy)
 
@@ -308,3 +339,5 @@ then variable-measurement rows with their captured values (Change → this selec
 - The shared `CheckboxGroup` component was extended with an optional per-option conditional reveal
   (generic + backwards-compatible convenience init) — no existing DesignSystem component rendered a
   conditional reveal. Logged for governance (Delivery Architecture).
+
+See [ADR-0011](../adr/0011-per-gear-catch-grouping.md) for the per-gear `GearCatch` model and multi-gear journey loop this section relies on.

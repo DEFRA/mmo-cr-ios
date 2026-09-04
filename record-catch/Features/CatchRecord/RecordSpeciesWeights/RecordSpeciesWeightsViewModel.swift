@@ -113,8 +113,19 @@ final class RecordSpeciesWeightsViewModel {
 
     /// The route to push after saving. Pure and independent of async work, so it is directly
     /// unit-testable.
+    ///
+    /// See `CatchRecordRouting.speciesCompletionRoute(...)`: returns straight to Check your answers
+    /// when this gear's catch was reached by "Change" from there; otherwise loops back to the
+    /// catch-location screen for the next selected gear when more than one gear was chosen, or
+    /// continues to the trip-level landing-storage question once every gear is done (see ADR-0011).
     var completionRoute: CatchRecordRoute {
-        .landingStorage(referenceNumber: referenceNumber)
+        CatchRecordRouting.speciesCompletionRoute(
+            currentGearID: gear.id,
+            orderedGears: draft.orderedGears,
+            vessel: vessel,
+            referenceNumber: referenceNumber,
+            resumingAtCheckYourAnswers: draft.returnToCheckYourAnswersAfterSpecies
+        )
     }
 
     /// Routes to the Add-species search screen, returning here afterwards.
@@ -136,8 +147,8 @@ final class RecordSpeciesWeightsViewModel {
         )
     }
 
-    /// Writes captured weights for ticked species back to favourites and into the journey draft
-    /// (`draft.speciesCaught`), then routes on to the landing-storage sub-journey.
+    /// Writes captured weights for ticked species back to favourites and into this gear's own
+    /// `GearCatch` entry (`draft.gearCatches[…].speciesCaught` - see ADR-0011), then routes on.
     ///
     /// Validation is deferred, so any ticked species (with or without entered weights) is saved.
     func submit() async {
@@ -151,8 +162,12 @@ final class RecordSpeciesWeightsViewModel {
                 try await favouriteSpecies.addFavourite(recorded)
                 captured.append(recorded)
             }
-            draft.speciesCaught = captured
-            router.push(completionRoute)
+            if let index = draft.gearCatchIndex(forGearID: gear.id) {
+                draft.gearCatches[index].speciesCaught = captured
+            }
+            let route = completionRoute
+            draft.returnToCheckYourAnswersAfterSpecies = false
+            router.push(route)
         } catch {
             saveFailed = true
         }

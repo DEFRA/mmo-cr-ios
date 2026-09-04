@@ -119,15 +119,20 @@ struct UITestRootView<ProductionRoot: View>: View {
         draft.returnDate = Date(timeIntervalSince1970: 1_785_100_000)
         draft.departurePort = PortOption(name: "Plymouth")
         draft.returnPort = PortOption(name: "Plymouth")
-        draft.statisticalArea = "27.7.e"
-        draft.gear = GearOption.seineNets
+        let gear = GearOption.seineNets
             .withRequiredMeasurements([
                 GearMeasurement(id: "meshSize", labelKey: "catchRecord.gear.measurement.meshSize", value: 80)
             ])
             .withVariableMeasurements([
                 GearMeasurement(id: "timesShot", labelKey: "catchRecord.gear.variableMeasurement.timesShot", value: 5)
             ])
-        draft.speciesCaught = [SpeciesOption(name: "Atlantic cod (COD)").withWeights(above: "250", below: nil, discarded: nil)]
+        draft.gearCatches = [
+            GearCatch(
+                gear: gear,
+                statisticalArea: "27.7.e",
+                speciesCaught: [SpeciesOption(name: "Atlantic cod (COD)").withWeights(above: "250", below: nil, discarded: nil)]
+            )
+        ]
         draft.speciesNotLanded = [SpeciesOption(name: "Atlantic cod (COD)").withWeights(above: "5", below: nil, discarded: nil)]
         return draft
     }

@@ -79,7 +79,6 @@ final class GearMeasurementsViewModel {
         defer { isSaving = false }
         do {
             try await favouriteGears.addFavourite(savedGear)
-            draft.gear = savedGear
             router.push(completionRoute)
         } catch {
             saveFailed = true

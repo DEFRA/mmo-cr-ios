@@ -96,11 +96,30 @@ final class SelectGearViewModelTests: XCTestCase {
         ])
         XCTAssertNil(sut.errorKey)
         XCTAssertNil(sut.variableErrorKey(gearID: GearOption.seineNets.id, measurementID: "timesShot"))
-        XCTAssertEqual(draft.gear, expectedGear)
-        XCTAssertEqual(draft.gear?.variableMeasurements.first?.value, 5)
+        XCTAssertEqual(draft.gearCatches.map(\.gear), [expectedGear])
+        XCTAssertEqual(draft.gearCatches.first?.gear.variableMeasurements.first?.value, 5)
         XCTAssertEqual(
             router.path,
             [.catchLocation(gear: expectedGear, vessel: vessel, referenceNumber: referenceNumber)]
+        )
+    }
+
+    func test_submit_withMultipleTickedGears_capturesAllIntoDraft_inFavouritesOrder_andRoutesToFirst() async {
+        let router = CatchRecordRouter()
+        let draft = CatchRecordDraft()
+        let trawl = GearOption(name: "Trawl nets")
+        let sut = makeSUT(router: router, favourites: [seineNetsFavourite, trawl], draft: draft)
+        await sut.loadFavourites()
+        sut.selection = [seineNetsFavourite.id, trawl.id]
+        sut.variableEntries["\(GearOption.seineNets.id).timesShot"] = "5"
+
+        sut.submit()
+
+        XCTAssertEqual(draft.gearCatches.map(\.gear.name), ["Seine nets (not specified)", "Trawl nets"])
+        XCTAssertTrue(draft.gearCatches.allSatisfy { $0.statisticalArea == nil && $0.speciesCaught.isEmpty })
+        XCTAssertEqual(
+            router.path,
+            [.catchLocation(gear: draft.gearCatches[0].gear, vessel: vessel, referenceNumber: referenceNumber)]
         )
     }
 

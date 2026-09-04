@@ -336,13 +336,12 @@ final class CatchRecordUITests: XCTestCase {
     // MARK: - Check your answers
 
     @MainActor
-    func test_checkYourAnswers_showsHeadingAndAllFourSections() {
+    func test_checkYourAnswers_showsHeadingAndAllSections() {
         let app = launch("-uiTestCatchRecordCheckYourAnswers")
 
         XCTAssertTrue(element(app, "CatchRecord.checkYourAnswers.heading").waitForExistence(timeout: 5))
         XCTAssertTrue(element(app, "CatchRecord.checkYourAnswers.section.trip").exists)
-        XCTAssertTrue(element(app, "CatchRecord.checkYourAnswers.section.gear").exists)
-        XCTAssertTrue(element(app, "CatchRecord.checkYourAnswers.section.speciesCaught").exists)
+        XCTAssertTrue(element(app, "CatchRecord.checkYourAnswers.section.gear.Seine nets (not specified)").exists)
         XCTAssertTrue(element(app, "CatchRecord.checkYourAnswers.section.speciesNotLanded").exists)
     }
 

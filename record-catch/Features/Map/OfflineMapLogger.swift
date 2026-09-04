@@ -1,4 +1,3 @@
-import CoreLocation
 import Foundation
 import OSLog
 
@@ -17,19 +16,5 @@ enum OfflineMapLogger {
 
     static func logLoadFailure(layer: String, error: Error) {
         logger.error("Failed to load offline map layer \(layer, privacy: .public): \(String(describing: error), privacy: .public)")
-    }
-
-    /// Debug-only aid for tuning `OfflineMapView`'s hard zoom limits (`maxZoomInDistance`/
-    /// `maxZoomOutDistance`) by eye — no personal/catch data involved, just camera geometry, so
-    /// `.public` privacy is fine here too. Callers gate this behind `#if DEBUG` themselves so it
-    /// never runs (or costs anything) in a release build.
-    static func logZoomLevel(distanceMetres: CLLocationDistance, latitudeDelta: Double, longitudeDelta: Double) {
-        logger.debug(
-            """
-            Zoom: distance=\(Int(distanceMetres), privacy: .public)m \
-            latitudeDelta=\(latitudeDelta, format: .fixed(precision: 4), privacy: .public) \
-            longitudeDelta=\(longitudeDelta, format: .fixed(precision: 4), privacy: .public)
-            """
-        )
     }
 }

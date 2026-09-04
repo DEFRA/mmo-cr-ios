@@ -30,9 +30,43 @@ supplies them as parameters. Content, top to bottom:
    "J.Smith".
 4. **`PaginationControls`** + pure `PaginationState` — renders "← Previous · Showing 1 to 4 of 4 ·
    [1] · Next →". Stubbed single page (so Previous/Next are hidden per the GDS pattern).
-5. **`ExpandableHelpSection`** — "Understanding catch record statuses" (Unsent / Submitted / Amended
-   / Late), copy routed through `home.help.*`.
-6. **`PrimaryButton`** "Create a new catch record" (`Home.createRecordButton`), inert.
+5. **`ExpandableHelpSection`** (generic `content:` form) — "How to record a catch"
+   (`home.howToRecord.title`, `Home.howToRecord`), collapsed by default. Four sub-sections, each a
+   bold sub-heading (`.isHeader` trait) plus paragraph(s), copy routed through `home.howToRecord.*`:
+   - *What you need to do* — 2 paragraphs.
+   - *When to create your record* — intro paragraph, a 3-item bullet list (quota species /
+     non-quota species / crossed an ICES boundary), then a 24-hour deadline paragraph.
+   - *Special cases: ICES areas* — 2 paragraphs (ICES 4c/7d/7e boundary-crossing rule; the "use the
+     mobile app" offline note — see content flag below).
+   - *Get help with your record* — phone number + opening hours, call-cost notice, out-of-hours
+     automated-line notice.
+6. **`ExpandableHelpSection`** (`items:` form) — "Understanding catch record statuses"
+   (`Home.statusHelp`) (Unsent / Submitted / Amended / Late), copy routed through `home.help.*`.
+7. **`PrimaryButton`** "Create a new catch record" (`Home.createRecordButton`), inert.
+
+### `ExpandableHelpSection` generalised (direct edit, backward-compatible)
+
+`ExpandableHelpSection` is now generic over its content (`ExpandableHelpSection<Content: View>`),
+taking either:
+- the original `items: [HelpItem]` heading+paragraph pairs (unchanged behaviour; used by
+  `TripFormDemoView`, `TripsOverviewDemoView` and Home's status-help section), or
+- an arbitrary `@ViewBuilder content:` closure, used by the new "How to record a catch" section,
+  which doesn't fit the flat heading+paragraph shape (it has paragraphs *and* a bullet list under
+  some sub-headings).
+
+Both forms share the same disclosure chevron/title button, expand/collapse state, and left-hand
+rule styling. An optional `accessibilityIdentifier:` parameter was added so each disclosure's
+button carries a stable identifier (`Home.howToRecord` / `Home.statusHelp`) for UI tests, without
+changing the existing `#Preview` or other call sites' behaviour.
+
+### Content flag — "use the mobile app" copy
+
+The supplied design mock's *Special cases: ICES areas* block includes: "If you need to record
+catches without an internet connection, use the mobile app." Since this screen **is** the mobile
+app, that sentence reads oddly in place — it appears to be copy reused verbatim from the
+equivalent GOV.UK web-service page. Per the design authority rule, the copy was shipped **as
+designed**; this is flagged here (and in the delivery change summary) for content/product review
+rather than silently reworded.
 
 ### Table is a direct edit (not backward-compatible)
 
@@ -156,6 +190,23 @@ dropping data.
 | `home.help.late.heading` | Late: | Hwyr: _(needs_review)_ |
 | `home.help.late.description` | This record was received by the MMO after the required reporting timeframe. | Derbyniwyd y cofnod hwn gan yr MMO ar ôl yr amserlen adrodd ofynnol. _(needs_review)_ |
 | `home.createRecord.button` | Create a new catch record | Creu cofnod dalfa newydd _(needs_review)_ |
+| `home.howToRecord.title` | How to record a catch | Sut i gofnodi dalfa _(needs_review)_ |
+| `home.howToRecord.whatYouNeedToDo.heading` | What you need to do | Beth sydd angen i chi ei wneud _(needs_review)_ |
+| `home.howToRecord.whatYouNeedToDo.body1` | You must record all catches unless an exemption applies. | Rhaid i chi gofnodi pob dalfa oni bai bod eithriad yn berthnasol. _(needs_review)_ |
+| `home.howToRecord.whatYouNeedToDo.body2` | We'll ask whether you caught any species subject to catch limits (quota). | Byddwn yn gofyn a wnaethoch ddal unrhyw rywogaethau sy'n ddarostyngedig i derfynau dalfa (cwota). _(needs_review)_ |
+| `home.howToRecord.whenToCreate.heading` | When to create your record | Pryd i greu eich cofnod _(needs_review)_ |
+| `home.howToRecord.whenToCreate.intro` | Create your catch record before moving your catch off the vessel if you: | Crëwch eich cofnod dalfa cyn symud eich dalfa oddi ar y llong os ydych chi: _(needs_review)_ |
+| `home.howToRecord.whenToCreate.bullet.quota` | caught any species subject to catch limits (quota) | wedi dal unrhyw rywogaethau sy'n ddarostyngedig i derfynau dalfa (cwota) _(needs_review)_ |
+| `home.howToRecord.whenToCreate.bullet.nonQuota` | caught only non-quota species | wedi dal rhywogaethau di-gwota yn unig _(needs_review)_ |
+| `home.howToRecord.whenToCreate.bullet.icesBoundary` | crossed an ICES area boundary while fishing | wedi croesi ffin ardal ICES wrth bysgota _(needs_review)_ |
+| `home.howToRecord.whenToCreate.deadline` | You need to create your catch record within 24 hours of landing your catch. | Mae angen i chi greu eich cofnod dalfa o fewn 24 awr i lanio eich dalfa. _(needs_review)_ |
+| `home.howToRecord.icesAreas.heading` | Special cases: ICES areas | Achosion arbennig: ardaloedd ICES _(needs_review)_ |
+| `home.howToRecord.icesAreas.body1` | If you fish in or cross ICES areas 4c, 7d or 7e, you must create a separate catch record each time you cross a boundary. | Os ydych chi'n pysgota yn ardaloedd ICES 4c, 7d neu 7e neu'n eu croesi, rhaid i chi greu cofnod dalfa ar wahân bob tro y byddwch yn croesi ffin. _(needs_review)_ |
+| `home.howToRecord.icesAreas.body2` | If you need to record catches without an internet connection, use the mobile app. | Os oes angen i chi gofnodi dalfeydd heb gysylltiad rhyngrwyd, defnyddiwch yr ap symudol. _(needs_review)_ — **content flag**: reads oddly on a screen that *is* the mobile app; see note above. |
+| `home.howToRecord.getHelp.heading` | Get help with your record | Cael help gyda'ch cofnod _(needs_review)_ |
+| `home.howToRecord.getHelp.phone` | Call 0300 020 3788, Monday to Friday, 9am to 5pm. | Ffoniwch 0300 020 3788, dydd Llun i ddydd Gwener, 9am i 5pm. _(needs_review)_ |
+| `home.howToRecord.getHelp.callCost` | Calls to 03 numbers cost the same as calls to 01 or 02 numbers. | Mae galwadau i rifau 03 yn costio'r un fath â galwadau i rifau 01 neu 02. _(needs_review)_ |
+| `home.howToRecord.getHelp.outOfHours` | Outside these hours, leave a catch record on our automated line. | Y tu allan i'r oriau hyn, gadewch gofnod dalfa ar ein llinell awtomataidd. _(needs_review)_ |
 
 Welsh strings needing confirmation by a Welsh speaker are tracked via the String Catalog
 `state: needs_review` plus a translator `comment` — never via a user-visible `[CY-TODO]` prefix.
@@ -171,6 +222,8 @@ Welsh strings needing confirmation by a Welsh speaker are tracked via the String
 | `Home.pagination.showing` | Showing-range text |
 | `Home.createRecordButton` | Primary "Create a new catch record" button |
 | `Home.table.row.<n>.date` | Table date-cell link for row `n` |
+| `Home.howToRecord` | "How to record a catch" disclosure button |
+| `Home.statusHelp` | "Understanding catch record statuses" disclosure button |
 
 Table date-cell links are addressed in tests via their stable accessibility **identifier**
 (`Home.table.row.<n>.date`); the user-facing accessibility **label** ("View submission for &lt;date&gt;")

@@ -61,15 +61,30 @@ final class TripDateViewModel {
     }
 
     /// Runs validation for "Save and continue" and routes on when the date is valid.
+    ///
+    /// When reached via "Change" from Check your answers (`draft.returnToCheckYourAnswers`), only
+    /// this one date is being corrected, so the journey returns straight there instead of
+    /// continuing into the other date/late-submission-nudge/port screens (see ADR-0013).
     func submit() {
         didAttemptSubmit = true
         guard let date = DateEntryField.parsedDate(from: value) else { return }
         switch phase {
         case .departure:
             draft.departureDate = date
-            router.push(.tripDate(phase: .return, vessel: vessel, referenceNumber: referenceNumber, departureDate: date))
         case .return:
             draft.returnDate = date
+        }
+
+        if draft.returnToCheckYourAnswers {
+            draft.returnToCheckYourAnswers = false
+            router.push(.checkYourAnswers(referenceNumber: referenceNumber))
+            return
+        }
+
+        switch phase {
+        case .departure:
+            router.push(.tripDate(phase: .return, vessel: vessel, referenceNumber: referenceNumber, departureDate: date))
+        case .return:
             // Records must be submitted within 24 hours of a trip ending. When the trip ended more
             // than 24 hours ago, interpose the late-submission nudge before the port sub-journey so
             // the user can double-check the trip end date (see `SubmissionNudge`).

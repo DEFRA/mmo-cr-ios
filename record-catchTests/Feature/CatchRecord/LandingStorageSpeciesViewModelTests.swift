@@ -14,11 +14,13 @@ final class LandingStorageSpeciesViewModelTests: XCTestCase {
         XCTAssertFalse(sut.saveFailed)
     }
 
-    func test_loadFavourites_loadsList_andSeedsPreviouslyCapturedWeights() async {
-        let cod = SpeciesOption(name: "Atlantic cod (COD)").withWeights(above: "12", below: nil, discarded: nil)
+    func test_loadFavourites_loadsList_andSeedsPreviouslyCapturedWeightsFromDraft() async {
+        let cod = SpeciesOption(name: "Atlantic cod (COD)")
         let hake = SpeciesOption(name: "Hake (HKE)")
         let provider = StubFavouriteSpeciesProvider(initialFavourites: [cod, hake])
-        let sut = LandingStorageSpeciesViewModel(referenceNumber: referenceNumber, router: CatchRecordRouter(), favouriteSpecies: provider)
+        let draft = CatchRecordDraft()
+        draft.speciesNotLanded = [cod.withWeights(above: "12", below: nil, discarded: nil)]
+        let sut = LandingStorageSpeciesViewModel(referenceNumber: referenceNumber, router: CatchRecordRouter(), favouriteSpecies: provider, draft: draft)
 
         await sut.loadFavourites()
 
@@ -26,6 +28,21 @@ final class LandingStorageSpeciesViewModelTests: XCTestCase {
         XCTAssertTrue(sut.isSelected(cod.id))
         XCTAssertFalse(sut.isSelected(hake.id))
         XCTAssertEqual(sut.weightEntries[cod.id], "12")
+    }
+
+    /// Regression test: the shared favourites store is also written to by every per-gear catch
+    /// screen (`RecordSpeciesWeightsViewModel`), so a species' `weightAboveMinimumKg` there may hold
+    /// a *gear's* catch weight rather than this trip-level "not landing straight away" weight. This
+    /// screen must not confuse the two.
+    func test_loadFavourites_doesNotSeedFromSharedFavouritesStore_evenWhenItCarriesAGearsWeight() async {
+        let codWithGearsWeight = SpeciesOption(name: "Atlantic cod (COD)").withWeights(above: "250", below: nil, discarded: nil)
+        let provider = StubFavouriteSpeciesProvider(initialFavourites: [codWithGearsWeight])
+        let sut = LandingStorageSpeciesViewModel(referenceNumber: referenceNumber, router: CatchRecordRouter(), favouriteSpecies: provider, draft: CatchRecordDraft())
+
+        await sut.loadFavourites()
+
+        XCTAssertFalse(sut.isSelected(codWithGearsWeight.id))
+        XCTAssertNil(sut.weightEntries[codWithGearsWeight.id])
     }
 
     func test_toggleSelection_addsThenRemoves() {

@@ -17,10 +17,17 @@ import SwiftUI
 /// - **The initial camera position is set once**, from `initialCoordinate`/`initialSpan`, in
 ///   `makeUIView` — never in `updateUIView` — so the caller's subsequent pan/zoom is preserved
 ///   across SwiftUI view updates and the map is never refit to the GeoJSON extent.
-/// - **Zoom is hard-limited** to a fixed distance range (see `maxZoomOutDistance`/
-///   `maxZoomInDistance`) so a pinch/double-tap gesture can never zoom out past a near-global,
-///   context-free view or in past a single flat-shaded polygon's fill — both of which would just
-///   show a blank, uninformative screen given these are static vector layers, not real imagery.
+/// - **Zoom is hard-limited** to a fixed *distance* range (see `minZoomDistance`/`maxZoomDistance`)
+///   via `MKMapView.CameraZoomRange`, so a pinch/double-tap gesture can never zoom out past a
+///   near-global, context-free view or in past a single flat-shaded polygon's fill — both of
+///   which would just show a blank, uninformative screen given these are static vector layers,
+///   not real imagery. `CameraZoomRange` is enforced by MapKit itself, continuously, for the
+///   whole duration of the gesture — not corrected afterwards — so the limit is a genuine hard
+///   stop with no overshoot/bounce-back.
+/// - **Panning is hard-limited** to roughly 100 miles from the map's *initial* centre (see
+///   `MapPanLimit`) via `MKMapView.cameraBoundary` — the same "MapKit enforces it natively,
+///   continuously" approach as the zoom limit, so a user can't pan away to an empty, unrelated
+///   part of the world and lose all context relative to where the screen opened.
 ///
 /// Usage:
 /// ```swift
@@ -34,19 +41,44 @@ import SwiftUI
 /// ```
 struct OfflineMapView: UIViewRepresentable {
 
-    /// Hard zoom-out limit. The offline layers are three fixed, bundled GeoJSON datasets — beyond
-    /// this distance there's nothing more to see: just a shrinking sliver of the UK's coastline
-    /// adrift in a mostly blank white "sea" (see `BlankOfflineTileOverlay`), with no real-world
-    /// basemap context to make that useful. Comfortably covers the whole-UK default view (see
-    /// `CatchLocationView`'s ~12°×8° default span) with room to spare, while still stopping a pinch
-    /// gesture well short of a near-global view.
-    private static let maxZoomOutDistance: CLLocationDistance = 200_000
+    /// Hard zoom-in limit, in metres from the camera to the map's centre — shows roughly a 2×2
+    /// block of subrectangles on `CatchLocationView`'s 3:4 map (measured empirically; see
+    /// `maxZoomDistance`'s doc comment for why this has to be measured against a real view size).
+    /// Every layer here is flat-shaded vector geometry with no finer detail to reveal (no imagery,
+    /// no street-level content), so zooming in past this just shows an increasingly large blank
+    /// fill of whichever single subrectangle/land polygon the user is inside — never useful, and
+    /// it makes it easy to lose all on-screen context. Plain hardcoded metres; adjust freely.
+    static let minZoomDistance: CLLocationDistance = 115_000
 
-    /// Hard zoom-in limit. Every layer here is flat-shaded vector geometry with no finer detail to
-    /// reveal (no imagery, no street-level content) — zooming in past this just shows an
-    /// increasingly large blank fill of whichever single subrectangle/land polygon the user is
-    /// inside, which is never useful and makes it easy to lose all on-screen context.
-    private static let maxZoomInDistance: CLLocationDistance = 60_000
+    /// Hard zoom-out limit, in metres from the camera to the map's centre — shows roughly a 4×4
+    /// block of subrectangles on `CatchLocationView`'s 3:4 map. Plain hardcoded metres; adjust
+    /// freely.
+    ///
+    /// Must comfortably exceed the distance the *default/initial* framing settles at
+    /// (`PortMapCamera.subrectangleGridSpan`, ~3×3) — `cameraZoomRange` clamps **every** region
+    /// change, including the very first `setRegion` call in `makeUIView`, so if this limit is
+    /// smaller than what the default framing needs, the initial view silently ends up more zoomed
+    /// in than intended (this bit us once already: 150,000m here was tighter than the ~174,600m
+    /// the 3×3 default needs on this view's aspect ratio, so the app opened showing only ~2
+    /// squares wide instead of ~3). `centerCoordinateDistance` is both latitude- and
+    /// view-size-dependent (see `docs/design-specs` history for the full explanation), so these
+    /// two constants were measured directly against `CatchLocationView`'s real 3:4 frame rather
+    /// than computed from the grid cell size in the abstract.
+    static let maxZoomDistance: CLLocationDistance = 235_000
+
+    /// The hard zoom limit MapKit applies to the map view — see `minZoomDistance`/
+    /// `maxZoomDistance`. Built once, from those two fixed constants, so a failure here can only
+    /// ever be a programmer error (`minZoomDistance` set higher than `maxZoomDistance`), not a
+    /// runtime condition to handle gracefully.
+    static let cameraZoomRange: MKMapView.CameraZoomRange = {
+        guard let range = MKMapView.CameraZoomRange(
+            minCenterCoordinateDistance: minZoomDistance,
+            maxCenterCoordinateDistance: maxZoomDistance
+        ) else {
+            preconditionFailure("minZoomDistance must not exceed maxZoomDistance")
+        }
+        return range
+    }()
 
     let initialCoordinate: CLLocationCoordinate2D
     let initialSpan: MKCoordinateSpan
@@ -96,16 +128,21 @@ struct OfflineMapView: UIViewRepresentable {
         map.layer.borderColor = MapColorPalette.mapBorder.cgColor
         map.layer.borderWidth = 1.5
 
-        // Hard zoom limits (see the doc comments on `maxZoomOutDistance`/`maxZoomInDistance`) — set
-        // once, here, alongside the initial camera position; unlike the region itself this never
-        // needs to change on subsequent SwiftUI updates, so `updateUIView` never touches it either.
-        // The initialiser is failable only if `min > max`, which these fixed constants never are,
-        // but a `nil` result is handled instead of force-unwrapped (see swift-swiftui instructions).
-        if let zoomRange = MKMapView.CameraZoomRange(
-            minCenterCoordinateDistance: Self.maxZoomInDistance,
-            maxCenterCoordinateDistance: Self.maxZoomOutDistance
+        // Hard zoom limit — see `minZoomDistance`/`maxZoomDistance`. Enforced natively by MapKit
+        // itself, continuously, for the whole gesture — never overshoots and snaps back.
+        map.cameraZoomRange = Self.cameraZoomRange
+
+        // Hard pan limit — see `MapPanLimit`. Same native-enforcement approach as the zoom limit
+        // above. `CameraBoundary(coordinateRegion:)` is failable (only for a degenerate region,
+        // never expected for a real coordinate here); fail-soft rather than crash, matching this
+        // file's existing fail-soft loading philosophy — a missing boundary just means unlimited
+        // panning, not a broken map.
+        if let boundary = MKMapView.CameraBoundary(
+            coordinateRegion: MapPanLimit.boundaryRegion(center: initialCoordinate)
         ) {
-            map.setCameraZoomRange(zoomRange, animated: false)
+            map.cameraBoundary = boundary
+        } else {
+            OfflineMapLogger.logLoadFailure(layer: "panBoundary", error: OfflineMapDataError.invalidGeoJSON)
         }
 
         // Entirely offline base layer — see `BlankOfflineTileOverlay`. Added first/lowest so the

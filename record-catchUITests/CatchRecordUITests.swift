@@ -247,8 +247,13 @@ final class CatchRecordUITests: XCTestCase {
         XCTAssertTrue(newlynResult.waitForExistence(timeout: 5))
         newlynResult.tap()
 
-        // Lands on the departure select screen with the new favourite present.
+        // Lands on "Was Newlyn your departure and return port?" — answering "No" continues into
+        // the separate departure/return select screens as before.
         app.buttons["CatchRecord.addPort.saveContinue"].tap()
+        XCTAssertTrue(element(app, "CatchRecord.confirmSamePort.heading").waitForExistence(timeout: 5))
+        element(app, "CatchRecord.confirmSamePort.option.no").tap()
+        app.buttons["CatchRecord.confirmSamePort.saveContinue"].tap()
+
         XCTAssertTrue(element(app, "CatchRecord.selectPort.departure.heading").waitForExistence(timeout: 5))
         app.buttons["CatchRecord.selectPort.departure.saveContinue"].tap()
         // No selection → inline error.
@@ -278,16 +283,65 @@ final class CatchRecordUITests: XCTestCase {
         XCTAssertTrue(element(app, "CatchRecord.addPort.heading").waitForExistence(timeout: 5))
     }
 
+    // MARK: - Confirm same port (Was `<port>` your departure and return port?)
+
+    @MainActor
+    func test_confirmSamePort_submitWithNoSelection_showsInlineError() {
+        let app = launch("-uiTestCatchRecordConfirmSamePort")
+
+        XCTAssertTrue(element(app, "CatchRecord.confirmSamePort.heading").waitForExistence(timeout: 5))
+        app.buttons["CatchRecord.confirmSamePort.saveContinue"].tap()
+
+        XCTAssertTrue(element(app, "CatchRecord.confirmSamePort.error").waitForExistence(timeout: 5))
+        // Did not route on: still on the confirm screen.
+        XCTAssertTrue(element(app, "CatchRecord.confirmSamePort.heading").exists)
+    }
+
+    @MainActor
+    func test_confirmSamePort_yes_bypassesSelectPortScreens_reachesGearSubJourneyDirectly() {
+        let app = launch("-uiTestCatchRecordConfirmSamePort")
+
+        XCTAssertTrue(element(app, "CatchRecord.confirmSamePort.heading").waitForExistence(timeout: 5))
+        element(app, "CatchRecord.confirmSamePort.option.yes").tap()
+        app.buttons["CatchRecord.confirmSamePort.saveContinue"].tap()
+
+        // Skips both "Which port did you leave from?"/"Which port did you return to?" screens and
+        // lands straight in the gear sub-journey (no favourite gears seeded → Add-gear screen).
+        XCTAssertTrue(element(app, "CatchRecord.addGear.heading").waitForExistence(timeout: 5))
+        XCTAssertFalse(element(app, "CatchRecord.selectPort.departure.heading").exists)
+        XCTAssertFalse(element(app, "CatchRecord.selectPort.return.heading").exists)
+    }
+
+    @MainActor
+    func test_confirmSamePort_no_continuesToSelectPortDeparture() {
+        let app = launch("-uiTestCatchRecordConfirmSamePort")
+
+        XCTAssertTrue(element(app, "CatchRecord.confirmSamePort.heading").waitForExistence(timeout: 5))
+        element(app, "CatchRecord.confirmSamePort.option.no").tap()
+        app.buttons["CatchRecord.confirmSamePort.saveContinue"].tap()
+
+        XCTAssertTrue(element(app, "CatchRecord.selectPort.departure.heading").waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    func test_confirmSamePort_addAnotherPort_returnsToAddPortSearch() {
+        let app = launch("-uiTestCatchRecordConfirmSamePort")
+
+        XCTAssertTrue(element(app, "CatchRecord.confirmSamePort.heading").waitForExistence(timeout: 5))
+        app.buttons["CatchRecord.confirmSamePort.addAnother"].tap()
+
+        XCTAssertTrue(element(app, "CatchRecord.addPort.heading").waitForExistence(timeout: 5))
+    }
+
     // MARK: - Check your answers
 
     @MainActor
-    func test_checkYourAnswers_showsHeadingAndAllFourSections() {
+    func test_checkYourAnswers_showsHeadingAndAllSections() {
         let app = launch("-uiTestCatchRecordCheckYourAnswers")
 
         XCTAssertTrue(element(app, "CatchRecord.checkYourAnswers.heading").waitForExistence(timeout: 5))
         XCTAssertTrue(element(app, "CatchRecord.checkYourAnswers.section.trip").exists)
-        XCTAssertTrue(element(app, "CatchRecord.checkYourAnswers.section.gear").exists)
-        XCTAssertTrue(element(app, "CatchRecord.checkYourAnswers.section.speciesCaught").exists)
+        XCTAssertTrue(element(app, "CatchRecord.checkYourAnswers.section.gear.SX").exists)
         XCTAssertTrue(element(app, "CatchRecord.checkYourAnswers.section.speciesNotLanded").exists)
     }
 
@@ -422,8 +476,8 @@ final class CatchRecordUITests: XCTestCase {
 
     private enum GearID {
         static let heading = "CatchRecord.selectGear.heading"
-        static let option = "CatchRecord.selectGear.option.seine nets (not specified)"
-        static let timesShotField = "CatchRecord.selectGear.variable.seine nets (not specified).timesShot"
+        static let option = "CatchRecord.selectGear.option.sx"
+        static let timesShotField = "CatchRecord.selectGear.variable.sx.timesShot"
         static let saveContinue = "CatchRecord.selectGear.saveContinue"
         static let catchLocationHeading = "CatchRecord.catchLocation.heading"
     }

@@ -67,6 +67,7 @@
 				Features/Map/MapLandLoader.swift,
 				Features/Map/MapLandOverlay.swift,
 				Features/Map/MapLandOverlayRenderer.swift,
+				Features/Map/MapPanLimit.swift,
 				Features/Map/MapView.swift,
 				Features/Map/OfflineMapCoordinator.swift,
 				Features/Map/OfflineMapDataError.swift,

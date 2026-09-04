@@ -61,4 +61,82 @@ final class CatchRecordRoutingTests: XCTestCase {
         let route = CatchRecordRouting.gearEntryRoute(hasFavourites: true, vessel: "ACHILLES", referenceNumber: "REF")
         XCTAssertEqual(route, .selectGear(vessel: "ACHILLES", referenceNumber: "REF"))
     }
+
+    // MARK: - Species completion decision (multi-gear loop — see ADR-0011)
+
+    func test_speciesCompletionRoute_forSingleGear_returnsLandingStorage() {
+        let seineNets = GearOption.seineNets
+        let route = CatchRecordRouting.speciesCompletionRoute(
+            currentGearID: seineNets.id,
+            orderedGears: [seineNets],
+            vessel: "ACHILLES",
+            referenceNumber: "REF",
+            resumingAtCheckYourAnswers: false
+        )
+        XCTAssertEqual(route, .landingStorage(referenceNumber: "REF"))
+    }
+
+    func test_speciesCompletionRoute_forFirstOfMultipleGears_loopsToCatchLocationForNextGear() {
+        let seineNets = GearOption.seineNets
+        let trawl = GearOption(name: "Trawl nets")
+        let route = CatchRecordRouting.speciesCompletionRoute(
+            currentGearID: seineNets.id,
+            orderedGears: [seineNets, trawl],
+            vessel: "ACHILLES",
+            referenceNumber: "REF",
+            resumingAtCheckYourAnswers: false
+        )
+        XCTAssertEqual(route, .catchLocation(gear: trawl, vessel: "ACHILLES", referenceNumber: "REF"))
+    }
+
+    func test_speciesCompletionRoute_forMiddleOfMultipleGears_loopsToCatchLocationForNextGear() {
+        let first = GearOption(name: "Gear A")
+        let middle = GearOption(name: "Gear B")
+        let last = GearOption(name: "Gear C")
+        let route = CatchRecordRouting.speciesCompletionRoute(
+            currentGearID: middle.id,
+            orderedGears: [first, middle, last],
+            vessel: "ACHILLES",
+            referenceNumber: "REF",
+            resumingAtCheckYourAnswers: false
+        )
+        XCTAssertEqual(route, .catchLocation(gear: last, vessel: "ACHILLES", referenceNumber: "REF"))
+    }
+
+    func test_speciesCompletionRoute_forLastOfMultipleGears_returnsLandingStorage() {
+        let seineNets = GearOption.seineNets
+        let trawl = GearOption(name: "Trawl nets")
+        let route = CatchRecordRouting.speciesCompletionRoute(
+            currentGearID: trawl.id,
+            orderedGears: [seineNets, trawl],
+            vessel: "ACHILLES",
+            referenceNumber: "REF",
+            resumingAtCheckYourAnswers: false
+        )
+        XCTAssertEqual(route, .landingStorage(referenceNumber: "REF"))
+    }
+
+    func test_speciesCompletionRoute_forUnknownGear_returnsLandingStorage() {
+        let route = CatchRecordRouting.speciesCompletionRoute(
+            currentGearID: "unknown",
+            orderedGears: [.seineNets],
+            vessel: "ACHILLES",
+            referenceNumber: "REF",
+            resumingAtCheckYourAnswers: false
+        )
+        XCTAssertEqual(route, .landingStorage(referenceNumber: "REF"))
+    }
+
+    func test_speciesCompletionRoute_whenResumingAtCheckYourAnswers_returnsThereEvenWithMoreGearsRemaining() {
+        let seineNets = GearOption.seineNets
+        let trawl = GearOption(name: "Trawl nets")
+        let route = CatchRecordRouting.speciesCompletionRoute(
+            currentGearID: seineNets.id,
+            orderedGears: [seineNets, trawl],
+            vessel: "ACHILLES",
+            referenceNumber: "REF",
+            resumingAtCheckYourAnswers: true
+        )
+        XCTAssertEqual(route, .checkYourAnswers(referenceNumber: "REF"))
+    }
 }

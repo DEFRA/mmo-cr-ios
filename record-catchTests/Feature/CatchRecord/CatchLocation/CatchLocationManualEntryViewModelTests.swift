@@ -53,12 +53,13 @@ final class CatchLocationManualEntryViewModelTests: XCTestCase {
 
     func test_submit_withSelection_writesStatisticalAreaIntoDraft() {
         let draft = CatchRecordDraft()
+        draft.gearCatches = [GearCatch(gear: .seineNets)]
         let sut = makeSUT(router: CatchRecordRouter(), draft: draft)
         sut.selectedCode = "38E95"
 
         sut.submit()
 
-        XCTAssertEqual(draft.statisticalArea, "38E95")
+        XCTAssertEqual(draft.gearCatches.first?.statisticalArea, "38E95")
     }
 
     func test_submit_withSelection_routesToSpeciesSubJourney() async {

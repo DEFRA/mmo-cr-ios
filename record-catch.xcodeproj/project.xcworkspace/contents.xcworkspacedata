@@ -4,4 +4,11 @@
    <FileRef
       location = "self:">
    </FileRef>
+   <Group
+      location = "group:scripts"
+      name = "scripts">
+      <FileRef
+         location = "group:add_home_how_to_record_strings.py">
+      </FileRef>
+   </Group>
 </Workspace>

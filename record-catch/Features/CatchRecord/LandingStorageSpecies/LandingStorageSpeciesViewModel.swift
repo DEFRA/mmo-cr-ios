@@ -46,13 +46,24 @@ final class LandingStorageSpeciesViewModel {
         self.draft = draft
     }
 
-    /// Loads favourite species and seeds any previously-captured weights into the field.
+    /// Loads favourite species and seeds the field with **this screen's own** previously-captured
+    /// weights, if any (`draft.speciesNotLanded` — see ADR-0011), so returning to edit this answer
+    /// (e.g. via "Change" from Check your answers) shows what was already recorded here.
+    ///
+    /// Deliberately does **not** seed from the shared `FavouriteSpeciesProviding` store's own
+    /// weights: that store is shared with every per-gear catch screen and `addFavourite` overwrites
+    /// a species' weights by id regardless of which screen recorded them, so it would show
+    /// whichever gear's catch weight was saved most recently instead of this trip-level,
+    /// not-landed weight, which is a distinct value. Failures leave the list empty.
     func loadFavourites() async {
         let loaded = (try? await favouriteSpecies.favouriteSpecies()) ?? []
         favourites = loaded
-        for species in loaded where !species.weightAboveMinimumKg.isEmpty {
+
+        let recordedByID = Dictionary(uniqueKeysWithValues: draft.speciesNotLanded.map { ($0.id, $0) })
+        for species in loaded {
+            guard let recorded = recordedByID[species.id], !recorded.weightAboveMinimumKg.isEmpty else { continue }
             selection.insert(species.id)
-            weightEntries[species.id] = species.weightAboveMinimumKg
+            weightEntries[species.id] = recorded.weightAboveMinimumKg
         }
     }
 
@@ -83,8 +94,8 @@ final class LandingStorageSpeciesViewModel {
             for species in favourites where selection.contains(species.id) {
                 let captured = species.withWeights(
                     above: weightEntries[species.id] ?? "",
-                    below: species.weightBelowMinimumKg,
-                    discarded: species.weightLegallyDiscardedKg
+                    below: nil,
+                    discarded: nil
                 )
                 try await favouriteSpecies.addFavourite(captured)
                 kept.append(captured)

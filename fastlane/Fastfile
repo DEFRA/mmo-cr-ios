@@ -40,7 +40,7 @@ platform :ios do
     )
   end
 
-  desc "Distribute the latest uploaded DEV build to the External Testers V2 group on TestFlight."
+  desc "Distribute the latest uploaded DEV build to external tester groups on TestFlight."
   lane :distribute_dev_external do
     api_key = app_store_connect_api_key(
       key_id: ENV.fetch("ASC_KEY_ID"),
@@ -49,12 +49,17 @@ platform :ios do
       is_key_content_base64: true
     )
 
+    external_groups = ENV.fetch("ASC_EXTERNAL_TESTING_GROUPS", "")
+                         .split(",")
+                         .map(&:strip)
+                         .reject(&:empty?)
+
     upload_to_testflight(
       api_key: api_key,
       app_identifier: "mmo.catchrecordingdev.ios",
       distribute_only: true,
       distribute_external: true,
-      groups: ["External Testers V2"],
+      groups: external_groups,
       notify_external_testers: true,
       skip_waiting_for_build_processing: false
     )

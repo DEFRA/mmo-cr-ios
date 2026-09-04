@@ -59,6 +59,11 @@ platform :ios do
     #   api_key: api_key
     # )
 
+    # Build number: use explicit CURRENT_PROJECT_VERSION override (e.g. from workflow_dispatch)
+    # or fallback to monotonic GITHUB_RUN_NUMBER.
+    project_version = ENV["CURRENT_PROJECT_VERSION"].to_s.strip
+    build_number = project_version.empty? ? ENV.fetch("GITHUB_RUN_NUMBER") : project_version
+
     build_app(
       project: PROJECT,
       scheme: SCHEME,
@@ -67,7 +72,7 @@ platform :ios do
       output_directory: "build",
       clean: true,
       xcargs: [
-        "CURRENT_PROJECT_VERSION=#{ENV.fetch('GITHUB_RUN_NUMBER')}",
+        "CURRENT_PROJECT_VERSION=#{build_number}",
         "DEVELOPMENT_TEAM=#{ENV.fetch('APPLE_TEAM_ID')}",
         "CODE_SIGN_STYLE=Manual",
         "CODE_SIGN_IDENTITY=\"Apple Distribution\"",

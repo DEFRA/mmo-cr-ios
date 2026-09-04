@@ -36,13 +36,13 @@ with the release pipeline.
 
 New [.github/workflows/ios-release.yml](../../.github/workflows/ios-release.yml):
 
-- Triggers on `v*` tags (plus `workflow_dispatch` with a `marketing_version` input for dry runs).
+- Triggers on `v*` tags (plus `workflow_dispatch` with mandatory `marketing_version` and `project_version` inputs).
 - **Non-cancelling** concurrency so an in-flight release is never auto-cancelled.
 - Least-privilege `permissions: contents: read`.
 - A single `dev-build-internal` job on the ungated `dev` GitHub Environment, which scopes the Dev
   App Store Connect and signing secrets to this job only.
 - Marketing version is sourced from the Xcode project's `MARKETING_VERSION` (single source of truth,
-  see decision 3a); the build number is the `GITHUB_RUN_NUMBER`.
+  see decision 3a); the build number defaults to `GITHUB_RUN_NUMBER` on tag triggers, or the mandatory `project_version` input for `workflow_dispatch`.
 
 ### 3. Fastlane `release_dev` lane
 

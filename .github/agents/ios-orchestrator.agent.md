@@ -16,7 +16,7 @@ verifies and reports — it does not implement code itself and never fetches JIR
 data directly.: ''
 name: iOS Orchestrator
 tools: ['read', 'search', 'web', 'todo', 'agent', 'fetch_webpage', 'file_search', 'grep_search', 'get_errors', 'get_terminal_output', 'list_dir', 'read_file', 'run_subagent', 'run_in_terminal', 'validate_cves', 'xcode/XcodeListNavigatorIssues', 'xcode/GetTestList', 'xcode/XcodeWrite', 'xcode/XcodeGrep', 'xcode/XcodeGetCurrentFile', 'xcode/RunSomeTests', 'xcode/XcodeRefreshCodeIssuesInFile', 'xcode/XcodeUpdate', 'xcode/XcodeMV', 'xcode/XcodeLS', 'xcode/RunAllTests', 'xcode/RenderPreview', 'xcode/XcodeMakeDir', 'xcode/GetBuildLog', 'xcode/XcodeListWindows', 'xcode/XcodeGlob', 'xcode/XcodeRM', 'xcode/XcodeRead', 'xcode/DocumentationSearch', 'xcode/BuildProject', 'xcode/RunCodeSnippet']
-model: Claude Opus 4.8 (copilot)
+model: Claude Opus 5 (copilot)
 argument-hint: Describe the complex iOS task, feature or change to plan and coordinate.
 agents:
   - iOS Planner

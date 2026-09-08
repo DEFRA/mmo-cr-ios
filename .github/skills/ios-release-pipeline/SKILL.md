@@ -21,13 +21,14 @@ working framework: plan → get approval → implement → validate.
 ## Before you build (Read → Clarify → Plan)
 1. **Read** the repo: existing `.github/workflows/`, any `fastlane/`, `Gemfile`, `*.xcconfig`, the Xcode
    scheme name and bundle identifier, and existing ADRs under `docs/adr/`.
-2. **Clarify** the ADR-gated decisions, in priority order, and record each as an **ADR before finalising
-   the pipeline**:
-   - **Configuration strategy** (gates everything): runtime **Option A** (build once, promote the binary)
-     vs build-time **Option B** (rebuild per environment, promote a fixed source commit). Prefer Option A.
-   - **Bundle-ID / versioning reconciliation:** the project currently ships a single hard-coded
-     `mmo.catchrecordingdev.ios` with hard-coded version/build values; the target is
-     `uk.gov.defra.catchrecording[.nonprod]` with CI-derived versioning. Confirm the authoritative model.
+2. **Confirm the frozen model** and record/keep the ADRs (create any that are missing **before**
+   finalising the pipeline):
+   - **Configuration strategy (frozen): build-time Option B** — three separate apps, each compiled with its
+     own `.xcconfig`; promote the **commit**, not a single binary.
+   - **Bundle-ID / versioning (frozen):** three identities — `mmo.catchrecordingdev.ios` /
+     `mmo.catchrecordingtest.ios` / `mmo.catchrecording.ios` — as three App Store Connect apps; marketing
+     version from the tag, `CFBundleVersion` from the release run number, per-app namespaces. Reconcile the
+     project's current single hard-coded `mmo.catchrecordingdev.ios`.
    - **Signing strategy:** Fastlane Match (recommended) vs manual `.p12` + profile vs Xcode Cloud managed
      signing (only if exportable keys are prohibited).
 3. **Plan and get approval** before creating files (Standard/Complex work).
@@ -40,7 +41,7 @@ This is a single-app iOS repo (app sources under `record-catch/`, tests under `r
 .github/
   workflows/
     ios-ci.yml         # PR + main: SwiftLint, build, test+coverage, SonarCloud
-    ios-release.yml    # tag / dispatch: Fastlane beta + release behind gated Environments
+    ios-release.yml    # tag / dispatch: one run, six gated per-environment jobs (Fastlane)
     codeql.yml         # SEPARATE CodeQL advanced-setup SAST workflow (Swift)
   dependabot.yml       # SEPARATE Dependabot config (github-actions, swift/SPM, bundler)
 fastlane/
@@ -73,45 +74,49 @@ Sonar-readable report and run the scan in `ios-ci.yml`. The SonarCloud quality g
 source of truth; wire it as a required check on `main`.
 
 ### 4. Release workflow — `.github/workflows/ios-release.yml`
-- Triggers: `push` tags matching `ios-v*`, plus `workflow_dispatch` (with a destination input).
-- Build + sign the release candidate **once**, then promote that exact App Store Connect build through
-  **three gated jobs**, each using a GitHub Environment with **required reviewers** (see step 6):
-  - `internal_beta` → `environment: mobile-internal-beta` → Fastlane `beta` lane → TestFlight **internal**
-    QA group.
-  - `uat` → `environment: mobile-uat` → distribute the **same** build → TestFlight **external** UAT group
-    (after internal QA sign-off; no rebuild).
-  - `release` → `environment: mobile-production` → Fastlane `release` lane → App Store phased release
-    (selects the **same** UAT-approved build; after UAT sign-off).
+- Triggers: `push` tags matching `v*`, plus `workflow_dispatch` (with a marketing-version input).
+- **One workflow run, six sequential gated jobs.** A GitHub Environment approval gates the **start of a
+  job**, so each distinct manual approval is its own job/environment. Every build job builds from the
+  **same tagged commit**; the promotion jobs never rebuild.
+  - `dev-build-internal` → `environment: dev` (no gate) → build+sign **Dev** → Dev **internal** TestFlight.
+  - `test-build-internal` → `environment: test` (Approval A) → build+sign **Test** → Test **internal** TestFlight.
+  - `test-promote-external` → `environment: test-external` (Approval B) → assign the **same** Test build → **external** UAT group (no rebuild).
+  - `prod-build-internal` → `environment: prod` (Approval C) → build+sign **Prod** → Prod **internal** TestFlight.
+  - `prod-promote-external` → `environment: prod-external` (Approval D) → assign the **same** Prod build → **external** group (no rebuild).
+  - `prod-appstore-submit` → `environment: prod-appstore` (Approval E) → submit the **same** Prod build's version → App Store phased release.
 - Derive the marketing version from the tag and the build number from the **release** `GITHUB_RUN_NUMBER`
   (do **not** query App Store Connect). Embed the short Git SHA + tag as read-only `Info.plist` metadata
   (e.g. `GitCommitSHA`) for traceability — not as the build number.
 - Never cancel an in-flight release (`concurrency` with `cancel-in-progress: false`).
-- **Build-once-and-promote holds only under runtime configuration (Option A).** Under build-time
-  configuration (Option B) the production job is a controlled rebuild from the exact UAT-approved commit,
-  evidenced by equivalence (same commit SHA, pinned toolchain, locked dependencies).
+- **Build-per-environment from one tested commit.** The three apps have distinct bundle IDs, so a single
+  binary cannot move between environments; equivalence is evidenced by the same commit SHA, pinned
+  toolchain and locked dependencies. External-TestFlight promotion is a no-rebuild App Store Connect
+  metadata action.
 
 ### 5. Fastlane
-- **`Appfile`** — app identifier + App Store Connect Team ID (no secrets).
+- **`Appfile`** — app identifier(s) + App Store Connect Team ID (no secrets).
 - **`Fastfile`** lanes:
   - `test` — run unit/UI tests on a simulator destination (used by CI).
-  - `build_release` — App Store Connect API key auth (`app_store_connect_api_key`), `match(readonly: true)`
-    or manual profile import into a **temporary keychain**, `increment_build_number(build_number:
-    ENV['GITHUB_RUN_NUMBER'])`, then `build_app`/`gym` with `export_method: "app-store"`. Build + sign
-    **once**; the same exported build is promoted through every stage.
-  - `beta` — `build_release` then `upload_to_testflight` distributing to the **internal** QA group
-    (`mobile-internal-beta`), then to the **external** UAT group (`mobile-uat`) once internal QA signs off;
-    attach tester-friendly release notes. Do **not** rebuild between the two groups.
-  - `release` — select the **same** TestFlight-tested build and `upload_to_app_store` (submit for review;
-    **phased release** on). Uploading, submitting for review and releasing are separate actions.
+  - A parametrised private `build_and_upload` — App Store Connect API key auth (`app_store_connect_api_key`),
+    `match(readonly: true)` (or manual profile import into a **temporary keychain**), `build_app`/`gym`
+    with `export_method: "app-store"` and the environment's configuration/bundle ID, marketing version +
+    build number passed as `xcargs` (so the tagged commit is built unchanged), then
+    `upload_to_testflight(distribute_external: false)` to that app's **internal** group.
+  - Per-environment release lanes (`release_dev` / `release_test` / `release_prod`) call `build_and_upload`
+    with the matching identity/configuration.
+  - `promote_external` — **no rebuild**: assign the already-uploaded build to that app's **external** group
+    (App Store Connect API) + Beta App Review.
+  - `submit_appstore` — submit the **Prod** app's build for review with **phased release** on. Uploading,
+    submitting for review and releasing are separate actions.
 - **Signing:** implement whichever the ADR selected (Match → manual `.p12` → Xcode Cloud managed signing).
-  If Match, add a `Matchfile` and use a read-only, encrypted cert repo; if manual, import a base64 `.p12` +
-  profile into a temporary keychain deleted at job end. Either way use the **App Store Connect API key**,
-  never Apple ID + password, and never commit signing assets.
+  If Match, add a `Matchfile` and use a read-only, encrypted cert repo covering the **three** bundle IDs;
+  if manual, import a base64 `.p12` + profile into a temporary keychain deleted at job end. Either way use
+  the **App Store Connect API key**, never Apple ID + password, and never commit signing assets.
 
 ### 6. GitHub Environments & secrets
-- Create **three** Environments — **`mobile-internal-beta`**, **`mobile-uat`** and
-  **`mobile-production`** — each with **required reviewer(s)** (all three gates are manual for this app;
-  prevent self-approval where supported) and restrict deployments to `main` + `ios-v*` tags.
+- Create **six** Environments — **`dev`** (ungated), **`test`** (A), **`test-external`** (B), **`prod`**
+  (C), **`prod-external`** (D) and **`prod-appstore`** (E) — each gated (except `dev`) by **required
+  reviewer(s)** (prevent self-approval where supported) and restrict deployments to `main` + `v*` tags.
 - Scope release secrets to each Environment (not the repo), exposing only what that stage needs:
   `APP_STORE_CONNECT_KEY_ID`, `APP_STORE_CONNECT_ISSUER_ID`, `APP_STORE_CONNECT_API_KEY_BASE64`, and — if
   using Match — `MATCH_PASSWORD`, `MATCH_GIT_BASIC_AUTHORIZATION`; plus `SONAR_TOKEN` (keep SonarCloud
@@ -140,13 +145,13 @@ leaks, follow the DEFRA
 process.
 
 ### 10. ADRs & README
-Record the ADR-gated decisions under `docs/adr/` **before** finalising the pipeline: the **configuration
-strategy & environment promotion** (runtime vs build-time — gates the build/release model), the
-**bundle-ID & environment model** (reconciled with the current project settings), the **signing
-strategy**, the **build-once & immutable promotion** policy, the **three-gate TestFlight distribution**
-model, and the **release model** (trunk-based, tag-driven, no release branches). Add ADRs for Xcode Cloud
-or cloud real-device testing (UK data residency) only if adopted. Update the README with the release
-process, required secrets, environments and how to cut a release.
+Record the release ADRs under `docs/adr/`: **build-time configuration & environment promotion** (Option B),
+the **three-application bundle-ID & environment model** (`dev`/`test`/`prod` as separate App Store Connect
+apps), the **signing strategy**, the **build-per-environment promotion & commit-equivalence** policy, the
+**single-workflow six-environment release topology** (per-stage + per-external-promotion gates), and the
+**release model** (trunk-based, tag-driven, no release branches). Add ADRs for Xcode Cloud or cloud
+real-device testing (UK data residency) only if adopted. Update the README with the release process,
+required secrets, environments and how to cut a release.
 
 ## Standards to honour
 - [ci-cd instructions](../../instructions/ci-cd.instructions.md) (tooling, branching, versioning,

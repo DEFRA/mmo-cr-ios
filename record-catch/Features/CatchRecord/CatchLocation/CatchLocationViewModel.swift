@@ -46,6 +46,9 @@ final class CatchLocationViewModel {
         self.favouriteSpecies = favouriteSpecies
         self.draft = draft
         self.departurePort = draft.departurePort
+        // Pre-fills this gear's previously-captured statistical area when restarting a resumed
+        // draft from the beginning (see ADR-0015 decision #1).
+        self.selectedArea = draft.gearCatchIndex(forGearID: gear.id).flatMap { draft.gearCatches[$0].statisticalArea }
     }
 
     /// Current inline error, once a submit has been attempted.

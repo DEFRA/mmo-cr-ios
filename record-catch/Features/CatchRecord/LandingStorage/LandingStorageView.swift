@@ -7,8 +7,8 @@ struct LandingStorageView: View {
     @Environment(AppLanguageStore.self) private var languageStore
     @State private var viewModel: LandingStorageViewModel
 
-    init(referenceNumber: String, router: CatchRecordRouter) {
-        _viewModel = State(wrappedValue: LandingStorageViewModel(referenceNumber: referenceNumber, router: router))
+    init(referenceNumber: String, router: CatchRecordRouter, draft: CatchRecordDraft = CatchRecordDraft()) {
+        _viewModel = State(wrappedValue: LandingStorageViewModel(referenceNumber: referenceNumber, router: router, draft: draft))
     }
 
     private let identifierPrefix = "CatchRecord.landingStorage"

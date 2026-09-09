@@ -10,8 +10,18 @@ struct SubmissionConfirmationView: View {
     @Environment(AppLanguageStore.self) private var languageStore
     @State private var viewModel: SubmissionConfirmationViewModel
 
-    init(referenceNumber: String, router: CatchRecordRouter) {
-        _viewModel = State(wrappedValue: SubmissionConfirmationViewModel(referenceNumber: referenceNumber, router: router))
+    init(
+        referenceNumber: String,
+        router: CatchRecordRouter,
+        draft: CatchRecordDraft = CatchRecordDraft(),
+        draftStore: CatchRecordDraftStoring = InMemoryCatchRecordDraftStore()
+    ) {
+        _viewModel = State(wrappedValue: SubmissionConfirmationViewModel(
+            referenceNumber: referenceNumber,
+            router: router,
+            draft: draft,
+            draftStore: draftStore
+        ))
     }
 
     private let identifierPrefix = "CatchRecord.submissionConfirmation"

@@ -12,7 +12,7 @@ import Foundation
 /// Each is modelled as an ordered list because a gear can define several of either, or none at all
 /// (e.g. "Mechanised dredges" / "Miscellaneous gear (diving)" define no measurements — see
 /// `AddGearViewModel.submit()`, which skips the now-empty measurements screen for such a gear).
-nonisolated struct GearOption: Identifiable, Hashable, Sendable {
+nonisolated struct GearOption: Identifiable, Hashable, Sendable, Codable {
     let id: String
     let name: String
     /// Fixed measurements of the gear, captured when it is added to favourites (empty until captured).
@@ -72,7 +72,7 @@ nonisolated struct GearOption: Identifiable, Hashable, Sendable {
 /// Modelled generically so a gear can define one or many of each kind. `value` is `nil` until the
 /// user enters it. Measurements are whole numbers per the design ("All gear measurements must be
 /// whole numbers").
-nonisolated struct GearMeasurement: Identifiable, Hashable, Sendable {
+nonisolated struct GearMeasurement: Identifiable, Hashable, Sendable, Codable {
     let id: String
     /// String Catalog key for the field label (e.g. "Mesh size (mm)").
     let labelKey: String

@@ -20,7 +20,7 @@ nonisolated struct PortCoordinate: Hashable, Sendable, Codable {
 ///
 /// Explicitly `nonisolated` so it can be constructed and read from any actor context (the stubbed
 /// providers run off the main actor); a plain `Sendable` value type has no isolation needs.
-nonisolated struct PortOption: Identifiable, Hashable, Sendable {
+nonisolated struct PortOption: Identifiable, Hashable, Sendable, Codable {
     let id: String
     let name: String
     let coordinate: PortCoordinate?

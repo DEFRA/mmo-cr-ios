@@ -6,8 +6,13 @@ struct DraftActionView: View {
     @Environment(AppLanguageStore.self) private var languageStore
     @State private var viewModel: DraftActionViewModel
 
-    init(row: SubmissionRow, router: CatchRecordRouter) {
-        _viewModel = State(wrappedValue: DraftActionViewModel(row: row, router: router))
+    init(
+        row: SubmissionRow,
+        router: CatchRecordRouter,
+        draft: CatchRecordDraft = CatchRecordDraft(),
+        draftStore: CatchRecordDraftStoring = InMemoryCatchRecordDraftStore()
+    ) {
+        _viewModel = State(wrappedValue: DraftActionViewModel(row: row, router: router, draft: draft, draftStore: draftStore))
     }
 
     var body: some View {

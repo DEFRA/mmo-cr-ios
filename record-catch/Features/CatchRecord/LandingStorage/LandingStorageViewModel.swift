@@ -3,8 +3,8 @@ import Foundation
 /// View model for the "Is there any catch you will not be landing straight away?" screen.
 ///
 /// A Yes/No radio question reached after the species weights screen. "Yes" continues to the
-/// "Which species are you not landing straight away?" screen; "No" continues to the placeholder
-/// next step. The answer is not yet persisted.
+/// "Which species are you not landing straight away?" screen; "No" continues to Check your
+/// answers.
 @MainActor
 @Observable
 final class LandingStorageViewModel {
@@ -17,9 +17,15 @@ final class LandingStorageViewModel {
 
     private let router: CatchRecordRouter
 
-    init(referenceNumber: String, router: CatchRecordRouter) {
+    init(referenceNumber: String, router: CatchRecordRouter, draft: CatchRecordDraft = CatchRecordDraft()) {
         self.referenceNumber = referenceNumber
         self.router = router
+        // Pre-fills "Yes" when restarting a resumed draft that already recorded species not
+        // landed (see ADR-0015 decision #1). There is no persisted "No" answer to infer from an
+        // empty list, so it is left unselected rather than guessed.
+        if !draft.speciesNotLanded.isEmpty {
+            self.selection = .yes
+        }
     }
 
     /// Current inline error, once a submit has been attempted.

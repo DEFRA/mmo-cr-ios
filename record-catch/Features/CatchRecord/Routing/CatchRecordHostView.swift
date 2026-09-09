@@ -208,6 +208,14 @@ struct CatchRecordHostView: View {
                 router: router,
                 favouriteSpecies: favouriteSpecies
             )
+        case .removeSpecies(let gear, let vessel, let referenceNumber):
+            RemoveSpeciesView(
+                gear: gear,
+                vessel: vessel,
+                referenceNumber: referenceNumber,
+                router: router,
+                draft: draft
+            )
         case .landingStorage(let referenceNumber):
             LandingStorageView(referenceNumber: referenceNumber, router: router, draft: draft)
         case .landingStorageSpecies(let referenceNumber):

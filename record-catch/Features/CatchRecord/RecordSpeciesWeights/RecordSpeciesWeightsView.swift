@@ -67,10 +67,14 @@ struct RecordSpeciesWeightsView: View {
             }
             .accessibilityIdentifier("\(identifierPrefix).addSpecies")
 
-            // Dummy link for now — remove-species behaviour is not yet implemented.
-            LinkButton(title: languageStore.localized("catchRecord.species.record.removeSpecies")) {
+            // Only shown once this gear's catch has something saved to remove (see
+            // `RecordSpeciesWeightsViewModel.hasRecordedSpecies`).
+            if viewModel.hasRecordedSpecies {
+                LinkButton(title: languageStore.localized("catchRecord.species.record.removeSpecies")) {
+                    viewModel.removeSpecies()
+                }
+                .accessibilityIdentifier("\(identifierPrefix).removeSpecies")
             }
-            .accessibilityIdentifier("\(identifierPrefix).removeSpecies")
 
             if viewModel.saveFailed {
                 errorBanner

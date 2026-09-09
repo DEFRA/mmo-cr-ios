@@ -203,4 +203,33 @@ final class RecordSpeciesWeightsViewModelTests: XCTestCase {
         XCTAssertTrue(sut.isBelowRevealed(codWithWeight.id))
         XCTAssertEqual(sut.belowEntries[codWithWeight.id], "10")
     }
+
+    // MARK: - Remove species
+
+    func test_hasRecordedSpecies_isFalse_whenGearHasNoSpeciesSavedToDraft() {
+        let sut = makeSUT(favourites: [], router: CatchRecordRouter(), draft: singleGearDraft())
+
+        XCTAssertFalse(sut.hasRecordedSpecies)
+    }
+
+    func test_hasRecordedSpecies_isTrue_whenGearHasSpeciesSavedToDraft() {
+        let cod = SpeciesOption(name: "Atlantic cod (COD)")
+        let draft = CatchRecordDraft()
+        draft.gearCatches = [GearCatch(gear: .seineNets, speciesCaught: [cod])]
+        let sut = makeSUT(favourites: [cod], router: CatchRecordRouter(), draft: draft)
+
+        XCTAssertTrue(sut.hasRecordedSpecies)
+    }
+
+    func test_removeSpecies_pushesRemoveSpecies_forThisGear() {
+        let router = CatchRecordRouter()
+        let sut = makeSUT(favourites: [], router: router, draft: singleGearDraft())
+
+        sut.removeSpecies()
+
+        XCTAssertEqual(
+            router.path,
+            [.removeSpecies(gear: .seineNets, vessel: vessel, referenceNumber: referenceNumber)]
+        )
+    }
 }

@@ -40,6 +40,15 @@ platform :ios do
     )
   end
 
+  desc "Sync the DEV signing assets from the Match repo into the local keychain (read-only)."
+  lane :certificates do
+    match(
+      type: "appstore",
+      app_identifier: "mmo.catchrecordingdev.ios",
+      readonly: true
+    )
+  end
+
   desc "Distribute the latest uploaded DEV build to external tester groups on TestFlight."
   lane :distribute_dev_external do
     api_key = app_store_connect_api_key(
@@ -74,15 +83,21 @@ platform :ios do
       is_key_content_base64: true
     )
 
-    # POC (DEV): manual .p12 signing — Fastlane Match is bypassed (see docs/adr/0011-release-pipeline.md).
-    # The signing certificate and provisioning profile are imported into a temporary keychain by the
-    # release workflow before this lane runs. Match remains the target for the full test/prod rollout.
-    # match(
-    #   type: "appstore",
-    #   app_identifier: options[:app_identifier],
-    #   readonly: true,
-    #   api_key: api_key
-    # )
+    # Creates an isolated temporary keychain on the runner so signing assets never touch the login keychain.
+    setup_ci
+
+    match(
+      type: "appstore",
+      app_identifier: options[:app_identifier],
+      readonly: true,
+      api_key: api_key,
+      # Path to the SSH deploy key written by the release workflow; nil locally, where the agent's key is used.
+      git_private_key: ENV["MATCH_GIT_PRIVATE_KEY"]
+    )
+
+    profile_mapping = lane_context[SharedValues::MATCH_PROVISIONING_PROFILE_MAPPING] || {}
+    profile_name = profile_mapping[options[:app_identifier]] ||
+                   ENV.fetch("sigh_#{options[:app_identifier]}_appstore_profile-name")
 
     # Version overrides: only set xcargs when explicit environment variables are provided
     # (e.g. via manual workflow_dispatch). Otherwise, use project.pbxproj build settings directly.
@@ -90,7 +105,7 @@ platform :ios do
       "DEVELOPMENT_TEAM=#{ENV.fetch('APPLE_TEAM_ID')}",
       "CODE_SIGN_STYLE=Manual",
       "CODE_SIGN_IDENTITY=\"Apple Distribution\"",
-      "PROVISIONING_PROFILE_SPECIFIER=\"#{ENV.fetch('PROVISIONING_PROFILE_NAME')}\""
+      "PROVISIONING_PROFILE_SPECIFIER=\"#{profile_name}\""
     ]
 
     project_version = ENV["CURRENT_PROJECT_VERSION"].to_s.strip
@@ -111,7 +126,7 @@ platform :ios do
         signingStyle: "manual",
         teamID: ENV.fetch("APPLE_TEAM_ID"),
         provisioningProfiles: {
-          options[:app_identifier] => ENV.fetch("PROVISIONING_PROFILE_NAME")
+          options[:app_identifier] => profile_name
         }
       }
     )

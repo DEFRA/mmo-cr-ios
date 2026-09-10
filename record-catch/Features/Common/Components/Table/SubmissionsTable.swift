@@ -106,6 +106,8 @@ struct SubmissionsTable: View {
         headerStatus: String,
         headerCreatedBy: String,
         viewSubmissionFormat: String = "View submission for %@",
+        // No-op default: intentionally empty for previews/tests that render the table without
+        // wiring row-tap navigation; real call sites (e.g. `HomeView`) always supply a handler.
         onDateTapped: @escaping (SubmissionRow) -> Void = { _ in }
     ) {
         self.rows = rows

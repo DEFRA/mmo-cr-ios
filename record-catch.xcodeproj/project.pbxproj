@@ -48,7 +48,6 @@
 				Features/Common/DesignSystem/AppTypography.swift,
 				Features/Common/Views/HeaderNavigating.swift,
 				Features/Common/Views/ScrollViewProxyEnvironment.swift,
-				Features/Common/Views/TripsOverviewDemoView.swift,
 				Features/Common/Views/ViewFooter.swift,
 				Features/Common/Views/ViewHeader.swift,
 				Features/Common/Views/ViewTemplate.swift,

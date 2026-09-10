@@ -18,10 +18,6 @@ This folder contains reusable GDS-inspired SwiftUI components and shared design 
 - `Components/Form/SearchDropdownField.swift`: list-only search field with dropdown results.
 - `Components/Form/TextInputField.swift`: text input that also supports secure password entry.
 
-## Demo screen
-
-- `Views/TripFormDemoView.swift` composes all reusable controls in one GDS-style flow.
-
 ## Data source (stub)
 
 - `Data/PortOptionProvider.swift` provides static options now and can be replaced by SwiftData-backed options later.

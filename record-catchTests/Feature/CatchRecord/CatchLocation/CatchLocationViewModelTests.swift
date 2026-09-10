@@ -96,6 +96,35 @@ final class CatchLocationViewModelTests: XCTestCase {
         XCTAssertNil(draft.gearCatches[1].statisticalArea)
     }
 
+    // MARK: - Departure port (map framing)
+
+    func test_departurePort_isReadFromDraft_withCoordinate() {
+        // Guards the map's port-framing input: the view model must surface the draft's departure
+        // port *including its coordinate*, since `PortMapCamera` frames on `coordinate` and falls
+        // back to the whole-UK view when it's nil (see `PortMapCamera.initialRegion`).
+        let draft = CatchRecordDraft()
+        draft.departurePort = PortOption(
+            name: "Plymouth",
+            coordinate: PortCoordinate(latitude: 50.3660, longitude: -4.1427)
+        )
+        let sut = CatchLocationViewModel(
+            gear: .seineNets,
+            vessel: vessel,
+            referenceNumber: referenceNumber,
+            router: CatchRecordRouter(),
+            draft: draft
+        )
+
+        XCTAssertEqual(sut.departurePort?.name, "Plymouth")
+        XCTAssertEqual(sut.departurePort?.coordinate?.latitude, 50.3660)
+        XCTAssertEqual(sut.departurePort?.coordinate?.longitude, -4.1427)
+    }
+
+    func test_departurePort_withNoPortInDraft_isNil() {
+        let sut = makeSUT(router: CatchRecordRouter())
+        XCTAssertNil(sut.departurePort)
+    }
+
     // MARK: - Manual entry ("Other" button)
 
     func test_enterManualEntry_pushesManualEntryRoute() {

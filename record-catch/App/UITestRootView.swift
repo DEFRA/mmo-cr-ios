@@ -71,8 +71,20 @@ struct UITestRootView<ProductionRoot: View>: View {
                     ])
                 ])
             )
-        } else if launchArguments.contains(.catchRecordCheckYourAnswers) {
-            // Fully-populated draft → Check your answers screen, for UI testing the summary/Change
+        } else if launchArguments.contains(.catchLocation) {
+            // Boots straight to the catch-location map for a new record, seeding a departure port
+            // that carries a REAL coordinate so the map frames on it (see `PortMapCamera`) — the
+            // hand-built ports elsewhere in this file have `coordinate == nil`, which makes the map
+            // fall back to the whole-UK default and hides the port-framing behaviour.
+            CatchRecordHostView(
+                initialRoute: .catchLocation(
+                    gear: .seineNets,
+                    vessel: "ACHILLES",
+                    referenceNumber: "A1234520260727150815"
+                ),
+                draft: Self.seedCatchLocationDraft
+            )
+        } else if launchArguments.contains(.catchRecordCheckYourAnswers) {            // Fully-populated draft → Check your answers screen, for UI testing the summary/Change
             // links without driving the whole journey by hand.
             CatchRecordHostView(
                 initialRoute: .checkYourAnswers(referenceNumber: "A1234520260727150815"),
@@ -106,6 +118,22 @@ struct UITestRootView<ProductionRoot: View>: View {
     /// Stubbed unsent record used to seed `-uiTestCatchRecordDraft`.
     private static var seedDraftRow: SubmissionRow {
         SubmissionRow(dateText: "20 Nov 2020", vesselName: "ACHILLES", status: .unsent, createdBy: "J.Smith")
+    }
+
+    /// Draft used to seed `-uiTestCatchLocation`: a new record whose departure port carries a real
+    /// WGS84 coordinate (Plymouth), so the catch-location map opens framed on the port rather than
+    /// falling back to the whole-UK default (see `PortMapCamera`). A matching `GearCatch` entry is
+    /// seeded so "Save and continue" can write the selected area back into the draft.
+    @MainActor
+    private static var seedCatchLocationDraft: CatchRecordDraft {
+        let draft = CatchRecordDraft()
+        draft.vessel = "ACHILLES"
+        draft.departurePort = PortOption(
+            name: "Plymouth",
+            coordinate: PortCoordinate(latitude: 50.3660, longitude: -4.1427)
+        )
+        draft.gearCatches = [GearCatch(gear: .seineNets)]
+        return draft
     }
 
     /// Fully-populated `CatchRecordDraft` used to seed `-uiTestCatchRecordCheckYourAnswers`, so the

@@ -33,10 +33,6 @@ struct LaunchArguments {
         case catchRecordConfirmSamePort = "-uiTestCatchRecordConfirmSamePort"
         case catchRecordSelectPort = "-uiTestCatchRecordSelectPort"
         case catchRecordSelectGear = "-uiTestCatchRecordSelectGear"
-        /// Boots straight to the "Where was most of your catch caught?" map for a new catch record,
-        /// with a departure port that has a **real coordinate**, so the map's port-framing (see
-        /// `PortMapCamera`) can be exercised without driving the whole journey by hand.
-        case catchLocation = "-uiTestCatchLocation"
         case catchRecordCheckYourAnswers = "-uiTestCatchRecordCheckYourAnswers"
         case catchRecordSubmissionConfirmation = "-uiTestCatchRecordSubmissionConfirmation"
         case catchRecordSubmissionSuccess = "-uiTestCatchRecordSubmissionSuccess"

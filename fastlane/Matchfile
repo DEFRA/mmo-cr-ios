@@ -1,0 +1,12 @@
+# Fastlane Match configuration — signing assets are stored, encrypted, in a private DEFRA repo.
+# Authentication is by SSH deploy key: CI supplies the key path in MATCH_GIT_PRIVATE_KEY and the
+# decryption passphrase in MATCH_PASSWORD, both Environment-scoped secrets. Nothing secret lives here.
+storage_mode("git")
+git_url("git@github.com:DEFRA/mmo-cr-ios-signing-assets.git")
+git_branch("main")
+
+type("appstore")
+app_identifier(["mmo.catchrecordingdev.ios"])
+
+# CI is forced read-only by the release lane (and by fastlane's setup_ci action); it is intentionally
+# not pinned here so a signing administrator can run `fastlane match appstore` to bootstrap or renew.

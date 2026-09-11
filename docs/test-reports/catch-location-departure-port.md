@@ -7,16 +7,22 @@
 
 ## 1. Changes made
 
-A gated, **test-only** launch seam plus tests were added so the catch-location map can be
-verified with a real departure-port coordinate, without signing in or driving the whole journey.
+This QA branch (`UItestautomation`) adds **tests only** so the catch-location map can be verified
+with a real departure-port coordinate, without signing in or driving the whole journey. The
+app-target launch seam the UI test relies on is delivered via a **separate dev PR** (preserved in
+`docs/dev-handoff/catch-location-seam.patch`), so QA and app changes stay in distinct PRs.
 Production sign-in and behaviour are unchanged.
 
-| File | Change |
-|------|--------|
-| `record-catch/App/LaunchArguments.swift` | New `-uiTestCatchLocation` launch flag |
-| `record-catch/App/UITestRootView.swift` | New seam booting straight to the catch-location map for a new record, seeding a departure port (**Plymouth**) with a **real WGS84 coordinate** (50.3660, −4.1427) + a matching `GearCatch` |
-| `record-catchTests/.../CatchLocationViewModelTests.swift` | 2 new unit tests: departure port + coordinate surfaced from the draft; nil when absent |
-| `record-catchUITests/CatchLocationUITests.swift` | New UI smoke test: seam boots to the map without sign-in |
+| File | Change | In this PR? |
+|------|--------|-------------|
+| `record-catchTests/.../CatchLocationViewModelTests.swift` | 2 new unit tests: departure port + coordinate surfaced from the draft; nil when absent | ✅ Yes |
+| `record-catchUITests/CatchLocationUITests.swift` | New UI smoke test: seam boots to the map without sign-in | ✅ Yes |
+| `record-catch/App/LaunchArguments.swift` | New `-uiTestCatchLocation` launch flag | ➡️ Separate dev PR (`catch-location-seam.patch`) |
+| `record-catch/App/UITestRootView.swift` | New seam booting straight to the catch-location map for a new record, seeding a departure port (**Plymouth**) with a **real WGS84 coordinate** (50.3660, −4.1427) + a matching `GearCatch` | ➡️ Separate dev PR (`catch-location-seam.patch`) |
+
+> **Note:** `CatchLocationUITests` depends on the `-uiTestCatchLocation` seam above, so it only
+> passes once the dev seam PR is merged and this branch is rebased on it. The unit tests pass on
+> this branch alone.
 
 **Root cause found & fixed for "draft not working":** the draft *was* wired correctly, but every
 hand-built/seeded port had `coordinate == nil`, so `PortMapCamera` silently fell back to the

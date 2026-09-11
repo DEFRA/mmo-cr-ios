@@ -39,6 +39,14 @@ Build and run the unit tests with code coverage (used by CI). UI tests are exclu
 
 Build, sign and upload the DEV app to its internal TestFlight group.
 
+### ios certificates
+
+```sh
+[bundle exec] fastlane ios certificates
+```
+
+Sync the DEV signing assets from the Match repo into the local keychain (read-only).
+
 ### ios distribute_dev_external
 
 ```sh

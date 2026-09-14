@@ -1,10 +1,13 @@
 # Design Spec — Home / "Your trips" (UI only)
 
 Feature: bilingual Home / trips-overview screen for the DEFRA / MMO Catch Recording iOS app.
-Scope: **UI only**. No real auth, networking, Keychain, persistence, sync or offline. All data is
-**stubbed/static**; pagination is a single stubbed page; the bottom tab bar is out of scope.
-`HomeView` is the production screen and **supersedes** `TripsOverviewDemoView` (kept only as a
-component showcase).
+Scope: no real auth or Keychain-backed auth yet. Server records (Submitted/Amended/Late) remain a
+fixed **stub** (`StubServerRecordsProvider` — see ADR-0015), pending the real backend; pagination
+is a single stubbed page; the bottom tab bar is out of scope. **Local Unsent drafts are real,
+persisted, offline-first data** (SwiftData-backed, see ADR-0014), merged with the stubbed server
+rows by `HomeViewModel`/`MergingRecordsRepository` (ADR-0015) — newest first, loading/empty/error
+states explicit. `HomeView` is the production screen and **supersedes** `TripsOverviewDemoView`
+(kept only as a component showcase).
 
 ## Layout (inside `ViewTemplate`)
 
@@ -26,8 +29,11 @@ supplies them as parameters. Content, top to bottom:
    Created by) and a first-class Created-by column. Column headers carry
    `.accessibilityAddTraits(.isHeader)`. Existing divider / border / status-tag styling and the
    date-cell link button are retained; status tags render on a single line (`.lineLimit(1)` +
-   `.fixedSize`). 4 stub rows: 20 Nov 2020 / ACHILLES / {submitted, amended, unsent, late} /
-   "J.Smith".
+   `.fixedSize`). Rows are now **data-driven** (see ADR-0015): every persisted, not-yet-submitted
+   local draft (Unsent — resumable/deletable, see the Draft-action screen) merged with 3 fixed
+   stub server rows (20 Nov 2020 / ACHILLES / {submitted, amended, late} / "J.Smith"), newest
+   first. A draft field not yet captured (vessel/trip end date) renders as a placeholder ("—")
+   rather than being omitted.
 4. **`PaginationControls`** + pure `PaginationState` — renders "← Previous · Showing 1 to 4 of 4 ·
    [1] · Next →". Stubbed single page (so Previous/Next are hidden per the GDS pattern).
 5. **`ExpandableHelpSection`** (generic `content:` form) — "How to record a catch"
@@ -74,6 +80,26 @@ Per the approved decision, `SubmissionsTable` and `SubmissionRow` were edited **
 `SubmissionRow` gains a **required** `createdBy: String`; `SubmissionsTable` gains a header row and a
 Created-by column as first-class parts. All call sites (`SubmissionsTable` `#Preview`,
 `TripsOverviewDemoView`, `TripFormDemoView`) were updated to the new signature.
+
+### Records list is data-driven (ADR-0014/0015)
+
+`HomeViewModel` loads via an injected `RecordsProviding` (`.task` on first appearance, and again
+whenever the Create-a-catch-record journey stack collapses back to Home, so a resumed/submitted/
+deleted draft is reflected without an app relaunch). Local Unsent drafts are always available
+offline-first regardless of the stubbed server call's outcome. Three explicit states, never an
+indefinite spinner:
+
+| State | Trigger | Presentation |
+|---|---|---|
+| Loading | First load | `ProgressView` + "Loading your trips…" (`Home.records.loading`), combined into one accessibility element |
+| Empty | Load succeeds with zero rows | "You have no trips yet." (`Home.records.empty`) |
+| Error | Local/stub load fails | Icon + red text (never colour alone) + a "Try again" retry button (`Home.records.retry`), announced as an error |
+| Loaded | Rows available | The table + pagination controls, as before |
+
+`SubmissionRow` also carries `localID: UUID?` (set for a local Unsent row, so Draft-action/resume
+can look up the persisted draft; `nil` for a server row) and `sortDate: Date` (ordering only —
+newest first). Both are excluded from `SubmissionRow`'s existing content-based `Equatable`/
+`Hashable`, so no previously-shipped row-equality expectation changed.
 
 ## States
 

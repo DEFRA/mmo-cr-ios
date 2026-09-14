@@ -12,7 +12,7 @@ import Foundation
 ///
 /// `nonisolated` and `Sendable` to mirror `GearOption`/`SpeciesOption`, since it is built and read
 /// from view models on the main actor but has no isolation needs of its own.
-nonisolated struct GearCatch: Identifiable, Hashable, Sendable {
+nonisolated struct GearCatch: Identifiable, Hashable, Sendable, Codable {
     /// The confirmed gear, including any captured required (per-favourite) and variable (per-trip)
     /// measurements. `var` so a later edit to this gear's measurements (e.g. via "Change" on Check
     /// your answers) can update it in place without disturbing the already-captured

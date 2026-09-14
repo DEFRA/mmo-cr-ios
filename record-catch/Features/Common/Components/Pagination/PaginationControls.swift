@@ -7,8 +7,12 @@ import SwiftUI
 struct PaginationControls: View {
 
     let state: PaginationState
+    /// No-op default: previews and any caller that only renders (no interaction wired up) can
+    /// omit this entirely; real call sites always supply their own handler.
     var onSelectPage: (Int) -> Void = { _ in }
+    /// No-op default: see `onSelectPage` above.
     var onPrevious: () -> Void = {}
+    /// No-op default: see `onSelectPage` above.
     var onNext: () -> Void = {}
 
     @Environment(AppLanguageStore.self) private var languageStore

@@ -152,6 +152,18 @@ final class RecordSpeciesWeightsViewModel {
         ))
     }
 
+    /// Whether this gear's catch already has at least one species saved to the draft
+    /// (`draft.gearCatches[…].speciesCaught` — see ADR-0011). Gates the "Remove species" link:
+    /// there is nothing to remove until a "Save and continue" has recorded something.
+    var hasRecordedSpecies: Bool {
+        !(draft.gearCatchIndex(forGearID: gear.id).map { draft.gearCatches[$0].speciesCaught } ?? []).isEmpty
+    }
+
+    /// Routes to the Remove-species screen for this gear's recorded catch.
+    func removeSpecies() {
+        router.push(.removeSpecies(gear: gear, vessel: vessel, referenceNumber: referenceNumber))
+    }
+
     /// Builds a species with its captured weights from the current field state.
     private func capturedSpecies(_ species: SpeciesOption) -> SpeciesOption {
         species.withWeights(

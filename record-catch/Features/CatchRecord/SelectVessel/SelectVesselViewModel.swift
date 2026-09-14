@@ -28,6 +28,9 @@ final class SelectVesselViewModel {
         self.router = router
         self.vessels = provider.vessels
         self.draft = draft
+        // Pre-fills the previously-captured vessel when restarting a resumed draft from the
+        // beginning (see ADR-0015 decision #1), so the user is not asked to re-choose it.
+        self.selection = draft.vessel
     }
 
     /// Current inline error, once a submit has been attempted.

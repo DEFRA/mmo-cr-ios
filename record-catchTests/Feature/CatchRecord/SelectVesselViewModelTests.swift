@@ -85,4 +85,21 @@ final class SelectVesselViewModelTests: XCTestCase {
 
         XCTAssertFalse(draft.returnToCheckYourAnswers)
     }
+
+    // MARK: - Pre-fill on resume (see ADR-0015 decision #1)
+
+    func test_init_prefillsSelectionFromDraftVessel() {
+        let draft = CatchRecordDraft()
+        draft.vessel = "HERCULES"
+
+        let sut = SelectVesselViewModel(router: CatchRecordRouter(), provider: StaticVesselProvider(), draft: draft)
+
+        XCTAssertEqual(sut.selection, "HERCULES")
+    }
+
+    func test_init_withNoDraftVessel_leavesSelectionNil() {
+        let sut = SelectVesselViewModel(router: CatchRecordRouter(), provider: StaticVesselProvider(), draft: CatchRecordDraft())
+
+        XCTAssertNil(sut.selection)
+    }
 }

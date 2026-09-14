@@ -6,10 +6,35 @@ nonisolated struct SubmissionRow: Identifiable, Equatable {
     let vesselName: String
     let status: SubmissionStatus
     let createdBy: String
+    /// The persisted draft this row resolves to, when it is a local **Unsent** record (see
+    /// ADR-0014/0015). `nil` for server-sourced rows and for rows built before persistence existed
+    /// (e.g. hand-built preview/test rows), which stay content-equal to one another as before.
+    let localID: UUID?
+    /// Used only for ordering the merged Home list newest-first (see `MergingRecordsRepository`);
+    /// never rendered and deliberately excluded from equality/hashing below.
+    let sortDate: Date
+
+    init(
+        dateText: String,
+        vesselName: String,
+        status: SubmissionStatus,
+        createdBy: String,
+        localID: UUID? = nil,
+        sortDate: Date = .distantPast
+    ) {
+        self.dateText = dateText
+        self.vesselName = vesselName
+        self.status = status
+        self.createdBy = createdBy
+        self.localID = localID
+        self.sortDate = sortDate
+    }
 
     /// Content-based equality: two rows with the same content are equal even if
     /// their randomly-generated `id`s differ (the `id` is for `Identifiable`/
-    /// `ForEach` identity only, not semantic equality).
+    /// `ForEach` identity only, not semantic equality). `localID`/`sortDate` are deliberately
+    /// excluded — they identify *where the data came from* and *how to order it*, not what is
+    /// shown, so this stays consistent with every existing call site/test that predates them.
     static func == (lhs: SubmissionRow, rhs: SubmissionRow) -> Bool {
         lhs.dateText == rhs.dateText
             && lhs.vesselName == rhs.vesselName
@@ -81,6 +106,8 @@ struct SubmissionsTable: View {
         headerStatus: String,
         headerCreatedBy: String,
         viewSubmissionFormat: String = "View submission for %@",
+        // No-op default: intentionally empty for previews/tests that render the table without
+        // wiring row-tap navigation; real call sites (e.g. `HomeView`) always supply a handler.
         onDateTapped: @escaping (SubmissionRow) -> Void = { _ in }
     ) {
         self.rows = rows

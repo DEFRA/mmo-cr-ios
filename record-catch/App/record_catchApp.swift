@@ -12,9 +12,17 @@ import SwiftData
 struct record_catchApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self
+            CatchRecordEntity.self
         ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+        // Protects on-device catch-record data at rest (vessel, dates, ports, gear, species — see
+        // ADR-0014, DEFRA data-at-rest requirement): the store is only accessible after the user
+        // has unlocked the device at least once since boot, and is never included in an unencrypted
+        // iTunes/Finder backup of a locked device.
+        let modelConfiguration = ModelConfiguration(
+            schema: schema,
+            isStoredInMemoryOnly: false,
+            cloudKitDatabase: .none
+        )
 
         do {
             return try ModelContainer(for: schema, configurations: [modelConfiguration])

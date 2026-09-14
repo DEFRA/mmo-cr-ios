@@ -26,7 +26,7 @@ final class SubmissionsTableTests: XCTestCase {
     // MARK: - Row model requires Created by
 
     func testSubmissionRow_carriesCreatedBy() {
-        let row = SubmissionRow(
+        let row = record_catch.SubmissionRow(
             dateText: "20 Nov 2020",
             vesselName: "ACHILLES",
             status: .submitted,

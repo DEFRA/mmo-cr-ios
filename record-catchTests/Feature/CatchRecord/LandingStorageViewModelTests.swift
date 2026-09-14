@@ -50,4 +50,21 @@ final class LandingStorageViewModelTests: XCTestCase {
         XCTAssertNil(sut.errorKey)
         XCTAssertEqual(router.path, [.checkYourAnswers(referenceNumber: referenceNumber)])
     }
+
+    // MARK: - Pre-fill on resume (see ADR-0015 decision #1)
+
+    func test_init_prefillsYes_whenDraftHasSpeciesNotLanded() {
+        let draft = CatchRecordDraft()
+        draft.speciesNotLanded = [.atlanticCod]
+
+        let sut = LandingStorageViewModel(referenceNumber: referenceNumber, router: CatchRecordRouter(), draft: draft)
+
+        XCTAssertEqual(sut.selection, .yes)
+    }
+
+    func test_init_withNoSpeciesNotLanded_leavesSelectionNil() {
+        let sut = LandingStorageViewModel(referenceNumber: referenceNumber, router: CatchRecordRouter(), draft: CatchRecordDraft())
+
+        XCTAssertNil(sut.selection)
+    }
 }

@@ -67,7 +67,10 @@ nonisolated protocol BiometricAuthenticating: Sendable {
 /// Apple guidance not to reuse a context across policy evaluations.
 nonisolated final class LABiometricAuthenticator: BiometricAuthenticating, @unchecked Sendable {
 
-    init() {}
+    init() {
+        // Intentionally empty: a fresh `LAContext` is created per evaluation call (see below),
+        // not stored here, so there is no per-instance state to set up.
+    }
 
     func biometricAvailability() -> BiometricAvailability {
         let context = LAContext()

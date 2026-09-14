@@ -27,19 +27,22 @@ struct HomeView: View {
     private let totalPages: Int
     private let totalItems: Int
 
-    init(currentPage: Int = 1, totalPages: Int = 1, totalItems: Int = 4) {
+    /// Loads the merged local-drafts + server-records list (see ADR-0015). Injectable so previews
+    /// and UI tests can seed a deterministic `RecordsProviding` without a real `ModelContainer`.
+    @State private var viewModel: HomeViewModel
+
+    init(
+        currentPage: Int = 1,
+        totalPages: Int = 1,
+        totalItems: Int = 4,
+        recordsProvider: RecordsProviding? = nil
+    ) {
         self.currentPage = currentPage
         self.totalPages = totalPages
         self.totalItems = totalItems
+        let provider = recordsProvider ?? MergingRecordsRepository(draftStore: InMemoryCatchRecordDraftStore())
+        _viewModel = State(wrappedValue: HomeViewModel(recordsProvider: provider))
     }
-
-    // Stubbed, static trips for this UI-only phase.
-    private let rows: [SubmissionRow] = [
-        SubmissionRow(dateText: "20 Nov 2020", vesselName: "ACHILLES", status: .submitted, createdBy: "J.Smith"),
-        SubmissionRow(dateText: "20 Nov 2020", vesselName: "ACHILLES", status: .amended, createdBy: "J.Smith"),
-        SubmissionRow(dateText: "20 Nov 2020", vesselName: "ACHILLES", status: .unsent, createdBy: "J.Smith"),
-        SubmissionRow(dateText: "20 Nov 2020", vesselName: "ACHILLES", status: .late, createdBy: "J.Smith")
-    ]
 
     // Stubbed single page of results.
     private var paginationState: PaginationState {
@@ -59,6 +62,14 @@ struct HomeView: View {
             content
                 .environment(\.locale, languageStore.language.locale)
         }
+        .task { await viewModel.load() }
+        // Reload whenever the journey stack collapses back to Home (e.g. a resumed draft was
+        // saved further, or deleted), so the list reflects the latest on-device state without
+        // requiring an app relaunch.
+        .onChange(of: router.path) { _, newPath in
+            guard newPath.isEmpty else { return }
+            Task { await viewModel.load() }
+        }
     }
 
     @ViewBuilder
@@ -70,9 +81,7 @@ struct HomeView: View {
                 ParagraphText(text: languageStore.localized("home.intro.webOnly"))
             }
 
-            tripsTable
-
-            PaginationControls(state: paginationState)
+            recordsListSection
 
             howToRecordSection
 
@@ -104,6 +113,56 @@ struct HomeView: View {
             }
             .accessibilityIdentifier("Home.createRecordButton")
         }
+    }
+
+    /// The records list itself, or an explicit loading/empty/error state — never an indefinite
+    /// spinner (see the accessibility instructions).
+    @ViewBuilder
+    private var recordsListSection: some View {
+        switch viewModel.loadState {
+        case .loading:
+            HStack(spacing: AppSpacing.small) {
+                ProgressView()
+                Text(languageStore.localized("home.records.loading"))
+                    .font(AppTypography.body)
+                    .foregroundStyle(AppColors.textSecondary)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("Home.records.loading")
+        case .empty:
+            Text(languageStore.localized("home.records.empty"))
+                .font(AppTypography.body)
+                .foregroundStyle(AppColors.textSecondary)
+                .accessibilityIdentifier("Home.records.empty")
+        case .failed:
+            recordsErrorBanner
+        case .loaded:
+            tripsTable
+            PaginationControls(state: paginationState)
+        }
+    }
+
+    private var recordsErrorBanner: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.small) {
+            HStack(alignment: .top, spacing: AppSpacing.xSmall) {
+                Image(systemName: "exclamationmark.circle.fill")
+                    .foregroundStyle(AppColors.errorRed)
+                    .accessibilityHidden(true)
+                Text(languageStore.localized("home.records.error"))
+                    .font(AppTypography.error)
+                    .foregroundStyle(AppColors.errorRed)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(
+                "\(languageStore.localized("a11y.errorPrefix")) \(languageStore.localized("home.records.error"))"
+            )
+
+            SecondaryButton(title: languageStore.localized("home.records.error.retry")) {
+                Task { await viewModel.load() }
+            }
+            .accessibilityIdentifier("Home.records.retry")
+        }
+        .accessibilityIdentifier("Home.records.error")
     }
 
     /// "How to record a catch" — a richer disclosure section (multiple
@@ -173,7 +232,7 @@ struct HomeView: View {
     @ViewBuilder
     private var tripsTable: some View {
         let table = SubmissionsTable(
-            rows: rows,
+            rows: viewModel.rows,
             headerEndDate: languageStore.localized("home.table.header.endDate"),
             headerVessel: languageStore.localized("home.table.header.vessel"),
             headerStatus: languageStore.localized("home.table.header.status"),

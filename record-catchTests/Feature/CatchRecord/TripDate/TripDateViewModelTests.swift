@@ -264,4 +264,51 @@ final class TripDateViewModelTests: XCTestCase {
         XCTAssertEqual(router.path, [.checkYourAnswers(referenceNumber: referenceNumber)])
         XCTAssertFalse(draft.returnToCheckYourAnswers)
     }
+
+    // MARK: - Pre-fill on resume (see ADR-0015 decision #1)
+
+    func test_init_departure_prefillsValueFromDraftDepartureDate() {
+        let draft = CatchRecordDraft()
+        draft.departureDate = Calendar(identifier: .gregorian).date(from: DateComponents(year: 2020, month: 3, day: 31))!
+
+        let sut = TripDateViewModel(
+            phase: .departure,
+            vessel: vessel,
+            referenceNumber: referenceNumber,
+            departureDate: nil,
+            router: CatchRecordRouter(),
+            draft: draft
+        )
+
+        XCTAssertEqual(sut.value, DateEntryValue(day: "31", month: "3", year: "2020"))
+    }
+
+    func test_init_return_prefillsValueFromDraftReturnDate() {
+        let draft = CatchRecordDraft()
+        draft.returnDate = Calendar(identifier: .gregorian).date(from: DateComponents(year: 2020, month: 4, day: 2))!
+
+        let sut = TripDateViewModel(
+            phase: .return,
+            vessel: vessel,
+            referenceNumber: referenceNumber,
+            departureDate: Date(),
+            router: CatchRecordRouter(),
+            draft: draft
+        )
+
+        XCTAssertEqual(sut.value, DateEntryValue(day: "2", month: "4", year: "2020"))
+    }
+
+    func test_init_withNoDraftDate_leavesValueBlank() {
+        let sut = TripDateViewModel(
+            phase: .departure,
+            vessel: vessel,
+            referenceNumber: referenceNumber,
+            departureDate: nil,
+            router: CatchRecordRouter(),
+            draft: CatchRecordDraft()
+        )
+
+        XCTAssertEqual(sut.value, DateEntryValue())
+    }
 }

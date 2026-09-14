@@ -28,6 +28,12 @@ final class CatchLocationUITests: XCTestCase {
         static let heading = "CatchRecord.catchLocation.heading"
         static let map = "CatchRecord.catchLocation.map"
         static let saveContinue = "CatchRecord.catchLocation.saveContinue"
+        static let otherButton = "CatchRecord.catchLocation.otherButton"
+        static let error = "CatchRecord.catchLocation.error"
+    }
+
+    private enum ManualEntryID {
+        static let heading = "CatchRecord.catchLocationManualEntry.heading"
     }
 
     override func setUpWithError() throws {
@@ -36,6 +42,33 @@ final class CatchLocationUITests: XCTestCase {
 
     private func element(_ app: XCUIApplication, _ identifier: String) -> XCUIElement {
         app.descendants(matching: .any).matching(identifier: identifier).firstMatch
+    }
+
+    /// Drives the one real UI step (select gear, enter its measurement, Save and continue) that
+    /// opens the catch-location map, returning once the map heading is visible. Shared by every
+    /// test here so each can start from the map screen without repeating the gear steps.
+    @MainActor
+    private func reachCatchLocationMap() -> XCUIApplication {
+        let app = launch()
+
+        let option = element(app, GearID.option)
+        XCTAssertTrue(option.waitForExistence(timeout: 5), "The select-gear seam should show the gear option")
+        option.tap()
+
+        let field = app.textFields[GearID.timesShotField]
+        XCTAssertTrue(field.waitForExistence(timeout: 5), "Ticking the gear should reveal its measurement field")
+        field.tap()
+        field.typeText("5")
+
+        // Dismiss the number pad (no return key) by tapping the heading, then continue.
+        element(app, GearID.heading).tap()
+        app.buttons[GearID.saveContinue].tap()
+
+        XCTAssertTrue(
+            element(app, CatchLocationID.heading).waitForExistence(timeout: 5),
+            "Continuing from select gear should open the catch-location map heading"
+        )
+        return app
     }
 
     /// Launches at the "What gear did you use?" screen via the existing seam, resetting any Welsh
@@ -50,29 +83,53 @@ final class CatchLocationUITests: XCTestCase {
 
     @MainActor
     func test_selectGearToCatchLocation_opensMapScreen() {
-        let app = launch()
+        let app = reachCatchLocationMap()
 
-        // Select a gear and enter its required per-trip measurement, then continue — the same one
-        // real step the existing gear test uses to reach the catch-location map.
-        let option = element(app, GearID.option)
-        XCTAssertTrue(option.waitForExistence(timeout: 5), "The select-gear seam should show the gear option")
-        option.tap()
-
-        let field = app.textFields[GearID.timesShotField]
-        XCTAssertTrue(field.waitForExistence(timeout: 5), "Ticking the gear should reveal its measurement field")
-        field.tap()
-        field.typeText("5")
-
-        // Dismiss the number pad (no return key) by tapping the heading, then continue.
-        element(app, GearID.heading).tap()
-        app.buttons[GearID.saveContinue].tap()
-
-        // The catch-location map screen opens.
-        XCTAssertTrue(
-            element(app, CatchLocationID.heading).waitForExistence(timeout: 5),
-            "Continuing from select gear should open the catch-location map heading"
-        )
+        // The catch-location map screen opens with the interactive map and Save and continue (FR2).
         XCTAssertTrue(element(app, CatchLocationID.map).exists, "The offline map should be present on the screen")
         XCTAssertTrue(element(app, CatchLocationID.saveContinue).exists, "Save and continue should be reachable")
+    }
+
+    /// Scenario 5 / FR11 — "Save and continue" with no area selected must show the inline
+    /// validation error and keep the user on the same screen (it must not route on).
+    @MainActor
+    func test_catchLocation_saveContinueWithNoSelection_showsErrorAndStays() {
+        let app = reachCatchLocationMap()
+
+        app.buttons[CatchLocationID.saveContinue].tap()
+
+        XCTAssertTrue(
+            element(app, CatchLocationID.error).waitForExistence(timeout: 5),
+            "Continuing with no statistical area selected should show the inline validation error"
+        )
+        XCTAssertTrue(
+            element(app, CatchLocationID.heading).exists,
+            "The user should remain on the catch-location screen when no area is selected"
+        )
+        XCTAssertFalse(
+            element(app, "CatchRecord.recordSpeciesWeights.heading").exists,
+            "The journey must not advance to the species screen without a selected area"
+        )
+        XCTAssertFalse(
+            element(app, "CatchRecord.addSpecies.heading").exists,
+            "The journey must not advance to the add-species screen without a selected area"
+        )
+    }
+
+    /// Scenario 1 / FR1 — the "Other" option navigates to the statistical sub-area selection
+    /// screen where the fisher can pick an area another way (in this build, the manual
+    /// type-to-search "Enter the statistical sub area…" screen).
+    @MainActor
+    func test_catchLocation_otherButton_navigatesToSubAreaSelection() {
+        let app = reachCatchLocationMap()
+
+        let other = element(app, CatchLocationID.otherButton)
+        XCTAssertTrue(other.waitForExistence(timeout: 5), "The map should offer an \"Other\" way to select a sub area")
+        other.tap()
+
+        XCTAssertTrue(
+            element(app, ManualEntryID.heading).waitForExistence(timeout: 5),
+            "Choosing \"Other\" should navigate to the statistical sub-area selection screen"
+        )
     }
 }

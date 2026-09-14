@@ -46,6 +46,18 @@ final class TripDateViewModel {
         self.favouritePorts = favouritePorts
         self.draft = draft
         self.now = now
+        // Pre-fills the previously-captured date when restarting a resumed draft from the
+        // beginning (see ADR-0015 decision #1).
+        switch phase {
+        case .departure:
+            if let existing = draft.departureDate {
+                self.value = DateEntryValue(date: existing)
+            }
+        case .return:
+            if let existing = draft.returnDate {
+                self.value = DateEntryValue(date: existing)
+            }
+        }
     }
 
     /// String Catalog key for the screen's H1.

@@ -67,6 +67,13 @@ enum CatchRecordRoute: Hashable {
     /// when the user has no favourite species yet, and reached from "Add a species"/"Add another
     /// species". `returnPhase` records which screen to return to after saving.
     case addSpecies(gear: GearOption, vessel: String, referenceNumber: String, returnPhase: SpeciesReturnPhase)
+    /// Remove one or more previously-recorded species from this gear's catch (multi-select
+    /// checkboxes, then "Delete" with a confirmation step, or "Cancel"). Reached from "Remove
+    /// species" on `recordSpeciesWeights`, shown only once this gear has at least one recorded
+    /// species. When deleting empties this gear's species list, the journey routes to `addSpecies`
+    /// (`returnPhase: .recordWeights`) rather than back to the now-empty weights screen; otherwise
+    /// it routes back to `recordSpeciesWeights`.
+    case removeSpecies(gear: GearOption, vessel: String, referenceNumber: String)
     /// Ask whether any catch from this trip will not be landed straight away (e.g. bait or keep
     /// pots). A Yes/No radio question reached after the species weights screen; carries the display-only
     /// reference number shown at the top of the screen.

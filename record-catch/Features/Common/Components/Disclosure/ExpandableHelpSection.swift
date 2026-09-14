@@ -5,8 +5,7 @@ import SwiftUI
 ///
 /// Two ways to supply content:
 /// - `items:` — the original heading + paragraph pairs (unchanged behaviour
-///   for existing call sites: `HomeView`'s status-help section,
-///   `TripFormDemoView`, `TripsOverviewDemoView`).
+///   for existing call sites, notably `HomeView`'s status-help section).
 /// - `content:` — an arbitrary `@ViewBuilder` for richer sections (multiple
 ///   sub-headings, paragraphs, bullet lists) such as Home's
 ///   "How to record a catch" section.

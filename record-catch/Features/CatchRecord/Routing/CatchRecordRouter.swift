@@ -11,7 +11,10 @@ final class CatchRecordRouter {
 
     private(set) var path: [CatchRecordRoute] = []
 
-    init() {}
+    init() {
+        // Intentionally empty: `path` is already initialised to an empty stack above; the
+        // journey is started explicitly via `startFromDraft(_:)`/`startNew()`.
+    }
 
     /// Starts the journey from an existing draft (unsent) record.
     func startFromDraft(_ row: SubmissionRow) {

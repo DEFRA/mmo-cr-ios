@@ -45,9 +45,22 @@ final class SelectPortViewModel {
         self.draft = draft
     }
 
-    /// Loads favourite ports for display. Failures leave the list empty.
+    /// Loads favourite ports for display, then pre-fills the previously-captured selection for
+    /// this phase, if any (`draft.departurePort`/`draft.returnPort` — see ADR-0015 decision #1),
+    /// so restarting a resumed draft from the beginning shows what was already chosen rather than
+    /// starting blank. Failures leave the list empty.
     func loadFavourites() async {
         favourites = (try? await favouritePorts.favouritePorts()) ?? []
+        let recorded: PortOption?
+        switch phase {
+        case .departure:
+            recorded = draft.departurePort
+        case .return:
+            recorded = draft.returnPort
+        }
+        if let recorded, favourites.contains(recorded) {
+            selection = recorded.name
+        }
     }
 
     /// Current inline error, once a submit has been attempted.

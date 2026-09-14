@@ -531,4 +531,95 @@ final class CatchRecordUITests: XCTestCase {
 
         XCTAssertTrue(element(app, GearID.catchLocationHeading).waitForExistence(timeout: 5))
     }
+
+    // MARK: - Remove species
+
+    private enum RemoveSpeciesID {
+        static let removeLink = "CatchRecord.recordSpeciesWeights.removeSpecies"
+        static let heading = "CatchRecord.removeSpecies.heading"
+        static let codOption = "CatchRecord.removeSpecies.option.atlantic cod (cod)"
+        static let bassOption = "CatchRecord.removeSpecies.option.seabass (bss)"
+        static let delete = "CatchRecord.removeSpecies.delete"
+        static let cancel = "CatchRecord.removeSpecies.cancel"
+        static let error = "CatchRecord.removeSpecies.error"
+        static let confirmDelete = "CatchRecord.removeSpecies.confirmDelete"
+        static let cancelDeleteConfirm = "CatchRecord.removeSpecies.cancelDeleteConfirm"
+        static let weightsHeading = "CatchRecord.recordSpeciesWeights.heading"
+        static let addSpeciesHeading = "CatchRecord.addSpecies.heading"
+    }
+
+    @MainActor
+    func test_recordSpeciesWeights_withRecordedSpecies_showsRemoveLink_navigatingToRemoveSpecies() {
+        let app = launch("-uiTestCatchRecordRecordSpeciesWeights")
+
+        let removeLink = app.buttons[RemoveSpeciesID.removeLink]
+        XCTAssertTrue(removeLink.waitForExistence(timeout: 5))
+        removeLink.tap()
+
+        XCTAssertTrue(element(app, RemoveSpeciesID.heading).waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    func test_removeSpecies_cancel_returnsToWeightsScreenWithNoChanges() {
+        let app = launch("-uiTestCatchRecordRecordSpeciesWeights")
+
+        app.buttons[RemoveSpeciesID.removeLink].tap()
+        XCTAssertTrue(element(app, RemoveSpeciesID.heading).waitForExistence(timeout: 5))
+
+        app.buttons[RemoveSpeciesID.cancel].tap()
+
+        XCTAssertTrue(element(app, RemoveSpeciesID.weightsHeading).waitForExistence(timeout: 5))
+        // The link that was tapped to get here still shows — nothing was removed.
+        XCTAssertTrue(app.buttons[RemoveSpeciesID.removeLink].exists)
+    }
+
+    @MainActor
+    func test_removeSpecies_deleteWithNoSelection_showsInlineError() {
+        let app = launch("-uiTestCatchRecordRemoveSpecies")
+
+        let deleteButton = app.buttons[RemoveSpeciesID.delete]
+        XCTAssertTrue(deleteButton.waitForExistence(timeout: 5))
+        deleteButton.tap()
+
+        XCTAssertTrue(element(app, RemoveSpeciesID.error).waitForExistence(timeout: 5))
+        // Did not present the confirmation dialog.
+        XCTAssertFalse(element(app, RemoveSpeciesID.confirmDelete).exists)
+    }
+
+    @MainActor
+    func test_removeSpecies_removingOneOfTwo_returnsToWeightsScreen() {
+        let app = launch("-uiTestCatchRecordRemoveSpecies")
+
+        let codOption = element(app, RemoveSpeciesID.codOption)
+        XCTAssertTrue(codOption.waitForExistence(timeout: 5))
+        codOption.tap()
+        app.buttons[RemoveSpeciesID.delete].tap()
+
+        let confirmButton = element(app, RemoveSpeciesID.confirmDelete)
+        XCTAssertTrue(confirmButton.waitForExistence(timeout: 5))
+        confirmButton.tap()
+
+        // A species remains for this gear, so the journey returns to the weights screen.
+        XCTAssertTrue(element(app, RemoveSpeciesID.weightsHeading).waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    func test_removeSpecies_removingLastOne_routesToAddSpecies() {
+        let app = launch("-uiTestCatchRecordRemoveSpecies")
+
+        let codOption = element(app, RemoveSpeciesID.codOption)
+        let bassOption = element(app, RemoveSpeciesID.bassOption)
+        XCTAssertTrue(codOption.waitForExistence(timeout: 5))
+        codOption.tap()
+        bassOption.tap()
+        app.buttons[RemoveSpeciesID.delete].tap()
+
+        let confirmButton = element(app, RemoveSpeciesID.confirmDelete)
+        XCTAssertTrue(confirmButton.waitForExistence(timeout: 5))
+        confirmButton.tap()
+
+        // Deleting the last recorded species routes onward to Add-species rather than back to the
+        // now-empty weights screen.
+        XCTAssertTrue(element(app, RemoveSpeciesID.addSpeciesHeading).waitForExistence(timeout: 5))
+    }
 }

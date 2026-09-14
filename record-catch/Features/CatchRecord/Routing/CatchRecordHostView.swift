@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 /// Hosts the single `NavigationStack` for the "Create a catch record" journey, rooted at `Home`.
 ///
@@ -8,6 +9,8 @@ import SwiftUI
 /// site, matching how `AppLanguageStore` is shared today.
 @MainActor
 struct CatchRecordHostView: View {
+
+    @Environment(\.modelContext) private var modelContext
 
     @State private var router: CatchRecordRouter
     /// Shared, journey-scoped favourite ports store so a port added on the Add-port screen is
@@ -23,9 +26,18 @@ struct CatchRecordHostView: View {
     @State private var favouriteSpecies: FavouriteSpeciesProviding
     /// Shared, journey-scoped draft accumulating the in-progress catch record (vessel, dates,
     /// ports, gear and species) so it is available to every screen in the stack without re-deriving
-    /// it from route payloads. Offline-first, local source of truth — not yet persisted to disk
-    /// (see `CatchRecordDraft`).
+    /// it from route payloads. Offline-first, local source of truth — persisted on-device after
+    /// every "Save and continue" via `draftStore` (see ADR-0014, `CatchRecordDraft`).
     @State private var draft: CatchRecordDraft
+    /// Injectable on-device draft persistence (see ADR-0014). Defaults to `nil`, in which case a
+    /// `SwiftDataCatchRecordDraftStore` bound to the environment's `modelContext` is used — deferred
+    /// to a computed property since `modelContext` is not available until the view resolves its
+    /// environment (i.e. not yet at `init`).
+    private let injectedDraftStore: CatchRecordDraftStoring?
+
+    private var draftStore: CatchRecordDraftStoring {
+        injectedDraftStore ?? SwiftDataCatchRecordDraftStore(modelContext: modelContext)
+    }
 
     /// - Parameters:
     ///   - initialRoute: optional route to seed the stack with at launch, used by UI tests to jump
@@ -35,12 +47,15 @@ struct CatchRecordHostView: View {
     ///   - favouriteGears: injectable favourite gears store; seeded by UI tests as above.
     ///   - favouriteSpecies: injectable favourite species store; seeded by UI tests as above.
     ///   - draft: injectable journey draft; UI tests can seed it to jump into a mid-journey state.
+    ///   - draftStore: injectable on-device draft persistence; UI tests/previews can supply an
+    ///     `InMemoryCatchRecordDraftStore` instead of a real `ModelContainer`.
     init(
         initialRoute: CatchRecordRoute? = nil,
         favouritePorts: FavouritePortsProviding = StubFavouritePortsProvider(),
         favouriteGears: FavouriteGearProviding = StubFavouriteGearProvider(),
         favouriteSpecies: FavouriteSpeciesProviding = StubFavouriteSpeciesProvider(),
-        draft: CatchRecordDraft? = nil
+        draft: CatchRecordDraft? = nil,
+        draftStore: CatchRecordDraftStoring? = nil
     ) {
         let router = CatchRecordRouter()
         if let initialRoute {
@@ -51,11 +66,12 @@ struct CatchRecordHostView: View {
         _favouriteGears = State(wrappedValue: favouriteGears)
         _favouriteSpecies = State(wrappedValue: favouriteSpecies)
         _draft = State(wrappedValue: draft ?? CatchRecordDraft())
+        injectedDraftStore = draftStore
     }
 
     var body: some View {
         NavigationStack(path: Binding(get: { router.path }, set: { router.setPath($0) })) {
-            HomeView()
+            HomeView(recordsProvider: MergingRecordsRepository(draftStore: draftStore))
                 .navigationDestination(for: CatchRecordRoute.self) { route in
                     // Single DRY call site (see ADR-0006 §3): hides the root tab bar for every
                     // pushed journey screen, current and future, without touching each of the
@@ -68,13 +84,21 @@ struct CatchRecordHostView: View {
         .environment(router)
         .environment(\.headerNavigator, router)
         .environment(draft)
+        // Persists the draft after every "Save and continue" (any route push — see ADR-0014
+        // decision #5), so a journey survives app termination and can be resumed as an Unsent
+        // Home row. Skips persisting until at least one value has been captured (`draft.vessel`),
+        // so a journey abandoned before the very first screen never creates an empty row.
+        .onChange(of: router.path) { _, newPath in
+            guard !newPath.isEmpty, draft.vessel != nil else { return }
+            Task { try? await draftStore.save(draft) }
+        }
     }
 
     @ViewBuilder
     private func destination(for route: CatchRecordRoute) -> some View {
         switch route {
         case .draftAction(let row):
-            DraftActionView(row: row, router: router)
+            DraftActionView(row: row, router: router, draft: draft, draftStore: draftStore)
         case .selectVessel:
             SelectVesselView(router: router, draft: draft)
         case .tripStartedToday(let vessel, let referenceNumber):
@@ -184,8 +208,16 @@ struct CatchRecordHostView: View {
                 router: router,
                 favouriteSpecies: favouriteSpecies
             )
+        case .removeSpecies(let gear, let vessel, let referenceNumber):
+            RemoveSpeciesView(
+                gear: gear,
+                vessel: vessel,
+                referenceNumber: referenceNumber,
+                router: router,
+                draft: draft
+            )
         case .landingStorage(let referenceNumber):
-            LandingStorageView(referenceNumber: referenceNumber, router: router)
+            LandingStorageView(referenceNumber: referenceNumber, router: router, draft: draft)
         case .landingStorageSpecies(let referenceNumber):
             LandingStorageSpeciesView(
                 referenceNumber: referenceNumber,
@@ -196,7 +228,7 @@ struct CatchRecordHostView: View {
         case .checkYourAnswers(let referenceNumber):
             CheckYourAnswersView(referenceNumber: referenceNumber, router: router, draft: draft)
         case .submissionConfirmation(let referenceNumber):
-            SubmissionConfirmationView(referenceNumber: referenceNumber, router: router)
+            SubmissionConfirmationView(referenceNumber: referenceNumber, router: router, draft: draft, draftStore: draftStore)
         case .submissionSuccess(let referenceNumber):
             SubmissionSuccessView(referenceNumber: referenceNumber, router: router)
         }

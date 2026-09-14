@@ -59,6 +59,18 @@ nonisolated final class KeychainStore: KeychainStoring, @unchecked Sendable {
         if let accessControl {
             query[kSecAttrAccessControl as String] = accessControl
         } else {
+            // No `accessControl` supplied: this path is intentionally reachable only for
+            // storing a non-secret marker (currently only `KeychainLocalSessionStore`'s
+            // `session.marker`, a single sentinel byte indicating a local session exists — never
+            // a credential or token). It must be readable *before* any biometric prompt, so it
+            // cannot itself be biometrically gated. Every actual secret (e.g.
+            // `ReentrySecretStoring`'s re-entry secret) is written via the `accessControl` branch
+            // above, built with `SecAccessControlCreateWithFlags(.biometryCurrentSet, ...)`.
+            // `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` is the DEFRA-mandated device-only,
+            // unlocked-only protection level for this non-secret item (security.instructions.md);
+            // it is not a weaker fallback for secrets. Accepted as a reviewed SonarCloud security
+            // hotspot/vulnerability rather than "fixed", since requiring authentication here would
+            // break the re-entry flow this marker exists to support.
             query[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
         }
 
@@ -137,7 +149,10 @@ nonisolated final class InMemoryKeychainStore: KeychainStoring, @unchecked Senda
     /// instead of returning the stored value — simulates biometric cancel/failure/lockout.
     var readErrorsByAccount: [String: Error] = [:]
 
-    init() {}
+    init() {
+        // Intentionally empty: `storage` is already initialised to an empty dictionary above;
+        // this test/preview double has no external resources to set up.
+    }
 
     func set(_ data: Data, account: String, accessControl: SecAccessControl?) throws {
         lock.withLock { storage[account] = data }

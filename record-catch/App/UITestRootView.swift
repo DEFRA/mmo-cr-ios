@@ -78,6 +78,22 @@ struct UITestRootView<ProductionRoot: View>: View {
                 initialRoute: .checkYourAnswers(referenceNumber: "A1234520260727150815"),
                 draft: Self.seedCheckYourAnswersDraft
             )
+        } else if launchArguments.contains(.catchRecordRecordSpeciesWeights) {
+            // Seeded favourite species already recorded to the draft → "Remove species" link is
+            // shown, for UI testing that it navigates to the Remove-species screen and back.
+            CatchRecordHostView(
+                initialRoute: .recordSpeciesWeights(gear: .seineNets, vessel: "ACHILLES", referenceNumber: "A1234520260727150815"),
+                favouriteSpecies: StubFavouriteSpeciesProvider(initialFavourites: Self.seedRemoveSpeciesList),
+                draft: Self.seedRemoveSpeciesDraft
+            )
+        } else if launchArguments.contains(.catchRecordRemoveSpecies) {
+            // Seeds straight to the Remove-species screen with two species already recorded to the
+            // draft, for UI testing the multi-select delete/cancel flow (including the "delete the
+            // last one" → Add-species routing) without driving the weights screen by hand.
+            CatchRecordHostView(
+                initialRoute: .removeSpecies(gear: .seineNets, vessel: "ACHILLES", referenceNumber: "A1234520260727150815"),
+                draft: Self.seedRemoveSpeciesDraft
+            )
         } else if launchArguments.contains(.catchRecordSubmissionConfirmation) {
             // Seeds straight to the final Confirmation screen, for UI testing the checkbox
             // validation and Accept action without driving the whole journey by hand.
@@ -134,6 +150,24 @@ struct UITestRootView<ProductionRoot: View>: View {
             )
         ]
         draft.speciesNotLanded = [SpeciesOption(name: "Atlantic cod (COD)").withWeights(above: "5", below: nil, discarded: nil)]
+        return draft
+    }
+
+    /// The two species pre-recorded to seine nets' catch for `-uiTestCatchRecordRecordSpeciesWeights`
+    /// and `-uiTestCatchRecordRemoveSpecies`.
+    private static var seedRemoveSpeciesList: [SpeciesOption] {
+        [
+            SpeciesOption(name: "Atlantic cod (COD)").withWeights(above: "250", below: nil, discarded: nil),
+            SpeciesOption(name: "Seabass (BSS)").withWeights(above: "40", below: nil, discarded: nil)
+        ]
+    }
+
+    /// Draft with seine nets' catch already recording both `seedRemoveSpeciesList` species, used to
+    /// seed both `-uiTestCatchRecordRecordSpeciesWeights` and `-uiTestCatchRecordRemoveSpecies`.
+    @MainActor
+    private static var seedRemoveSpeciesDraft: CatchRecordDraft {
+        let draft = CatchRecordDraft()
+        draft.gearCatches = [GearCatch(gear: .seineNets, speciesCaught: seedRemoveSpeciesList)]
         return draft
     }
 }

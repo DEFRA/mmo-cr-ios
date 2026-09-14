@@ -33,9 +33,12 @@ final class AppLockViewModel {
     private let unlockReason: String
 
     /// Called once biometric re-entry succeeds.
+    /// No-op default: previews/tests that don't care about the unlock transition can omit this;
+    /// real call sites (e.g. the app root) always supply a handler.
     var onUnlocked: () -> Void = {}
     /// Called whenever the flow hands off to the normal sign-in form (unavailable, locked out,
     /// or the user tapped the manual fallback link).
+    /// No-op default: see `onUnlocked` above.
     var onFallbackToSignIn: () -> Void = {}
 
     init(

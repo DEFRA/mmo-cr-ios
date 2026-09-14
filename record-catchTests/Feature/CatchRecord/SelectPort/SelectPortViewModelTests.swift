@@ -186,4 +186,48 @@ final class SelectPortViewModelTests: XCTestCase {
         XCTAssertEqual(router.path, [.checkYourAnswers(referenceNumber: referenceNumber)])
         XCTAssertFalse(draft.returnToCheckYourAnswers)
     }
+
+    // MARK: - Pre-fill on resume (see ADR-0015 decision #1)
+
+    func test_loadFavourites_departure_prefillsSelectionFromDraftDeparturePort() async {
+        let draft = CatchRecordDraft()
+        draft.departurePort = PortOption(name: "Hastings")
+        let sut = SelectPortViewModel(
+            phase: .departure,
+            vessel: vessel,
+            referenceNumber: referenceNumber,
+            router: CatchRecordRouter(),
+            favouritePorts: StubFavouritePortsProvider(initialFavourites: [PortOption(name: "Hastings"), PortOption(name: "Newlyn")]),
+            draft: draft
+        )
+
+        await sut.loadFavourites()
+
+        XCTAssertEqual(sut.selection, "Hastings")
+    }
+
+    func test_loadFavourites_return_prefillsSelectionFromDraftReturnPort() async {
+        let draft = CatchRecordDraft()
+        draft.returnPort = PortOption(name: "Newlyn")
+        let sut = SelectPortViewModel(
+            phase: .return,
+            vessel: vessel,
+            referenceNumber: referenceNumber,
+            router: CatchRecordRouter(),
+            favouritePorts: StubFavouritePortsProvider(initialFavourites: [PortOption(name: "Hastings"), PortOption(name: "Newlyn")]),
+            draft: draft
+        )
+
+        await sut.loadFavourites()
+
+        XCTAssertEqual(sut.selection, "Newlyn")
+    }
+
+    func test_loadFavourites_withNoDraftPort_leavesSelectionNil() async {
+        let sut = makeSUT(phase: .departure, router: CatchRecordRouter())
+
+        await sut.loadFavourites()
+
+        XCTAssertNil(sut.selection)
+    }
 }

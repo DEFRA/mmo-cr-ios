@@ -12,7 +12,7 @@
 //  `PortMapCameraTests` and `CatchLocationViewModelTests` (XCUITest can't assert map pixels). This
 //  is the in-app smoke test that the map screen actually opens and Save and continue is reachable.
 //
-
+    
 import XCTest
 
 final class CatchLocationUITests: XCTestCase {

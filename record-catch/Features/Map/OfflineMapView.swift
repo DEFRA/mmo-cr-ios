@@ -165,7 +165,7 @@ struct OfflineMapView: UIViewRepresentable {
         return map
     }
 
-    func updateUIView(_ map: MKMapView, context: Context) {
+    func updateUIView(_: MKMapView, context: Context) {
         // Uses `syncSelection(_:)`, not `select(_:)` — `select(_:)` writes to the
         // `selectedSubrectangle` binding, and mutating a binding from inside `updateUIView`
         // triggers SwiftUI's "Modifying state during view update" warning even when the value is

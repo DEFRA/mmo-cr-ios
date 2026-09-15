@@ -21,6 +21,7 @@ final class CatchRecordUITests: XCTestCase {
         static let draftContinue = "CatchRecord.draftAction.saveContinue"
         static let draftError = "CatchRecord.draftAction.error"
         static let draftDeleteConfirm = "CatchRecord.draftAction.deleteConfirm"
+        static let draftDeleteCancel = "CatchRecord.draftAction.deleteCancel"
 
         static let vesselGroup = "CatchRecord.selectVessel.radioGroup"
         static let vesselAchilles = "CatchRecord.selectVessel.option.achilles"
@@ -39,6 +40,7 @@ final class CatchRecordUITests: XCTestCase {
         static let departureError = "CatchRecord.tripDate.departure.error"
         static let returnHeading = "CatchRecord.tripDate.return.heading"
         static let returnContinue = "CatchRecord.tripDate.return.saveContinue"
+        static let returnError = "CatchRecord.tripDate.return.error"
 
         static let warningBox = "Home.warningBox"
     }
@@ -214,6 +216,52 @@ final class CatchRecordUITests: XCTestCase {
 
         XCTAssertTrue(element(app, ID.departureError).waitForExistence(timeout: 5))
         // Did not route on: still on the departure screen.
+        XCTAssertTrue(element(app, ID.departureHeading).exists)
+    }
+
+    @MainActor
+    func test_tripDate_return_submitWithNoDate_showsInlineError() {
+        let app = launch("-uiTestCatchRecordNew")
+
+        let achilles = element(app, ID.vesselAchilles)
+        XCTAssertTrue(achilles.waitForExistence(timeout: 5))
+        achilles.tap()
+        app.buttons[ID.vesselContinue].tap()
+
+        XCTAssertTrue(element(app, ID.tripNo).waitForExistence(timeout: 5))
+        element(app, ID.tripNo).tap()
+        app.buttons[ID.tripContinue].tap()
+
+        XCTAssertTrue(element(app, ID.departureHeading).waitForExistence(timeout: 5))
+        let departure = dateStrings(daysAgo: 1)
+        enterDate(app, day: departure.day, month: departure.month, year: departure.year, headingID: ID.departureHeading)
+        app.buttons[ID.departureContinue].tap()
+
+        XCTAssertTrue(element(app, ID.returnHeading).waitForExistence(timeout: 5))
+        app.buttons[ID.returnContinue].tap()
+
+        XCTAssertTrue(element(app, ID.returnError).waitForExistence(timeout: 5))
+        XCTAssertTrue(element(app, ID.returnHeading).exists)
+    }
+
+    @MainActor
+    func test_tripDate_departure_submitWithInvalidDate_showsInlineError() {
+        let app = launch("-uiTestCatchRecordNew")
+
+        let achilles = element(app, ID.vesselAchilles)
+        XCTAssertTrue(achilles.waitForExistence(timeout: 5))
+        achilles.tap()
+        app.buttons[ID.vesselContinue].tap()
+
+        XCTAssertTrue(element(app, ID.tripNo).waitForExistence(timeout: 5))
+        element(app, ID.tripNo).tap()
+        app.buttons[ID.tripContinue].tap()
+
+        XCTAssertTrue(element(app, ID.departureHeading).waitForExistence(timeout: 5))
+        enterDate(app, day: "31", month: "02", year: "2026", headingID: ID.departureHeading)
+        app.buttons[ID.departureContinue].tap()
+
+        XCTAssertTrue(element(app, ID.departureError).waitForExistence(timeout: 5))
         XCTAssertTrue(element(app, ID.departureHeading).exists)
     }
 
@@ -530,6 +578,26 @@ final class CatchRecordUITests: XCTestCase {
         app.buttons[GearID.saveContinue].tap()
 
         XCTAssertTrue(element(app, GearID.catchLocationHeading).waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    func test_selectGear_withDecimalVariableMeasurement_doesNotNavigate() {
+        let app = launch("-uiTestCatchRecordSelectGear")
+
+        let option = element(app, GearID.option)
+        XCTAssertTrue(option.waitForExistence(timeout: 5))
+        option.tap()
+
+        let field = app.textFields[GearID.timesShotField]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.typeText("5.5")
+
+        element(app, GearID.heading).tap()
+        app.buttons[GearID.saveContinue].tap()
+
+        XCTAssertTrue(element(app, GearID.heading).exists)
+        XCTAssertFalse(element(app, GearID.catchLocationHeading).exists)
     }
 
     // MARK: - Remove species

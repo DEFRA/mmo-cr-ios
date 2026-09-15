@@ -154,11 +154,11 @@ nonisolated final class InMemoryKeychainStore: KeychainStoring, @unchecked Senda
         // this test/preview double has no external resources to set up.
     }
 
-    func set(_ data: Data, account: String, accessControl: SecAccessControl?) throws {
+    func set(_ data: Data, account: String, accessControl _: SecAccessControl?) throws {
         lock.withLock { storage[account] = data }
     }
 
-    func data(account: String, prompt: String?) throws -> Data? {
+    func data(account: String, prompt _: String?) throws -> Data? {
         if let error = lock.withLock({ readErrorsByAccount[account] }) {
             throw error
         }

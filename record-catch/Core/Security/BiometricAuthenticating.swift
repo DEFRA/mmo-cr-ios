@@ -157,7 +157,7 @@ nonisolated final class FakeBiometricAuthenticator: BiometricAuthenticating, @un
         lock.withLock { availability }
     }
 
-    func authenticate(reason: String) async throws {
+    func authenticate(reason _: String) async throws {
         lock.withLock { authenticateCallCount += 1 }
         switch lock.withLock({ authenticateResult }) {
         case .success:

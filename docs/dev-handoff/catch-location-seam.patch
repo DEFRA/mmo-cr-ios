@@ -1,0 +1,65 @@
+diff --git a/record-catch/App/LaunchArguments.swift b/record-catch/App/LaunchArguments.swift
+index b34f2a1..d6d962a 100644
+--- a/record-catch/App/LaunchArguments.swift
++++ b/record-catch/App/LaunchArguments.swift
+@@ -33,6 +33,10 @@ struct LaunchArguments {
+         case catchRecordConfirmSamePort = "-uiTestCatchRecordConfirmSamePort"
+         case catchRecordSelectPort = "-uiTestCatchRecordSelectPort"
+         case catchRecordSelectGear = "-uiTestCatchRecordSelectGear"
++        /// Boots straight to the "Where was most of your catch caught?" map for a new catch record,
++        /// with a departure port that has a **real coordinate**, so the map's port-framing (see
++        /// `PortMapCamera`) can be exercised without driving the whole journey by hand.
++        case catchLocation = "-uiTestCatchLocation"
+         case catchRecordCheckYourAnswers = "-uiTestCatchRecordCheckYourAnswers"
+         case catchRecordSubmissionConfirmation = "-uiTestCatchRecordSubmissionConfirmation"
+         case catchRecordSubmissionSuccess = "-uiTestCatchRecordSubmissionSuccess"
+diff --git a/record-catch/App/UITestRootView.swift b/record-catch/App/UITestRootView.swift
+index 35f9e97..efe49ac 100644
+--- a/record-catch/App/UITestRootView.swift
++++ b/record-catch/App/UITestRootView.swift
+@@ -71,8 +71,20 @@ struct UITestRootView<ProductionRoot: View>: View {
+                     ])
+                 ])
+             )
+-        } else if launchArguments.contains(.catchRecordCheckYourAnswers) {
+-            // Fully-populated draft → Check your answers screen, for UI testing the summary/Change
++        } else if launchArguments.contains(.catchLocation) {
++            // Boots straight to the catch-location map for a new record, seeding a departure port
++            // that carries a REAL coordinate so the map frames on it (see `PortMapCamera`) — the
++            // hand-built ports elsewhere in this file have `coordinate == nil`, which makes the map
++            // fall back to the whole-UK default and hides the port-framing behaviour.
++            CatchRecordHostView(
++                initialRoute: .catchLocation(
++                    gear: .seineNets,
++                    vessel: "ACHILLES",
++                    referenceNumber: "A1234520260727150815"
++                ),
++                draft: Self.seedCatchLocationDraft
++            )
++        } else if launchArguments.contains(.catchRecordCheckYourAnswers) {            // Fully-populated draft → Check your answers screen, for UI testing the summary/Change
+             // links without driving the whole journey by hand.
+             CatchRecordHostView(
+                 initialRoute: .checkYourAnswers(referenceNumber: "A1234520260727150815"),
+@@ -108,6 +120,22 @@ struct UITestRootView<ProductionRoot: View>: View {
+         SubmissionRow(dateText: "20 Nov 2020", vesselName: "ACHILLES", status: .unsent, createdBy: "J.Smith")
+     }
+ 
++    /// Draft used to seed `-uiTestCatchLocation`: a new record whose departure port carries a real
++    /// WGS84 coordinate (Plymouth), so the catch-location map opens framed on the port rather than
++    /// falling back to the whole-UK default (see `PortMapCamera`). A matching `GearCatch` entry is
++    /// seeded so "Save and continue" can write the selected area back into the draft.
++    @MainActor
++    private static var seedCatchLocationDraft: CatchRecordDraft {
++        let draft = CatchRecordDraft()
++        draft.vessel = "ACHILLES"
++        draft.departurePort = PortOption(
++            name: "Plymouth",
++            coordinate: PortCoordinate(latitude: 50.3660, longitude: -4.1427)
++        )
++        draft.gearCatches = [GearCatch(gear: .seineNets)]
++        return draft
++    }
++
+     /// Fully-populated `CatchRecordDraft` used to seed `-uiTestCatchRecordCheckYourAnswers`, so the
+     /// Check-your-answers screen can be UI-tested (headings, rows, Change navigation) without
+     /// driving the whole journey by hand.

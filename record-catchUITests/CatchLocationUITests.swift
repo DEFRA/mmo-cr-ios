@@ -132,4 +132,92 @@ final class CatchLocationUITests: XCTestCase {
             "Choosing \"Other\" should navigate to the statistical sub-area selection screen"
         )
     }
+
+    /// Confirms the interactive map loads with its accessibility identifier and is on-screen and
+    /// hittable, independent of the zoom-gesture tests below.
+    @MainActor
+    func test_catchLocationMap_loadsWithInteractiveMapElement() {
+        let app = reachCatchLocationMap()
+
+        let map = element(app, CatchLocationID.map)
+        XCTAssertTrue(map.waitForExistence(timeout: 5), "The offline map should load with its accessibility identifier")
+        XCTAssertTrue(map.isHittable, "The offline map should be visible and interactive on screen")
+    }
+
+    /// Pinch-zooms out on the map (see `OfflineMapView.minZoomDistance`/`maxZoomDistance` for the
+    /// native MapKit zoom limits this gesture is bounded by) and confirms the map stays valid,
+    /// visible and responsive throughout, and that a subsequent, unrelated interaction ("Other")
+    /// still works — i.e. the zoom gesture doesn't leave the screen unresponsive.
+    @MainActor
+    func test_catchLocationMap_pinchToZoomOut_mapRemainsResponsive() {
+        let app = reachCatchLocationMap()
+
+        let map = element(app, CatchLocationID.map)
+        XCTAssertTrue(map.waitForExistence(timeout: 5), "The map should be present before zooming")
+        XCTAssertTrue(map.isHittable, "The map should be interactive before zooming")
+
+        map.pinch(withScale: 0.5, velocity: -1.0)
+
+        XCTAssertTrue(map.exists, "The map should remain valid immediately after a zoom-out gesture")
+        XCTAssertTrue(map.isHittable, "The map should remain visible and interactive after a zoom-out gesture")
+
+        let other = element(app, CatchLocationID.otherButton)
+        XCTAssertTrue(other.waitForExistence(timeout: 5), "The \"Other\" control should still be reachable after zooming out")
+        other.tap()
+        XCTAssertTrue(
+            element(app, ManualEntryID.heading).waitForExistence(timeout: 5),
+            "Navigation should still work normally after a zoom-out gesture"
+        )
+    }
+
+    /// Pinch-zooms in on the map and confirms the same responsiveness, then that "Save and
+    /// continue" still functions afterwards (exercising the no-selection validation path so the
+    /// test doesn't depend on tapping a specific subrectangle at an unpredictable zoom level).
+    @MainActor
+    func test_catchLocationMap_pinchToZoomIn_mapRemainsResponsive() {
+        let app = reachCatchLocationMap()
+
+        let map = element(app, CatchLocationID.map)
+        XCTAssertTrue(map.waitForExistence(timeout: 5), "The map should be present before zooming")
+        XCTAssertTrue(map.isHittable, "The map should be interactive before zooming")
+
+        map.pinch(withScale: 2.0, velocity: 1.0)
+
+        XCTAssertTrue(map.exists, "The map should remain valid immediately after a zoom-in gesture")
+        XCTAssertTrue(map.isHittable, "The map should remain visible and interactive after a zoom-in gesture")
+
+        app.buttons[CatchLocationID.saveContinue].tap()
+        XCTAssertTrue(
+            element(app, CatchLocationID.error).waitForExistence(timeout: 5),
+            "Save and continue should still function normally after a zoom-in gesture"
+        )
+    }
+
+    /// Chains a zoom out then a zoom in on the same map instance, confirming it survives repeated
+    /// gestures back-to-back without becoming stale, invisible or unresponsive.
+    @MainActor
+    func test_catchLocationMap_pinchZoomOutThenIn_mapRemainsResponsive() {
+        let app = reachCatchLocationMap()
+
+        let map = element(app, CatchLocationID.map)
+        XCTAssertTrue(map.waitForExistence(timeout: 5), "The map should be present before zooming")
+
+        map.pinch(withScale: 0.5, velocity: -1.0)
+        XCTAssertTrue(map.exists, "The map should remain valid after zooming out")
+        XCTAssertTrue(map.isHittable, "The map should remain interactive after zooming out")
+
+        map.pinch(withScale: 2.0, velocity: 1.0)
+        XCTAssertTrue(map.exists, "The map should remain valid after zooming back in")
+        XCTAssertTrue(map.isHittable, "The map should remain interactive after zooming back in")
+
+        // Tap Save and continue and confirm it still actually functions (rather than just
+        // checking `isHittable`, which can be reported before the simulator settles after two
+        // gestures fired back-to-back) — reaching the validation error proves the whole screen,
+        // not just the map, is still genuinely responsive.
+        app.buttons[CatchLocationID.saveContinue].tap()
+        XCTAssertTrue(
+            element(app, CatchLocationID.error).waitForExistence(timeout: 5),
+            "Save and continue should still function normally after repeated zoom gestures"
+        )
+    }
 }

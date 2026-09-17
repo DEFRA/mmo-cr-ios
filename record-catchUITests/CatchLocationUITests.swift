@@ -44,6 +44,24 @@ final class CatchLocationUITests: XCTestCase {
         app.descendants(matching: .any).matching(identifier: identifier).firstMatch
     }
 
+    /// Attaches a full-screen screenshot to the test as QA evidence, kept even on a passing run
+    /// so it's retrievable from the resulting `.xcresult` bundle.
+    private func attachScreenshot(named name: String, app: XCUIApplication) {
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        self.add(attachment)
+    }
+
+    /// `XCUIElement.pinch(withScale:velocity:)` returns as soon as the synthetic touches lift, but
+    /// `MKMapView` keeps animating its camera (spring/deceleration) for a short time afterwards —
+    /// there's no XCUITest-visible signal (no accessibility value, no animation-idle predicate) to
+    /// wait on directly, so this settles on a fixed pause. Without it, `attachScreenshot` captures
+    /// a part-way animation frame, not the fully zoomed state.
+    private func waitForZoomGestureToSettle() {
+        Thread.sleep(forTimeInterval: 1.0)
+    }
+
     /// Drives the one real UI step (select gear, enter its measurement, Save and continue) that
     /// opens the catch-location map, returning once the map heading is visible. Shared by every
     /// test here so each can start from the map screen without repeating the gear steps.
@@ -148,6 +166,16 @@ final class CatchLocationUITests: XCTestCase {
     /// native MapKit zoom limits this gesture is bounded by) and confirms the map stays valid,
     /// visible and responsive throughout, and that a subsequent, unrelated interaction ("Other")
     /// still works — i.e. the zoom gesture doesn't leave the screen unresponsive.
+    ///
+    /// NOTE on the screenshots this test attaches as QA evidence: `XCUIElement.pinch(withScale:
+    /// velocity:)` synthesises touches on a "best effort" basis (Apple's own documentation says
+    /// accuracy isn't guaranteed), and empirically — captured and diffed against this map's
+    /// `minZoomDistance`/`maxZoomDistance` bounds during investigation — a single synthetic pinch
+    /// does not reliably move `MKMapView`'s camera in the Simulator, so "Default" and "After" can
+    /// legitimately look the same. These assertions therefore verify *behavioural* responsiveness
+    /// (the map/screen stay interactive and navigation still works), not a specific zoom-level
+    /// change — treat the attached screenshots as "screen after the gesture was sent" evidence,
+    /// not proof the zoom level changed.
     @MainActor
     func test_catchLocationMap_pinchToZoomOut_mapRemainsResponsive() {
         let app = reachCatchLocationMap()
@@ -155,11 +183,15 @@ final class CatchLocationUITests: XCTestCase {
         let map = element(app, CatchLocationID.map)
         XCTAssertTrue(map.waitForExistence(timeout: 5), "The map should be present before zooming")
         XCTAssertTrue(map.isHittable, "The map should be interactive before zooming")
+        waitForZoomGestureToSettle()
+        attachScreenshot(named: "CatchLocation-Map-Default-3x3", app: app)
 
         map.pinch(withScale: 0.5, velocity: -1.0)
 
         XCTAssertTrue(map.exists, "The map should remain valid immediately after a zoom-out gesture")
         XCTAssertTrue(map.isHittable, "The map should remain visible and interactive after a zoom-out gesture")
+        waitForZoomGestureToSettle()
+        attachScreenshot(named: "CatchLocation-Map-After-PinchZoomOut", app: app)
 
         let other = element(app, CatchLocationID.otherButton)
         XCTAssertTrue(other.waitForExistence(timeout: 5), "The \"Other\" control should still be reachable after zooming out")
@@ -180,11 +212,15 @@ final class CatchLocationUITests: XCTestCase {
         let map = element(app, CatchLocationID.map)
         XCTAssertTrue(map.waitForExistence(timeout: 5), "The map should be present before zooming")
         XCTAssertTrue(map.isHittable, "The map should be interactive before zooming")
+        waitForZoomGestureToSettle()
+        attachScreenshot(named: "CatchLocation-Map-Default-3x3", app: app)
 
         map.pinch(withScale: 2.0, velocity: 1.0)
 
         XCTAssertTrue(map.exists, "The map should remain valid immediately after a zoom-in gesture")
         XCTAssertTrue(map.isHittable, "The map should remain visible and interactive after a zoom-in gesture")
+        waitForZoomGestureToSettle()
+        attachScreenshot(named: "CatchLocation-Map-After-PinchZoomIn", app: app)
 
         app.buttons[CatchLocationID.saveContinue].tap()
         XCTAssertTrue(
@@ -201,14 +237,20 @@ final class CatchLocationUITests: XCTestCase {
 
         let map = element(app, CatchLocationID.map)
         XCTAssertTrue(map.waitForExistence(timeout: 5), "The map should be present before zooming")
+        waitForZoomGestureToSettle()
+        attachScreenshot(named: "CatchLocation-Map-Default-3x3", app: app)
 
         map.pinch(withScale: 0.5, velocity: -1.0)
         XCTAssertTrue(map.exists, "The map should remain valid after zooming out")
         XCTAssertTrue(map.isHittable, "The map should remain interactive after zooming out")
+        waitForZoomGestureToSettle()
+        attachScreenshot(named: "CatchLocation-Map-After-PinchZoomOut", app: app)
 
         map.pinch(withScale: 2.0, velocity: 1.0)
         XCTAssertTrue(map.exists, "The map should remain valid after zooming back in")
         XCTAssertTrue(map.isHittable, "The map should remain interactive after zooming back in")
+        waitForZoomGestureToSettle()
+        attachScreenshot(named: "CatchLocation-Map-After-PinchZoomIn", app: app)
 
         // Tap Save and continue and confirm it still actually functions (rather than just
         // checking `isHittable`, which can be reported before the simulator settles after two

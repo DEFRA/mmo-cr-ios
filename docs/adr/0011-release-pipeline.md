@@ -48,8 +48,7 @@ New [.github/workflows/ios-release.yml](../../.github/workflows/ios-release.yml)
 `release_dev` calls a parametrised private `build_and_upload` lane (so future test/prod lanes reuse it):
 
 - App Store Connect **API-key** auth from `ASC_KEY_ID` / `ASC_ISSUER_ID` / `ASC_KEY_CONTENT` (base64).
-- **Signing (POC):** a manual `.p12` certificate + DEV provisioning profile imported into a temporary
-  keychain by the workflow; the `match` call is commented out (see decision 4).
+- **Signing:** Fastlane Match in read-only mode, synced from the private signing repo (see decision 4).
 - `build_app` (app-store export) without automatic build number incrementing (`GITHUB_RUN_NUMBER` is not used). The `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` baked into `project.pbxproj` are used directly unless overridden at runtime via `workflow_dispatch` inputs.
 - `upload_to_testflight(distribute_external: false)` → the Dev app's internal TestFlight group.
 - `distribute_dev_external` lane → waits for App Store Connect build processing and assigns the uploaded build to the "External Testers V2" external group (`distribute_only: true`).
@@ -66,26 +65,50 @@ to the exact versions configured in `project.pbxproj`. This is a deliberate devi
 ci-cd standard's "derive marketing version from tag / build number from GITHUB_RUN_NUMBER" preference (see
 [ci-cd instructions](../../.github/instructions/ci-cd.instructions.md)), chosen so developers manage versioning directly in code without automated increment collisions.
 
-### 4. Signing — Fastlane Match (target) with a manual `.p12` POC deviation for DEV
+### 4. Signing — Fastlane Match (git storage, SSH deploy key, read-only in CI)
 
-Fastlane Match (read-only, per design §8.2) is the **target** signing approach. **For the initial DEV
-proof-of-concept, however, the pipeline signs with a manual `.p12` certificate + provisioning profile
-(design §8.3), bypassing Match**: the release workflow decodes the certificate and profile from secrets,
-imports them into a **temporary keychain** on the runner (deleted at job end), and `build_app` signs
-manually (`CODE_SIGN_STYLE=Manual` with the DEV distribution profile). The `match(...)` call in the
-`build_and_upload` lane is **commented out, not removed**, so the full test/prod rollout can switch back to
-Match without rework. Only the release job receives signing secrets; PR CI never does.
+Fastlane Match is the signing approach for the pipeline. Signing assets are encrypted with OpenSSL under
+a `MATCH_PASSWORD` passphrase and stored in the **private** repo
+[DEFRA/mmo-cr-ios-signing-assets](https://github.com/DEFRA/mmo-cr-ios-signing-assets), configured in
+[fastlane/Matchfile](../../fastlane/Matchfile) (`storage_mode: git`, `type: appstore`, branch `main`).
+
+- **Repo authentication is an SSH deploy key** dedicated to the signing repo and granted **read-only**
+  access. The release workflow writes the key from the `MATCH_DEPLOY_KEY` secret to a `RUNNER_TEMP` file
+  (`chmod 600`), pins GitHub's published `ssh-ed25519` host key into `known_hosts` rather than trusting
+  `ssh-keyscan`, and exports `MATCH_GIT_PRIVATE_KEY` for `match`. A separate deploy key is required
+  because GitHub will not accept the same key on two repositories; `actions/checkout` uses the
+  `GITHUB_TOKEN`, so there is no conflict.
+- **CI never mints credentials.** `setup_ci` creates an isolated temporary keychain (`fastlane_tmp_keychain`)
+  and `match(readonly: true)` only fetches existing assets. Certificate/profile creation and renewal are a
+  deliberate, local act by a signing administrator holding Apple Developer App Manager rights and write
+  access to the signing repo (`bundle exec fastlane match appstore`). A `certificates` lane exists so
+  developers can sync read-only.
+- The provisioning profile name is taken from Match's
+  `SharedValues::MATCH_PROVISIONING_PROFILE_MAPPING` (falling back to sigh's env var) and passed to
+  `build_app` as `PROVISIONING_PROFILE_SPECIFIER` plus the `export_options` mapping, so no profile name is
+  hard-coded or held as a secret.
+- The deploy key and the temporary keychain are destroyed in an `if: always()` cleanup step.
+
+The earlier manual `.p12` + provisioning-profile approach (design §8.3) was a **proof of concept only** and
+has been removed, together with its `BUILD_CERTIFICATE_BASE64`, `P12_PASSWORD`,
+`BUILD_PROVISION_PROFILE_BASE64`, `KEYCHAIN_PASSWORD` and `PROVISIONING_PROFILE_NAME` secrets. Only the
+release job receives signing secrets; PR CI never does.
+
+The one-off administrator procedure for populating the store — GitHub SSH access, converting the existing
+certificate to DER and running `fastlane match import` — is documented in
+[Fastlane Match — importing existing signing assets](../release/fastlane-match-signing.md).
 
 ## Consequences
 
 - The Dev release path exists as reviewable, version-controlled pipeline-as-code and extends ADR-0008’s
   single automation model.
 - **Prerequisites before this workflow can run green** (provisioning, not code): the `dev` Environment
-  with the App Store Connect API-key secrets `ASC_KEY_ID` / `ASC_ISSUER_ID` / `ASC_KEY_CONTENT`, and — for
-  the manual `.p12` POC — `BUILD_CERTIFICATE_BASE64`, `P12_PASSWORD`, `BUILD_PROVISION_PROFILE_BASE64`,
-  `KEYCHAIN_PASSWORD`, `APPLE_TEAM_ID` and `PROVISIONING_PROFILE_NAME`; plus the Dev App Store Connect app
-  record with an internal TestFlight group. (The `MATCH_*` secrets are not needed while the POC bypasses
-  Match.)
+  with the App Store Connect API-key secrets `ASC_KEY_ID` / `ASC_ISSUER_ID` / `ASC_KEY_CONTENT`, plus
+  `APPLE_TEAM_ID`, `ASC_EXTERNAL_TESTING_GROUPS`, `MATCH_PASSWORD` and `MATCH_DEPLOY_KEY`; the signing
+  repo bootstrapped once by a signing administrator; and the Dev App Store Connect app record with an
+  internal TestFlight group.
+- **Custody risk accepted:** losing `MATCH_PASSWORD` makes the store undecryptable and forces a
+  `match nuke` + regenerate, so it is held in the team credential store.
 - **Follow-ups (out of scope here):** the three `.xcconfig`/schemes and test/prod identities (iOS
   Developer app-code work); embedding `GitCommitSHA` as read-only `Info.plist` metadata (needs an
   `Info.plist` key wired in the project); the remaining `test`/`prod` build, external-promotion and App

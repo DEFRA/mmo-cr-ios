@@ -18,10 +18,13 @@ This folder contains reusable GDS-inspired SwiftUI components and shared design 
 - `Components/Form/SearchDropdownField.swift`: list-only search field with dropdown results.
 - `Components/Form/TextInputField.swift`: text input that also supports secure password entry.
 
-## Demo screen
-
-- `Views/TripFormDemoView.swift` composes all reusable controls in one GDS-style flow.
-
 ## Data source (stub)
 
 - `Data/PortOptionProvider.swift` provides static options now and can be replaced by SwiftData-backed options later.
+- `Data/RecordsRepository.swift` merges local, on-device-persisted Unsent drafts (see
+  [ADR-0014](../../../docs/adr/0014-catch-record-draft-persistence.md)) with a fixed server-record
+  stub, newest first, for Home's trips table (see
+  [ADR-0015](../../../docs/adr/0015-home-merged-records-list.md)).
+- `Components/Table/SubmissionsTable.swift`'s `SubmissionRow` carries an optional `localID: UUID?`
+  (set for a local Unsent row so it can be resumed/deleted) and a `sortDate: Date` (ordering only);
+  both are excluded from its existing content-based equality/hashing.

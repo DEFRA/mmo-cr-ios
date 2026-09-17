@@ -50,6 +50,9 @@ final class CatchLocationManualEntryViewModel {
         self.subrectangleSearch = subrectangleSearch
         self.favouriteSpecies = favouriteSpecies
         self.draft = draft
+        // Pre-fills this gear's previously-captured statistical area when restarting a resumed
+        // draft from the beginning (see ADR-0015 decision #1).
+        self.selectedCode = draft.gearCatchIndex(forGearID: gear.id).flatMap { draft.gearCatches[$0].statisticalArea }
     }
 
     /// Current inline error, once a submit has been attempted. Reuses `CatchLocationValidation` —

@@ -6,10 +6,12 @@ species caught) and confirm submission. This document covers the whole module: a
 navigation, every screen, the shared journey state, data models, and how offline-first,
 accessibility and testing are handled throughout.
 
-This is a **UI-only phase**: there is no real backend yet. Every "API" (vessels, ports, gears,
-species, favourites) is a stubbed, protocol-shaped provider so a real implementation can be swapped
-in later without changing view models or their tests. Nothing is persisted to disk yet — see
-[ADR-0005](../../../docs/adr/0005-catch-record-draft-model.md) for the planned persistence work.
+This is a **UI-only phase for the submission itself**: there is no real backend yet. Every "API"
+(vessels, ports, gears, species, favourites) is a stubbed, protocol-shaped provider so a real
+implementation can be swapped in later without changing view models or their tests. The
+**in-progress draft itself is genuinely persisted on-device** (SwiftData), so a journey survives
+app termination and reappears as an Unsent row on Home — see
+[ADR-0014](../../../docs/adr/0014-catch-record-draft-persistence.md).
 
 ## Related ADRs and design specs
 
@@ -20,6 +22,12 @@ in later without changing view models or their tests. Nothing is persisted to di
   (provider protocols, per-user favourites, routing/branching pattern reused by gear and species)
 - [ADR-0005 — Catch record draft model](../../../docs/adr/0005-catch-record-draft-model.md)
   (`CatchRecordDraft`, the shared journey-scoped state)
+- [ADR-0013 — Every "Change" link returns to Check your answers](../../../docs/adr/0013-check-your-answers-change-always-resumes.md)
+  (per-screen resume-from-draft pre-fill pattern, generalised by ADR-0014's full-journey resume)
+- [ADR-0014 — On-device persistence of the in-progress catch record](../../../docs/adr/0014-catch-record-draft-persistence.md)
+  (SwiftData-backed `CatchRecordDraftStoring`, `localID`/`payload`, resume/delete)
+- [ADR-0015 — Home's merged records list](../../../docs/adr/0015-home-merged-records-list.md)
+  (local Unsent drafts + stubbed server records, merge/ordering)
 - [Design spec — Create a catch record, Part 1](../../../docs/design-specs/create-catch-record.md)
   (copy table, states, accessibility annotations for the first screens)
 
@@ -121,7 +129,7 @@ namespaced `CatchRecord.<screenId>.*` throughout (e.g. `CatchRecord.selectVessel
 
 | # | Folder | Route case | Purpose | Continues to |
 |---|---|---|---|---|
-| 1 | `DraftAction/` | `.draftAction(SubmissionRow)` | What to do with an existing **Unsent** draft record: Complete or Delete (destructive `confirmationDialog`, requires explicit confirm). | Complete → `.selectVessel`; Delete confirmed → `popToRoot()` (Home) |
+| 1 | `DraftAction/` | `.draftAction(SubmissionRow)` | What to do with an existing **Unsent** draft record: Complete or Delete (destructive `confirmationDialog`, requires explicit confirm). Complete loads the persisted payload (if any) into the shared draft before continuing (see ADR-0014). | Complete → `.selectVessel` (fields already answered are pre-filled as the user walks forward again); Delete confirmed → deletes the persisted draft, then `popToRoot()` (Home) |
 | 2 | `SelectVessel/` | `.selectVessel` | Pick the vessel for a new trip, from `VesselProviding` (stubbed: ACHILLES, HERCULES). Writes `draft.vessel`. | `.tripStartedToday` |
 | 3 | `TripStartedToday/` | `.tripStartedToday` | Yes/No — did the trip start and finish today? | Yes → port sub-journey; No → `.tripDate(.departure)` |
 | 4 | `TripDate/` | `.tripDate(phase:...)` | Reusable day/month/year date entry for departure **and** return (driven by `TripDatePhase`). Writes `draft.departureDate`/`draft.returnDate`. | Departure → `.tripDate(.return)`; Return → late? `.submissionNudge` : port sub-journey |
@@ -145,8 +153,14 @@ namespaced `CatchRecord.<screenId>.*` throughout (e.g. `CatchRecord.selectVessel
 Reached only from an **Unsent** row on the Home submissions table
 (`CatchRecordRouting.entryRoute(for:)` — every other status resolves to `nil` and stays inert).
 `DraftActionOption` is `.complete`/`.delete`. Deleting requires a destructive
-`confirmationDialog` (`showDeleteConfirmation`); confirming calls `router.popToRoot()`, cancelling
-just dismisses the dialog leaving the selection untouched.
+`confirmationDialog` (`showDeleteConfirmation`); confirming deletes the persisted draft
+(`CatchRecordDraftStoring.deleteDraft(localID:)`) and calls `router.popToRoot()`; cancelling just
+dismisses the dialog leaving the selection untouched. Completing loads the persisted
+`CatchRecordDraftPayload` for `row.localID` (when present) via `resumeDraft()` and applies it to
+the shared `CatchRecordDraft` (`draft.apply(payload)`) **before** pushing `.selectVessel` — the
+journey always restarts from the very first screen, but every already-answered field is pre-filled
+as the user walks forward again (see ADR-0014 decision #5). A row with no `localID` (e.g. a
+hand-built preview/test row) still routes forward with a blank draft.
 
 ### 2. Select vessel (`SelectVessel/`)
 
@@ -262,24 +276,31 @@ journey-scoped accumulator shared across every screen in the stack (injected by
 `CatchRecordHostView`, mirroring the favourites providers). It **complements** the route-payload
 approach rather than replacing it: routes still carry the specific values a destination needs for
 its own display/deep-linking, while the draft accumulates the whole in-progress record for the
-Check-your-answers summary and eventual submission.
+Check-your-answers summary, eventual submission, and on-device persistence.
 
 ```swift
 final class CatchRecordDraft {
+    let localID: UUID
     var vessel: String?
     var departureDate: Date?
     var returnDate: Date?
     var departurePort: PortOption?
     var returnPort: PortOption?
-    var statisticalArea: String?
-    var gear: GearOption?
-    var speciesCaught: [SpeciesOption] = []
+    var gearCatches: [GearCatch] = []
     var speciesNotLanded: [SpeciesOption] = []
+    var returnToCheckYourAnswers = false
+
+    var payload: CatchRecordDraftPayload { ... }       // Codable snapshot for persistence
+    func apply(_ payload: CatchRecordDraftPayload) { ... } // mutate in place when resuming
 }
 ```
 
-Not persisted to disk in this phase — see ADR-0005 and the "future ADR" notes throughout this
-module for the planned on-device persistence/sync work.
+`localID` is a stable, per-draft identifier generated once (or supplied — used when reconstructing
+a draft from a persisted payload). `payload`/`apply(_:)` are the seam to
+[`CatchRecordDraftStoring`](../../Core/Persistence/CatchRecordDraftStore.swift) — see
+[ADR-0014](../../../docs/adr/0014-catch-record-draft-persistence.md) for the full persistence
+design (SwiftData-backed store, when the draft is saved, how resuming pre-fills every screen, and
+the data-at-rest posture).
 
 ## Offline-first
 
@@ -293,8 +314,10 @@ connectivity by default**:
   storage species) surface a `saveFailed` flag with a recoverable, accessible inline error banner
   rather than crashing or silently discarding input, ready to become real network/persistence
   failures later without changing the view/view-model contract.
-- Nothing here is persisted across app restarts yet — that is explicit future-phase scope (see
-  ADR-0005), not an oversight.
+- The in-progress draft **is** persisted across app restarts (SwiftData, ADR-0014) — every "Save
+  and continue" writes it, so an Unsent record reappears on Home and is resumable/deletable even
+  after the app was terminated. Favourites and the stubbed provider data remain in-memory only,
+  scoped to a single journey, per the "future ADR" notes throughout this module.
 
 ## Accessibility
 

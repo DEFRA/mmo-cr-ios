@@ -77,4 +77,15 @@ final class CatchLocationManualEntryViewModelTests: XCTestCase {
             [.addSpecies(gear: .seineNets, vessel: vessel, referenceNumber: referenceNumber, returnPhase: .recordWeights)]
         )
     }
+
+    // MARK: - Pre-fill on resume (see ADR-0015 decision #1)
+
+    func test_init_prefillsSelectedCodeFromDraftGearCatch() {
+        let draft = CatchRecordDraft()
+        draft.gearCatches = [GearCatch(gear: .seineNets, statisticalArea: "38E96")]
+
+        let sut = makeSUT(router: CatchRecordRouter(), draft: draft)
+
+        XCTAssertEqual(sut.selectedCode, "38E96")
+    }
 }

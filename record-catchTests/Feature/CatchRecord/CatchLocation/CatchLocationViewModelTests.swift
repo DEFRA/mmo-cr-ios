@@ -138,4 +138,36 @@ final class CatchLocationViewModelTests: XCTestCase {
             [.catchLocationManualEntry(gear: .seineNets, vessel: vessel, referenceNumber: referenceNumber)]
         )
     }
+
+    // MARK: - Pre-fill on resume (see ADR-0015 decision #1)
+
+    func test_init_prefillsSelectedAreaFromDraftGearCatch() {
+        let draft = CatchRecordDraft()
+        draft.gearCatches = [GearCatch(gear: .seineNets, statisticalArea: "38E96")]
+
+        let sut = CatchLocationViewModel(
+            gear: .seineNets,
+            vessel: vessel,
+            referenceNumber: referenceNumber,
+            router: CatchRecordRouter(),
+            draft: draft
+        )
+
+        XCTAssertEqual(sut.selectedArea, "38E96")
+    }
+
+    func test_init_withNoRecordedArea_leavesSelectedAreaNil() {
+        let draft = CatchRecordDraft()
+        draft.gearCatches = [GearCatch(gear: .seineNets)]
+
+        let sut = CatchLocationViewModel(
+            gear: .seineNets,
+            vessel: vessel,
+            referenceNumber: referenceNumber,
+            router: CatchRecordRouter(),
+            draft: draft
+        )
+
+        XCTAssertNil(sut.selectedArea)
+    }
 }

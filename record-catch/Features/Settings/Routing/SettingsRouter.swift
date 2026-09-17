@@ -14,7 +14,10 @@ final class SettingsRouter {
 
     private(set) var path: [SettingsRoute] = []
 
-    init() {}
+    init() {
+        // Intentionally empty: `path` is already initialised to an empty stack above; screens
+        // are pushed explicitly via `push(_:)` once the Settings tab is shown.
+    }
 
     /// Pushes the next screen in the Settings tab's stack.
     func push(_ route: SettingsRoute) {

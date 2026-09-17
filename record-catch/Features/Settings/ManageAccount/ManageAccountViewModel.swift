@@ -79,21 +79,31 @@ final class ManageAccountViewModel {
 
     /// Reached via the First name row's "Change" link.
     /// - TODO: Navigate to a first-name-editing destination once one exists.
-    func changeFirstNameTapped() {}
+    func changeFirstNameTapped() {
+        // Intentionally empty: no destination exists yet (see TODO above).
+    }
 
     /// Reached via the Last name row's "Change" link.
     /// - TODO: Navigate to a last-name-editing destination once one exists.
-    func changeLastNameTapped() {}
+    func changeLastNameTapped() {
+        // Intentionally empty: no destination exists yet (see TODO above).
+    }
 
     /// Reached via the Address row's "Change" link.
     /// - TODO: Navigate to an address-editing destination once one exists.
-    func changeAddressTapped() {}
+    func changeAddressTapped() {
+        // Intentionally empty: no destination exists yet (see TODO above).
+    }
 
     /// Reached via the Email row's "Change" link.
     /// - TODO: Navigate to an email-editing destination once one exists.
-    func changeEmailTapped() {}
+    func changeEmailTapped() {
+        // Intentionally empty: no destination exists yet (see TODO above).
+    }
 
     /// Reached via the Contact number row's "Change" link.
     /// - TODO: Navigate to a contact-number-editing destination once one exists.
-    func changeContactNumberTapped() {}
+    func changeContactNumberTapped() {
+        // Intentionally empty: no destination exists yet (see TODO above).
+    }
 }

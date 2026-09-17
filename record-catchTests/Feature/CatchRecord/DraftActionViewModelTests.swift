@@ -23,17 +23,6 @@ final class DraftActionViewModelTests: XCTestCase {
         XCTAssertTrue(router.path.isEmpty)
     }
 
-    func test_submit_withCompleteSelected_pushesSelectVessel() {
-        let router = CatchRecordRouter()
-        let sut = DraftActionViewModel(row: row, router: router)
-        sut.selection = .complete
-
-        sut.submit()
-
-        XCTAssertNil(sut.errorKey)
-        XCTAssertEqual(router.path, [.selectVessel])
-    }
-
     func test_submit_withDeleteSelected_showsConfirmation_doesNotRouteYet() {
         let router = CatchRecordRouter()
         let sut = DraftActionViewModel(row: row, router: router)
@@ -74,5 +63,74 @@ final class DraftActionViewModelTests: XCTestCase {
     func test_errorKey_beforeSubmit_isNilEvenWithoutSelection() {
         let sut = DraftActionViewModel(row: row, router: CatchRecordRouter())
         XCTAssertNil(sut.errorKey)
+    }
+
+    // MARK: - Resume (see ADR-0014/0015 — "Complete" restarts from the beginning, pre-filled)
+
+    func test_resumeDraft_withNoLocalID_pushesSelectVessel_leavesDraftUntouched() async {
+        let router = CatchRecordRouter()
+        let draft = CatchRecordDraft()
+        let sut = DraftActionViewModel(row: row, router: router, draft: draft) // row.localID is nil
+
+        await sut.resumeDraft()
+
+        XCTAssertEqual(router.path, [.selectVessel])
+        XCTAssertNil(draft.vessel)
+    }
+
+    func test_resumeDraft_withPersistedDraft_loadsPayloadIntoSharedDraft_andPushesSelectVessel() async {
+        let localID = UUID()
+        let rowWithLocalID = record_catch.SubmissionRow(
+            dateText: "—", vesselName: "—", status: .unsent, createdBy: "You", localID: localID
+        )
+        let seededDraft = CatchRecordDraft(localID: localID)
+        seededDraft.vessel = "ACHILLES"
+        seededDraft.departurePort = PortOption(name: "Hastings")
+        let store = InMemoryCatchRecordDraftStore(seed: [localID: seededDraft.payload])
+
+        let router = CatchRecordRouter()
+        let sharedDraft = CatchRecordDraft()
+        let sut = DraftActionViewModel(row: rowWithLocalID, router: router, draft: sharedDraft, draftStore: store)
+
+        await sut.resumeDraft()
+
+        XCTAssertEqual(sharedDraft.vessel, "ACHILLES")
+        XCTAssertEqual(sharedDraft.departurePort, PortOption(name: "Hastings"))
+        XCTAssertEqual(router.path, [.selectVessel])
+    }
+
+    func test_resumeDraft_withUnknownLocalID_startsBlank_stillPushesSelectVessel() async {
+        let rowWithLocalID = record_catch.SubmissionRow(
+            dateText: "—", vesselName: "—", status: .unsent, createdBy: "You", localID: UUID()
+        )
+        let router = CatchRecordRouter()
+        let draft = CatchRecordDraft()
+        let sut = DraftActionViewModel(row: rowWithLocalID, router: router, draft: draft, draftStore: InMemoryCatchRecordDraftStore())
+
+        await sut.resumeDraft()
+
+        XCTAssertNil(draft.vessel)
+        XCTAssertEqual(router.path, [.selectVessel])
+    }
+
+    // MARK: - Delete removes the persisted draft (see ADR-0014)
+
+    func test_confirmDelete_withLocalID_removesPersistedDraft() async {
+        let localID = UUID()
+        let rowWithLocalID = record_catch.SubmissionRow(
+            dateText: "—", vesselName: "—", status: .unsent, createdBy: "You", localID: localID
+        )
+        let store = InMemoryCatchRecordDraftStore(seed: [localID: CatchRecordDraft(localID: localID).payload])
+        let router = CatchRecordRouter()
+        let sut = DraftActionViewModel(row: rowWithLocalID, router: router, draftStore: store)
+        sut.selection = .delete
+        sut.submit()
+
+        sut.confirmDelete()
+        // Allow the fire-and-forget deletion Task to run.
+        try? await Task.sleep(nanoseconds: 10_000_000)
+
+        let remaining = try? await store.loadDraft(localID: localID)
+        XCTAssertNil(remaining ?? nil)
     }
 }

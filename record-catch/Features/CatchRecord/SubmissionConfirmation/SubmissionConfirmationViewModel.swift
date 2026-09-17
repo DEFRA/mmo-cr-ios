@@ -7,9 +7,12 @@ import Foundation
 /// and accurate before "Accept and submit trip details" proceeds; declining to tick it shows an
 /// inline error and does not navigate. Once ticked, "Accept and submit trip details" calls the
 /// (stubbed) `CatchRecordSubmissionServicing` — this is where the real submission API call will
-/// happen in a future phase — and only routes on to `submissionSuccess` once it succeeds. A
-/// transient/offline failure surfaces a recoverable inline error and does not navigate, matching
-/// the `saveFailed` pattern used elsewhere in this module (e.g. `GearMeasurementsViewModel`).
+/// happen in a future phase — and only routes on to `submissionSuccess` once it succeeds. On
+/// success the persisted local draft is deleted (fire-and-forget) so it no longer appears as an
+/// Unsent row on Home (see ADR-0014/0015) — the server becomes the record's source of truth once
+/// submitted. A transient/offline failure surfaces a recoverable inline error and does not
+/// navigate (and leaves the persisted draft untouched, so it remains resumable), matching the
+/// `saveFailed` pattern used elsewhere in this module (e.g. `GearMeasurementsViewModel`).
 @MainActor
 @Observable
 final class SubmissionConfirmationViewModel {
@@ -26,15 +29,21 @@ final class SubmissionConfirmationViewModel {
 
     private let router: CatchRecordRouter
     private let submissionService: CatchRecordSubmissionServicing
+    private let draft: CatchRecordDraft
+    private let draftStore: CatchRecordDraftStoring
 
     init(
         referenceNumber: String,
         router: CatchRecordRouter,
-        submissionService: CatchRecordSubmissionServicing = StubCatchRecordSubmissionService()
+        submissionService: CatchRecordSubmissionServicing = StubCatchRecordSubmissionService(),
+        draft: CatchRecordDraft = CatchRecordDraft(),
+        draftStore: CatchRecordDraftStoring = InMemoryCatchRecordDraftStore()
     ) {
         self.referenceNumber = referenceNumber
         self.router = router
         self.submissionService = submissionService
+        self.draft = draft
+        self.draftStore = draftStore
     }
 
     /// Current inline error, once a submit has been attempted.
@@ -54,6 +63,8 @@ final class SubmissionConfirmationViewModel {
         defer { isSubmitting = false }
         do {
             try await submissionService.submit(referenceNumber: referenceNumber)
+            let localID = draft.localID
+            Task { try? await draftStore.deleteDraft(localID: localID) }
             router.push(.submissionSuccess(referenceNumber: referenceNumber))
         } catch {
             submitFailed = true

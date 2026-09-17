@@ -22,6 +22,14 @@ import Foundation
 @Observable
 final class CatchRecordDraft {
 
+    /// Stable local identity for this draft's persisted on-device record (see ADR-0014,
+    /// `CatchRecordDraftStoring`). Generated once per journey; a resumed journey's draft keeps the
+    /// `localID` of the persisted record it was loaded from, so saving continues to update the same
+    /// row rather than creating a duplicate. `nonisolated(unsafe)` purely so the `nonisolated init`
+    /// below can set it directly (mirroring the class's existing default-parameter-value pattern);
+    /// every actual read/write happens on the main actor in practice, same as every other property.
+    nonisolated(unsafe) var localID: UUID
+
     /// The vessel this catch record is for.
     var vessel: String?
     /// The date the trip departed.
@@ -52,7 +60,9 @@ final class CatchRecordDraft {
     /// `nonisolated` so `CatchRecordDraft()` can be used as a default parameter value from any
     /// isolation context (e.g. non-`@MainActor` `View` initializers) without a hop to the main
     /// actor; it only sets default property values, so this is safe.
-    nonisolated init() {}
+    nonisolated init(localID: UUID = UUID()) {
+        self.localID = localID
+    }
 
     /// The confirmed gears, in the order they were selected — convenience over
     /// `gearCatches.map(\.gear)`.
@@ -62,4 +72,48 @@ final class CatchRecordDraft {
     func gearCatchIndex(forGearID gearID: String) -> Int? {
         gearCatches.firstIndex { $0.id == gearID }
     }
+
+    /// A `Codable` snapshot of every persisted field, suitable for writing to
+    /// `CatchRecordDraftStoring` (see ADR-0014). Deliberately excludes `localID` (carried
+    /// separately by the store) and `returnToCheckYourAnswers` (a transient, in-memory navigation
+    /// hint with no persisted meaning).
+    var payload: CatchRecordDraftPayload {
+        CatchRecordDraftPayload(
+            vessel: vessel,
+            departureDate: departureDate,
+            returnDate: returnDate,
+            departurePort: departurePort,
+            returnPort: returnPort,
+            gearCatches: gearCatches,
+            speciesNotLanded: speciesNotLanded
+        )
+    }
+
+    /// Overwrites every persisted field from a previously-saved payload (e.g. when resuming a
+    /// draft from Home — see `DraftActionViewModel`). Mutates this instance in place, rather than
+    /// replacing it, so every screen already holding a reference to the shared draft (via
+    /// `.environment(draft)`) observes the resumed values.
+    func apply(_ payload: CatchRecordDraftPayload) {
+        vessel = payload.vessel
+        departureDate = payload.departureDate
+        returnDate = payload.returnDate
+        departurePort = payload.departurePort
+        returnPort = payload.returnPort
+        gearCatches = payload.gearCatches
+        speciesNotLanded = payload.speciesNotLanded
+    }
+}
+
+/// A `Codable` snapshot of every field `CatchRecordDraft` accumulates across the journey, used as
+/// the on-disk representation stored by `CatchRecordDraftStoring` (see ADR-0014). Kept as a plain
+/// value type, separate from the `@Observable` reference-typed `CatchRecordDraft`, so encoding/
+/// decoding has no `@MainActor` isolation requirement of its own.
+nonisolated struct CatchRecordDraftPayload: Codable, Equatable, Sendable {
+    var vessel: String?
+    var departureDate: Date?
+    var returnDate: Date?
+    var departurePort: PortOption?
+    var returnPort: PortOption?
+    var gearCatches: [GearCatch]
+    var speciesNotLanded: [SpeciesOption]
 }

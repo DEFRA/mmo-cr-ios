@@ -18,6 +18,8 @@ struct SignInView: View {
     /// demonstrate the error-state UI; it does not gate this callback.
     /// TODO: replace with real OAuth2/OIDC sign-in (Keychain-backed) before
     /// production — see security instructions.
+    /// No-op default: previews/tests that render the form without a real destination can omit
+    /// this; the app root always supplies a handler that continues to Home.
     var onSignIn: () -> Void = {}
 
     var body: some View {

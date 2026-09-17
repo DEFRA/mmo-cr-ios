@@ -72,3 +72,16 @@ fastlane/test_output
 *.save
 ._*
 *.bak
+
+# Build output
+#
+# Fastlane redirects Xcode DerivedData into the repo root (see `derived_data_path`
+# in fastlane/Fastfile), so it must be ignored here as well as the default location.
+DerivedData/
+
+# Bundler
+#
+# Gems are installed into the repo via `bundle install --path vendor/bundle`;
+# only Gemfile and Gemfile.lock are version controlled.
+vendor/
+.bundle/

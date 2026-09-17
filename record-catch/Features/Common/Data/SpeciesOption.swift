@@ -11,7 +11,7 @@ import Foundation
 ///
 /// Explicitly `nonisolated` so it can be constructed and read from any actor context (the stubbed
 /// providers run off the main actor); a plain `Sendable` value type has no isolation needs.
-nonisolated struct SpeciesOption: Identifiable, Hashable, Sendable {
+nonisolated struct SpeciesOption: Identifiable, Hashable, Sendable, Codable {
     let id: String
     let name: String
     /// Live weight above minimum size retained (kg), as entered. Empty until captured.

@@ -64,22 +64,32 @@ final class SettingsViewModel {
     /// Reached via the "Sign out" link. **Inert** — no session exists yet, so there is
     /// nothing to sign out of, and this must not falsely imply an action occurred.
     /// - TODO: Wire real sign-out once authentication (ADR pending) exists.
-    func signOutTapped() {}
+    func signOutTapped() {
+        // Intentionally empty: no session exists to sign out of yet (see TODO above).
+    }
 
     /// Reached via the Gear used row's "Change" link.
     /// - TODO: Navigate to a gear-editing destination once one exists.
-    func changeGearTapped() {}
+    func changeGearTapped() {
+        // Intentionally empty: no destination exists yet (see TODO above).
+    }
 
     /// Reached via the "Privacy notice" link.
     /// - TODO: Navigate to (or open) the real privacy-notice destination.
-    func privacyNoticeTapped() {}
+    func privacyNoticeTapped() {
+        // Intentionally empty: no destination exists yet (see TODO above).
+    }
 
     /// Reached via the "Support information" link.
     /// - TODO: Navigate to a support-information destination once one exists.
-    func supportInformationTapped() {}
+    func supportInformationTapped() {
+        // Intentionally empty: no destination exists yet (see TODO above).
+    }
 
     /// Reached via the "How we use your data" link below the analytics paragraph.
     /// - TODO: Navigate to (or open) the real privacy-notice destination — likely the
     ///   same destination as `privacyNoticeTapped()`, to be confirmed with product.
-    func openHowWeUseYourData() {}
+    func openHowWeUseYourData() {
+        // Intentionally empty: no destination exists yet (see TODO above).
+    }
 }

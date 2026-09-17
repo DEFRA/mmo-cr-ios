@@ -5,6 +5,21 @@ struct DateEntryValue: Equatable {
     var day: String = ""
     var month: String = ""
     var year: String = ""
+
+    init(day: String = "", month: String = "", year: String = "") {
+        self.day = day
+        self.month = month
+        self.year = year
+    }
+
+    /// Builds the field values from an existing `Date` — used to pre-fill a resumed draft's
+    /// already-captured date (see ADR-0015 decision #1, `TripDateViewModel`).
+    init(date: Date, calendar: Calendar = .current) {
+        let components = calendar.dateComponents([.day, .month, .year], from: date)
+        self.day = components.day.map(String.init) ?? ""
+        self.month = components.month.map(String.init) ?? ""
+        self.year = components.year.map(String.init) ?? ""
+    }
 }
 
 /// A GOV.UK-style day/month/year date input with inline validation.

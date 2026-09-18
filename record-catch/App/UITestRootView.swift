@@ -71,6 +71,47 @@ struct UITestRootView<ProductionRoot: View>: View {
                     ])
                 ])
             )
+        } else if launchArguments.contains(.catchRecordCatchLocationManualEntry) {
+            // Seeds straight to the manual "Enter the statistical sub area…" screen reached from
+            // the catch-location map's "Other" button, for UI testing its search/validation
+            // without driving the map by hand.
+            CatchRecordHostView(
+                initialRoute: .catchLocationManualEntry(
+                    gear: .seineNets,
+                    vessel: "ACHILLES",
+                    referenceNumber: "A1234520260727150815"
+                )
+            )
+        } else if launchArguments.contains(.catchRecordSpeciesWeights) {
+            // Seeded favourite species → "Which species did you catch with <gear>?" screen, for UI
+            // testing the per-species weight fields (above/below/discarded reveal) and validation.
+            CatchRecordHostView(
+                initialRoute: .recordSpeciesWeights(
+                    gear: .seineNets,
+                    vessel: "ACHILLES",
+                    referenceNumber: "A1234520260727150815"
+                ),
+                favouriteSpecies: StubFavouriteSpeciesProvider(initialFavourites: [.atlanticCod])
+            )
+        } else if launchArguments.contains(.catchRecordLandingStorage) {
+            // Seeds straight to the "Is there any catch you will not be landing straight away?"
+            // Yes/No screen, with a favourite species seeded so the "Yes" branch's species screen
+            // has an option to tick.
+            CatchRecordHostView(
+                initialRoute: .landingStorage(referenceNumber: "A1234520260727150815"),
+                favouriteSpecies: StubFavouriteSpeciesProvider(initialFavourites: [.atlanticCod])
+            )
+        } else if launchArguments.contains(.catchRecordSubmissionNudge) {
+            // Seeds straight to the late-submission nudge screen (return date more than 24 hours
+            // ago), for UI testing its heading, "Save and continue" and "Check the trip end date"
+            // link without computing a late date by hand.
+            CatchRecordHostView(
+                initialRoute: .submissionNudge(
+                    daysLate: 3,
+                    vessel: "ACHILLES",
+                    referenceNumber: "A1234520260727150815"
+                )
+            )
         } else if launchArguments.contains(.catchRecordCheckYourAnswers) {
             // Fully-populated draft → Check your answers screen, for UI testing the summary/Change
             // links without driving the whole journey by hand.

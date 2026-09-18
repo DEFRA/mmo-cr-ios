@@ -94,7 +94,7 @@ final class RemoveSpeciesViewModel {
         selectedIDs = []
 
         if remaining.isEmpty {
-            router.push(.addSpecies(gear: gear, vessel: vessel, referenceNumber: referenceNumber, returnPhase: .recordWeights))
+            router.push(.addSpecies(gear: gear, vessel: vessel, referenceNumber: referenceNumber, returnPhase: .recordWeights, context: .addAnother))
         } else {
             router.push(.recordSpeciesWeights(gear: gear, vessel: vessel, referenceNumber: referenceNumber))
         }

@@ -74,7 +74,12 @@ final class CatchLocationManualEntryViewModelTests: XCTestCase {
         XCTAssertNil(sut.errorKey)
         XCTAssertEqual(
             router.path,
-            [.addSpecies(gear: .seineNets, vessel: vessel, referenceNumber: referenceNumber, returnPhase: .recordWeights)]
+            [
+                .addSpecies(
+                    gear: .seineNets, vessel: vessel, referenceNumber: referenceNumber,
+                    returnPhase: .recordWeights, context: .firstTime
+                )
+            ]
         )
     }
 

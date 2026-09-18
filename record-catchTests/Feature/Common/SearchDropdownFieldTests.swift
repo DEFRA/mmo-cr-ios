@@ -71,7 +71,8 @@ final class SearchDropdownFieldTests: XCTestCase {
             label: "Add port",
             options: options,
             query: .constant("xyz"),
-            selectedOption: .constant(nil)
+            selectedOption: .constant(nil),
+            errorMessage: "Select a port from the list"
         )
 
         XCTAssertEqual(field.resultsAnnouncement(0), "No results")
@@ -82,7 +83,8 @@ final class SearchDropdownFieldTests: XCTestCase {
             label: "Add port",
             options: options,
             query: .constant("ham"),
-            selectedOption: .constant(nil)
+            selectedOption: .constant(nil),
+            errorMessage: "Select a port from the list"
         )
 
         XCTAssertEqual(field.resultsAnnouncement(2), "2 results")

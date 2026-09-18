@@ -54,6 +54,11 @@ struct LandingStorageSpeciesView: View {
 
             ParagraphText(text: languageStore.localized("catchRecord.landingStorageSpecies.hint"), isHint: true)
 
+            ErrorSummary(
+                messages: viewModel.allErrorMessages.map { languageStore.localized($0) },
+                identifierPrefix: "\(identifierPrefix).errorSummary"
+            )
+
             ForEach(viewModel.favourites) { species in
                 speciesRow(species)
             }
@@ -86,6 +91,7 @@ struct LandingStorageSpeciesView: View {
             .accessibilityIdentifier("\(identifierPrefix).option.\(idKey)")
 
             if viewModel.isSelected(species.id) {
+                let error = viewModel.weightErrorMessages[species.id]
                 TextInputField(
                     label: languageStore.localized("catchRecord.landingStorageSpecies.weight"),
                     isRequired: false,
@@ -93,7 +99,9 @@ struct LandingStorageSpeciesView: View {
                     text: Binding(
                         get: { viewModel.weightEntries[species.id] ?? "" },
                         set: { viewModel.weightEntries[species.id] = $0 }
-                    )
+                    ),
+                    didAttemptSubmit: error != nil,
+                    errorMessage: error.map(languageStore.localized)
                 )
                 .accessibilityIdentifier("\(identifierPrefix).weight.\(idKey)")
                 .padding(.leading, AppSpacing.medium)

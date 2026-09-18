@@ -6,6 +6,7 @@ final class RecordSpeciesWeightsViewModelTests: XCTestCase {
 
     private let vessel = "ACHILLES"
     private let referenceNumber = "A1234520260727150815"
+    private let cod = SpeciesOption(name: "Atlantic cod (COD)")
 
     private func makeSUT(
         gear: GearOption = .seineNets,
@@ -30,6 +31,15 @@ final class RecordSpeciesWeightsViewModelTests: XCTestCase {
         return draft
     }
 
+    /// Ticks `cod` (already loaded into `favourites`) with a valid "above minimum" weight, so
+    /// `submit()` passes validation — used by every routing test that doesn't itself exercise the
+    /// validation rules.
+    private func tickValidSpecies(_ sut: RecordSpeciesWeightsViewModel) async {
+        await sut.loadFavourites()
+        sut.selection = [cod.id]
+        sut.aboveEntries[cod.id] = "250"
+    }
+
     // MARK: - Routing (single gear)
 
     func test_completionRoute_forSingleGear_isLandingStorage() {
@@ -40,7 +50,8 @@ final class RecordSpeciesWeightsViewModelTests: XCTestCase {
 
     func test_submit_forSingleGear_pushesLandingStorage() async {
         let router = CatchRecordRouter()
-        let sut = makeSUT(favourites: [], router: router, draft: singleGearDraft())
+        let sut = makeSUT(favourites: [cod], router: router, draft: singleGearDraft())
+        await tickValidSpecies(sut)
 
         await sut.submit()
 
@@ -55,7 +66,12 @@ final class RecordSpeciesWeightsViewModelTests: XCTestCase {
 
         XCTAssertEqual(
             router.path,
-            [.addSpecies(gear: .seineNets, vessel: vessel, referenceNumber: referenceNumber, returnPhase: .recordWeights)]
+            [
+                .addSpecies(
+                    gear: .seineNets, vessel: vessel, referenceNumber: referenceNumber,
+                    returnPhase: .recordWeights, context: .addAnother
+                )
+            ]
         )
     }
 
@@ -89,7 +105,8 @@ final class RecordSpeciesWeightsViewModelTests: XCTestCase {
         let router = CatchRecordRouter()
         let draft = CatchRecordDraft()
         draft.gearCatches = [GearCatch(gear: .seineNets), GearCatch(gear: trawl)]
-        let sut = makeSUT(gear: .seineNets, favourites: [], router: router, draft: draft)
+        let sut = makeSUT(gear: .seineNets, favourites: [cod], router: router, draft: draft)
+        await tickValidSpecies(sut)
 
         await sut.submit()
 
@@ -113,7 +130,8 @@ final class RecordSpeciesWeightsViewModelTests: XCTestCase {
         let router = CatchRecordRouter()
         let draft = singleGearDraft()
         draft.returnToCheckYourAnswers = true
-        let sut = makeSUT(favourites: [], router: router, draft: draft)
+        let sut = makeSUT(favourites: [cod], router: router, draft: draft)
+        await tickValidSpecies(sut)
 
         await sut.submit()
 
@@ -121,10 +139,98 @@ final class RecordSpeciesWeightsViewModelTests: XCTestCase {
         XCTAssertFalse(draft.returnToCheckYourAnswers)
     }
 
+    // MARK: - Validation
+
+    func test_submit_withNoSpeciesSelected_setsSelectionError_andDoesNotRoute() async {
+        let router = CatchRecordRouter()
+        let sut = makeSUT(favourites: [], router: router, draft: singleGearDraft())
+
+        await sut.submit()
+
+        XCTAssertEqual(sut.selectionErrorMessage?.key, "catchRecord.species.record.validation.none")
+        XCTAssertTrue(router.path.isEmpty)
+    }
+
+    func test_submit_withTickedSpeciesButBlankAboveWeight_setsEnterWeightError_andDoesNotRoute() async {
+        let router = CatchRecordRouter()
+        let sut = makeSUT(favourites: [cod], router: router, draft: singleGearDraft())
+        await sut.loadFavourites()
+        sut.selection = [cod.id]
+
+        await sut.submit()
+
+        let key = SpeciesFieldKey(speciesID: cod.id, field: .above)
+        XCTAssertEqual(sut.weightErrorMessages[key]?.key, "catchRecord.species.weight.validation.enter")
+        XCTAssertTrue(router.path.isEmpty)
+    }
+
+    func test_submit_withInvalidAboveWeight_setsFormatError_andDoesNotRoute() async {
+        let router = CatchRecordRouter()
+        let sut = makeSUT(favourites: [cod], router: router, draft: singleGearDraft())
+        await sut.loadFavourites()
+        sut.selection = [cod.id]
+        sut.aboveEntries[cod.id] = "12.55"
+
+        await sut.submit()
+
+        let key = SpeciesFieldKey(speciesID: cod.id, field: .above)
+        XCTAssertEqual(sut.weightErrorMessages[key]?.key, "catchRecord.species.weight.validation.decimalPlace")
+        XCTAssertTrue(router.path.isEmpty)
+    }
+
+    func test_submit_withZeroAboveWeight_setsGreaterThanZeroError_andDoesNotRoute() async {
+        let router = CatchRecordRouter()
+        let sut = makeSUT(favourites: [cod], router: router, draft: singleGearDraft())
+        await sut.loadFavourites()
+        sut.selection = [cod.id]
+        sut.aboveEntries[cod.id] = "0"
+
+        await sut.submit()
+
+        let key = SpeciesFieldKey(speciesID: cod.id, field: .above)
+        XCTAssertEqual(sut.weightErrorMessages[key]?.key, "catchRecord.species.weight.validation.greaterThanZero")
+        XCTAssertTrue(router.path.isEmpty)
+    }
+
+    func test_submit_withRevealedButBlankBelowWeight_isValid_becauseBelowIsOptional() async {
+        let router = CatchRecordRouter()
+        let sut = makeSUT(favourites: [cod], router: router, draft: singleGearDraft())
+        await sut.loadFavourites()
+        sut.selection = [cod.id]
+        sut.aboveEntries[cod.id] = "10.5"
+        sut.revealBelow(cod.id)
+
+        await sut.submit()
+
+        XCTAssertEqual(router.path, [.landingStorage(referenceNumber: referenceNumber)])
+    }
+
+    func test_submit_withInvalidRevealedBelowWeight_setsFormatError_andDoesNotRoute() async {
+        let router = CatchRecordRouter()
+        let sut = makeSUT(favourites: [cod], router: router, draft: singleGearDraft())
+        await sut.loadFavourites()
+        sut.selection = [cod.id]
+        sut.aboveEntries[cod.id] = "10.5"
+        sut.revealBelow(cod.id)
+        sut.belowEntries[cod.id] = "abc"
+
+        await sut.submit()
+
+        let key = SpeciesFieldKey(speciesID: cod.id, field: .below)
+        XCTAssertEqual(sut.weightErrorMessages[key]?.key, "catchRecord.species.weight.validation.decimalPlace")
+        XCTAssertTrue(router.path.isEmpty)
+    }
+
+    func test_validationMessages_beforeSubmit_areEmpty() {
+        let sut = makeSUT(favourites: [], router: CatchRecordRouter(), draft: singleGearDraft())
+
+        XCTAssertNil(sut.selectionErrorMessage)
+        XCTAssertTrue(sut.weightErrorMessages.isEmpty)
+    }
+
     // MARK: - Draft capture
 
     func test_submit_writesTickedSpeciesWithWeightsIntoDraft() async {
-        let cod = SpeciesOption(name: "Atlantic cod (COD)")
         let draft = singleGearDraft()
         let sut = makeSUT(favourites: [cod], router: CatchRecordRouter(), draft: draft)
         await sut.loadFavourites()
@@ -138,12 +244,12 @@ final class RecordSpeciesWeightsViewModelTests: XCTestCase {
     }
 
     func test_submit_excludesUntickedSpeciesFromDraft() async {
-        let cod = SpeciesOption(name: "Atlantic cod (COD)")
         let bass = SpeciesOption(name: "Seabass (BSS)")
         let draft = singleGearDraft()
         let sut = makeSUT(favourites: [cod, bass], router: CatchRecordRouter(), draft: draft)
         await sut.loadFavourites()
         sut.selection = [cod.id]
+        sut.aboveEntries[cod.id] = "250"
 
         await sut.submit()
 
@@ -151,13 +257,13 @@ final class RecordSpeciesWeightsViewModelTests: XCTestCase {
     }
 
     func test_submit_withMultipleGears_writesSpeciesOnlyIntoMatchingGear() async {
-        let cod = SpeciesOption(name: "Atlantic cod (COD)")
         let trawl = GearOption(name: "Trawl nets")
         let draft = CatchRecordDraft()
         draft.gearCatches = [GearCatch(gear: .seineNets), GearCatch(gear: trawl)]
         let sut = makeSUT(gear: .seineNets, favourites: [cod], router: CatchRecordRouter(), draft: draft)
         await sut.loadFavourites()
         sut.selection = [cod.id]
+        sut.aboveEntries[cod.id] = "250"
 
         await sut.submit()
 
@@ -213,7 +319,6 @@ final class RecordSpeciesWeightsViewModelTests: XCTestCase {
     }
 
     func test_hasRecordedSpecies_isTrue_whenGearHasSpeciesSavedToDraft() {
-        let cod = SpeciesOption(name: "Atlantic cod (COD)")
         let draft = CatchRecordDraft()
         draft.gearCatches = [GearCatch(gear: .seineNets, speciesCaught: [cod])]
         let sut = makeSUT(favourites: [cod], router: CatchRecordRouter(), draft: draft)

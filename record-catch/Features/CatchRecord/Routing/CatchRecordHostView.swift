@@ -199,12 +199,13 @@ struct CatchRecordHostView: View {
                 favouriteSpecies: favouriteSpecies,
                 draft: draft
             )
-        case .addSpecies(let gear, let vessel, let referenceNumber, let returnPhase):
+        case .addSpecies(let gear, let vessel, let referenceNumber, let returnPhase, let context):
             AddSpeciesView(
                 gear: gear,
                 vessel: vessel,
                 referenceNumber: referenceNumber,
                 returnPhase: returnPhase,
+                context: context,
                 router: router,
                 favouriteSpecies: favouriteSpecies
             )

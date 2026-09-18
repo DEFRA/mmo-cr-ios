@@ -52,7 +52,13 @@ struct TextInputField: View {
     }
 
     private var shouldShowError: Bool {
-        Self.shouldShowRequiredError(
+        // An externally-supplied error (e.g. a per-species weight validation message) always wins
+        // once a submit has been attempted, regardless of the field's own blank/required check —
+        // this lets a caller validate format/range rules on an otherwise-optional field.
+        if didAttemptSubmit, errorMessage != nil {
+            return true
+        }
+        return Self.shouldShowRequiredError(
             text: text,
             didAttemptSubmit: didAttemptSubmit,
             hasBlurred: hasBlurred,
@@ -81,9 +87,19 @@ struct TextInputField: View {
             inputField
 
             if shouldShowError {
-                Text(resolvedErrorMessage)
-                    .font(AppTypography.error)
-                    .foregroundStyle(AppColors.errorRed)
+                // Inlined (rather than delegating to the shared `InlineErrorText`) because this
+                // file is also compiled directly into the `record-catchTests` target, which does
+                // not include every file in `Common` — keeping this self-contained avoids an
+                // unresolved-symbol build error there (see `SearchDropdownField`'s equivalent note).
+                HStack(alignment: .top, spacing: AppSpacing.xSmall) {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .foregroundStyle(AppColors.errorRed)
+                        .accessibilityHidden(true)
+                    Text(resolvedErrorMessage)
+                        .font(AppTypography.error)
+                        .foregroundStyle(AppColors.errorRed)
+                }
+                .accessibilityElement(children: .combine)
             }
         }
         .onChange(of: isFocused) { _, focused in

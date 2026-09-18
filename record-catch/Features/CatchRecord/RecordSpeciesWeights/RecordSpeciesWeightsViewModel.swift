@@ -8,7 +8,10 @@ import Foundation
 /// reveal and remove). On "Save and continue" the captured weights are written back to favourites
 /// and the journey routes to the summary. "Add a species" pushes the Add-species search screen.
 ///
-/// Weight validation is intentionally deferred to a future phase — fields accept free input for now.
+/// Validated on "Save and continue": at least one species must be ticked, and each ticked
+/// species' mandatory "above minimum" weight must be present and match its `WeightPrecision`; the
+/// optional "below minimum"/"legally discarded" fields are validated only when non-blank (see
+/// `RecordSpeciesWeightsValidation`, `SpeciesWeightValidation`).
 @MainActor
 @Observable
 final class RecordSpeciesWeightsViewModel {
@@ -36,6 +39,9 @@ final class RecordSpeciesWeightsViewModel {
     private(set) var isSaving = false
     /// Set when saving to favourites fails, so the view can surface a recoverable error.
     private(set) var saveFailed = false
+    /// Set once "Save and continue" has been attempted, so inline errors only appear after a
+    /// submit (mirroring every other validated screen in the journey).
+    private(set) var didAttemptSubmit = false
 
     private let router: CatchRecordRouter
     private let favouriteSpecies: FavouriteSpeciesProviding
@@ -97,9 +103,7 @@ final class RecordSpeciesWeightsViewModel {
     }
 
     /// Whether a species is currently ticked.
-    func isSelected(_ id: String) -> Bool { selection.contains(id) }
-
-    /// Toggles a species' ticked state.
+    func isSelected(_ id: String) -> Bool { selection.contains(id) }    /// Toggles a species' ticked state.
     func toggleSelection(_ id: String) {
         if selection.contains(id) {
             selection.remove(id)
@@ -125,6 +129,38 @@ final class RecordSpeciesWeightsViewModel {
         discardedEntries[id] = nil
     }
 
+    /// "Select at least one species" — shown once a submit has been attempted with nothing ticked.
+    var selectionErrorMessage: ValidationMessage? {
+        guard didAttemptSubmit else { return nil }
+        return RecordSpeciesWeightsValidation.selectionErrorMessage(selection: selection)
+    }
+
+    /// Every weight-field error for the ticked species, once a submit has been attempted, keyed by
+    /// `(speciesID, field)` so each `TextInputField` can render its own message.
+    var weightErrorMessages: [SpeciesFieldKey: ValidationMessage] {
+        guard didAttemptSubmit else { return [:] }
+        return RecordSpeciesWeightsValidation.weightErrorMessages(
+            selection: selection,
+            species: favourites,
+            entries: SpeciesWeightEntries(
+                above: aboveEntries,
+                below: belowEntries,
+                discarded: discardedEntries,
+                belowRevealed: belowRevealed,
+                discardedRevealed: discardedRevealed
+            )
+        )
+    }
+
+    /// Every validation message currently showing, in priority order (selection first, then each
+    /// species' weight errors) — used to drive the "There is a problem" error summary.
+    var allErrorMessages: [ValidationMessage] {
+        var messages: [ValidationMessage] = []
+        if let selectionErrorMessage { messages.append(selectionErrorMessage) }
+        messages.append(contentsOf: weightErrorMessages.values)
+        return messages
+    }
+
     /// The route to push after saving. Pure and independent of async work, so it is directly
     /// unit-testable.
     ///
@@ -148,7 +184,8 @@ final class RecordSpeciesWeightsViewModel {
             gear: gear,
             vessel: vessel,
             referenceNumber: referenceNumber,
-            returnPhase: .recordWeights
+            returnPhase: .recordWeights,
+            context: .addAnother
         ))
     }
 
@@ -173,12 +210,13 @@ final class RecordSpeciesWeightsViewModel {
         )
     }
 
-    /// Writes captured weights for ticked species back to favourites and into this gear's own
-    /// `GearCatch` entry (`draft.gearCatches[…].speciesCaught` - see ADR-0011), then routes on.
-    ///
-    /// Validation is deferred, so any ticked species (with or without entered weights) is saved.
+    /// Validates "Select at least one species" and each ticked species' weight fields before
+    /// writing captured weights for ticked species back to favourites and into this gear's own
+    /// `GearCatch` entry (`draft.gearCatches[…].speciesCaught` - see ADR-0011), then routing on.
     func submit() async {
+        didAttemptSubmit = true
         saveFailed = false
+        guard allErrorMessages.isEmpty else { return }
         isSaving = true
         defer { isSaving = false }
         do {

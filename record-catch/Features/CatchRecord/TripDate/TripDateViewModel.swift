@@ -66,10 +66,17 @@ final class TripDateViewModel {
     /// String Catalog key for the screen's hint.
     var hintKey: String { phase.hintKey }
 
-    /// Current inline error, once a submit has been attempted.
-    var errorKey: String? {
+    /// Current validation result, once a submit has been attempted — `nil` when `value` is valid.
+    /// `locale` is only used to render the earliest-trip-date message (see `TripDateValidation`).
+    func validationResult(locale: Locale) -> TripDateValidationResult? {
         guard didAttemptSubmit else { return nil }
-        return TripDateValidation.errorKey(for: value)
+        return TripDateValidation.result(
+            for: value,
+            phase: phase,
+            departureDate: departureDate,
+            now: now(),
+            locale: locale
+        )
     }
 
     /// Runs validation for "Save and continue" and routes on when the date is valid.
@@ -77,8 +84,15 @@ final class TripDateViewModel {
     /// When reached via "Change" from Check your answers (`draft.returnToCheckYourAnswers`), only
     /// this one date is being corrected, so the journey returns straight there instead of
     /// continuing into the other date/late-submission-nudge/port screens (see ADR-0013).
-    func submit() {
+    func submit(locale: Locale) {
         didAttemptSubmit = true
+        guard TripDateValidation.result(
+            for: value,
+            phase: phase,
+            departureDate: departureDate,
+            now: now(),
+            locale: locale
+        ) == nil else { return }
         guard let date = DateEntryField.parsedDate(from: value) else { return }
         switch phase {
         case .departure:

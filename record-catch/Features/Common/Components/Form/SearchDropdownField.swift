@@ -8,8 +8,10 @@ struct SearchDropdownField: View {
     @Binding var query: String
     @Binding var selectedOption: String?
     var didAttemptSubmit: Bool = false
-    /// Error message shown when the query has no valid selection from the list.
-    var errorMessage: String = "Select a port from the list"
+    /// Error message shown when the query has no valid selection from the list. No default: every
+    /// call site must supply its own localised, context-specific copy (see the GOV.UK guidance on
+    /// specific error messages) rather than silently falling back to un-localised English port copy.
+    var errorMessage: String
     /// Localised "results" announcement builder for VoiceOver (WCAG 2.2 SC 4.1.3). Given a count,
     /// returns the phrase to announce (e.g. "5 results" / "No results"). Announcements are made
     /// without moving focus so the user is informed of changes to the results list.
@@ -29,6 +31,9 @@ struct SearchDropdownField: View {
     /// Unique per-instance anchor so `ScrollViewProxy.scrollTo` targets this field's own results
     /// list rather than another `SearchDropdownField` on the same screen.
     private let resultsAnchorID = UUID()
+    /// Optional accessibility identifier for the inline error, so UI tests can target it directly
+    /// rather than matching on label text (which can collide with the field's own typed value).
+    var errorAccessibilityIdentifier: String?
 
     @Environment(\.scrollViewProxy) private var scrollViewProxy
 
@@ -40,7 +45,8 @@ struct SearchDropdownField: View {
         query: Binding<String>,
         selectedOption: Binding<String?>,
         didAttemptSubmit: Bool = false,
-        errorMessage: String = "Select a port from the list",
+        errorMessage: String,
+        errorAccessibilityIdentifier: String? = nil,
         resultsAnnouncement: @escaping (Int) -> String = { $0 == 0 ? "No results" : "\($0) results" }
     ) {
         self.label = label
@@ -51,6 +57,7 @@ struct SearchDropdownField: View {
         _selectedOption = selectedOption
         self.didAttemptSubmit = didAttemptSubmit
         self.errorMessage = errorMessage
+        self.errorAccessibilityIdentifier = errorAccessibilityIdentifier
         self.resultsAnnouncement = resultsAnnouncement
     }
 
@@ -150,9 +157,21 @@ struct SearchDropdownField: View {
             }
 
             if shouldShowError {
-                Text(errorMessage)
-                    .font(AppTypography.error)
-                    .foregroundStyle(AppColors.errorRed)
+                // Inlined (rather than delegating to the shared `InlineErrorText`) because this
+                // file is also compiled directly into the `record-catchTests` target (alongside
+                // several other `Common/Components` files), which does not include every file in
+                // `Common` — keeping this self-contained avoids an unresolved-symbol build error
+                // there. `AccessibilityAnnouncer`'s helper is duplicated below for the same reason.
+                HStack(alignment: .top, spacing: AppSpacing.xSmall) {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .foregroundStyle(AppColors.errorRed)
+                        .accessibilityHidden(true)
+                    Text(errorMessage)
+                        .font(AppTypography.error)
+                        .foregroundStyle(AppColors.errorRed)
+                }
+                .accessibilityElement(children: .combine)
+                .modifier(SearchDropdownFieldErrorIdentifier(identifier: errorAccessibilityIdentifier))
             }
         }
         // The results list renders below the field as ordinary sibling content, so SwiftUI's
@@ -194,7 +213,9 @@ struct SearchDropdownField: View {
     }
 
     /// Posts a VoiceOver announcement using the iOS 17+ API where available, falling back to the
-    /// `UIAccessibility` notification on iOS 16 (the app's minimum deployment target).
+    /// `UIAccessibility` notification on iOS 16 (the app's minimum deployment target). Duplicated
+    /// from `AccessibilityAnnouncer` rather than delegating to it — see the comment on the inline
+    /// error row above for why this file stays self-contained.
     static func announce(_ message: String) {
         if #available(iOS 17, *) {
             var announcement = AttributedString(message)
@@ -231,6 +252,20 @@ struct SearchDropdownField: View {
     }
 }
 
+/// Applies `.accessibilityIdentifier` only when one is supplied — duplicated from
+/// `InlineErrorText`'s equivalent modifier for the same dual-target reason (see above).
+private struct SearchDropdownFieldErrorIdentifier: ViewModifier {
+    let identifier: String?
+
+    func body(content: Content) -> some View {
+        if let identifier {
+            content.accessibilityIdentifier(identifier)
+        } else {
+            content
+        }
+    }
+}
+
 #Preview {
     @Previewable @State var query = ""
     @Previewable @State var selected: String?
@@ -240,7 +275,8 @@ struct SearchDropdownField: View {
         options: StubPortOptionProvider().options,
         query: $query,
         selectedOption: $selected,
-        didAttemptSubmit: true
+        didAttemptSubmit: true,
+        errorMessage: "Select a port from the list"
     )
     .padding()
 }

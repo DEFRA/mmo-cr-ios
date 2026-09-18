@@ -9,7 +9,9 @@ import Foundation
 /// "Save and continue" the captured weights are written back to favourites and the journey routes
 /// to Check your answers.
 ///
-/// Weight validation is intentionally deferred to a future phase — the field accepts free input.
+/// Validated on "Save and continue": each ticked species' weight is mandatory and must match its
+/// `WeightPrecision` (see `SpeciesWeightValidation`) — mirrors the record-weights screen's
+/// "above minimum" field (plan Q2).
 @MainActor
 @Observable
 final class LandingStorageSpeciesViewModel {
@@ -27,6 +29,8 @@ final class LandingStorageSpeciesViewModel {
     private(set) var isSaving = false
     /// Set when saving to favourites fails, so the view can surface a recoverable error.
     private(set) var saveFailed = false
+    /// Set once "Save and continue" has been attempted, so inline errors only appear after a submit.
+    private(set) var didAttemptSubmit = false
 
     private let router: CatchRecordRouter
     private let favouriteSpecies: FavouriteSpeciesProviding
@@ -82,11 +86,38 @@ final class LandingStorageSpeciesViewModel {
     /// The route to push after saving. Pure, so it is directly unit-testable.
     var completionRoute: CatchRecordRoute { .checkYourAnswers(referenceNumber: referenceNumber) }
 
-    /// Writes captured weights for ticked species back to favourites, then routes onward.
-    ///
-    /// Validation is deferred, so any ticked species (with or without an entered weight) is saved.
+    /// Every weight-field error for the ticked species, once a submit has been attempted, keyed by
+    /// species id.
+    var weightErrorMessages: [String: ValidationMessage] {
+        guard didAttemptSubmit else { return [:] }
+        var errors: [String: ValidationMessage] = [:]
+        for species in favourites where selection.contains(species.id) {
+            if let message = SpeciesWeightValidation.requiredErrorMessage(
+                for: weightEntries[species.id] ?? "",
+                speciesName: species.name,
+                precision: species.weightPrecision,
+                enterKey: "catchRecord.landingStorageSpecies.weight.validation.enter"
+            ) {
+                errors[species.id] = message
+            }
+        }
+        return errors
+    }
+
+    /// Every validation message currently showing, in priority order — used to drive the "There
+    /// is a problem" error summary. Ticking at least one species is not itself mandatory on this
+    /// screen (it is only reached after answering "Yes" to "any catch not landed straight away?"),
+    /// so only per-species weight errors are aggregated here.
+    var allErrorMessages: [ValidationMessage] {
+        Array(weightErrorMessages.values)
+    }
+
+    /// Writes captured weights for ticked species back to favourites, then routes onward, once
+    /// every ticked species' weight is valid.
     func submit() async {
+        didAttemptSubmit = true
         saveFailed = false
+        guard weightErrorMessages.isEmpty else { return }
         isSaving = true
         defer { isSaving = false }
         do {

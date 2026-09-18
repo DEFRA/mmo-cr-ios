@@ -15,6 +15,7 @@ struct AddSpeciesView: View {
         vessel: String,
         referenceNumber: String,
         returnPhase: SpeciesReturnPhase,
+        context: AddSpeciesContext,
         router: CatchRecordRouter,
         favouriteSpecies: FavouriteSpeciesProviding
     ) {
@@ -23,6 +24,7 @@ struct AddSpeciesView: View {
             vessel: vessel,
             referenceNumber: referenceNumber,
             returnPhase: returnPhase,
+            context: context,
             router: router,
             favouriteSpecies: favouriteSpecies
         ))
@@ -54,6 +56,11 @@ struct AddSpeciesView: View {
                 .accessibilityAddTraits(.isHeader)
                 .accessibilityIdentifier("\(identifierPrefix).heading")
 
+            ErrorSummary(
+                messages: viewModel.validationMessage.map { [languageStore.localized($0)] } ?? [],
+                identifierPrefix: "\(identifierPrefix).errorSummary"
+            )
+
             ParagraphText(text: languageStore.localized("catchRecord.species.add.empty"))
             ParagraphText(text: languageStore.localized("catchRecord.species.add.body"))
 
@@ -63,7 +70,9 @@ struct AddSpeciesView: View {
                 options: viewModel.speciesNames,
                 query: Binding(get: { viewModel.query }, set: { viewModel.query = $0 }),
                 selectedOption: Binding(get: { viewModel.selectedName }, set: { viewModel.selectedName = $0 }),
-                errorMessage: languageStore.localized("catchRecord.species.add.search.select"),
+                didAttemptSubmit: viewModel.didAttemptSubmit,
+                errorMessage: viewModel.validationMessage.map(languageStore.localized) ?? "",
+                errorAccessibilityIdentifier: "\(identifierPrefix).error",
                 resultsAnnouncement: { count in
                     count == 0
                         ? languageStore.localized("catchRecord.species.add.search.noResults")
@@ -127,6 +136,7 @@ struct AddSpeciesView: View {
         vessel: "ACHILLES",
         referenceNumber: "A1234520260727150815",
         returnPhase: .recordWeights,
+        context: .firstTime,
         router: CatchRecordRouter(),
         favouriteSpecies: StubFavouriteSpeciesProvider()
     )
@@ -139,6 +149,7 @@ struct AddSpeciesView: View {
         vessel: "ACHILLES",
         referenceNumber: "A1234520260727150815",
         returnPhase: .recordWeights,
+        context: .firstTime,
         router: CatchRecordRouter(),
         favouriteSpecies: StubFavouriteSpeciesProvider()
     )
@@ -155,6 +166,7 @@ struct AddSpeciesView: View {
         vessel: "ACHILLES",
         referenceNumber: "A1234520260727150815",
         returnPhase: .recordWeights,
+        context: .firstTime,
         router: CatchRecordRouter(),
         favouriteSpecies: StubFavouriteSpeciesProvider()
     )

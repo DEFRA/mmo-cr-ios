@@ -57,6 +57,11 @@ struct TripDateView: View {
                 .accessibilityAddTraits(.isHeader)
                 .accessibilityIdentifier("\(identifierPrefix).heading")
 
+            ErrorSummary(
+                messages: currentValidationResult.map { [languageStore.localized($0.message)] } ?? [],
+                identifierPrefix: "\(identifierPrefix).errorSummary"
+            )
+
             DateEntryField(
                 title: languageStore.localized(viewModel.titleKey),
                 hint: languageStore.localized(viewModel.hintKey),
@@ -65,15 +70,20 @@ struct TripDateView: View {
                     set: { viewModel.value = $0 }
                 ),
                 didAttemptSubmit: viewModel.didAttemptSubmit,
-                errorKey: viewModel.errorKey ?? "catchRecord.tripDate.validation.none",
+                errorMessage: currentValidationResult.map { languageStore.localized($0.message) },
+                errorParts: currentValidationResult?.parts ?? [],
                 accessibilityIdentifierPrefix: identifierPrefix
             )
 
             PrimaryButton(title: languageStore.localized("catchRecord.saveContinue")) {
-                viewModel.submit()
+                viewModel.submit(locale: languageStore.language.locale)
             }
             .accessibilityIdentifier("\(identifierPrefix).saveContinue")
         }
+    }
+
+    private var currentValidationResult: TripDateValidationResult? {
+        viewModel.validationResult(locale: languageStore.language.locale)
     }
 }
 

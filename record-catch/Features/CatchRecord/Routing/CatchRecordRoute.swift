@@ -65,8 +65,13 @@ enum CatchRecordRoute: Hashable {
     case recordSpeciesWeights(gear: GearOption, vessel: String, referenceNumber: String)
     /// Add a species via type-to-search and save it to the user's favourites (see ADR-0004). Shown
     /// when the user has no favourite species yet, and reached from "Add a species"/"Add another
-    /// species". `returnPhase` records which screen to return to after saving.
-    case addSpecies(gear: GearOption, vessel: String, referenceNumber: String, returnPhase: SpeciesReturnPhase)
+    /// species". `returnPhase` records which screen to return to after saving. `context` records
+    /// which entry point this is, so `AddSpeciesValidation` shows context-specific copy (see plan
+    /// Q3, ADR-0004 mirrors `SelectPortPhase`).
+    case addSpecies(
+        gear: GearOption, vessel: String, referenceNumber: String,
+        returnPhase: SpeciesReturnPhase, context: AddSpeciesContext
+    )
     /// Remove one or more previously-recorded species from this gear's catch (multi-select
     /// checkboxes, then "Delete" with a confirmation step, or "Cancel"). Reached from "Remove
     /// species" on `recordSpeciesWeights`, shown only once this gear has at least one recorded

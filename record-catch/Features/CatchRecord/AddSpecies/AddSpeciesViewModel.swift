@@ -4,8 +4,10 @@ import Foundation
 ///
 /// UI-shaped but backed by stubbed, API-shaped providers (see ADR-0004). On a valid selection it
 /// adds the species to the user's favourites, then routes back to the screen recorded in
-/// `returnPhase`. Selection validation is intentionally deferred — a submit with no selection simply
-/// does nothing for now.
+/// `returnPhase`. Validated on "Save and continue" (see `AddSpeciesValidation`): the search field
+/// must not be blank, and once typed a species must be picked from the results list. Copy is
+/// context-specific (`AddSpeciesContext`, plan Q3): first-time entry vs "Add a species" while
+/// already recording this trip's catch.
 @MainActor
 @Observable
 final class AddSpeciesViewModel {
@@ -18,11 +20,14 @@ final class AddSpeciesViewModel {
     let referenceNumber: String
     /// Which screen to return to after saving.
     let returnPhase: SpeciesReturnPhase
+    /// Which entry point this screen was reached from — drives validation copy.
+    let context: AddSpeciesContext
 
     /// The current search text.
     var query: String = ""
     /// The species name selected from the results list (nil until one is chosen).
     var selectedName: String?
+    private(set) var didAttemptSubmit = false
     private(set) var isSaving = false
     /// Set when saving to favourites fails, so the view can surface a recoverable error.
     private(set) var saveFailed = false
@@ -39,6 +44,7 @@ final class AddSpeciesViewModel {
         vessel: String,
         referenceNumber: String,
         returnPhase: SpeciesReturnPhase,
+        context: AddSpeciesContext,
         router: CatchRecordRouter,
         speciesSearch: SpeciesSearchProviding = StubSpeciesSearchProvider(),
         favouriteSpecies: FavouriteSpeciesProviding = StubFavouriteSpeciesProvider()
@@ -47,6 +53,7 @@ final class AddSpeciesViewModel {
         self.vessel = vessel
         self.referenceNumber = referenceNumber
         self.returnPhase = returnPhase
+        self.context = context
         self.router = router
         self.speciesSearch = speciesSearch
         self.favouriteSpecies = favouriteSpecies
@@ -55,6 +62,12 @@ final class AddSpeciesViewModel {
     /// The selected `SpeciesOption`, if the user has chosen one from the list.
     var selectedSpecies: SpeciesOption? {
         selectedName.map(SpeciesOption.init(name:))
+    }
+
+    /// Current validation message, once a submit has been attempted.
+    var validationMessage: ValidationMessage? {
+        guard didAttemptSubmit else { return nil }
+        return AddSpeciesValidation.message(query: query, selectedSpecies: selectedSpecies, context: context)
     }
 
     /// The route to push after a successful save. Pure and independent of async work, so it is
@@ -76,11 +89,14 @@ final class AddSpeciesViewModel {
         speciesNames = ((try? await speciesSearch.allSpecies()) ?? []).map(\.name)
     }
 
-    /// Adds the selected species to favourites, then routes back to the recorded screen. Does
-    /// nothing when no species is selected (validation deferred).
+    /// Validates the selection, then adds it to favourites and routes back to the recorded screen.
     func submit() async {
+        didAttemptSubmit = true
         saveFailed = false
-        guard let species = selectedSpecies else { return }
+        guard let species = selectedSpecies,
+              AddSpeciesValidation.message(query: query, selectedSpecies: species, context: context) == nil else {
+            return
+        }
         isSaving = true
         defer { isSaving = false }
         do {

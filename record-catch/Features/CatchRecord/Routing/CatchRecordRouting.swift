@@ -62,7 +62,10 @@ enum CatchRecordRouting {
     ) -> CatchRecordRoute {
         hasFavourites
             ? .recordSpeciesWeights(gear: gear, vessel: vessel, referenceNumber: referenceNumber)
-            : .addSpecies(gear: gear, vessel: vessel, referenceNumber: referenceNumber, returnPhase: .recordWeights)
+            : .addSpecies(
+                gear: gear, vessel: vessel, referenceNumber: referenceNumber,
+                returnPhase: .recordWeights, context: .firstTime
+            )
     }
 
     /// Resolves where "Save and continue" on the "Which species did you catch with `<gear>`?"

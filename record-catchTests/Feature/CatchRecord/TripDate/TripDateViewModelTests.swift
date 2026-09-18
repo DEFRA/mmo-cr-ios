@@ -6,9 +6,17 @@ final class TripDateViewModelTests: XCTestCase {
 
     private let vessel = "ACHILLES"
     private let referenceNumber = "A1234520260727150815"
+    private let locale = Locale(identifier: "en_GB")
 
     private func makeValidDate() -> DateEntryValue {
-        DateEntryValue(day: "31", month: "03", year: "2020")
+        DateEntryValue(day: "31", month: "03", year: "2026")
+    }
+
+    /// A fixed departure date before `makeValidDate()`'s 31/03/2026 return date, for return-phase
+    /// tests that must satisfy the "return must be on or after departure" rule. Using `Date()` here
+    /// would fail non-deterministically once the current date passes the fixed return date.
+    private var earlyDepartureDate: Date {
+        Calendar(identifier: .gregorian).date(from: DateComponents(year: 2026, month: 1, day: 1))!
     }
 
     // MARK: - Initial state
@@ -21,7 +29,7 @@ final class TripDateViewModelTests: XCTestCase {
             departureDate: nil,
             router: CatchRecordRouter()
         )
-        XCTAssertNil(sut.errorKey)
+        XCTAssertNil(sut.validationResult(locale: locale))
         XCTAssertEqual(sut.referenceNumber, referenceNumber)
         XCTAssertEqual(sut.vessel, vessel)
         XCTAssertEqual(sut.titleKey, "catchRecord.tripDate.departure.title")
@@ -52,9 +60,9 @@ final class TripDateViewModelTests: XCTestCase {
             router: router
         )
 
-        sut.submit()
+        sut.submit(locale: locale)
 
-        XCTAssertEqual(sut.errorKey, "catchRecord.tripDate.validation.none")
+        XCTAssertEqual(sut.validationResult(locale: locale)?.message.key, "catchRecord.tripDate.departure.validation.day")
         XCTAssertTrue(router.path.isEmpty)
     }
 
@@ -71,9 +79,9 @@ final class TripDateViewModelTests: XCTestCase {
         )
         sut.value = makeValidDate()
 
-        sut.submit()
+        sut.submit(locale: locale)
 
-        XCTAssertNil(sut.errorKey)
+        XCTAssertNil(sut.validationResult(locale: locale))
         let expectedDate = DateEntryField.parsedDate(from: makeValidDate())
         XCTAssertEqual(
             router.path,
@@ -121,7 +129,7 @@ final class TripDateViewModelTests: XCTestCase {
         )
     }
 
-    func test_errorKey_beforeSubmit_isNil() {
+    func test_validationResult_beforeSubmit_isNil() {
         let sut = TripDateViewModel(
             phase: .departure,
             vessel: vessel,
@@ -130,28 +138,28 @@ final class TripDateViewModelTests: XCTestCase {
             router: CatchRecordRouter()
         )
         sut.value = DateEntryValue()
-        XCTAssertNil(sut.errorKey)
+        XCTAssertNil(sut.validationResult(locale: locale))
     }
 
     // MARK: - Submit: return date late-submission nudge
 
     func test_submit_return_whenTripEndedMoreThan24HoursAgo_pushesSubmissionNudge() {
         let router = CatchRecordRouter()
-        // Return date 31/03/2020; "now" is many days later, so the nudge is required.
-        let now = Calendar(identifier: .gregorian).date(from: DateComponents(year: 2020, month: 4, day: 3, hour: 12))!
+        // Return date 31/03/2026; "now" is many days later, so the nudge is required.
+        let now = Calendar(identifier: .gregorian).date(from: DateComponents(year: 2026, month: 4, day: 3, hour: 12))!
         let sut = TripDateViewModel(
             phase: .return,
             vessel: vessel,
             referenceNumber: referenceNumber,
-            departureDate: Date(),
+            departureDate: earlyDepartureDate,
             router: router,
             now: { now }
         )
         sut.value = makeValidDate()
 
-        sut.submit()
+        sut.submit(locale: locale)
 
-        XCTAssertNil(sut.errorKey)
+        XCTAssertNil(sut.validationResult(locale: locale))
         XCTAssertEqual(
             router.path,
             [.submissionNudge(daysLate: 3, vessel: vessel, referenceNumber: referenceNumber)]
@@ -168,16 +176,16 @@ final class TripDateViewModelTests: XCTestCase {
             phase: .return,
             vessel: vessel,
             referenceNumber: referenceNumber,
-            departureDate: Date(),
+            departureDate: earlyDepartureDate,
             router: router,
             favouritePorts: StubFavouritePortsProvider(),
             now: { end.addingTimeInterval(60 * 60) }
         )
         sut.value = makeValidDate()
 
-        sut.submit()
+        sut.submit(locale: locale)
 
-        XCTAssertNil(sut.errorKey)
+        XCTAssertNil(sut.validationResult(locale: locale))
         XCTAssertFalse(router.path.contains(.submissionNudge(daysLate: 0, vessel: vessel, referenceNumber: referenceNumber)))
     }
 
@@ -195,7 +203,7 @@ final class TripDateViewModelTests: XCTestCase {
         )
         sut.value = makeValidDate()
 
-        sut.submit()
+        sut.submit(locale: locale)
 
         XCTAssertEqual(draft.departureDate, DateEntryField.parsedDate(from: makeValidDate()))
         XCTAssertNil(draft.returnDate)
@@ -207,14 +215,14 @@ final class TripDateViewModelTests: XCTestCase {
             phase: .return,
             vessel: vessel,
             referenceNumber: referenceNumber,
-            departureDate: Date(),
+            departureDate: earlyDepartureDate,
             router: CatchRecordRouter(),
             draft: draft,
             now: { DateEntryField.parsedDate(from: self.makeValidDate())!.addingTimeInterval(60 * 60) }
         )
         sut.value = makeValidDate()
 
-        sut.submit()
+        sut.submit(locale: locale)
 
         XCTAssertEqual(draft.returnDate, DateEntryField.parsedDate(from: makeValidDate()))
     }
@@ -235,7 +243,7 @@ final class TripDateViewModelTests: XCTestCase {
         )
         sut.value = makeValidDate()
 
-        sut.submit()
+        sut.submit(locale: locale)
 
         XCTAssertEqual(router.path, [.checkYourAnswers(referenceNumber: referenceNumber)])
         XCTAssertFalse(draft.returnToCheckYourAnswers)
@@ -247,19 +255,19 @@ final class TripDateViewModelTests: XCTestCase {
         draft.returnToCheckYourAnswers = true
         // "now" is far past the entered return date, so a nudge would otherwise be interposed —
         // resuming at Check your answers must still take priority.
-        let now = Calendar(identifier: .gregorian).date(from: DateComponents(year: 2020, month: 4, day: 3, hour: 12))!
+        let now = Calendar(identifier: .gregorian).date(from: DateComponents(year: 2026, month: 4, day: 3, hour: 12))!
         let sut = TripDateViewModel(
             phase: .return,
             vessel: vessel,
             referenceNumber: referenceNumber,
-            departureDate: Date(),
+            departureDate: earlyDepartureDate,
             router: router,
             draft: draft,
             now: { now }
         )
         sut.value = makeValidDate()
 
-        sut.submit()
+        sut.submit(locale: locale)
 
         XCTAssertEqual(router.path, [.checkYourAnswers(referenceNumber: referenceNumber)])
         XCTAssertFalse(draft.returnToCheckYourAnswers)
@@ -269,7 +277,7 @@ final class TripDateViewModelTests: XCTestCase {
 
     func test_init_departure_prefillsValueFromDraftDepartureDate() {
         let draft = CatchRecordDraft()
-        draft.departureDate = Calendar(identifier: .gregorian).date(from: DateComponents(year: 2020, month: 3, day: 31))!
+        draft.departureDate = Calendar(identifier: .gregorian).date(from: DateComponents(year: 2026, month: 3, day: 31))!
 
         let sut = TripDateViewModel(
             phase: .departure,
@@ -280,12 +288,12 @@ final class TripDateViewModelTests: XCTestCase {
             draft: draft
         )
 
-        XCTAssertEqual(sut.value, DateEntryValue(day: "31", month: "3", year: "2020"))
+        XCTAssertEqual(sut.value, DateEntryValue(day: "31", month: "3", year: "2026"))
     }
 
     func test_init_return_prefillsValueFromDraftReturnDate() {
         let draft = CatchRecordDraft()
-        draft.returnDate = Calendar(identifier: .gregorian).date(from: DateComponents(year: 2020, month: 4, day: 2))!
+        draft.returnDate = Calendar(identifier: .gregorian).date(from: DateComponents(year: 2026, month: 4, day: 2))!
 
         let sut = TripDateViewModel(
             phase: .return,
@@ -296,7 +304,7 @@ final class TripDateViewModelTests: XCTestCase {
             draft: draft
         )
 
-        XCTAssertEqual(sut.value, DateEntryValue(day: "2", month: "4", year: "2020"))
+        XCTAssertEqual(sut.value, DateEntryValue(day: "2", month: "4", year: "2026"))
     }
 
     func test_init_withNoDraftDate_leavesValueBlank() {

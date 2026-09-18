@@ -21,7 +21,12 @@ final class SpeciesSubJourneyEntryTests: XCTestCase {
 
         XCTAssertEqual(
             router.path,
-            [.addSpecies(gear: gear, vessel: vessel, referenceNumber: referenceNumber, returnPhase: .recordWeights)]
+            [
+                .addSpecies(
+                    gear: gear, vessel: vessel, referenceNumber: referenceNumber,
+                    returnPhase: .recordWeights, context: .firstTime
+                )
+            ]
         )
     }
 

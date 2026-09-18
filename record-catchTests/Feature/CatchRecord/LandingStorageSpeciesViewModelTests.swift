@@ -79,11 +79,52 @@ final class LandingStorageSpeciesViewModelTests: XCTestCase {
         let sut = LandingStorageSpeciesViewModel(referenceNumber: referenceNumber, router: router, favouriteSpecies: provider)
         await sut.loadFavourites()
         sut.toggleSelection(cod.id)
+        sut.weightEntries[cod.id] = "8.5"
 
         await sut.submit()
 
         XCTAssertTrue(sut.saveFailed)
         XCTAssertTrue(router.path.isEmpty)
+    }
+
+    // MARK: - Validation (plan Q2: weight is mandatory once a species is ticked)
+
+    func test_submit_withTickedSpeciesButBlankWeight_setsEnterError_andDoesNotRoute() async {
+        let cod = SpeciesOption(name: "Atlantic cod (COD)")
+        let provider = StubFavouriteSpeciesProvider(initialFavourites: [cod])
+        let router = CatchRecordRouter()
+        let sut = LandingStorageSpeciesViewModel(referenceNumber: referenceNumber, router: router, favouriteSpecies: provider)
+        await sut.loadFavourites()
+        sut.toggleSelection(cod.id)
+
+        await sut.submit()
+
+        XCTAssertEqual(sut.weightErrorMessages[cod.id]?.key, "catchRecord.landingStorageSpecies.weight.validation.enter")
+        XCTAssertTrue(router.path.isEmpty)
+    }
+
+    func test_submit_withInvalidWeight_setsFormatError_andDoesNotRoute() async {
+        let cod = SpeciesOption(name: "Atlantic cod (COD)")
+        let provider = StubFavouriteSpeciesProvider(initialFavourites: [cod])
+        let router = CatchRecordRouter()
+        let sut = LandingStorageSpeciesViewModel(referenceNumber: referenceNumber, router: router, favouriteSpecies: provider)
+        await sut.loadFavourites()
+        sut.toggleSelection(cod.id)
+        sut.weightEntries[cod.id] = "abc"
+
+        await sut.submit()
+
+        XCTAssertEqual(sut.weightErrorMessages[cod.id]?.key, "catchRecord.species.weight.validation.decimalPlace")
+        XCTAssertTrue(router.path.isEmpty)
+    }
+
+    func test_submit_withNoSpeciesTicked_isValid_becauseSelectionIsNotMandatoryHere() async {
+        let router = CatchRecordRouter()
+        let sut = LandingStorageSpeciesViewModel(referenceNumber: referenceNumber, router: router)
+
+        await sut.submit()
+
+        XCTAssertEqual(router.path, [.checkYourAnswers(referenceNumber: referenceNumber)])
     }
 
     // MARK: - Draft capture

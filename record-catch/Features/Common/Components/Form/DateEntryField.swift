@@ -20,6 +20,9 @@ struct DateEntryValue: Equatable {
         self.month = components.month.map(String.init) ?? ""
         self.year = components.year.map(String.init) ?? ""
     }
+
+    /// Whether every part is blank.
+    var isEmpty: Bool { day.isEmpty && month.isEmpty && year.isEmpty }
 }
 
 /// A GOV.UK-style day/month/year date input with inline validation.
@@ -30,13 +33,32 @@ struct DateEntryValue: Equatable {
 /// so it renders correctly in English and Welsh (WCAG 3.1.2 Language of Parts),
 /// and the group is exposed to VoiceOver as a single container labelled by the
 /// screen heading (WCAG 1.3.1 / 3.3.2).
+///
+/// Purely presentational for validation: the caller (e.g. `TripDateViewModel` via
+/// `TripDateValidation`) decides *what* the current error is and *which* field(s) it belongs to;
+/// this view only renders that decision, following GOV.UK's guidance to highlight just the
+/// offending field(s) when known, or the whole group otherwise.
 struct DateEntryField: View {
+    /// Which of the three fields a validation error applies to. GOV.UK: highlight only the field
+    /// that has the error when it's known to be a specific one; otherwise (e.g. "not a real date",
+    /// "must be on or after…") highlight the date as a whole.
+    enum Part: Hashable {
+        case day
+        case month
+        case year
+    }
+
     let title: String
     let hint: String
     @Binding var value: DateEntryValue
     var didAttemptSubmit: Bool = false
-    /// String Catalog key for the inline error shown when the date is not real.
-    var errorKey: String = "component.dateEntry.validation.none"
+    /// The current validation message, already localised — `nil` when the value is valid. The
+    /// caller (`TripDateValidation`) computes this, so `DateEntryField` has no validation logic of
+    /// its own beyond `parsedDate(from:)`.
+    var errorMessage: String?
+    /// Which specific field(s) `errorMessage` applies to. Empty means "highlight the whole group"
+    /// (used for whole-date errors such as "must be on or after 24 July 2025").
+    var errorParts: Set<Part> = []
     /// Accessibility identifier prefix; the inline error uses `<prefix>.error`.
     var accessibilityIdentifierPrefix: String = "DateEntry"
 
@@ -44,18 +66,14 @@ struct DateEntryField: View {
     @FocusState private var focusedPart: Part?
     @State private var hasBlurred = false
 
-    private enum Part {
-        case day
-        case month
-        case year
-    }
-
     private var shouldShowError: Bool {
-        (didAttemptSubmit || hasBlurred) && !isValidDate
+        (didAttemptSubmit || hasBlurred) && errorMessage != nil
     }
 
-    private var isValidDate: Bool {
-        Self.parsedDate(from: value) != nil
+    /// Whether a specific field should be individually highlighted: only when the error targets
+    /// specific field(s) — an empty `errorParts` highlights every field via `highlightsWholeGroup`.
+    private func isPartHighlighted(_ part: Part) -> Bool {
+        shouldShowError && (errorParts.isEmpty || errorParts.contains(part))
     }
 
     var body: some View {
@@ -65,6 +83,13 @@ struct DateEntryField: View {
                 .foregroundStyle(AppColors.textPrimary)
 
             ParagraphText(text: hint, isHint: true)
+
+            if shouldShowError, let errorMessage {
+                InlineErrorText(
+                    message: errorMessage,
+                    accessibilityIdentifier: "\(accessibilityIdentifierPrefix).error"
+                )
+            }
 
             HStack(alignment: .top, spacing: AppSpacing.small) {
                 field(
@@ -86,10 +111,6 @@ struct DateEntryField: View {
                     part: .year
                 )
             }
-
-            if shouldShowError {
-                errorRow
-            }
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(title)
@@ -98,22 +119,6 @@ struct DateEntryField: View {
                 hasBlurred = true
             }
         }
-    }
-
-    private var errorRow: some View {
-        HStack(alignment: .top, spacing: AppSpacing.xSmall) {
-            Image(systemName: "exclamationmark.circle.fill")
-                .foregroundStyle(AppColors.errorRed)
-                .accessibilityHidden(true)
-            LocalizedText(errorKey)
-                .font(AppTypography.error)
-                .foregroundStyle(AppColors.errorRed)
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(
-            "\(languageStore.localized("a11y.errorPrefix")) \(languageStore.localized(errorKey))"
-        )
-        .accessibilityIdentifier("\(accessibilityIdentifierPrefix).error")
     }
 
     private func field(label: String, text: Binding<String>, width: CGFloat, part: Part) -> some View {
@@ -132,7 +137,7 @@ struct DateEntryField: View {
                 .background(AppColors.background)
                 .overlay(
                     Rectangle()
-                        .stroke(shouldShowError ? AppColors.errorRed : AppColors.borderDefault, lineWidth: 1)
+                        .stroke(isPartHighlighted(part) ? AppColors.errorRed : AppColors.borderDefault, lineWidth: 1)
                 )
                 .focused($focusedPart, equals: part)
                 .onChange(of: text.wrappedValue) { _, newValue in
@@ -142,14 +147,17 @@ struct DateEntryField: View {
         }
     }
 
+    /// Parses a real calendar date from `value`, or `nil` when it is not one.
+    ///
+    /// Accepts 1 or 2 digit day/month (e.g. "3" or "03"), matching the GOV.UK date-input pattern's
+    /// accepted example format ("31 3 2019") and the values `DateEntryValue(date:)` itself produces
+    /// when pre-filling from an existing `Date` (which are not zero-padded). The year must be
+    /// exactly 4 digits.
     static func parsedDate(from value: DateEntryValue) -> Date? {
         guard
-            let day = Int(value.day),
-            let month = Int(value.month),
-            let year = Int(value.year),
-            value.day.count == 2,
-            value.month.count == 2,
-            value.year.count == 4
+            let day = Int(value.day), (1...2).contains(value.day.count),
+            let month = Int(value.month), (1...2).contains(value.month.count),
+            let year = Int(value.year), value.year.count == 4
         else {
             return nil
         }
@@ -179,9 +187,11 @@ struct DateEntryField: View {
 
     return DateEntryField(
         title: "When did you leave for your trip?",
-        hint: "Enter the date you departed. For example, 31/03/2020",
+        hint: "Enter the date you departed. For example, 31 3 2019",
         value: $value,
         didAttemptSubmit: true,
+        errorMessage: "Enter the day you left for your trip",
+        errorParts: [.day],
         accessibilityIdentifierPrefix: "Preview.date"
     )
     .padding()

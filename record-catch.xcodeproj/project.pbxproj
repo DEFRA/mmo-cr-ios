@@ -46,6 +46,7 @@
 				Features/Common/DesignSystem/AppColors.swift,
 				Features/Common/DesignSystem/AppSpacing.swift,
 				Features/Common/DesignSystem/AppTypography.swift,
+				Features/Common/Views/AccessibilityAnnouncer.swift,
 				Features/Common/Views/HeaderNavigating.swift,
 				Features/Common/Views/ScrollViewProxyEnvironment.swift,
 				Features/Common/Views/ViewFooter.swift,

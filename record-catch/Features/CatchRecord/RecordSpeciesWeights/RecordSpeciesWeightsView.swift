@@ -58,8 +58,20 @@ struct RecordSpeciesWeightsView: View {
 
             ParagraphText(text: languageStore.localized("catchRecord.species.record.body"))
 
+            ErrorSummary(
+                messages: viewModel.allErrorMessages.map { languageStore.localized($0) },
+                identifierPrefix: "\(identifierPrefix).errorSummary"
+            )
+
             ForEach(viewModel.favourites) { species in
                 speciesRow(species)
+            }
+
+            if let selectionErrorMessage = viewModel.selectionErrorMessage {
+                InlineErrorText(
+                    message: languageStore.localized(selectionErrorMessage),
+                    accessibilityIdentifier: "\(identifierPrefix).selectionError"
+                )
             }
 
             LinkButton(title: languageStore.localized("catchRecord.species.record.addSpecies")) {
@@ -112,6 +124,7 @@ struct RecordSpeciesWeightsView: View {
 
     @ViewBuilder
     private func weightFields(for species: SpeciesOption, idKey: String) -> some View {
+        let errors = viewModel.weightErrorMessages
         VStack(alignment: .leading, spacing: AppSpacing.medium) {
             TextInputField(
                 label: languageStore.localized("catchRecord.species.weight.above"),
@@ -120,7 +133,9 @@ struct RecordSpeciesWeightsView: View {
                 text: Binding(
                     get: { viewModel.aboveEntries[species.id] ?? "" },
                     set: { viewModel.aboveEntries[species.id] = $0 }
-                )
+                ),
+                didAttemptSubmit: errors[SpeciesFieldKey(speciesID: species.id, field: .above)] != nil,
+                errorMessage: errors[SpeciesFieldKey(speciesID: species.id, field: .above)].map(languageStore.localized)
             )
             .accessibilityIdentifier("\(identifierPrefix).weightAbove.\(idKey)")
 
@@ -132,7 +147,10 @@ struct RecordSpeciesWeightsView: View {
                     text: Binding(
                         get: { viewModel.belowEntries[species.id] ?? "" },
                         set: { viewModel.belowEntries[species.id] = $0 }
-                    )
+                    ),
+                    didAttemptSubmit: errors[SpeciesFieldKey(speciesID: species.id, field: .below)] != nil,
+                    errorMessage: errors[SpeciesFieldKey(speciesID: species.id, field: .below)]
+                        .map(languageStore.localized)
                 )
                 .accessibilityIdentifier("\(identifierPrefix).weightBelow.\(idKey)")
 
@@ -155,7 +173,10 @@ struct RecordSpeciesWeightsView: View {
                     text: Binding(
                         get: { viewModel.discardedEntries[species.id] ?? "" },
                         set: { viewModel.discardedEntries[species.id] = $0 }
-                    )
+                    ),
+                    didAttemptSubmit: errors[SpeciesFieldKey(speciesID: species.id, field: .discarded)] != nil,
+                    errorMessage: errors[SpeciesFieldKey(speciesID: species.id, field: .discarded)]
+                        .map(languageStore.localized)
                 )
                 .accessibilityIdentifier("\(identifierPrefix).weightDiscarded.\(idKey)")
 

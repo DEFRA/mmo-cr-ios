@@ -24,11 +24,13 @@ final class AddSpeciesViewModelTests: XCTestCase {
         favouriteSpecies: FavouriteSpeciesProviding = StubFavouriteSpeciesProvider()
     ) -> AddSpeciesViewModel {
         AddSpeciesViewModel(
-            gear: gear,
-            vessel: vessel,
-            referenceNumber: referenceNumber,
-            returnPhase: .recordWeights,
-            context: context,
+            request: AddSpeciesRequest(
+                gear: gear,
+                vessel: vessel,
+                referenceNumber: referenceNumber,
+                returnPhase: .recordWeights,
+                context: context
+            ),
             router: router,
             speciesSearch: speciesSearch,
             favouriteSpecies: favouriteSpecies

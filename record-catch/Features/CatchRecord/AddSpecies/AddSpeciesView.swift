@@ -20,11 +20,13 @@ struct AddSpeciesView: View {
         favouriteSpecies: FavouriteSpeciesProviding
     ) {
         _viewModel = State(wrappedValue: AddSpeciesViewModel(
-            gear: gear,
-            vessel: vessel,
-            referenceNumber: referenceNumber,
-            returnPhase: returnPhase,
-            context: context,
+            request: AddSpeciesRequest(
+                gear: gear,
+                vessel: vessel,
+                referenceNumber: referenceNumber,
+                returnPhase: returnPhase,
+                context: context
+            ),
             router: router,
             favouriteSpecies: favouriteSpecies
         ))

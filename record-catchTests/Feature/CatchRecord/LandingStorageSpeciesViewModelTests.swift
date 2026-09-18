@@ -145,6 +145,85 @@ final class LandingStorageSpeciesViewModelTests: XCTestCase {
         XCTAssertEqual(draft.speciesNotLanded.first?.id, cod.id)
         XCTAssertEqual(draft.speciesNotLanded.first?.weightAboveMinimumKg, "8.5")
     }
+
+    // MARK: - Weight validation
+
+    func test_weightErrorMessages_beforeSubmit_isEmpty_evenWithBlankWeight() async {
+        let cod = SpeciesOption(name: "Atlantic cod (COD)")
+        let provider = StubFavouriteSpeciesProvider(initialFavourites: [cod])
+        let sut = LandingStorageSpeciesViewModel(referenceNumber: referenceNumber, router: CatchRecordRouter(), favouriteSpecies: provider)
+        await sut.loadFavourites()
+        sut.toggleSelection(cod.id)
+
+        XCTAssertTrue(sut.weightErrorMessages.isEmpty)
+        XCTAssertTrue(sut.allErrorMessages.isEmpty)
+        XCTAssertFalse(sut.didAttemptSubmit)
+    }
+
+    func test_submit_withTickedSpeciesAndBlankWeight_setsEnterMessage_andDoesNotRoute() async {
+        let cod = SpeciesOption(name: "Atlantic cod (COD)")
+        let provider = StubFavouriteSpeciesProvider(initialFavourites: [cod])
+        let router = CatchRecordRouter()
+        let sut = LandingStorageSpeciesViewModel(referenceNumber: referenceNumber, router: router, favouriteSpecies: provider)
+        await sut.loadFavourites()
+        sut.toggleSelection(cod.id)
+
+        await sut.submit()
+
+        XCTAssertTrue(sut.didAttemptSubmit)
+        XCTAssertEqual(
+            sut.weightErrorMessages[cod.id]?.key,
+            "catchRecord.landingStorageSpecies.weight.validation.enter"
+        )
+        XCTAssertEqual(sut.allErrorMessages.count, 1)
+        XCTAssertTrue(router.path.isEmpty)
+    }
+
+    func test_submit_withTickedSpeciesAndInvalidWeightFormat_setsFormatMessage() async {
+        let cod = SpeciesOption(name: "Atlantic cod (COD)")
+        let provider = StubFavouriteSpeciesProvider(initialFavourites: [cod])
+        let sut = LandingStorageSpeciesViewModel(referenceNumber: referenceNumber, router: CatchRecordRouter(), favouriteSpecies: provider)
+        await sut.loadFavourites()
+        sut.toggleSelection(cod.id)
+        sut.weightEntries[cod.id] = "not-a-number"
+
+        await sut.submit()
+
+        XCTAssertEqual(
+            sut.weightErrorMessages[cod.id]?.key,
+            "catchRecord.species.weight.validation.decimalPlace"
+        )
+    }
+
+    func test_submit_withValidWeightForEveryTickedSpecies_hasNoErrors_andRoutes() async {
+        let cod = SpeciesOption(name: "Atlantic cod (COD)")
+        let provider = StubFavouriteSpeciesProvider(initialFavourites: [cod])
+        let router = CatchRecordRouter()
+        let sut = LandingStorageSpeciesViewModel(referenceNumber: referenceNumber, router: router, favouriteSpecies: provider)
+        await sut.loadFavourites()
+        sut.toggleSelection(cod.id)
+        sut.weightEntries[cod.id] = "8.5"
+
+        await sut.submit()
+
+        XCTAssertTrue(sut.weightErrorMessages.isEmpty)
+        XCTAssertEqual(router.path, [.checkYourAnswers(referenceNumber: referenceNumber)])
+    }
+
+    func test_weightErrorMessages_onlyConsidersTickedSpecies() async {
+        let cod = SpeciesOption(name: "Atlantic cod (COD)")
+        let hake = SpeciesOption(name: "Hake (HKE)")
+        let provider = StubFavouriteSpeciesProvider(initialFavourites: [cod, hake])
+        let sut = LandingStorageSpeciesViewModel(referenceNumber: referenceNumber, router: CatchRecordRouter(), favouriteSpecies: provider)
+        await sut.loadFavourites()
+        sut.toggleSelection(cod.id)
+        sut.weightEntries[cod.id] = "8.5"
+        // Hake is left un-ticked with no weight entered — must not produce an error.
+
+        await sut.submit()
+
+        XCTAssertTrue(sut.weightErrorMessages.isEmpty)
+    }
 }
 
 /// Favourite species provider whose `addFavourite` always throws, to exercise the save-failure path.

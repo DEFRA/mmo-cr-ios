@@ -47,4 +47,16 @@ final class DateEntryFieldTests: XCTestCase {
 
         XCTAssertNil(DateEntryField.parsedDate(from: value))
     }
+
+    // MARK: - DateEntryValue.isEmpty
+
+    func testIsEmptyIsTrueForDefaultValue() {
+        XCTAssertTrue(DateEntryValue().isEmpty)
+    }
+
+    func testIsEmptyIsFalseWhenAnyPartIsSet() {
+        XCTAssertFalse(DateEntryValue(day: "1").isEmpty)
+        XCTAssertFalse(DateEntryValue(month: "1").isEmpty)
+        XCTAssertFalse(DateEntryValue(year: "2026").isEmpty)
+    }
 }

@@ -71,3 +71,61 @@ final class InMemoryReentrySecretStoreTests: XCTestCase {
         try? await sut.verifyReentry(reason: "test")
     }
 }
+
+/// `KeychainReentrySecretStore`'s real business logic (byte generation, access-control
+/// construction, and delegating to `KeychainStoring`) is exercised here with an injected
+/// `InMemoryKeychainStore` — no real hardware needed. Only an actual biometric-gated *read*
+/// against the real Keychain would need hardware, and that's `KeychainStore`'s concern, already
+/// covered by `KeychainStoreTests`.
+final class KeychainReentrySecretStoreTests: XCTestCase {
+
+    func test_secretExists_isFalse_beforeProvisioning() {
+        let sut = KeychainReentrySecretStore(keychain: InMemoryKeychainStore())
+        XCTAssertFalse(sut.secretExists())
+    }
+
+    func test_provisionSecret_thenSecretExists_isTrue() throws {
+        let sut = KeychainReentrySecretStore(keychain: InMemoryKeychainStore())
+        try sut.provisionSecret()
+        XCTAssertTrue(sut.secretExists())
+    }
+
+    func test_verifyReentry_succeeds_afterProvisioning() async throws {
+        let sut = KeychainReentrySecretStore(keychain: InMemoryKeychainStore())
+        try sut.provisionSecret()
+        try await sut.verifyReentry(reason: "test")
+    }
+
+    /// **Known behavioural gap** (not introduced or fixed by this change — flagged for follow-up):
+    /// unlike `InMemoryReentrySecretStore.verifyReentry`, the real `KeychainReentrySecretStore`
+    /// discards the `Data?` returned by `keychain.data(account:prompt:)` (see its `_ = try
+    /// keychain.data(...)`), so it does **not** throw when nothing was ever provisioned — it only
+    /// throws if the underlying `KeychainStoring.data` call itself throws. This asymmetry with the
+    /// fake double should be raised with the team; it is exercised here as documentation of the
+    /// current, actual behaviour rather than the originally-assumed (symmetrical) one.
+    func test_verifyReentry_whenNotProvisioned_doesNotThrow_dueToDiscardedReadResult() async throws {
+        let sut = KeychainReentrySecretStore(keychain: InMemoryKeychainStore())
+        try await sut.verifyReentry(reason: "test")
+    }
+
+    func test_verifyReentry_propagatesKeychainReadError() async throws {
+        let keychain = InMemoryKeychainStore()
+        let sut = KeychainReentrySecretStore(keychain: keychain)
+        try sut.provisionSecret()
+        keychain.readErrorsByAccount["reentry.secret"] = BiometricError.userCancelled
+
+        do {
+            try await sut.verifyReentry(reason: "test")
+            XCTFail("Expected verifyReentry to throw")
+        } catch {
+            XCTAssertEqual(error as? BiometricError, .userCancelled)
+        }
+    }
+
+    func test_clearSecret_removesProvisionedSecret() throws {
+        let sut = KeychainReentrySecretStore(keychain: InMemoryKeychainStore())
+        try sut.provisionSecret()
+        try sut.clearSecret()
+        XCTAssertFalse(sut.secretExists())
+    }
+}

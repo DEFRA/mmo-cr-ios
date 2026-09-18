@@ -17,7 +17,7 @@ final class MapLandOverlayRenderer: MKOverlayPathRenderer {
         self.path = path
     }
 
-    override func draw(_ mapRect: MKMapRect, zoomScale: MKZoomScale, in context: CGContext) {
+    override func draw(_: MKMapRect, zoomScale: MKZoomScale, in context: CGContext) {
         if path == nil {
             createPath()
         }

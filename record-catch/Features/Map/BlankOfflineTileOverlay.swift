@@ -30,7 +30,7 @@ final class BlankOfflineTileOverlay: MKTileOverlay {
         canReplaceMapContent = true
     }
 
-    override func loadTile(at path: MKTileOverlayPath, result: @escaping (Data?, Error?) -> Void) {
+    override func loadTile(at _: MKTileOverlayPath, result: @escaping (Data?, Error?) -> Void) {
         // Synchronous, in-memory only — never touches the network.
         result(Self.tileImageData, nil)
     }

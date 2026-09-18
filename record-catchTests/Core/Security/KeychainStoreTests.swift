@@ -61,6 +61,34 @@ final class KeychainStoreTests: XCTestCase {
 
         XCTAssertFalse(sut.itemExists(account: "account"))
     }
+
+    /// Exercises the `accessControl`-supplied branch of `set(_:account:accessControl:)` —
+    /// creating the descriptor and adding the item doesn't itself require hardware/biometric
+    /// interaction; only a subsequent *read* of an access-controlled item would.
+    func test_set_withAccessControl_succeeds() throws {
+        let sut = makeSut()
+        var accessControlError: Unmanaged<CFError>?
+        let accessControl = SecAccessControlCreateWithFlags(
+            nil,
+            kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
+            .biometryCurrentSet,
+            &accessControlError
+        )
+        let unwrappedAccessControl = try XCTUnwrap(accessControl)
+
+        XCTAssertNoThrow(
+            try sut.set(Data("value".utf8), account: "account", accessControl: unwrappedAccessControl)
+        )
+        XCTAssertTrue(sut.itemExists(account: "account"))
+    }
+
+    /// Exercises the `prompt`-supplied branch of `data(account:prompt:)` (building the `LAContext`
+    /// and adding it to the query). The account is missing, so this resolves via
+    /// `errSecItemNotFound` without ever needing a real biometric prompt.
+    func test_data_withPrompt_onMissingItem_returnsNil() throws {
+        let sut = makeSut()
+        XCTAssertNil(try sut.data(account: "missing", prompt: "Unlock to continue"))
+    }
 }
 
 final class InMemoryKeychainStoreTests: XCTestCase {

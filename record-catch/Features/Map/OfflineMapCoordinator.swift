@@ -80,7 +80,7 @@ final class OfflineMapCoordinator: NSObject, MKMapViewDelegate {
 
     // MARK: - MKMapViewDelegate
 
-    func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
+    func mapView(_: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
         if let tileOverlay = overlay as? MKTileOverlay {
             return MKTileOverlayRenderer(tileOverlay: tileOverlay)
         }
@@ -144,7 +144,7 @@ final class OfflineMapCoordinator: NSObject, MKMapViewDelegate {
         return nil
     }
 
-    func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
+    func mapView(_ mapView: MKMapView, regionDidChangeAnimated _: Bool) {
         let showLabels = LabelVisibility.shouldShowLabels(forLatitudeDelta: mapView.region.span.latitudeDelta)
 
         for view in annotationViewsBySubCode.values {

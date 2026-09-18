@@ -1,8 +1,9 @@
 # Description
 
 Please include a summary of the change:
-- 
-- 
+
+-
+-
 
 Fixes - Jira Ticket
 CRAR-<JiraTicket#>

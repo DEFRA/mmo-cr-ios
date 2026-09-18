@@ -1,11 +1,11 @@
 ---
-description: '>-'
-Expert full-stack native iOS developer for the DEFRA/MMO Catch Recording app.: ''
-Researches and implements an already-approved plan end-to-end: Swift/SwiftUI
-features, architecture, networking, offline sync, data persistence,: ''
-accessibility (WCAG 2.2 AA) and unit/UI tests. Owns the Research and: ''
-Implement/Test stages of the working framework; it does not plan work or run a: ''
-plan-approval gate itself.: ''
+description: >-
+  Expert full-stack native iOS developer for the DEFRA/MMO Catch Recording app.
+  Researches and implements an already-approved plan end-to-end: Swift/SwiftUI
+  features, architecture, networking, offline sync, data persistence,
+  accessibility (WCAG 2.2 AA) and unit/UI tests. Owns the Research and
+  Implement/Test stages of the working framework; it does not plan work or run a
+  plan-approval gate itself.
 name: iOS Developer
 tools: ['read', 'edit', 'search', 'execute', 'web', 'todo', 'agent', 'apply_patch', 'fetch_webpage', 'get_errors', 'list_dir', 'get_terminal_output', 'read_file', 'run_subagent', 'run_in_terminal', 'validate_cves', 'xcode/XcodeListNavigatorIssues', 'xcode/GetTestList', 'xcode/XcodeWrite', 'xcode/XcodeGrep', 'xcode/XcodeGetCurrentFile', 'xcode/RunSomeTests', 'xcode/XcodeRefreshCodeIssuesInFile', 'xcode/XcodeUpdate', 'xcode/XcodeMV', 'xcode/XcodeLS', 'xcode/RunAllTests', 'xcode/RenderPreview', 'xcode/XcodeMakeDir', 'xcode/GetBuildLog', 'xcode/XcodeListWindows', 'xcode/XcodeGlob', 'xcode/XcodeRM', 'xcode/XcodeRead', 'xcode/DocumentationSearch', 'xcode/BuildProject', 'xcode/RunCodeSnippet', 'xcode/AddEntitlement', 'xcode/AddInfoPlist', 'xcode/DeviceInteractionEndSession', 'xcode/DeviceInteractionInstallAndRun', 'xcode/DeviceInteractionStartSession', 'xcode/DeviceInteractionStartWorkspaceSession', 'xcode/DeviceInteractionSynthesize', 'xcode/GetConsoleOutput', 'xcode/GetCrashIssueLogs', 'xcode/GetFieldPerformanceIssueLogs', 'xcode/GetFileCompilerFlags', 'xcode/GetTargetBuildSettings', 'xcode/GetTopCrashIssues', 'xcode/GetTopFieldPerformanceIssues', 'xcode/LocalizationPlanner', 'xcode/InvokeDebuggerCommand', 'xcode/RunProject', 'xcode/StopProject', 'xcode/StringCatalogContext', 'xcode/StringCatalogEdit', 'xcode/StringCatalogRead', 'xcode/UpdateFileCompilerFlags', 'xcode/UpdateTargetBuildSetting', 'xcode/XcodeCloseWorkspace', 'xcode/XcodeListRunDestinations', 'xcode/XcodeListSchemes', 'xcode/XcodeListTargets', 'xcode/XcodeListTemplates', 'xcode/XcodeListTestPlans', 'xcode/XcodeListWorkspaces', 'xcode/XcodeNewProject', 'xcode/XcodeNewTarget', 'xcode/XcodeOpenWorkspace', 'xcode/XcodeSwitchRunDestination', 'xcode/XcodeSwitchScheme', 'xcode/XcodeSwitchTestPlan']
 model: Claude Sonnet 5 (copilot)

@@ -35,11 +35,15 @@ final class AppLockViewModel {
     /// Called once biometric re-entry succeeds.
     /// No-op default: previews/tests that don't care about the unlock transition can omit this;
     /// real call sites (e.g. the app root) always supply a handler.
-    var onUnlocked: () -> Void = {}
+    var onUnlocked: () -> Void = {
+        // Intentionally empty: default no-op handler, overridden by real call sites.
+    }
     /// Called whenever the flow hands off to the normal sign-in form (unavailable, locked out,
     /// or the user tapped the manual fallback link).
     /// No-op default: see `onUnlocked` above.
-    var onFallbackToSignIn: () -> Void = {}
+    var onFallbackToSignIn: () -> Void = {
+        // Intentionally empty: default no-op handler, overridden by real call sites.
+    }
 
     init(
         biometricAuthenticator: BiometricAuthenticating,

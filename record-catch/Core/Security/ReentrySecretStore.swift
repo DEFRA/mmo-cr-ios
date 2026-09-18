@@ -94,7 +94,7 @@ nonisolated final class InMemoryReentrySecretStore: ReentrySecretStoring, @unche
         lock.withLock { exists = true }
     }
 
-    func verifyReentry(reason: String) async throws {
+    func verifyReentry(reason _: String) async throws {
         if let error = lock.withLock({ verifyError }) {
             throw error
         }

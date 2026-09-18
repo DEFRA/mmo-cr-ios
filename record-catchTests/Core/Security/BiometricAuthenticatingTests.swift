@@ -71,6 +71,10 @@ final class BiometricErrorMappingTests: XCTestCase {
         XCTAssertEqual(BiometryKind(.faceID), .faceID)
     }
 
+    func test_biometryKind_mapsOpticID() {
+        XCTAssertEqual(BiometryKind(.opticID), .opticID)
+    }
+
     func test_biometricUnavailableReason_mapsNonLAErrorToOther() {
         let error = NSError(domain: "SomeOtherDomain", code: 1)
         XCTAssertEqual(BiometricUnavailableReason(error), .other)
@@ -78,5 +82,37 @@ final class BiometricErrorMappingTests: XCTestCase {
 
     func test_biometricUnavailableReason_mapsNilToOther() {
         XCTAssertEqual(BiometricUnavailableReason(nil), .other)
+    }
+
+    func test_biometricUnavailableReason_mapsLAErrorCodes() {
+        XCTAssertEqual(BiometricUnavailableReason(Self.laNSError(.biometryNotEnrolled)), .noBiometryEnrolled)
+        XCTAssertEqual(BiometricUnavailableReason(Self.laNSError(.biometryLockout)), .biometryLockedOut)
+        XCTAssertEqual(BiometricUnavailableReason(Self.laNSError(.passcodeNotSet)), .passcodeNotSet)
+        XCTAssertEqual(BiometricUnavailableReason(Self.laNSError(.biometryNotAvailable)), .notSupportedOnDevice)
+        XCTAssertEqual(BiometricUnavailableReason(Self.laNSError(.invalidContext)), .other)
+    }
+
+    func test_biometricError_mapsFromLAErrorCodes() {
+        XCTAssertEqual(BiometricError(Self.laError(.userCancel)), .userCancelled)
+        XCTAssertEqual(BiometricError(Self.laError(.userFallback)), .userFallback)
+        XCTAssertEqual(BiometricError(Self.laError(.systemCancel)), .systemCancelled)
+        XCTAssertEqual(BiometricError(Self.laError(.appCancel)), .systemCancelled)
+        XCTAssertEqual(BiometricError(Self.laError(.biometryNotAvailable)), .biometryNotAvailable)
+        XCTAssertEqual(BiometricError(Self.laError(.biometryNotEnrolled)), .biometryNotEnrolled)
+        XCTAssertEqual(BiometricError(Self.laError(.biometryLockout)), .biometryLockedOut)
+        XCTAssertEqual(BiometricError(Self.laError(.authenticationFailed)), .authenticationFailed)
+        XCTAssertEqual(BiometricError(Self.laError(.passcodeNotSet)), .passcodeNotSet)
+        XCTAssertEqual(BiometricError(Self.laError(.invalidContext)), .other)
+    }
+
+    /// Fabricates a real `LAError` for a given code — a real `LAContext` can't be driven
+    /// deterministically in CI, but `LAError` bridges cleanly from a plain `NSError` in its own
+    /// domain, so this exercises the actual `LAError`-mapping switch statements.
+    private static func laError(_ code: LAError.Code) -> LAError {
+        laNSError(code) as! LAError
+    }
+
+    private static func laNSError(_ code: LAError.Code) -> NSError {
+        NSError(domain: LAError.errorDomain, code: code.rawValue)
     }
 }

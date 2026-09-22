@@ -17,4 +17,17 @@ final class LaunchArgumentsTests: XCTestCase {
         let sut = LaunchArguments(raw: [])
         XCTAssertFalse(sut.contains(.catchRecordNew))
     }
+
+    // MARK: - isUITesting
+
+    func test_isUITesting_isTrue_whenAnyUITestFlagPresent() {
+        XCTAssertTrue(LaunchArguments(raw: ["-uiTestHome"]).isUITesting)
+        XCTAssertTrue(LaunchArguments(raw: ["-uiTestResetLanguage"]).isUITesting)
+        XCTAssertTrue(LaunchArguments(raw: ["-someOtherFlag", "-uiTestCatchRecordNew"]).isUITesting)
+    }
+
+    func test_isUITesting_isFalse_whenNoUITestFlagPresent() {
+        XCTAssertFalse(LaunchArguments(raw: []).isUITesting)
+        XCTAssertFalse(LaunchArguments(raw: ["-someOtherFlag"]).isUITesting)
+    }
 }

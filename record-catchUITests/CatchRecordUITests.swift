@@ -12,7 +12,6 @@ final class CatchRecordUITests: XCTestCase {
 
     private enum ID {
         static let firstRowDate = "Home.table.row.0.date" // Submitted row — inert
-        static let unsentRowDate = "Home.table.row.2.date" // Unsent (draft) row
         static let createRecord = "Home.createRecordButton"
 
         static let draftGroup = "CatchRecord.draftAction.radioGroup"
@@ -66,7 +65,35 @@ final class CatchRecordUITests: XCTestCase {
     func test_homeUnsentRow_opensDraftAction() {
         let app = launch("-uiTestHome")
 
-        let dateLink = element(app, ID.unsentRowDate)
+        // Creates a real Unsent draft within this test's own launch session (rather than relying
+        // on a draft left over from another test): starts a new catch record and picks a vessel,
+        // which persists an Unsent draft as soon as `draft.vessel` is set (see
+        // `CatchRecordHostView`'s `onChange(of: router.path)`). UI tests use an in-memory
+        // `ModelContainer` (see `LaunchArguments.isUITesting`), so this draft is scoped to this
+        // process only and never leaks into — or depends on — any other test.
+        let createButton = app.buttons[ID.createRecord]
+        XCTAssertTrue(createButton.waitForExistence(timeout: 5))
+        createButton.tap()
+
+        let achilles = element(app, ID.vesselAchilles)
+        XCTAssertTrue(achilles.waitForExistence(timeout: 5))
+        achilles.tap()
+        app.buttons[ID.vesselContinue].tap()
+
+        // Reached "Did your trip start and finish today?" — the vessel selection is now persisted.
+        XCTAssertTrue(element(app, ID.tripGroup).waitForExistence(timeout: 5))
+
+        // Navigate back to Home (Trip today → Select vessel → Home), so Home reloads its merged
+        // records list (see `HomeView`'s `onChange(of: router.path)`) and picks up the new draft.
+        let backButton = element(app, "ViewHeader.backButton")
+        XCTAssertTrue(backButton.waitForExistence(timeout: 5))
+        backButton.tap()
+        XCTAssertTrue(element(app, ID.vesselGroup).waitForExistence(timeout: 5))
+        backButton.tap()
+
+        // Back at Home: the new draft sorts first (most recently edited — see `RecordsMerging`),
+        // so it's the first row.
+        let dateLink = element(app, "Home.table.row.0.date")
         XCTAssertTrue(dateLink.waitForExistence(timeout: 5))
         dateLink.tap()
 

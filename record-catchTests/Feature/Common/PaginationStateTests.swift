@@ -43,6 +43,56 @@ final class PaginationStateTests: XCTestCase {
         XCTAssertEqual(state.totalItems, 0)
     }
 
+    // MARK: - itemCount-deriving convenience initializer
+    //
+    // Regression coverage for the bug where Home's pagination control was built from a
+    // `totalItems`/`totalPages` pair fixed at view construction, so it never reflected the actual
+    // number of drafts/records loaded (see `HomeView.paginationState`). This initializer derives
+    // `totalPages` from a live item count instead, so callers can't reintroduce the same bug.
+
+    func testItemCountInit_derivesTotalPages_exactMultipleOfPageSize() {
+        let state = PaginationState(currentPage: 1, itemCount: 8, pageSize: 4)
+        XCTAssertEqual(state.totalPages, 2)
+        XCTAssertEqual(state.totalItems, 8)
+    }
+
+    func testItemCountInit_derivesTotalPages_roundsUpPartialLastPage() {
+        let state = PaginationState(currentPage: 1, itemCount: 5, pageSize: 4)
+        XCTAssertEqual(state.totalPages, 2)
+        XCTAssertEqual(state.totalItems, 5)
+    }
+
+    func testItemCountInit_growingItemCount_increasesTotalPages() {
+        // Simulates a new draft being added to Home's list — the control must grow with it.
+        let before = PaginationState(currentPage: 1, itemCount: 4, pageSize: 4)
+        let after = PaginationState(currentPage: 1, itemCount: 9, pageSize: 4)
+        XCTAssertEqual(before.totalPages, 1)
+        XCTAssertEqual(after.totalPages, 3)
+    }
+
+    func testItemCountInit_shrinkingItemCount_decreasesTotalPages() {
+        // Simulates a draft being deleted — the control must shrink back down, not stay stale.
+        let before = PaginationState(currentPage: 3, itemCount: 12, pageSize: 4)
+        let after = PaginationState(currentPage: 3, itemCount: 4, pageSize: 4)
+        XCTAssertEqual(before.totalPages, 3)
+        XCTAssertEqual(after.totalPages, 1)
+        // Current page is clamped back into range rather than pointing past the end.
+        XCTAssertEqual(after.currentPage, 1)
+    }
+
+    func testItemCountInit_zeroItems_yieldsSinglePage() {
+        let state = PaginationState(currentPage: 1, itemCount: 0, pageSize: 4)
+        XCTAssertEqual(state.totalPages, 1)
+        XCTAssertEqual(state.totalItems, 0)
+    }
+
+    func testItemCountInit_clampsNegativeItemCountAndPageSize() {
+        let state = PaginationState(currentPage: 1, itemCount: -3, pageSize: 0)
+        XCTAssertEqual(state.totalItems, 0)
+        XCTAssertEqual(state.pageSize, 1)
+        XCTAssertEqual(state.totalPages, 1)
+    }
+
     // MARK: - Previous / next availability
 
     func testCanGoPreviousNext_firstPage() {

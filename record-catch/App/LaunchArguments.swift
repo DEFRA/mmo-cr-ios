@@ -56,4 +56,17 @@ struct LaunchArguments {
     func contains(_ flag: Flag) -> Bool {
         raw.contains(flag.rawValue)
     }
+
+    /// Whether *any* `-uiTest*` seam is active for this launch.
+    ///
+    /// Used to keep on-device persistence (the `SwiftDataCatchRecordDraftStore`-backed
+    /// `ModelContainer` — see `record_catchApp`) in-memory-only for UI test runs, so drafts saved
+    /// by one UI test (e.g. resuming a journey, or Home's own "Create a catch record" flow) never
+    /// leak into another test's launch of the app within the same simulator/test-run. Without
+    /// this, Home's drafts + records pagination control (and any other screen reading persisted
+    /// drafts) would accumulate state across tests and make exact assertions non-deterministic —
+    /// the same class of bug as a pagination control that doesn't reflect the real draft count.
+    var isUITesting: Bool {
+        raw.contains { $0.hasPrefix("-uiTest") }
+    }
 }

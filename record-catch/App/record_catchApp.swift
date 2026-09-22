@@ -18,9 +18,15 @@ struct record_catchApp: App {
         // ADR-0014, DEFRA data-at-rest requirement): the store is only accessible after the user
         // has unlocked the device at least once since boot, and is never included in an unencrypted
         // iTunes/Finder backup of a locked device.
+        //
+        // In-memory-only for any `-uiTest*` launch (see `LaunchArguments.isUITesting`), so drafts
+        // saved by one UI test never persist into another test's launch of the app within the same
+        // simulator/test-run — otherwise Home's drafts + records pagination (and any other screen
+        // reading persisted drafts) would accumulate state across tests, making exact assertions
+        // non-deterministic.
         let modelConfiguration = ModelConfiguration(
             schema: schema,
-            isStoredInMemoryOnly: false,
+            isStoredInMemoryOnly: LaunchArguments.current.isUITesting,
             cloudKitDatabase: .none
         )
 

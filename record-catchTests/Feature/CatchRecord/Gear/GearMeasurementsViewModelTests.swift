@@ -46,6 +46,20 @@ final class GearMeasurementsViewModelTests: XCTestCase {
         XCTAssertTrue(router.path.isEmpty)
     }
 
+    /// A mesh size of 0mm is not physically possible — must be rejected with its own error, not
+    /// silently accepted (regression test).
+    func test_submit_withZeroValue_setsGreaterThanZeroError_andDoesNotRoute() async {
+        let router = CatchRecordRouter()
+        let sut = makeSUT(router: router)
+        sut.entries["meshSize"] = "0"
+
+        await sut.submit()
+
+        XCTAssertEqual(sut.errorKey(for: .init(id: "meshSize", labelKey: "catchRecord.gear.measurement.meshSize")),
+                       "catchRecord.gear.measurement.validation.greaterThanZero")
+        XCTAssertTrue(router.path.isEmpty)
+    }
+
     func test_completionRoute_returnsSelectGear() {
         let sut = makeSUT(router: CatchRecordRouter())
         XCTAssertEqual(

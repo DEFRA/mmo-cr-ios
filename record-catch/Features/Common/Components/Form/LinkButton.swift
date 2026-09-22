@@ -3,9 +3,13 @@ import SwiftUI
 /// A GOV.UK-style inline text link that performs an action (not navigation chrome).
 ///
 /// Used for in-page actions such as "Add a species", "Remove weight below minimum size retained
-/// (kg)". Rendered as underlined link-blue text with a full 44pt-tall tappable area to meet the
-/// WCAG 2.2 target-size minimum, and exposed to VoiceOver as a button (a link that acts on the page,
-/// per GOV.UK guidance, is announced with the `.isButton` trait).
+/// (kg)". Rendered as underlined link-blue text with a tappable area that meets the WCAG 2.2
+/// (2.5.8) / Apple HIG 44×44pt target-size minimum but, unlike a full-width row, does **not**
+/// stretch to fill the rest of the line — mirroring `PaginationControls`' link buttons. Stretching
+/// a short inline link's hit area across the remaining line width lets a tap in visually-empty
+/// space activate it, which is surprising and can mis-trigger a nearby in-page action. Exposed to
+/// VoiceOver as a button (a link that acts on the page, per GOV.UK guidance, is announced with the
+/// `.isButton` trait).
 struct LinkButton: View {
     let title: String
     let action: () -> Void
@@ -17,7 +21,7 @@ struct LinkButton: View {
                 .foregroundStyle(AppColors.linkText)
                 .underline()
                 .multilineTextAlignment(.leading)
-                .frame(maxWidth: .infinity, minHeight: AppControlSize.buttonHeight, alignment: .leading)
+                .frame(minWidth: AppControlSize.minTapTarget, minHeight: AppControlSize.buttonHeight, alignment: .leading)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

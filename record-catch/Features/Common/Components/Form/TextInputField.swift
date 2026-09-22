@@ -107,6 +107,18 @@ struct TextInputField: View {
                 hasBlurred = true
             }
         }
+        .onChange(of: text) { _, newValue in
+            // Live-sanitise decimal-pad input: the on-screen numeric keypad happily lets a user
+            // tap "." repeatedly (e.g. "......888"), which upstream weight/precision validation
+            // only catches once "Save and continue" is pressed. Filtering as the user types keeps
+            // the field always in a valid numeric shape rather than surfacing an error later —
+            // GOV.UK's "prevent errors" pattern (https://www.gov.uk/service-manual/design/prevent-user-errors).
+            guard keyboardType == .decimalPad else { return }
+            let sanitized = Self.sanitizedDecimalInput(newValue)
+            if sanitized != newValue {
+                text = sanitized
+            }
+        }
     }
 
     @ViewBuilder
@@ -179,6 +191,30 @@ struct TextInputField: View {
 
     static func isBlank(_ value: String) -> Bool {
         value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// Filters `raw` down to a shape a decimal number can always be typed into: digits and **at
+    /// most one** "." decimal point. Any additional "." (e.g. from repeatedly tapping the
+    /// decimal-pad's dot key, as in "......888" or "11......2222") is dropped rather than
+    /// accepted, and any other stray character is dropped too. Pure and static so the
+    /// keystroke-level filtering is unit-testable without a hosted view.
+    ///
+    /// This only prevents an invalid *shape* (multiple decimal points / non-numeric characters)
+    /// as the user types; it deliberately does not enforce a specific number of decimal places or
+    /// a value range — those remain the job of the per-field validation run on submit (e.g.
+    /// `SpeciesWeightValidation`, which knows the field's required `WeightPrecision`).
+    static func sanitizedDecimalInput(_ raw: String) -> String {
+        var result = ""
+        var hasDecimalPoint = false
+        for character in raw {
+            if character.isASCII, character.isNumber {
+                result.append(character)
+            } else if character == ".", !hasDecimalPoint {
+                result.append(character)
+                hasDecimalPoint = true
+            }
+        }
+        return result
     }
 }
 

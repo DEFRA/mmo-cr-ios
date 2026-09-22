@@ -27,7 +27,7 @@ final class GearValidationTests: XCTestCase {
 
     func test_parse_validWholeNumber() {
         XCTAssertEqual(GearMeasurementValidation.parse(" 100 "), 100)
-        XCTAssertEqual(GearMeasurementValidation.parse("0"), 0)
+        XCTAssertEqual(GearMeasurementValidation.parse("1"), 1)
     }
 
     func test_parse_invalidValues_returnNil() {
@@ -37,11 +37,25 @@ final class GearValidationTests: XCTestCase {
         XCTAssertNil(GearMeasurementValidation.parse("10.5"))
     }
 
+    /// A measurement of zero is never physically possible (e.g. a mesh size or times-shot count of
+    /// 0mm/0 times), so it must be rejected even though it is a valid whole number.
+    func test_parse_zero_returnsNil() {
+        XCTAssertNil(GearMeasurementValidation.parse("0"))
+        XCTAssertNil(GearMeasurementValidation.parse(" 0 "))
+    }
+
     func test_errorKey_reflectsValidity() {
         XCTAssertNil(GearMeasurementValidation.errorKey(for: "100"))
         XCTAssertEqual(
             GearMeasurementValidation.errorKey(for: "x"),
             "catchRecord.gear.measurement.validation.wholeNumber"
+        )
+    }
+
+    func test_errorKey_forZero_returnsGreaterThanZeroKey() {
+        XCTAssertEqual(
+            GearMeasurementValidation.errorKey(for: "0"),
+            "catchRecord.gear.measurement.validation.greaterThanZero"
         )
     }
 }

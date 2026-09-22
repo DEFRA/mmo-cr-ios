@@ -45,10 +45,11 @@ struct CheckboxOption: View {
                             .foregroundStyle(AppColors.textSecondary)
                     }
                 }
-
-                Spacer()
             }
-            .frame(minHeight: AppControlSize.buttonHeight, alignment: .center)
+            // No trailing `Spacer()`: the tappable area hugs the checkbox + label (padded up to
+            // the 44×44pt minimum), rather than stretching across the rest of the row's blank
+            // trailing space — mirroring the `LinkButton`/`AppLockView` fix for the same issue.
+            .frame(minWidth: AppControlSize.minTapTarget, minHeight: AppControlSize.buttonHeight, alignment: .leading)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

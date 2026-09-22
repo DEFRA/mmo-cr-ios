@@ -14,7 +14,8 @@ This folder contains reusable GDS-inspired SwiftUI components and shared design 
 - `Components/Typography/ParagraphText.swift`: reusable body/hint text.
 - `Components/Form/PrimaryButton.swift`: primary action button.
 - `Components/Form/RadioOption.swift`: radio-style option row.
-- `Components/Form/DateEntryField.swift`: day/month/year date input with inline validation.
+- `Components/Form/TripDatePicker.swift`: native `DatePicker` wrapper used by the trip-date
+  screens, range-constrained by the caller instead of validated inline (see ADR-0017).
 - `Components/Form/SearchDropdownField.swift`: list-only search field with dropdown results.
 - `Components/Form/TextInputField.swift`: text input that also supports secure password entry.
 

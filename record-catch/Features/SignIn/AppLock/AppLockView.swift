@@ -84,20 +84,31 @@ struct AppLockView: View {
         }
     }
 
+    /// Centred beneath the primary unlock button, but — unlike a full-width row — the actual
+    /// tappable area hugs the short link text (widened only to the WCAG 2.2 / HIG 44×44pt
+    /// minimum) rather than stretching across the rest of the line. Centring is achieved with
+    /// flanking `Spacer`s on a full-width `HStack` instead of `.frame(maxWidth: .infinity)` on the
+    /// button itself, so a tap in the visually-empty space either side no longer activates it.
     private var fallbackLink: some View {
-        Button {
-            viewModel.useSignInInstead()
-        } label: {
-            LocalizedText("appLock.fallback.link")
-                .font(AppTypography.body)
-                .foregroundStyle(AppColors.linkText)
-                .underline()
-                .frame(maxWidth: .infinity, minHeight: AppControlSize.minTapTarget, alignment: .center)
-                .contentShape(Rectangle())
+        HStack(spacing: 0) {
+            Spacer(minLength: 0)
+
+            Button {
+                viewModel.useSignInInstead()
+            } label: {
+                LocalizedText("appLock.fallback.link")
+                    .font(AppTypography.body)
+                    .foregroundStyle(AppColors.linkText)
+                    .underline()
+                    .frame(minWidth: AppControlSize.minTapTarget, minHeight: AppControlSize.minTapTarget)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityAddTraits(.isLink)
+            .accessibilityIdentifier("AppLock.passwordFallbackLink")
+
+            Spacer(minLength: 0)
         }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(.isLink)
-        .accessibilityIdentifier("AppLock.passwordFallbackLink")
     }
 
     private func failureSummary(for message: AppLockFailureMessage) -> some View {

@@ -28,21 +28,14 @@ final class ValidationStringCatalogIntegrityTests: XCTestCase {
         "catchRecord.landingStorage.validation.none",
         "catchRecord.addPort.validation.none",
 
-        // Trip date (Task 5–6)
+        // Trip date (Task 5–6). Per-field "missing"/"not a real date"/"future"/"before
+        // departure" validation keys were removed as part of ADR-0017 (native `DatePicker`
+        // replacing the day/month/year `DateEntryField`): `TripDateViewModel.selectableRange`
+        // clamps out every invalid value, so those states can no longer occur and their copy
+        // keys were retired along with `TripDateValidation`. Only the (still-shown) hints
+        // remain under test here.
         "catchRecord.tripDate.departure.hint",
-        "catchRecord.tripDate.departure.validation.day",
-        "catchRecord.tripDate.departure.validation.month",
-        "catchRecord.tripDate.departure.validation.year",
-        "catchRecord.tripDate.departure.validation.format",
-        "catchRecord.tripDate.departure.validation.minimumDate",
-        "catchRecord.tripDate.departure.validation.future",
         "catchRecord.tripDate.return.hint",
-        "catchRecord.tripDate.return.validation.day",
-        "catchRecord.tripDate.return.validation.month",
-        "catchRecord.tripDate.return.validation.year",
-        "catchRecord.tripDate.return.validation.format",
-        "catchRecord.tripDate.return.validation.future",
-        "catchRecord.tripDate.return.validation.beforeDeparture",
 
         // Species (Task 7a)
         "catchRecord.species.add.validation.enter",

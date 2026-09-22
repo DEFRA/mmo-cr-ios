@@ -5,6 +5,12 @@ import Foundation
 /// UI only — no persistence or networking. On a valid departure date it pushes the return
 /// variant carrying the parsed departure date; on a valid return date it continues to the next
 /// step. See ADR-0003 for the routing pattern.
+///
+/// Uses a native `DatePicker` (see `TripDatePicker`, ADR-0017) rather than the day/month/year
+/// `DateEntryField` this screen used previously. Because `selectedDate` is always a concrete
+/// `Date`, defaulted to today, and `selectableRange` clamps out every date the business rules
+/// forbid (including the service's earliest supported trip date — see `CatchRecordDateRules`),
+/// there is no "missing field"/"not a real date" validation step left to run here.
 @MainActor
 @Observable
 final class TripDateViewModel {
@@ -18,8 +24,20 @@ final class TripDateViewModel {
     /// The parsed departure date carried into the return screen (nil for the departure screen).
     let departureDate: Date?
 
-    var value = DateEntryValue()
-    private(set) var didAttemptSubmit = false
+    /// The date currently selected in the picker. Defaults to today (or the resumed draft's
+    /// already-captured date — see ADR-0015 decision #1), clamped into `selectableRange`.
+    var selectedDate: Date
+
+    /// The inclusive range of calendar days the picker allows.
+    ///
+    /// - Departure: on or after the service's earliest supported trip date
+    ///   (`CatchRecordDateRules.earliestTripDate`), up to and including today.
+    /// - Return: on or after the departure date, and no later than today.
+    ///
+    /// Computed once at `init` from the injected `now`, so the screen's bounds stay stable for
+    /// the lifetime of a single visit (deterministic for tests; a real device crossing midnight
+    /// mid-visit simply keeps the bound it started with).
+    let selectableRange: ClosedRange<Date>
 
     private let router: CatchRecordRouter
     private let favouritePorts: FavouritePortsProviding
@@ -27,6 +45,7 @@ final class TripDateViewModel {
     private let draft: CatchRecordDraft
     /// Injectable "now" so the late-submission nudge decision is deterministic in tests.
     private let now: () -> Date
+    private let calendar = Calendar(identifier: .gregorian)
 
     init(
         phase: TripDatePhase,
@@ -46,17 +65,27 @@ final class TripDateViewModel {
         self.favouritePorts = favouritePorts
         self.draft = draft
         self.now = now
+
+        let calendar = Calendar(identifier: .gregorian)
+        let today = calendar.startOfDay(for: now())
+        let range = Self.selectableRange(phase: phase, departureDate: departureDate, today: today, calendar: calendar)
+        self.selectableRange = range
+
         // Pre-fills the previously-captured date when restarting a resumed draft from the
-        // beginning (see ADR-0015 decision #1).
+        // beginning (see ADR-0015 decision #1). Clamped defensively in case an older/corrupt
+        // draft holds a date outside today's computed range.
+        let existing: Date?
         switch phase {
         case .departure:
-            if let existing = draft.departureDate {
-                self.value = DateEntryValue(date: existing)
-            }
+            existing = draft.departureDate
         case .return:
-            if let existing = draft.returnDate {
-                self.value = DateEntryValue(date: existing)
-            }
+            existing = draft.returnDate
+        }
+        if let existing {
+            let day = calendar.startOfDay(for: existing)
+            self.selectedDate = min(max(day, range.lowerBound), range.upperBound)
+        } else {
+            self.selectedDate = today
         }
     }
 
@@ -66,34 +95,34 @@ final class TripDateViewModel {
     /// String Catalog key for the screen's hint.
     var hintKey: String { phase.hintKey }
 
-    /// Current validation result, once a submit has been attempted — `nil` when `value` is valid.
-    /// `locale` is only used to render the earliest-trip-date message (see `TripDateValidation`).
-    func validationResult(locale: Locale) -> TripDateValidationResult? {
-        guard didAttemptSubmit else { return nil }
-        return TripDateValidation.result(
-            for: value,
-            phase: phase,
-            departureDate: departureDate,
-            now: now(),
-            locale: locale
-        )
+    /// The allowed date range for this phase, given `today` and (for the return phase) the
+    /// departure date. A defensive `min(lower, today)` keeps the range non-inverted (a
+    /// `ClosedRange` with `lowerBound > upperBound` traps at runtime) even if an older/corrupt
+    /// draft's departure date is after today, or before the service's earliest supported date.
+    private static func selectableRange(
+        phase: TripDatePhase,
+        departureDate: Date?,
+        today: Date,
+        calendar: Calendar
+    ) -> ClosedRange<Date> {
+        switch phase {
+        case .departure:
+            let earliest = calendar.startOfDay(for: CatchRecordDateRules.earliestTripDate)
+            return min(earliest, today)...today
+        case .return:
+            let lower = departureDate.map { calendar.startOfDay(for: $0) } ?? Date.distantPast
+            return min(lower, today)...today
+        }
     }
 
-    /// Runs validation for "Save and continue" and routes on when the date is valid.
+    /// Persists the selected date and routes onward. The picker's `range` makes every entered
+    /// date valid by construction, so there is nothing left to validate before routing.
     ///
     /// When reached via "Change" from Check your answers (`draft.returnToCheckYourAnswers`), only
     /// this one date is being corrected, so the journey returns straight there instead of
     /// continuing into the other date/late-submission-nudge/port screens (see ADR-0013).
-    func submit(locale: Locale) {
-        didAttemptSubmit = true
-        guard TripDateValidation.result(
-            for: value,
-            phase: phase,
-            departureDate: departureDate,
-            now: now(),
-            locale: locale
-        ) == nil else { return }
-        guard let date = DateEntryField.parsedDate(from: value) else { return }
+    func submit() {
+        let date = calendar.startOfDay(for: selectedDate)
         switch phase {
         case .departure:
             draft.departureDate = date

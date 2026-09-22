@@ -62,4 +62,42 @@ final class TextInputFieldTests: XCTestCase {
     func testPasswordToggleLabelWhenVisiblePromptsToHide() {
         XCTAssertEqual(TextInputField.passwordToggleLabel(isVisible: true), "Hide password")
     }
+
+    // MARK: - sanitizedDecimalInput
+
+    func testSanitizedDecimalInputPassesThroughAValidWholeNumber() {
+        XCTAssertEqual(TextInputField.sanitizedDecimalInput("12"), "12")
+    }
+
+    func testSanitizedDecimalInputPassesThroughAValidDecimal() {
+        XCTAssertEqual(TextInputField.sanitizedDecimalInput("12.5"), "12.5")
+    }
+
+    func testSanitizedDecimalInputKeepsOnlyTheFirstDecimalPointWhenDotsAreRepeatedFromEmpty() {
+        // Reported bug: tapping the decimal-pad's "." key repeatedly then entering digits.
+        XCTAssertEqual(TextInputField.sanitizedDecimalInput("......888"), ".888")
+    }
+
+    func testSanitizedDecimalInputKeepsOnlyTheFirstDecimalPointBetweenDigitGroups() {
+        // Reported bug: digits, then repeated dots, then more digits.
+        XCTAssertEqual(TextInputField.sanitizedDecimalInput("11......2222"), "11.2222")
+    }
+
+    func testSanitizedDecimalInputDropsAnySecondDecimalPoint() {
+        XCTAssertEqual(TextInputField.sanitizedDecimalInput("1.2.3"), "1.23")
+    }
+
+    func testSanitizedDecimalInputDropsNonNumericCharacters() {
+        XCTAssertEqual(TextInputField.sanitizedDecimalInput("1a2b.5c"), "12.5")
+    }
+
+    func testSanitizedDecimalInputReturnsEmptyStringForEmptyInput() {
+        XCTAssertEqual(TextInputField.sanitizedDecimalInput(""), "")
+    }
+
+    func testSanitizedDecimalInputIsIdempotent() {
+        let once = TextInputField.sanitizedDecimalInput("......888")
+        let twice = TextInputField.sanitizedDecimalInput(once)
+        XCTAssertEqual(once, twice)
+    }
 }

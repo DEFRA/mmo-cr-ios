@@ -132,10 +132,13 @@ final class CatchLocationManualEntryUITests: XCTestCase {
 
         app.buttons[ID.saveContinue].tap()
 
-        // NOTE: the app currently shows the shared "Select the area where most of your catch was
-        // caught" message rather than the ticket's "Enter a valid statistical sub area code." —
-        // recorded as a copy gap. The test asserts an error is shown and the screen is retained.
-        let error = app.staticTexts["Select the area where most of your catch was caught"]
+        // NOTE: the app currently shows the shared "Select a statistical subrectangle" message
+        // (`catchRecord.catchLocation.validation.none`) rather than the ticket's "Enter a valid
+        // statistical sub area code." — recorded as a copy gap. The test asserts an error is
+        // shown and the screen is retained. (Not to be confused with
+        // `catchRecord.catchLocation.hint.select`, "Select the area where most of your catch was
+        // caught.", which is the field's *hint* text, always visible, not the validation error.)
+        let error = app.staticTexts["Select a statistical subrectangle"]
         XCTAssertTrue(error.waitForExistence(timeout: 5), "An invalid code should surface an inline validation error")
         XCTAssertTrue(element(app, ID.heading).exists, "The user should remain on the manual-entry screen")
         XCTAssertFalse(element(app, "CatchRecord.addSpecies.heading").exists)

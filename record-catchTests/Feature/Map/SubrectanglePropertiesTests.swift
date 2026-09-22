@@ -4,7 +4,7 @@ import XCTest
 final class SubrectanglePropertiesTests: XCTestCase {
 
     func testDecodesFullValidProperties() throws {
-        let json = """
+        let jsonText = """
         {
             "OBJECTID_1": 25719, "OBJECTID": 25719, "ICESNAME": "27D8",
             "SOUTH": 49.0, "WEST": -12.0, "NORTH": 49.5, "EAST": -11.0,
@@ -12,7 +12,8 @@ final class SubrectanglePropertiesTests: XCTestCase {
             "sub_code": "27D86", "sub_str": 6,
             "Shape_Leng": 130867.6104, "Shape_Area": 1051127177.62
         }
-        """.data(using: .utf8)!
+        """
+        let json = Data(jsonText.utf8)
 
         let properties = try JSONDecoder().decode(SubrectangleProperties.self, from: json)
 
@@ -24,7 +25,7 @@ final class SubrectanglePropertiesTests: XCTestCase {
     }
 
     func testDecodesWithOnlySubCodePresent() throws {
-        let json = #"{"sub_code": "A1"}"#.data(using: .utf8)!
+        let json = Data(#"{"sub_code": "A1"}"#.utf8)
 
         let properties = try JSONDecoder().decode(SubrectangleProperties.self, from: json)
 
@@ -36,13 +37,13 @@ final class SubrectanglePropertiesTests: XCTestCase {
     }
 
     func testThrowsWhenSubCodeMissing() {
-        let json = #"{"ICESNAME": "27D8"}"#.data(using: .utf8)!
+        let json = Data(#"{"ICESNAME": "27D8"}"#.utf8)
 
         XCTAssertThrowsError(try JSONDecoder().decode(SubrectangleProperties.self, from: json))
     }
 
     func testGeoJSONPropertiesDecoderReturnsNilForMissingSubCode() {
-        let json = #"{"ICESNAME": "27D8"}"#.data(using: .utf8)!
+        let json = Data(#"{"ICESNAME": "27D8"}"#.utf8)
 
         XCTAssertNil(GeoJSONPropertiesDecoder.decode(SubrectangleProperties.self, from: json))
     }

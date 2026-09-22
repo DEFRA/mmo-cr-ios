@@ -267,6 +267,6 @@ final class DraftActionViewModelTests: XCTestCase {
         try? await Task.sleep(nanoseconds: 10_000_000)
 
         let remaining = try? await store.loadDraft(localID: localID)
-        XCTAssertNil(remaining ?? nil)
+        XCTAssertNil(remaining)
     }
 }

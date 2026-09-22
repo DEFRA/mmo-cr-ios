@@ -156,4 +156,3 @@ final class RawGeoJSONTests: XCTestCase {
         XCTAssertNotNil(features.first?.propertiesData)
     }
 }
-

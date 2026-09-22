@@ -5,8 +5,6 @@
 
 included:
   - record-catch
-  - record-catchTests
-  - record-catchUITests
 
 excluded:
   - DerivedData

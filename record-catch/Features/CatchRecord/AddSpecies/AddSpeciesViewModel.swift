@@ -16,20 +16,6 @@ struct AddSpeciesRequest {
     let returnPhase: SpeciesReturnPhase
     /// Which entry point this screen was reached from — drives validation copy.
     let context: AddSpeciesContext
-
-    init(
-        gear: GearOption,
-        vessel: String,
-        referenceNumber: String,
-        returnPhase: SpeciesReturnPhase,
-        context: AddSpeciesContext
-    ) {
-        self.gear = gear
-        self.vessel = vessel
-        self.referenceNumber = referenceNumber
-        self.returnPhase = returnPhase
-        self.context = context
-    }
 }
 
 /// View model for the Add-species screen (type-to-search, save to favourites).

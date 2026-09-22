@@ -1437,6 +1437,24 @@
         }
       }
     },
+    "catchRecord.gear.measurement.validation.greaterThanZero": {
+      "comment": "Inline validation error when a measurement is a valid whole number but is zero, which is not physically possible (e.g. a mesh size or times-shot count of 0).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Rhowch rif sy'n fwy na 0"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a number greater than 0"
+          }
+        }
+      }
+    },
     "catchRecord.gear.measurement.validation.wholeNumber": {
       "comment": "Inline validation error when a measurement is not a whole number.",
       "extractionState": "manual",

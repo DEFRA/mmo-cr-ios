@@ -221,6 +221,37 @@ final class RecordSpeciesWeightsViewModelTests: XCTestCase {
         XCTAssertTrue(router.path.isEmpty)
     }
 
+    /// A catch record with zero catch across every weight category is meaningless — 0 must be
+    /// rejected on the revealed optional fields too, not just the mandatory "above" field
+    /// (regression test).
+    func test_submit_withAllWeightsZero_setsGreaterThanZeroErrors_andDoesNotRoute() async {
+        let router = CatchRecordRouter()
+        let sut = makeSUT(favourites: [cod], router: router, draft: singleGearDraft())
+        await sut.loadFavourites()
+        sut.selection = [cod.id]
+        sut.aboveEntries[cod.id] = "0"
+        sut.revealBelow(cod.id)
+        sut.belowEntries[cod.id] = "0"
+        sut.revealDiscarded(cod.id)
+        sut.discardedEntries[cod.id] = "0"
+
+        await sut.submit()
+
+        XCTAssertEqual(
+            sut.weightErrorMessages[SpeciesFieldKey(speciesID: cod.id, field: .above)]?.key,
+            "catchRecord.species.weight.validation.greaterThanZero"
+        )
+        XCTAssertEqual(
+            sut.weightErrorMessages[SpeciesFieldKey(speciesID: cod.id, field: .below)]?.key,
+            "catchRecord.species.weight.validation.greaterThanZero"
+        )
+        XCTAssertEqual(
+            sut.weightErrorMessages[SpeciesFieldKey(speciesID: cod.id, field: .discarded)]?.key,
+            "catchRecord.species.weight.validation.greaterThanZero"
+        )
+        XCTAssertTrue(router.path.isEmpty)
+    }
+
     func test_validationMessages_beforeSubmit_areEmpty() {
         let sut = makeSUT(favourites: [], router: CatchRecordRouter(), draft: singleGearDraft())
 

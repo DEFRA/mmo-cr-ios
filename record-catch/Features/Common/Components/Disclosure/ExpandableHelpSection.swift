@@ -42,9 +42,13 @@ struct ExpandableHelpSection<Content: View>: View {
                         .font(AppTypography.bodySmall)
                         .foregroundStyle(AppColors.linkText)
                         .underline()
-
-                    Spacer()
                 }
+                // No trailing `Spacer()`: the tappable area hugs the chevron + title (padded up
+                // to the 44×44pt minimum), rather than stretching across the rest of the row's
+                // blank trailing space — mirroring the `LinkButton`/`AppLockView` fix for the
+                // same issue.
+                .frame(minWidth: AppControlSize.minTapTarget, minHeight: AppControlSize.minTapTarget, alignment: .leading)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityHint(isExpanded ? "Hides additional information" : "Reveals additional information")

@@ -341,3 +341,49 @@ resaved, rather than looping through any other gears again (ADR-0011).
   conditional reveal. Logged for governance (Delivery Architecture).
 
 See [ADR-0011](../adr/0011-per-gear-catch-grouping.md) for the per-gear `GearCatch` model and multi-gear journey loop this section relies on.
+
+## Trip date screens (`CatchRecord.tripDate.departure.*` / `.return.*`)
+
+Reused single screen (`TripDateView`/`TripDateViewModel`, driven by `TripDatePhase`) collecting
+the trip departure and return dates, reached from the "No" answer on "Did your trip start and
+finish today?".
+
+1. Caption "New catch record", display-only reference number header, H1 from `TripDatePhase`
+   ("When did you leave for your trip?" / "When did you return from your trip?").
+2. **Native `DatePicker`** (`TripDatePicker`, `.compact` style) — see the deviation register entry
+   below and [ADR-0017](../adr/0017-native-date-picker-for-trip-dates.md). Defaults to today (or
+   the resumed draft's already-captured date). Range-constrained rather than validated: departure
+   allows any day up to and including today; return allows the departure date up to today.
+3. `PrimaryButton` "Save and continue" (`.saveContinue`).
+4. Departure continue → pushes the return variant, carrying the parsed departure date. Return
+   continue → the late-submission nudge (if the trip ended more than 24 hours ago — see
+   `SubmissionNudge`) or straight into the port sub-journey.
+5. Reached via "Change" from Check your answers → returns straight back there instead of
+   continuing the rest of the journey (ADR-0013).
+
+### Copy (en / cy)
+
+| Key | English | Welsh |
+|---|---|---|
+| `catchRecord.tripDate.departure.hint` | Select the date you left for your trip. | Dewiswch y dyddiad y gwnaethoch adael am eich taith. *(needs_review — awaiting linguist sign-off)* |
+| `catchRecord.tripDate.return.hint` | Select the date you returned from your trip. | Dewiswch y dyddiad y gwnaethoch ddychwelyd o'ch taith. *(needs_review — awaiting linguist sign-off)* |
+
+### Accessibility annotations
+
+- The picker exposes an `accessibilityLabel` equal to the screen's H1 question and a stable
+  `<prefix>.picker` accessibility identifier for VoiceOver/XCUITest.
+- No inline error state exists for this screen (see deviation register) — every selectable date is
+  valid by construction, so there is nothing to announce as an error.
+- Verified at `.accessibility5` Dynamic Type and in the Welsh locale via the existing screen
+  previews; the picker's own popover calendar is Apple-maintained UI.
+
+### Deviation register
+
+- **Replaced the GOV.UK *Date input* day/month/year component (`DateEntryField`) with a native
+  SwiftUI `DatePicker`** for both trip-date screens, and replaced explicit inline validation with a
+  range-constrained selection (no invalid date is selectable). This is a deliberate deviation from
+  the GOV.UK Design System's default date-input pattern — see
+  [ADR-0017](../adr/0017-native-date-picker-for-trip-dates.md) for the full rationale, and the
+  accepted data-quality trade-off (the picker always shows a concrete date, defaulted to today,
+  rather than forcing an explicit entry). Logged for governance (Delivery Architecture).
+- The Welsh hint copy above is a same-session draft translation, not yet linguist-reviewed.

@@ -37,10 +37,10 @@ final class CatchRecordUITests: XCTestCase {
 
         static let departureHeading = "CatchRecord.tripDate.departure.heading"
         static let departureContinue = "CatchRecord.tripDate.departure.saveContinue"
-        static let departureError = "CatchRecord.tripDate.departure.error"
+        static let departurePicker = "CatchRecord.tripDate.departure.picker"
         static let returnHeading = "CatchRecord.tripDate.return.heading"
         static let returnContinue = "CatchRecord.tripDate.return.saveContinue"
-        static let returnError = "CatchRecord.tripDate.return.error"
+        static let returnPicker = "CatchRecord.tripDate.return.picker"
 
         static let warningBox = "Home.warningBox"
     }
@@ -179,90 +179,22 @@ final class CatchRecordUITests: XCTestCase {
         element(app, ID.tripNo).tap()
         app.buttons[ID.tripContinue].tap()
 
-        // Departure date screen. Dates are computed relative to "now" (rather than a fixed
-        // historical date) so a return date of "today" never falls outside the 24-hour
-        // submission window and triggers the Submission Nudge screen (see `SubmissionNudge`).
-        let departure = dateStrings(daysAgo: 1)
-        let returnValue = dateStrings(daysAgo: 0)
-
+        // Departure date screen. The native `DatePicker` (see `TripDatePicker`, ADR-0017)
+        // defaults to today and is range-constrained rather than validated, so accepting the
+        // default on both screens is itself a valid "no dates entered" journey — a return date of
+        // "today" never falls outside the 24-hour submission window and triggers the Submission
+        // Nudge screen (see `SubmissionNudge`).
         XCTAssertTrue(element(app, ID.departureHeading).waitForExistence(timeout: 5))
-        enterDate(app, day: departure.day, month: departure.month, year: departure.year, headingID: ID.departureHeading)
+        XCTAssertTrue(element(app, ID.departurePicker).exists)
         app.buttons[ID.departureContinue].tap()
 
         // Return date screen.
         XCTAssertTrue(element(app, ID.returnHeading).waitForExistence(timeout: 5))
-        enterDate(app, day: returnValue.day, month: returnValue.month, year: returnValue.year, headingID: ID.returnHeading)
+        XCTAssertTrue(element(app, ID.returnPicker).exists)
         app.buttons[ID.returnContinue].tap()
 
         // With no favourites yet, enters the port sub-journey at the Add-port screen.
         XCTAssertTrue(element(app, "CatchRecord.addPort.heading").waitForExistence(timeout: 5))
-    }
-
-    @MainActor
-    func test_tripDate_departure_submitWithNoDate_showsInlineError() {
-        let app = launch("-uiTestCatchRecordNew")
-
-        let achilles = element(app, ID.vesselAchilles)
-        XCTAssertTrue(achilles.waitForExistence(timeout: 5))
-        achilles.tap()
-        app.buttons[ID.vesselContinue].tap()
-
-        XCTAssertTrue(element(app, ID.tripNo).waitForExistence(timeout: 5))
-        element(app, ID.tripNo).tap()
-        app.buttons[ID.tripContinue].tap()
-
-        XCTAssertTrue(element(app, ID.departureHeading).waitForExistence(timeout: 5))
-        app.buttons[ID.departureContinue].tap()
-
-        XCTAssertTrue(element(app, ID.departureError).waitForExistence(timeout: 5))
-        // Did not route on: still on the departure screen.
-        XCTAssertTrue(element(app, ID.departureHeading).exists)
-    }
-
-    @MainActor
-    func test_tripDate_return_submitWithNoDate_showsInlineError() {
-        let app = launch("-uiTestCatchRecordNew")
-
-        let achilles = element(app, ID.vesselAchilles)
-        XCTAssertTrue(achilles.waitForExistence(timeout: 5))
-        achilles.tap()
-        app.buttons[ID.vesselContinue].tap()
-
-        XCTAssertTrue(element(app, ID.tripNo).waitForExistence(timeout: 5))
-        element(app, ID.tripNo).tap()
-        app.buttons[ID.tripContinue].tap()
-
-        XCTAssertTrue(element(app, ID.departureHeading).waitForExistence(timeout: 5))
-        let departure = dateStrings(daysAgo: 1)
-        enterDate(app, day: departure.day, month: departure.month, year: departure.year, headingID: ID.departureHeading)
-        app.buttons[ID.departureContinue].tap()
-
-        XCTAssertTrue(element(app, ID.returnHeading).waitForExistence(timeout: 5))
-        app.buttons[ID.returnContinue].tap()
-
-        XCTAssertTrue(element(app, ID.returnError).waitForExistence(timeout: 5))
-        XCTAssertTrue(element(app, ID.returnHeading).exists)
-    }
-
-    @MainActor
-    func test_tripDate_departure_submitWithInvalidDate_showsInlineError() {
-        let app = launch("-uiTestCatchRecordNew")
-
-        let achilles = element(app, ID.vesselAchilles)
-        XCTAssertTrue(achilles.waitForExistence(timeout: 5))
-        achilles.tap()
-        app.buttons[ID.vesselContinue].tap()
-
-        XCTAssertTrue(element(app, ID.tripNo).waitForExistence(timeout: 5))
-        element(app, ID.tripNo).tap()
-        app.buttons[ID.tripContinue].tap()
-
-        XCTAssertTrue(element(app, ID.departureHeading).waitForExistence(timeout: 5))
-        enterDate(app, day: "31", month: "02", year: "2026", headingID: ID.departureHeading)
-        app.buttons[ID.departureContinue].tap()
-
-        XCTAssertTrue(element(app, ID.departureError).waitForExistence(timeout: 5))
-        XCTAssertTrue(element(app, ID.departureHeading).exists)
     }
 
     // MARK: - Port journey
@@ -484,40 +416,6 @@ final class CatchRecordUITests: XCTestCase {
 
         // Back at Home.
         XCTAssertTrue(element(app, ID.warningBox).waitForExistence(timeout: 5))
-    }
-
-    /// Day/month/year components for a date `daysAgo` days before "now", zero-padded for the
-    /// date-entry fields. Used instead of a fixed historical date so trip-date UI tests stay
-    /// deterministic regardless of when they're run (see `SubmissionNudge.isNeeded`, which compares
-    /// against the real wall clock in the running app).
-    private func dateStrings(daysAgo: Int) -> (day: String, month: String, year: String) {
-        let calendar = Calendar(identifier: .gregorian)
-        let date = calendar.date(byAdding: .day, value: -daysAgo, to: Date()) ?? Date()
-        let components = calendar.dateComponents([.day, .month, .year], from: date)
-        return (
-            String(format: "%02d", components.day ?? 1),
-            String(format: "%02d", components.month ?? 1),
-            String(format: "%04d", components.year ?? 2020)
-        )
-    }
-
-    private func enterDate(_ app: XCUIApplication, day: String, month: String, year: String, headingID: String) {
-        let dayField = app.textFields["Day"]
-        XCTAssertTrue(dayField.waitForExistence(timeout: 5))
-        dayField.tap()
-        dayField.typeText(day)
-
-        let monthField = app.textFields["Month"]
-        monthField.tap()
-        monthField.typeText(month)
-
-        let yearField = app.textFields["Year"]
-        yearField.tap()
-        yearField.typeText(year)
-
-        // Dismiss the number pad (which has no return key) by tapping the screen heading,
-        // which stays near the top and never scrolls the continue button out of reach.
-        element(app, headingID).tap()
     }
 
     // MARK: - Select gear — variable (per-trip) measurement conditional reveal

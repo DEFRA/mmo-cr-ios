@@ -81,6 +81,24 @@ final class SelectGearViewModelTests: XCTestCase {
         XCTAssertNil(sut.variableErrorKey(gearID: GearOption.seineNets.id, measurementID: "timesShot"))
     }
 
+    /// The gear was shot 0 times means there is no catch to record — must be rejected with its own
+    /// error, not silently accepted (regression test).
+    func test_submit_withZeroVariableMeasurement_setsGreaterThanZeroError_andDoesNotRoute() async {
+        let router = CatchRecordRouter()
+        let sut = makeSUT(router: router, favourites: [seineNetsFavourite])
+        await sut.loadFavourites()
+        sut.selection = [GearOption.seineNets.id]
+        sut.variableEntries["\(GearOption.seineNets.id).timesShot"] = "0"
+
+        sut.submit()
+
+        XCTAssertEqual(
+            sut.variableErrorKey(gearID: GearOption.seineNets.id, measurementID: "timesShot"),
+            "catchRecord.gear.measurement.validation.greaterThanZero"
+        )
+        XCTAssertTrue(router.path.isEmpty)
+    }
+
     func test_submit_withValidVariableMeasurement_capturesValue_writesDraft_andRoutes() async {
         let router = CatchRecordRouter()
         let draft = CatchRecordDraft()

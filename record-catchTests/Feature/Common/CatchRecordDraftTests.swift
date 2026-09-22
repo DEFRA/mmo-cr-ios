@@ -25,6 +25,7 @@ final class CatchRecordDraftTests: XCTestCase {
         sut.returnPort = PortOption(name: "Newlyn")
         sut.gearCatches = [GearCatch(gear: .seineNets, statisticalArea: "38E96", speciesCaught: [.atlanticCod])]
         sut.speciesNotLanded = [.atlanticCod]
+        sut.advance(to: .ports)
 
         let payload = sut.payload
 
@@ -35,6 +36,7 @@ final class CatchRecordDraftTests: XCTestCase {
         XCTAssertEqual(payload.returnPort, sut.returnPort)
         XCTAssertEqual(payload.gearCatches, sut.gearCatches)
         XCTAssertEqual(payload.speciesNotLanded, sut.speciesNotLanded)
+        XCTAssertEqual(payload.checkpoint, .ports)
     }
 
     func test_apply_overwritesEveryPersistedField_inPlace() {
@@ -47,7 +49,8 @@ final class CatchRecordDraftTests: XCTestCase {
             departurePort: PortOption(name: "Hastings"),
             returnPort: PortOption(name: "Newlyn"),
             gearCatches: [GearCatch(gear: .seineNets, statisticalArea: "38E96")],
-            speciesNotLanded: [.atlanticCod]
+            speciesNotLanded: [.atlanticCod],
+            checkpoint: .gear
         )
 
         sut.apply(payload)
@@ -59,16 +62,61 @@ final class CatchRecordDraftTests: XCTestCase {
         XCTAssertEqual(sut.returnPort, payload.returnPort)
         XCTAssertEqual(sut.gearCatches, payload.gearCatches)
         XCTAssertEqual(sut.speciesNotLanded, payload.speciesNotLanded)
+        XCTAssertEqual(sut.checkpoint, .gear)
     }
 
     func test_payload_roundTripsThroughJSONEncoding() throws {
         let sut = CatchRecordDraft()
         sut.vessel = "ACHILLES"
         sut.gearCatches = [GearCatch(gear: .seineNets, statisticalArea: "38E96", speciesCaught: [.atlanticCod])]
+        sut.advance(to: .checkYourAnswers)
 
         let data = try JSONEncoder().encode(sut.payload)
         let decoded = try JSONDecoder().decode(CatchRecordDraftPayload.self, from: data)
 
         XCTAssertEqual(decoded, sut.payload)
+        XCTAssertEqual(decoded.checkpoint, .checkYourAnswers)
+    }
+
+    // MARK: - checkpoint (see ADR-0014 decision #5, amended — resume at the last completed section)
+
+    func test_checkpoint_defaultsToVessel() {
+        let sut = CatchRecordDraft()
+        XCTAssertEqual(sut.checkpoint, .vessel)
+    }
+
+    func test_advance_movesCheckpointForward() {
+        let sut = CatchRecordDraft()
+        sut.advance(to: .ports)
+        XCTAssertEqual(sut.checkpoint, .ports)
+    }
+
+    func test_advance_neverMovesCheckpointBackward() {
+        let sut = CatchRecordDraft()
+        sut.advance(to: .gear)
+        sut.advance(to: .tripDates)
+        XCTAssertEqual(sut.checkpoint, .gear)
+    }
+
+    func test_advance_toSameCheckpoint_isANoOp() {
+        let sut = CatchRecordDraft()
+        sut.advance(to: .ports)
+        sut.advance(to: .ports)
+        XCTAssertEqual(sut.checkpoint, .ports)
+    }
+
+    func test_checkpointDecoding_missingKey_defaultsToVessel_forAlreadyPersistedDrafts() throws {
+        // Simulates a draft persisted before `checkpoint` existed on `CatchRecordDraftPayload`.
+        let json = """
+        {
+            "vessel": "ACHILLES",
+            "gearCatches": [],
+            "speciesNotLanded": []
+        }
+        """
+        let decoded = try JSONDecoder().decode(CatchRecordDraftPayload.self, from: Data(json.utf8))
+
+        XCTAssertEqual(decoded.vessel, "ACHILLES")
+        XCTAssertEqual(decoded.checkpoint, .vessel)
     }
 }

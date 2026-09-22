@@ -57,6 +57,7 @@ final class ConfirmSamePortViewModel {
         case .yes:
             draft.departurePort = port
             draft.returnPort = port
+            draft.advance(to: .ports)
             Task { await enterGearSubJourney() }
         case .no:
             router.push(.selectPort(phase: .departure, vessel: vessel, referenceNumber: referenceNumber))

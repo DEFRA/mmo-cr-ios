@@ -6,8 +6,16 @@ struct TripStartedTodayView: View {
     @Environment(AppLanguageStore.self) private var languageStore
     @State private var viewModel: TripStartedTodayViewModel
 
-    init(vessel: String, referenceNumber: String, router: CatchRecordRouter, favouritePorts: FavouritePortsProviding) {
-        _viewModel = State(wrappedValue: TripStartedTodayViewModel(vessel: vessel, referenceNumber: referenceNumber, router: router, favouritePorts: favouritePorts))
+    init(
+        vessel: String,
+        referenceNumber: String,
+        router: CatchRecordRouter,
+        favouritePorts: FavouritePortsProviding,
+        draft: CatchRecordDraft = CatchRecordDraft()
+    ) {
+        _viewModel = State(wrappedValue: TripStartedTodayViewModel(
+            vessel: vessel, referenceNumber: referenceNumber, router: router, favouritePorts: favouritePorts, draft: draft
+        ))
     }
 
     var body: some View {

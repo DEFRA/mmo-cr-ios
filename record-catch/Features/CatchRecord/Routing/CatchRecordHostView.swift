@@ -90,6 +90,14 @@ struct CatchRecordHostView: View {
         // so a journey abandoned before the very first screen never creates an empty row.
         .onChange(of: router.path) { _, newPath in
             guard !newPath.isEmpty, draft.vessel != nil else { return }
+            // Reaching Check your answers is the last section boundary before submission, and is
+            // reachable from several places (the landing-storage "No" answer, the
+            // landing-storage-species screen, and every "Change" link) — a single, DRY hook here
+            // covers all of them, rather than duplicating `draft.advance(to:)` at each call site
+            // (see `CatchRecordCheckpoint`, ADR-0014 decision #5, amended).
+            if case .checkYourAnswers = newPath.last {
+                draft.advance(to: .checkYourAnswers)
+            }
             Task { try? await draftStore.save(draft) }
         }
     }
@@ -98,11 +106,18 @@ struct CatchRecordHostView: View {
     private func destination(for route: CatchRecordRoute) -> some View {
         switch route {
         case .draftAction(let row):
-            DraftActionView(row: row, router: router, draft: draft, draftStore: draftStore)
+            DraftActionView(
+                row: row,
+                router: router,
+                draft: draft,
+                draftStore: draftStore,
+                favouritePorts: favouritePorts,
+                favouriteGears: favouriteGears
+            )
         case .selectVessel:
             SelectVesselView(router: router, draft: draft)
         case .tripStartedToday(let vessel, let referenceNumber):
-            TripStartedTodayView(vessel: vessel, referenceNumber: referenceNumber, router: router, favouritePorts: favouritePorts)
+            TripStartedTodayView(vessel: vessel, referenceNumber: referenceNumber, router: router, favouritePorts: favouritePorts, draft: draft)
         case .tripDate(let phase, let vessel, let referenceNumber, let departureDate):
             TripDateView(
                 phase: phase,

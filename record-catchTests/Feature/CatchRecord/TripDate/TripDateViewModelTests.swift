@@ -397,4 +397,43 @@ final class TripDateViewModelTests: XCTestCase {
 
         XCTAssertEqual(sut.selectedDate, date(2026, 3, 30))
     }
+
+    // MARK: - Checkpoint (see ADR-0014 decision #5, amended — resume at the last completed section)
+
+    func test_submit_return_advancesCheckpointToTripDates() {
+        let draft = CatchRecordDraft()
+        let returnDate = date(2026, 3, 31)
+        let sut = TripDateViewModel(
+            phase: .return,
+            vessel: vessel,
+            referenceNumber: referenceNumber,
+            departureDate: date(2026, 3, 30),
+            router: CatchRecordRouter(),
+            draft: draft,
+            now: { returnDate.addingTimeInterval(60 * 60) }
+        )
+        sut.selectedDate = returnDate
+
+        sut.submit()
+
+        XCTAssertEqual(draft.checkpoint, .tripDates)
+    }
+
+    func test_submit_departure_doesNotAdvanceCheckpointYet() {
+        let draft = CatchRecordDraft()
+        let today = date(2026, 4, 3)
+        let sut = TripDateViewModel(
+            phase: .departure,
+            vessel: vessel,
+            referenceNumber: referenceNumber,
+            departureDate: nil,
+            router: CatchRecordRouter(),
+            draft: draft,
+            now: { today }
+        )
+
+        sut.submit()
+
+        XCTAssertEqual(draft.checkpoint, .vessel)
+    }
 }

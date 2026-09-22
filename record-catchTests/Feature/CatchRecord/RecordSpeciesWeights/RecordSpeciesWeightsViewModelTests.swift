@@ -368,4 +368,32 @@ final class RecordSpeciesWeightsViewModelTests: XCTestCase {
             [.removeSpecies(gear: .seineNets, vessel: vessel, referenceNumber: referenceNumber)]
         )
     }
+
+    // MARK: - Checkpoint (see ADR-0014 decision #5, amended — resume at the last completed section)
+
+    func test_submit_forLastGear_advancesCheckpointToGear() async {
+        let router = CatchRecordRouter()
+        let draft = singleGearDraft()
+        let sut = makeSUT(favourites: [cod], router: router, draft: draft)
+        await tickValidSpecies(sut)
+
+        await sut.submit()
+
+        XCTAssertEqual(draft.checkpoint, .gear)
+    }
+
+    func test_submit_whenMoreGearsRemain_doesNotAdvanceCheckpointYet() async {
+        let trawl = GearOption(name: "Trawl nets").withVariableMeasurements([
+            GearMeasurement(id: "timesShot", labelKey: "catchRecord.gear.variableMeasurement.timesShot", value: 3)
+        ])
+        let router = CatchRecordRouter()
+        let draft = CatchRecordDraft()
+        draft.gearCatches = [GearCatch(gear: .seineNets), GearCatch(gear: trawl)]
+        let sut = makeSUT(gear: .seineNets, favourites: [cod], router: router, draft: draft)
+        await tickValidSpecies(sut)
+
+        await sut.submit()
+
+        XCTAssertEqual(draft.checkpoint, .vessel)
+    }
 }

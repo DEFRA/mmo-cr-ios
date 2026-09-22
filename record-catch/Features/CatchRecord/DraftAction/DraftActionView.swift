@@ -10,9 +10,18 @@ struct DraftActionView: View {
         row: SubmissionRow,
         router: CatchRecordRouter,
         draft: CatchRecordDraft = CatchRecordDraft(),
-        draftStore: CatchRecordDraftStoring = InMemoryCatchRecordDraftStore()
+        draftStore: CatchRecordDraftStoring = InMemoryCatchRecordDraftStore(),
+        favouritePorts: FavouritePortsProviding = StubFavouritePortsProvider(),
+        favouriteGears: FavouriteGearProviding = StubFavouriteGearProvider()
     ) {
-        _viewModel = State(wrappedValue: DraftActionViewModel(row: row, router: router, draft: draft, draftStore: draftStore))
+        _viewModel = State(wrappedValue: DraftActionViewModel(
+            row: row,
+            router: router,
+            draft: draft,
+            draftStore: draftStore,
+            favouritePorts: favouritePorts,
+            favouriteGears: favouriteGears
+        ))
     }
 
     var body: some View {

@@ -230,6 +230,9 @@ final class RecordSpeciesWeightsViewModel {
                 draft.gearCatches[index].speciesCaught = captured
             }
             let route = completionRoute
+            if case .landingStorage = route {
+                draft.advance(to: .gear)
+            }
             draft.returnToCheckYourAnswers = false
             router.push(route)
         } catch {

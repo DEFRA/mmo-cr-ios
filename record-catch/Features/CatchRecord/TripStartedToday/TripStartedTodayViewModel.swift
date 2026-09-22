@@ -15,17 +15,22 @@ final class TripStartedTodayViewModel {
 
     private let router: CatchRecordRouter
     private let favouritePorts: FavouritePortsProviding
+    /// Shared journey draft; advanced to `.tripDates` once this question is answered (see
+    /// `CatchRecordDraft.checkpoint`).
+    private let draft: CatchRecordDraft
 
     init(
         vessel: String,
         referenceNumber: String,
         router: CatchRecordRouter,
-        favouritePorts: FavouritePortsProviding = StubFavouritePortsProvider()
+        favouritePorts: FavouritePortsProviding = StubFavouritePortsProvider(),
+        draft: CatchRecordDraft = CatchRecordDraft()
     ) {
         self.vessel = vessel
         self.referenceNumber = referenceNumber
         self.router = router
         self.favouritePorts = favouritePorts
+        self.draft = draft
     }
 
     /// Current inline error, once a submit has been attempted.
@@ -43,6 +48,7 @@ final class TripStartedTodayViewModel {
         guard let selection else { return }
         switch selection {
         case .yes:
+            draft.advance(to: .tripDates)
             Task { await enterPortSubJourney() }
         case .no:
             router.push(.tripDate(phase: .departure, vessel: vessel, referenceNumber: referenceNumber, departureDate: nil))

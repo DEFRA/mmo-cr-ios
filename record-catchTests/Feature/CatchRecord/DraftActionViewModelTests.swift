@@ -65,7 +65,8 @@ final class DraftActionViewModelTests: XCTestCase {
         XCTAssertNil(sut.errorKey)
     }
 
-    // MARK: - Resume (see ADR-0014/0015 — "Complete" restarts from the beginning, pre-filled)
+    // MARK: - Resume (see ADR-0014 decision #5, amended — "Complete" resumes at the last
+    // completed section, pre-filled)
 
     func test_resumeDraft_withNoLocalID_pushesSelectVessel_leavesDraftUntouched() async {
         let router = CatchRecordRouter()
@@ -78,7 +79,7 @@ final class DraftActionViewModelTests: XCTestCase {
         XCTAssertNil(draft.vessel)
     }
 
-    func test_resumeDraft_withPersistedDraft_loadsPayloadIntoSharedDraft_andPushesSelectVessel() async {
+    func test_resumeDraft_withPersistedDraft_atVesselCheckpoint_pushesSelectVessel() async {
         let localID = UUID()
         let rowWithLocalID = record_catch.SubmissionRow(
             dateText: "—", vesselName: "—", status: .unsent, createdBy: "You", localID: localID
@@ -111,6 +112,141 @@ final class DraftActionViewModelTests: XCTestCase {
 
         XCTAssertNil(draft.vessel)
         XCTAssertEqual(router.path, [.selectVessel])
+    }
+
+    func test_resumeDraft_atTripDatesCheckpoint_withFavouritePorts_pushesSelectDeparturePort() async {
+        let localID = UUID()
+        let rowWithLocalID = record_catch.SubmissionRow(
+            dateText: "—", vesselName: "—", status: .unsent, createdBy: "You", localID: localID
+        )
+        let seededDraft = CatchRecordDraft(localID: localID)
+        seededDraft.vessel = "ACHILLES"
+        seededDraft.advance(to: .tripDates)
+        let store = InMemoryCatchRecordDraftStore(seed: [localID: seededDraft.payload])
+
+        let router = CatchRecordRouter()
+        let sut = DraftActionViewModel(
+            row: rowWithLocalID,
+            router: router,
+            draft: CatchRecordDraft(),
+            draftStore: store,
+            favouritePorts: StubFavouritePortsProvider(initialFavourites: [PortOption(name: "Hastings")])
+        )
+
+        await sut.resumeDraft()
+
+        XCTAssertEqual(
+            router.path,
+            [.selectPort(phase: .departure, vessel: "ACHILLES", referenceNumber: SelectVesselViewModel.placeholderReferenceNumber)]
+        )
+    }
+
+    func test_resumeDraft_atTripDatesCheckpoint_withNoFavouritePorts_pushesAddPort() async {
+        let localID = UUID()
+        let rowWithLocalID = record_catch.SubmissionRow(
+            dateText: "—", vesselName: "—", status: .unsent, createdBy: "You", localID: localID
+        )
+        let seededDraft = CatchRecordDraft(localID: localID)
+        seededDraft.vessel = "ACHILLES"
+        seededDraft.advance(to: .tripDates)
+        let store = InMemoryCatchRecordDraftStore(seed: [localID: seededDraft.payload])
+
+        let router = CatchRecordRouter()
+        let sut = DraftActionViewModel(
+            row: rowWithLocalID,
+            router: router,
+            draft: CatchRecordDraft(),
+            draftStore: store,
+            favouritePorts: StubFavouritePortsProvider(initialFavourites: [])
+        )
+
+        await sut.resumeDraft()
+
+        XCTAssertEqual(
+            router.path,
+            [.addPort(vessel: "ACHILLES", referenceNumber: SelectVesselViewModel.placeholderReferenceNumber, returnPhase: nil)]
+        )
+    }
+
+    func test_resumeDraft_atPortsCheckpoint_withFavouriteGears_pushesSelectGear() async {
+        let localID = UUID()
+        let rowWithLocalID = record_catch.SubmissionRow(
+            dateText: "—", vesselName: "—", status: .unsent, createdBy: "You", localID: localID
+        )
+        let seededDraft = CatchRecordDraft(localID: localID)
+        seededDraft.vessel = "ACHILLES"
+        seededDraft.advance(to: .ports)
+        let store = InMemoryCatchRecordDraftStore(seed: [localID: seededDraft.payload])
+
+        let router = CatchRecordRouter()
+        let sut = DraftActionViewModel(
+            row: rowWithLocalID,
+            router: router,
+            draft: CatchRecordDraft(),
+            draftStore: store,
+            favouriteGears: StubFavouriteGearProvider(initialFavourites: [.seineNets])
+        )
+
+        await sut.resumeDraft()
+
+        XCTAssertEqual(
+            router.path,
+            [.selectGear(vessel: "ACHILLES", referenceNumber: SelectVesselViewModel.placeholderReferenceNumber)]
+        )
+    }
+
+    func test_resumeDraft_atGearCheckpoint_pushesLandingStorage() async {
+        let localID = UUID()
+        let rowWithLocalID = record_catch.SubmissionRow(
+            dateText: "—", vesselName: "—", status: .unsent, createdBy: "You", localID: localID
+        )
+        let seededDraft = CatchRecordDraft(localID: localID)
+        seededDraft.vessel = "ACHILLES"
+        seededDraft.advance(to: .gear)
+        let store = InMemoryCatchRecordDraftStore(seed: [localID: seededDraft.payload])
+
+        let router = CatchRecordRouter()
+        let sut = DraftActionViewModel(row: rowWithLocalID, router: router, draft: CatchRecordDraft(), draftStore: store)
+
+        await sut.resumeDraft()
+
+        XCTAssertEqual(router.path, [.landingStorage(referenceNumber: SelectVesselViewModel.placeholderReferenceNumber)])
+    }
+
+    func test_resumeDraft_atLandingStorageCheckpoint_pushesCheckYourAnswers() async {
+        let localID = UUID()
+        let rowWithLocalID = record_catch.SubmissionRow(
+            dateText: "—", vesselName: "—", status: .unsent, createdBy: "You", localID: localID
+        )
+        let seededDraft = CatchRecordDraft(localID: localID)
+        seededDraft.vessel = "ACHILLES"
+        seededDraft.advance(to: .landingStorage)
+        let store = InMemoryCatchRecordDraftStore(seed: [localID: seededDraft.payload])
+
+        let router = CatchRecordRouter()
+        let sut = DraftActionViewModel(row: rowWithLocalID, router: router, draft: CatchRecordDraft(), draftStore: store)
+
+        await sut.resumeDraft()
+
+        XCTAssertEqual(router.path, [.checkYourAnswers(referenceNumber: SelectVesselViewModel.placeholderReferenceNumber)])
+    }
+
+    func test_resumeDraft_atCheckYourAnswersCheckpoint_pushesCheckYourAnswers() async {
+        let localID = UUID()
+        let rowWithLocalID = record_catch.SubmissionRow(
+            dateText: "—", vesselName: "—", status: .unsent, createdBy: "You", localID: localID
+        )
+        let seededDraft = CatchRecordDraft(localID: localID)
+        seededDraft.vessel = "ACHILLES"
+        seededDraft.advance(to: .checkYourAnswers)
+        let store = InMemoryCatchRecordDraftStore(seed: [localID: seededDraft.payload])
+
+        let router = CatchRecordRouter()
+        let sut = DraftActionViewModel(row: rowWithLocalID, router: router, draft: CatchRecordDraft(), draftStore: store)
+
+        await sut.resumeDraft()
+
+        XCTAssertEqual(router.path, [.checkYourAnswers(referenceNumber: SelectVesselViewModel.placeholderReferenceNumber)])
     }
 
     // MARK: - Delete removes the persisted draft (see ADR-0014)

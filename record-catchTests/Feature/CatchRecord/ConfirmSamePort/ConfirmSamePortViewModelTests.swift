@@ -102,4 +102,29 @@ final class ConfirmSamePortViewModelTests: XCTestCase {
 
         XCTAssertEqual(router.path, [.addPort(vessel: vessel, referenceNumber: referenceNumber, returnPhase: nil)])
     }
+
+    // MARK: - Checkpoint (see ADR-0014 decision #5, amended — resume at the last completed section)
+
+    func test_submit_withYesSelected_advancesCheckpointToPorts() async {
+        let router = CatchRecordRouter()
+        let draft = CatchRecordDraft()
+        let sut = makeSUT(router: router, draft: draft)
+        sut.selection = .yes
+
+        sut.submit()
+        await sut.enterGearSubJourney()
+
+        XCTAssertEqual(draft.checkpoint, .ports)
+    }
+
+    func test_submit_withNoSelected_doesNotAdvanceCheckpoint() {
+        let router = CatchRecordRouter()
+        let draft = CatchRecordDraft()
+        let sut = makeSUT(router: router, draft: draft)
+        sut.selection = .no
+
+        sut.submit()
+
+        XCTAssertEqual(draft.checkpoint, .vessel)
+    }
 }

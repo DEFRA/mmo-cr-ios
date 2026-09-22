@@ -77,4 +77,30 @@ final class TripStartedTodayViewModelTests: XCTestCase {
         let sut = TripStartedTodayViewModel(vessel: vessel, referenceNumber: referenceNumber, router: CatchRecordRouter())
         XCTAssertNil(sut.errorKey)
     }
+
+    // MARK: - Checkpoint (see ADR-0014 decision #5, amended — resume at the last completed section)
+
+    func test_submit_withYesSelected_advancesCheckpointToTripDates() {
+        let draft = CatchRecordDraft()
+        let sut = TripStartedTodayViewModel(
+            vessel: vessel, referenceNumber: referenceNumber, router: CatchRecordRouter(), draft: draft
+        )
+        sut.selection = .yes
+
+        sut.submit()
+
+        XCTAssertEqual(draft.checkpoint, .tripDates)
+    }
+
+    func test_submit_withNoSelected_doesNotAdvanceCheckpointYet() {
+        let draft = CatchRecordDraft()
+        let sut = TripStartedTodayViewModel(
+            vessel: vessel, referenceNumber: referenceNumber, router: CatchRecordRouter(), draft: draft
+        )
+        sut.selection = .no
+
+        sut.submit()
+
+        XCTAssertEqual(draft.checkpoint, .vessel)
+    }
 }

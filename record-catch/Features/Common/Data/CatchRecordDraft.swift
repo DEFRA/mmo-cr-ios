@@ -56,6 +56,10 @@ final class CatchRecordDraft {
     /// every field by ADR-0013). Consumed and reset by whichever screen's `submit()` is reached
     /// once that mini-journey completes.
     var returnToCheckYourAnswers = false
+    /// The furthest section of the journey this draft has completed, persisted alongside every
+    /// other field so resuming a draft can jump straight past what's already done (see ADR-0014
+    /// decision #5, amended). Only ever moves forward — see `advance(to:)`.
+    var checkpoint: CatchRecordCheckpoint = .vessel
 
     /// `nonisolated` so `CatchRecordDraft()` can be used as a default parameter value from any
     /// isolation context (e.g. non-`@MainActor` `View` initializers) without a hop to the main
@@ -73,6 +77,14 @@ final class CatchRecordDraft {
         gearCatches.firstIndex { $0.id == gearID }
     }
 
+    /// Moves `checkpoint` forward to `newCheckpoint`, if it represents further progress than what
+    /// is already recorded. Never moves it backwards, so a "Change" link revisiting an earlier
+    /// screen (ADR-0013) cannot regress how far a resumed draft jumps forward to.
+    func advance(to newCheckpoint: CatchRecordCheckpoint) {
+        guard newCheckpoint > checkpoint else { return }
+        checkpoint = newCheckpoint
+    }
+
     /// A `Codable` snapshot of every persisted field, suitable for writing to
     /// `CatchRecordDraftStoring` (see ADR-0014). Deliberately excludes `localID` (carried
     /// separately by the store) and `returnToCheckYourAnswers` (a transient, in-memory navigation
@@ -85,7 +97,8 @@ final class CatchRecordDraft {
             departurePort: departurePort,
             returnPort: returnPort,
             gearCatches: gearCatches,
-            speciesNotLanded: speciesNotLanded
+            speciesNotLanded: speciesNotLanded,
+            checkpoint: checkpoint
         )
     }
 
@@ -101,7 +114,35 @@ final class CatchRecordDraft {
         returnPort = payload.returnPort
         gearCatches = payload.gearCatches
         speciesNotLanded = payload.speciesNotLanded
+        checkpoint = payload.checkpoint
     }
+}
+
+/// The furthest section of the "Create a catch record" journey a draft has completed, used to
+/// resume it at (roughly) the right screen instead of always restarting from `.selectVessel` (see
+/// `CatchRecordDraft.checkpoint`, ADR-0014 decision #5).
+///
+/// Deliberately coarse — one case per major section, not one per `CatchRecordRoute` case — so only
+/// a handful of existing "section boundary" view models need a single additive
+/// `draft.advance(to:)` call, and resuming stays a small, pure mapping back onto the existing
+/// `CatchRecordRouting` entry-point helpers rather than replaying the exact route stack.
+/// `Int`-backed and `Comparable` so `advance(to:)` can enforce "never move backwards".
+nonisolated enum CatchRecordCheckpoint: Int, Codable, Comparable, Sendable {
+    /// Nothing beyond the vessel (or nothing at all) has been captured yet.
+    case vessel = 0
+    /// The trip-started-today/trip-date sub-journey (and the late-submission nudge, if shown) has
+    /// been resolved.
+    case tripDates = 1
+    /// Both the departure and return ports have been resolved.
+    case ports = 2
+    /// Every selected gear's catch (statistical area + species) has been recorded.
+    case gear = 3
+    /// The "any catch not landed straight away?" question has been answered.
+    case landingStorage = 4
+    /// Check your answers has been reached at least once.
+    case checkYourAnswers = 5
+
+    static func < (lhs: Self, rhs: Self) -> Bool { lhs.rawValue < rhs.rawValue }
 }
 
 /// A `Codable` snapshot of every field `CatchRecordDraft` accumulates across the journey, used as
@@ -116,4 +157,40 @@ nonisolated struct CatchRecordDraftPayload: Codable, Equatable, Sendable {
     var returnPort: PortOption?
     var gearCatches: [GearCatch]
     var speciesNotLanded: [SpeciesOption]
+    /// See `CatchRecordDraft.checkpoint`. Added after the first release of this payload shape, so
+    /// decoding falls back to `.vessel` for any already-persisted draft with no `checkpoint` key
+    /// (see the custom `init(from:)` below) rather than failing to decode the whole draft.
+    var checkpoint: CatchRecordCheckpoint
+
+    init(
+        vessel: String?,
+        departureDate: Date?,
+        returnDate: Date?,
+        departurePort: PortOption?,
+        returnPort: PortOption?,
+        gearCatches: [GearCatch],
+        speciesNotLanded: [SpeciesOption],
+        checkpoint: CatchRecordCheckpoint = .vessel
+    ) {
+        self.vessel = vessel
+        self.departureDate = departureDate
+        self.returnDate = returnDate
+        self.departurePort = departurePort
+        self.returnPort = returnPort
+        self.gearCatches = gearCatches
+        self.speciesNotLanded = speciesNotLanded
+        self.checkpoint = checkpoint
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        vessel = try container.decodeIfPresent(String.self, forKey: .vessel)
+        departureDate = try container.decodeIfPresent(Date.self, forKey: .departureDate)
+        returnDate = try container.decodeIfPresent(Date.self, forKey: .returnDate)
+        departurePort = try container.decodeIfPresent(PortOption.self, forKey: .departurePort)
+        returnPort = try container.decodeIfPresent(PortOption.self, forKey: .returnPort)
+        gearCatches = try container.decodeIfPresent([GearCatch].self, forKey: .gearCatches) ?? []
+        speciesNotLanded = try container.decodeIfPresent([SpeciesOption].self, forKey: .speciesNotLanded) ?? []
+        checkpoint = try container.decodeIfPresent(CatchRecordCheckpoint.self, forKey: .checkpoint) ?? .vessel
+    }
 }

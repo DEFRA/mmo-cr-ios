@@ -60,7 +60,7 @@ jobs:
           if ! command -v swiftlint >/dev/null 2>&1; then
             brew install swiftlint
           fi
-          bash scripts/swiftlint.sh
+          swiftlint lint --reporter github-actions-logging
 
       - name: Set up Ruby and Fastlane
         uses: ruby/setup-ruby@v1

@@ -9,7 +9,7 @@ import SwiftUI
 import SwiftData
 
 @main
-struct record_catchApp: App {
+struct RecordCatchApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             CatchRecordEntity.self

@@ -60,7 +60,7 @@ struct LaunchArguments {
     /// Whether *any* `-uiTest*` seam is active for this launch.
     ///
     /// Used to keep on-device persistence (the `SwiftDataCatchRecordDraftStore`-backed
-    /// `ModelContainer` — see `record_catchApp`) in-memory-only for UI test runs, so drafts saved
+    /// `ModelContainer` — see `RecordCatchApp`) in-memory-only for UI test runs, so drafts saved
     /// by one UI test (e.g. resuming a journey, or Home's own "Create a catch record" flow) never
     /// leak into another test's launch of the app within the same simulator/test-run. Without
     /// this, Home's drafts + records pagination control (and any other screen reading persisted

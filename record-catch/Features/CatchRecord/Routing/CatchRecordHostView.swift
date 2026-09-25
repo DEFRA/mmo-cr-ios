@@ -102,8 +102,27 @@ struct CatchRecordHostView: View {
         }
     }
 
+    /// Dispatches to the four journey-section helpers below, each covering a contiguous run of
+    /// `CatchRecordRoute` cases. Split out of a single 21-case switch (see ADR-0003) purely to
+    /// keep cyclomatic complexity low per function (`cyclomatic_complexity`, `.swiftlint.yml`) —
+    /// the routing behaviour is unchanged, just grouped by journey section for readability.
     @ViewBuilder
     private func destination(for route: CatchRecordRoute) -> some View {
+        switch route {
+        case .draftAction, .selectVessel, .tripStartedToday, .tripDate, .submissionNudge:
+            vesselAndTripDestination(for: route)
+        case .addPort, .confirmSamePort, .selectPort, .selectGear, .addGear, .gearMeasurements:
+            portAndGearDestination(for: route)
+        case .catchLocation, .catchLocationManualEntry, .recordSpeciesWeights, .addSpecies, .removeSpecies:
+            speciesDestination(for: route)
+        case .landingStorage, .landingStorageSpecies, .checkYourAnswers, .submissionConfirmation, .submissionSuccess:
+            landingAndSubmissionDestination(for: route)
+        }
+    }
+
+    /// Draft resumption through to the trip-date/submission-nudge screens (start of the journey).
+    @ViewBuilder
+    private func vesselAndTripDestination(for route: CatchRecordRoute) -> some View {
         switch route {
         case .draftAction(let row):
             DraftActionView(
@@ -117,7 +136,13 @@ struct CatchRecordHostView: View {
         case .selectVessel:
             SelectVesselView(router: router, draft: draft)
         case .tripStartedToday(let vessel, let referenceNumber):
-            TripStartedTodayView(vessel: vessel, referenceNumber: referenceNumber, router: router, favouritePorts: favouritePorts, draft: draft)
+            TripStartedTodayView(
+                vessel: vessel,
+                referenceNumber: referenceNumber,
+                router: router,
+                favouritePorts: favouritePorts,
+                draft: draft
+            )
         case .tripDate(let phase, let vessel, let referenceNumber, let departureDate):
             TripDateView(
                 phase: phase,
@@ -136,6 +161,15 @@ struct CatchRecordHostView: View {
                 router: router,
                 favouritePorts: favouritePorts
             )
+        default:
+            fatalError("vesselAndTripDestination received an unhandled route: \(route)")
+        }
+    }
+
+    /// Port selection/confirmation through to gear selection and measurements.
+    @ViewBuilder
+    private func portAndGearDestination(for route: CatchRecordRoute) -> some View {
+        switch route {
         case .addPort(let vessel, let referenceNumber, let returnPhase):
             AddPortView(
                 vessel: vessel,
@@ -187,6 +221,15 @@ struct CatchRecordHostView: View {
                 favouriteGears: favouriteGears,
                 draft: draft
             )
+        default:
+            fatalError("portAndGearDestination received an unhandled route: \(route)")
+        }
+    }
+
+    /// Statistical-area capture through to per-gear species weights and removal.
+    @ViewBuilder
+    private func speciesDestination(for route: CatchRecordRoute) -> some View {
+        switch route {
         case .catchLocation(let gear, let vessel, let referenceNumber):
             CatchLocationView(
                 gear: gear,
@@ -232,6 +275,15 @@ struct CatchRecordHostView: View {
                 router: router,
                 draft: draft
             )
+        default:
+            fatalError("speciesDestination received an unhandled route: \(route)")
+        }
+    }
+
+    /// Landing/storage questions through to final submission and success.
+    @ViewBuilder
+    private func landingAndSubmissionDestination(for route: CatchRecordRoute) -> some View {
+        switch route {
         case .landingStorage(let referenceNumber):
             LandingStorageView(referenceNumber: referenceNumber, router: router, draft: draft)
         case .landingStorageSpecies(let referenceNumber):
@@ -244,9 +296,16 @@ struct CatchRecordHostView: View {
         case .checkYourAnswers(let referenceNumber):
             CheckYourAnswersView(referenceNumber: referenceNumber, router: router, draft: draft)
         case .submissionConfirmation(let referenceNumber):
-            SubmissionConfirmationView(referenceNumber: referenceNumber, router: router, draft: draft, draftStore: draftStore)
+            SubmissionConfirmationView(
+                referenceNumber: referenceNumber,
+                router: router,
+                draft: draft,
+                draftStore: draftStore
+            )
         case .submissionSuccess(let referenceNumber):
             SubmissionSuccessView(referenceNumber: referenceNumber, router: router)
+        default:
+            fatalError("landingAndSubmissionDestination received an unhandled route: \(route)")
         }
     }
 }

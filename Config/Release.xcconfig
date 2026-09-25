@@ -1,0 +1,13 @@
+//
+//  Release.xcconfig
+//  record-catch
+//
+//  Build-time configuration for the Release build configuration (see ADR-0018 and
+//  .github/instructions/ci-cd.instructions.md's frozen "Option B" build-time configuration
+//  decision). Do NOT put secrets/tokens in this file — it is committed to source control.
+//
+
+// Placeholder production HTTPS endpoint, pending the real production reference-data API. Must
+// always be `https://` — `APIConfiguration` refuses any non-HTTPS base URL outside of a DEBUG
+// build as defence-in-depth (see ADR-0018 §3).
+API_BASE_URL = https:$()/$()/reference-data.example.invalid

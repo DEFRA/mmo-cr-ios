@@ -87,16 +87,57 @@ changes and `draft.vessel != nil` (i.e. at least the first screen has been answe
 DRY call site rather than threading a save call through every screen's `submit()`. A journey
 abandoned before the very first screen is answered never creates a persisted row.
 
-### 5. Resuming: restart from the first screen, pre-filled
+### 5. Resuming: jump to the last completed section, pre-filled
 
-Per the agreed decision, tapping "Complete" on an Unsent record's Draft-action screen does **not**
-jump to wherever the user left off. It restarts the journey from `.selectVessel`, having first
-loaded the persisted payload and called `draft.apply(payload)` so every already-answered field is
-pre-filled as the user walks forward again. Each screen's own `init` reads straight from the shared
-`CatchRecordDraft` to seed its local selection/value state (matching the existing per-screen
-pre-fill pattern already used for ADR-0013's "return to Check your answers" resume flow) — there is
-no separate "resume coordinator". Fields not yet captured render as a placeholder ("—") on Home,
-per decision #6.
+> **Amended 2026-09.** The original decision below ("restart from the first screen") is
+> superseded by this one; the original text is kept struck through for history.
+>
+> ~~Per the agreed decision, tapping "Complete" on an Unsent record's Draft-action screen does not
+> jump to wherever the user left off. It restarts the journey from `.selectVessel`, having first
+> loaded the persisted payload and called `draft.apply(payload)` so every already-answered field is
+> pre-filled as the user walks forward again.~~
+>
+> In practice, always restarting at `.selectVessel` meant a user who had reached, say, "Record
+> species weights" had to click "Save and continue" through every already-answered screen before
+> reaching new ground — reported as a bug (resuming a draft should continue from where the user left
+> off). `DraftActionViewModel.resumeDraft()` now resumes at the furthest section the draft had
+> reached, via a new, deliberately coarse `CatchRecordCheckpoint` on `CatchRecordDraft`/
+> `CatchRecordDraftPayload`:
+>
+> ```swift
+> enum CatchRecordCheckpoint: Int, Codable, Comparable, Sendable {
+>     case vessel, tripDates, ports, gear, landingStorage, checkYourAnswers
+> }
+> ```
+>
+> - **One case per major section**, not one per `CatchRecordRoute` case. Reconstructing the exact
+>   `CatchRecordRoute` the user was on would require persisting extra transient state that isn't
+>   otherwise part of the draft (e.g. which gear is mid-catch-capture before it has any recorded
+>   species, or the one-off `PortOption`/`GearOption` a "Change" mini-journey was showing) — a much
+>   larger persistence surface for a purely navigational concern. A coarse checkpoint keeps the
+>   change additive: only the existing "section boundary" view models
+>   (`TripStartedTodayViewModel`, `TripDateViewModel`, `ConfirmSamePortViewModel`,
+>   `SelectPortViewModel`, `RecordSpeciesWeightsViewModel`) gained a single `draft.advance(to:)`
+>   call, plus one central hook in `CatchRecordHostView`'s existing `onChange(of: router.path)` for
+>   reaching Check your answers (reachable from several places — a single DRY hook covers them all).
+> - **Monotonic — `advance(to:)` only ever moves forward.** A "Change" link revisiting an earlier
+>   screen (ADR-0013) must not regress how far a resumed draft jumps to.
+> - **Resuming reuses the existing forward-journey entry-point helpers** (`CatchRecordRouting.
+>   portEntryRoute`/`gearEntryRoute`), re-checking favourites at resume time, so the has-favourites
+>   branching is identical whether reached going forward or resuming.
+> - **Known simplification:** if a draft is killed exactly between answering "any catch not landed
+>   straight away?" and finishing the not-landed-species screen, resuming lands on Check your
+>   answers rather than re-opening that one sub-screen; the user can use "Change" there. This was
+>   judged an acceptable trade-off against a materially larger persisted-state change for a narrow
+>   interruption window.
+> - **Backward-compatible decoding:** `checkpoint` decodes via a custom `init(from:)` that falls back
+>   to `.vessel` for any draft already persisted before this field existed, so no migration step is
+>   needed and no existing on-disk draft fails to decode.
+
+Each screen's own `init` still reads straight from the shared `CatchRecordDraft` to seed its local
+selection/value state (matching the existing per-screen pre-fill pattern already used for
+ADR-0013's "return to Check your answers" resume flow) — there is no separate "resume coordinator".
+Fields not yet captured render as a placeholder ("—") on Home, per decision #6.
 
 ### 6. Deletion
 
@@ -130,9 +171,14 @@ later gains a stricter classification, revisit with `NSFileProtectionComplete`.
   Date` used only for ordering (ADR-0015) — deliberately excluded from its existing content-based
   `Equatable`/`Hashable` conformance so no existing call site/test needed to change its expectations
   of row equality.
+- Resuming a draft (decision #5, amended) now depends on `favouritePorts`/`favouriteGears` being
+  threaded into `DraftActionViewModel`/`DraftActionView` (previously unused there), so the
+  has-favourites branching at resume time matches the forward journey.
 - Coverage: `CatchRecordDraftStoreTests` (both store implementations), `CatchRecordDraftTests`
-  (`localID`/`payload`/`apply`/JSON round-trip) and each affected view model's pre-fill tests meet
-  the project's ≥95% core-logic coverage target.
+  (`localID`/`payload`/`apply`/`checkpoint`/JSON round-trip, including backward-compatible
+  decoding of pre-checkpoint drafts), `DraftActionViewModelTests` (resume routes to every
+  checkpoint), and each affected view model's pre-fill/checkpoint tests meet the project's ≥95%
+  core-logic coverage target.
 
 ## References
 

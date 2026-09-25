@@ -230,4 +230,43 @@ final class SelectPortViewModelTests: XCTestCase {
 
         XCTAssertNil(sut.selection)
     }
+
+    // MARK: - Checkpoint (see ADR-0014 decision #5, amended — resume at the last completed section)
+
+    func test_submit_return_withSelection_advancesCheckpointToPorts() async {
+        let draft = CatchRecordDraft()
+        let sut = SelectPortViewModel(
+            phase: .return,
+            vessel: vessel,
+            referenceNumber: referenceNumber,
+            router: CatchRecordRouter(),
+            favouritePorts: StubFavouritePortsProvider(initialFavourites: [PortOption(name: "Hastings")]),
+            draft: draft
+        )
+        await sut.loadFavourites()
+        sut.selection = "Hastings"
+
+        sut.submit()
+        await sut.enterGearSubJourney()
+
+        XCTAssertEqual(draft.checkpoint, .ports)
+    }
+
+    func test_submit_departure_withSelection_doesNotAdvanceCheckpointYet() async {
+        let draft = CatchRecordDraft()
+        let sut = SelectPortViewModel(
+            phase: .departure,
+            vessel: vessel,
+            referenceNumber: referenceNumber,
+            router: CatchRecordRouter(),
+            favouritePorts: StubFavouritePortsProvider(initialFavourites: [PortOption(name: "Hastings")]),
+            draft: draft
+        )
+        await sut.loadFavourites()
+        sut.selection = "Hastings"
+
+        sut.submit()
+
+        XCTAssertEqual(draft.checkpoint, .vessel)
+    }
 }

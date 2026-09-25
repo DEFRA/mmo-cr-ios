@@ -4,7 +4,7 @@
 //
 //  Journey tests for the offline biometric local re-entry ("app lock") screen (ADR-0009), hosted
 //  via deterministic `-uiTestAppLock*` launch arguments that inject fakes — no real biometric
-//  hardware is exercised (see `record_catchApp.swift`'s UI-test seams and
+//  hardware is exercised (see `RecordCatchApp.swift`'s UI-test seams and
 //  `AppLockViewModelTests`/`BiometricReentryPolicyTests` for the exhaustive logic coverage).
 //
 

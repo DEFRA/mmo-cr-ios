@@ -143,6 +143,7 @@ final class TripDateViewModel {
             // Records must be submitted within 24 hours of a trip ending. When the trip ended more
             // than 24 hours ago, interpose the late-submission nudge before the port sub-journey so
             // the user can double-check the trip end date (see `SubmissionNudge`).
+            draft.advance(to: .tripDates)
             let currentTime = now()
             if SubmissionNudge.isNeeded(tripEndDate: date, now: currentTime) {
                 let daysLate = SubmissionNudge.daysLate(tripEndDate: date, now: currentTime)

@@ -16,10 +16,14 @@ final class LandingStorageViewModel {
     private(set) var didAttemptSubmit = false
 
     private let router: CatchRecordRouter
+    /// Shared journey draft; advanced to `.landingStorage` once this question is answered (see
+    /// `CatchRecordDraft.checkpoint`).
+    private let draft: CatchRecordDraft
 
     init(referenceNumber: String, router: CatchRecordRouter, draft: CatchRecordDraft = CatchRecordDraft()) {
         self.referenceNumber = referenceNumber
         self.router = router
+        self.draft = draft
         // Pre-fills "Yes" when restarting a resumed draft that already recorded species not
         // landed (see ADR-0015 decision #1). There is no persisted "No" answer to infer from an
         // empty list, so it is left unselected rather than guessed.
@@ -49,6 +53,7 @@ final class LandingStorageViewModel {
     func submit() {
         didAttemptSubmit = true
         guard selection != nil else { return }
+        draft.advance(to: .landingStorage)
         router.push(completionRoute)
     }
 }

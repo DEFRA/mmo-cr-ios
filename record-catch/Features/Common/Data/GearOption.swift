@@ -168,6 +168,6 @@ extension GearOption {
         GearOption(id: "FIX", name: "Traps (not specified)", variableMeasurements: [.potsHauled, .potsLeft]),
         GearOption(id: "LTL", name: "Trolling lines", variableMeasurements: [.hooksHauled, .hooksLeft]),
         GearOption(id: "PS2", name: "Two boat operated purse seine", requiredMeasurements: [.meshSize], variableMeasurements: [.timesShot]),
-        GearOption(id: "LA", name: "Without purse lines (lampara)", requiredMeasurements: [.meshSize], variableMeasurements: [.timesShot]),
+        GearOption(id: "LA", name: "Without purse lines (lampara)", requiredMeasurements: [.meshSize], variableMeasurements: [.timesShot])
     ]
 }

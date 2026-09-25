@@ -6,7 +6,7 @@
 //
 //  `isSignedIn` is gone: a device-local "session" persists across relaunches via `sessionStore`
 //  (Keychain-backed, NOT a backend session — no real authentication exists yet). `phase` decides
-//  which of sign-in / app-lock / home `record_catchApp` shows, computed via the pure
+//  which of sign-in / app-lock / home `RecordCatchApp` shows, computed via the pure
 //  `BiometricReentryPolicy` helper so the *decision* logic stays unit-tested there; this type only
 //  wires the stores together and exposes the resulting phase + intents, and is itself unit-tested
 //  (see `RootSessionCoordinatorTests`) — this logic used to live, untested, directly inside the

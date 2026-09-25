@@ -67,4 +67,26 @@ final class LandingStorageViewModelTests: XCTestCase {
 
         XCTAssertNil(sut.selection)
     }
+
+    // MARK: - Checkpoint (see ADR-0014 decision #5, amended — resume at the last completed section)
+
+    func test_submit_withYesSelected_advancesCheckpointToLandingStorage() {
+        let draft = CatchRecordDraft()
+        let sut = LandingStorageViewModel(referenceNumber: referenceNumber, router: CatchRecordRouter(), draft: draft)
+        sut.selection = .yes
+
+        sut.submit()
+
+        XCTAssertEqual(draft.checkpoint, .landingStorage)
+    }
+
+    func test_submit_withNoSelected_advancesCheckpointToLandingStorage() {
+        let draft = CatchRecordDraft()
+        let sut = LandingStorageViewModel(referenceNumber: referenceNumber, router: CatchRecordRouter(), draft: draft)
+        sut.selection = .no
+
+        sut.submit()
+
+        XCTAssertEqual(draft.checkpoint, .landingStorage)
+    }
 }

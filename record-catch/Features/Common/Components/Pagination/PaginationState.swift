@@ -29,6 +29,22 @@ struct PaginationState: Equatable {
         self.totalItems = max(0, totalItems)
     }
 
+    /// Convenience initializer that derives `totalPages` from a live `itemCount`, so callers don't
+    /// have to duplicate the ceil-division themselves. Use this wherever the pagination control is
+    /// backed by a list that can grow/shrink at runtime (e.g. Home's drafts + server records list)
+    /// so the control always reflects the current count rather than a value fixed at construction.
+    init(currentPage: Int, itemCount: Int, pageSize: Int) {
+        let normalizedPageSize = max(1, pageSize)
+        let normalizedItemCount = max(0, itemCount)
+        let derivedTotalPages = max(1, Int(ceil(Double(normalizedItemCount) / Double(normalizedPageSize))))
+        self.init(
+            currentPage: currentPage,
+            totalPages: derivedTotalPages,
+            pageSize: normalizedPageSize,
+            totalItems: normalizedItemCount
+        )
+    }
+
     /// The 1-based index of the first item shown on the current page.
     var firstItemOnPage: Int {
         totalItems == 0 ? 0 : ((currentPage - 1) * pageSize) + 1

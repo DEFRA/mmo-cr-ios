@@ -2,7 +2,7 @@
 //  UITestRootView.swift
 //  record-catch
 //
-//  Hosts the app root's UI-test-only launch-argument seams, kept out of `record_catchApp` so the
+//  Hosts the app root's UI-test-only launch-argument seams, kept out of `RecordCatchApp` so the
 //  production entry point isn't dominated by test scaffolding.
 //
 //  Default app root stays whatever `productionRoot` builds (sign-in / app-lock / home). UI-test

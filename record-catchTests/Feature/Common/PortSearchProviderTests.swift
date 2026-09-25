@@ -120,4 +120,3 @@ final class PortSearchProviderTests: XCTestCase {
         XCTAssertTrue(options.isEmpty)
     }
 }
-

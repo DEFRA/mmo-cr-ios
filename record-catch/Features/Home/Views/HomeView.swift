@@ -20,12 +20,13 @@ struct HomeView: View {
     /// the horizontal-scroll reflow legible at accessibility text sizes.
     private static let tableReflowMinWidth: CGFloat = 560
 
-    /// Stubbed page/total counts for this UI-only phase. Injectable so previews
-    /// can demonstrate the multi-page pagination (Previous/Next arrows) without
-    /// changing the default single-page production behaviour.
+    /// The number of rows shown per pagination page.
+    private static let pageSize = 4
+
+    /// The 1-based page currently shown. Injectable so previews can demonstrate the multi-page
+    /// pagination (Previous/Next arrows); there is no in-app paging interaction yet, so this stays
+    /// fixed for a given screen instance.
     private let currentPage: Int
-    private let totalPages: Int
-    private let totalItems: Int
 
     /// Loads the merged local-drafts + server-records list (see ADR-0015). Injectable so previews
     /// and UI tests can seed a deterministic `RecordsProviding` without a real `ModelContainer`.
@@ -33,25 +34,18 @@ struct HomeView: View {
 
     init(
         currentPage: Int = 1,
-        totalPages: Int = 1,
-        totalItems: Int = 4,
         recordsProvider: RecordsProviding? = nil
     ) {
         self.currentPage = currentPage
-        self.totalPages = totalPages
-        self.totalItems = totalItems
         let provider = recordsProvider ?? MergingRecordsRepository(draftStore: InMemoryCatchRecordDraftStore())
         _viewModel = State(wrappedValue: HomeViewModel(recordsProvider: provider))
     }
 
-    // Stubbed single page of results.
+    /// Derived from the live `viewModel.rows` count, so the "showing X to Y of Z" text and the
+    /// page-number strip update whenever a draft is added, saved further or deleted (see
+    /// `HomeViewModel.load()`) instead of being fixed at view construction.
     private var paginationState: PaginationState {
-        PaginationState(
-            currentPage: currentPage,
-            totalPages: totalPages,
-            pageSize: 4,
-            totalItems: totalItems
-        )
+        PaginationState(currentPage: currentPage, itemCount: viewModel.rows.count, pageSize: Self.pageSize)
     }
 
     var body: some View {
@@ -262,8 +256,17 @@ struct HomeView: View {
 }
 
 #Preview("Pagination – multiple pages") {
-    // Injects a multi-page state so the GDS Previous/Next arrows are visible.
-    HomeView(currentPage: 2, totalPages: 5, totalItems: 20)
+    // Injects 20 stubbed rows (5 pages at pageSize 4) so the GDS Previous/Next arrows are visible.
+    let rows = (1...20).map { index in
+        SubmissionRow(
+            dateText: "20 Nov 2020",
+            vesselName: "ACHILLES \(index)",
+            status: .submitted,
+            createdBy: "J.Smith",
+            sortDate: Date(timeIntervalSince1970: TimeInterval(index))
+        )
+    }
+    HomeView(currentPage: 2, recordsProvider: StubRecordsProvider(rows: rows))
         .environment(AppLanguageStore.preview)
         .environment(CatchRecordRouter())
 }

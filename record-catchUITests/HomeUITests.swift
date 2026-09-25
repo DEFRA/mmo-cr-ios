@@ -59,7 +59,10 @@ final class HomeUITests: XCTestCase {
         XCTAssertFalse(element(app, ID.paginationPrevious).exists)
         XCTAssertFalse(element(app, ID.paginationNext).exists)
 
-        XCTAssertTrue(app.staticTexts["Showing 1 to 4 of 4"].exists)
+        // 3 stubbed server records (see `StubServerRecordsProvider`) and no local drafts fit on a
+        // single page — asserted against the real loaded count, not a value fixed independently of
+        // it, so this test would catch the pagination control going stale again.
+        XCTAssertTrue(app.staticTexts["Showing 1 to 3 of 3"].exists)
     }
 
     @MainActor

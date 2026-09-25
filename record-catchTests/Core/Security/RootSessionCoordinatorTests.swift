@@ -2,7 +2,7 @@ import XCTest
 @testable import record_catch
 
 /// Security-critical path — 100% coverage target (testing.instructions.md). Covers the
-/// composition-root logic that used to live, untested, directly inside `record_catchApp`.
+/// composition-root logic that used to live, untested, directly inside `RecordCatchApp`.
 @MainActor
 final class RootSessionCoordinatorTests: XCTestCase {
 

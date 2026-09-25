@@ -95,6 +95,7 @@ final class SelectPortViewModel {
         case .departure:
             router.push(.selectPort(phase: .return, vessel: vessel, referenceNumber: referenceNumber))
         case .return:
+            draft.advance(to: .ports)
             Task { await enterGearSubJourney() }
         }
     }

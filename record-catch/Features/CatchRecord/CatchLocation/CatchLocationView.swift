@@ -154,7 +154,6 @@ struct CatchLocationView: View {
         .accessibilityIdentifier("\(identifierPrefix).otherButton")
     }
 
-
     @ViewBuilder
     private var selectedAreaReadout: some View {
         let value = viewModel.selectedArea ?? languageStore.localized("catchRecord.catchLocation.selectedArea.none")

@@ -8,6 +8,13 @@ import SwiftUI
 /// a `range` that clamps out every impossible value, this view has no validation or error-state
 /// logic of its own — unlike the `DateEntryField` it replaces, there is no "missing"/"not a real
 /// date" state to render.
+///
+/// - Important: Uses `.datePickerStyle(.wheel)` to present separate day/month/year wheels. This
+///   **supersedes ADR-0017 decision #2**, which originally chose `.compact` and explicitly
+///   rejected `.wheel` over Dynamic Type reflow and VoiceOver concerns — that rejection has not
+///   yet been re-verified against this style. ADR-0017 must be updated (or a follow-up ADR
+///   raised) and a manual accessibility pass (Dynamic Type to 200%, VoiceOver adjustable-value
+///   announcement, 44×44pt row targets) completed before this ships to production.
 struct TripDatePicker: View {
     let title: String
     let hint: String
@@ -26,10 +33,9 @@ struct TripDatePicker: View {
                 in: range,
                 displayedComponents: .date
             )
-            .datePickerStyle(.compact)
+            .datePickerStyle(.wheel)
             .labelsHidden()
-            .frame(minHeight: AppControlSize.dateFieldHeight, alignment: .leading)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .center)
             .accessibilityLabel(title)
             .accessibilityIdentifier("\(accessibilityIdentifierPrefix).picker")
         }

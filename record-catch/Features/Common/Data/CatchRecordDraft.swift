@@ -157,31 +157,22 @@ nonisolated struct CatchRecordDraftPayload: Codable, Equatable, Sendable {
     var returnPort: PortOption?
     var gearCatches: [GearCatch]
     var speciesNotLanded: [SpeciesOption]
-    /// See `CatchRecordDraft.checkpoint`. Added after the first release of this payload shape, so
-    /// decoding falls back to `.vessel` for any already-persisted draft with no `checkpoint` key
-    /// (see the custom `init(from:)` below) rather than failing to decode the whole draft.
-    var checkpoint: CatchRecordCheckpoint
+    /// See `CatchRecordDraft.checkpoint`. Added after the first release of this payload shape. The
+    /// default here is what the synthesized memberwise initializer (see below) falls back to, and
+    /// `init(from:)` below applies the same fallback when decoding any already-persisted draft with
+    /// no `checkpoint` key, rather than failing to decode the whole draft.
+    var checkpoint: CatchRecordCheckpoint = .vessel
+}
 
-    init(
-        vessel: String?,
-        departureDate: Date?,
-        returnDate: Date?,
-        departurePort: PortOption?,
-        returnPort: PortOption?,
-        gearCatches: [GearCatch],
-        speciesNotLanded: [SpeciesOption],
-        checkpoint: CatchRecordCheckpoint = .vessel
-    ) {
-        self.vessel = vessel
-        self.departureDate = departureDate
-        self.returnDate = returnDate
-        self.departurePort = departurePort
-        self.returnPort = returnPort
-        self.gearCatches = gearCatches
-        self.speciesNotLanded = speciesNotLanded
-        self.checkpoint = checkpoint
-    }
-
+/// `init(from:)` is deliberately declared here, in an **extension**, rather than in the primary
+/// declaration above: a struct's synthesized memberwise initializer is only suppressed by
+/// initializers declared in its *primary* declaration, not by ones in an extension. Keeping the
+/// custom decoding logic here means `CatchRecordDraftPayload` still gets its normal, fully-labelled
+/// memberwise initializer (matching the property list above, in order, with `checkpoint`
+/// defaulting to `.vessel`) for free — used by `CatchRecordDraft.payload` and in tests — instead of
+/// a second, hand-maintained 8-parameter initializer that duplicates it and drifts if a field is
+/// ever added or removed.
+extension CatchRecordDraftPayload {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         vessel = try container.decodeIfPresent(String.self, forKey: .vessel)

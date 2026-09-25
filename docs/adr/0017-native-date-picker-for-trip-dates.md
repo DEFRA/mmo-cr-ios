@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted, with **Addendum (2026-09-23)** below superseding decision #2's style choice.
 
 ## Context
 
@@ -40,10 +40,10 @@ This deviation should be logged with Delivery Architecture
 
 1. **Component:** Replace `DateEntryField`/`DateEntryValue` with a new `TripDatePicker` component
    wrapping SwiftUI's `DatePicker(selection:in:displayedComponents: .date)`.
-2. **Style:** Use `.datePickerStyle(.compact)`. The always-visible `.graphical` calendar was
-   rejected — its day cells are frequently smaller than the WCAG 2.2 (2.5.8) / Apple HIG 44×44pt
-   minimum target size and it reflows poorly at large Dynamic Type sizes. `.wheels` was rejected for
-   the same Dynamic Type/VoiceOver concerns.
+2. **Style:** ~~Use `.datePickerStyle(.compact)`.~~ **Superseded — see Addendum below; now
+   `.wheel`.** The always-visible `.graphical` calendar was rejected — its day cells are
+   frequently smaller than the WCAG 2.2 (2.5.8) / Apple HIG 44×44pt minimum target size and it
+   reflows poorly at large Dynamic Type sizes; that rejection still stands.
 3. **Default value:** `TripDateViewModel.selectedDate` is a **non-optional `Date`**, defaulted to
    today (or the resumed draft's already-captured date — see ADR-0015 decision #1). `DatePicker`
    cannot bind to an optional `Date`, so unlike the old three blank text fields, the screen always
@@ -104,3 +104,26 @@ This deviation should be logged with Delivery Architecture
 - [Apple HIG — Pickers](https://developer.apple.com/design/human-interface-guidelines/pickers)
 - ADR-0003 (create-catch-record navigation), ADR-0013 (Check your answers "Change" routing),
   ADR-0015 (resumed-draft pre-fill)
+
+## Addendum (2026-09-23): style changed from `.compact` to `.wheel`
+
+Product/engineering requested the day/month/year **wheel** style in place of the `.compact`
+popover, so decision #2 above is superseded: `TripDatePicker` now uses
+`.datePickerStyle(.wheel)`.
+
+This directly reopens the concern decision #2 originally raised: `.wheel` was rejected at the
+time over Dynamic Type reflow and VoiceOver row-target-size worries. That rejection has **not**
+been re-tested against the current SwiftUI/iOS version. Before this change ships to production:
+
+- Run a manual accessibility pass on both trip-date screens: Dynamic Type up to 200% (confirm the
+  wheel reflows/scrolls without clipping or truncating day/month/year labels), VoiceOver (confirm
+  each wheel announces as an adjustable element with its current value and swipe-up/down
+  adjustment works), and Increase Contrast/Reduce Motion.
+- Confirm each wheel row meets the WCAG 2.2 (2.5.8) / Apple HIG 44×44pt minimum target size on the
+  smallest supported device at the largest tested Dynamic Type size.
+- If either check fails, revert to `.compact` (or another compliant style) rather than shipping a
+  non-conformant control — WCAG 2.2 AA is a legal requirement and overrides this style preference
+  per the working framework (`copilot-instructions.md` §4).
+- Record the outcome of this pass here and update Delivery Architecture
+  (`delivery.architecture@defra.gov.uk`) on the style deviation, per this repo's deviation-logging
+  rule.

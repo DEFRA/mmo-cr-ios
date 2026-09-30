@@ -85,3 +85,4 @@ DerivedData/
 # only Gemfile and Gemfile.lock are version controlled.
 vendor/
 .bundle/
+tmp

@@ -19,7 +19,7 @@ release engineering. Any deviation from a DEFRA standard must be raised as a gov
 ## Tooling (fixed decisions)
 
 - **CI orchestrator:** **GitHub Actions** is the single authoritative CI/CD orchestration and audit
-  platform. All PR validation, main-branch validation and tag-triggered releases run here. GitHub Actions
+  platform. All PR validation, main-branch validation and manually dispatched releases run here. GitHub Actions
   decides **when** a job runs and **with what permissions**; Fastlane does the Apple-specific work.
 - **Deployment engine:** **Fastlane** — chosen to keep one uniform automation model across the iOS and
   (separately-hosted) Android apps. It is the Apple release toolkit, **not** a second orchestrator. Build,
@@ -49,9 +49,22 @@ This is a **small team practising trunk-based development**. The model is delibe
 - **`main` is the trunk** and is always releasable. Protect it: require PRs, green CI and review before
   merge; no direct pushes.
 - **Short-lived feature branches** (`feature/*`) merge back into `main` via PR, then are deleted.
-- **Releases are cut from an automated Git tag created on `main`** after merging a PR, never from a long-lived branch. Tag format:
-  **`vMAJOR.MINOR.PATCH-BUILD_BUILDNUMBER`** (e.g. `v2.0.0-BUILD_9`), derived from `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` in `project.pbxproj`. Pushing or generating a matching tag triggers the release workflow.
-- **Hotfixes** are a normal fix on `main` with incremented version/build numbers merged via PR, which triggers the automated tag creation. Because
+- **Every merge to `main` publishes a release tag — except Dependabot merges**, which carry no version bump and
+  ship with the next bumped release. Once build and tests pass on `main`, *iOS CI* pushes the tag. A manual *iOS
+  CI* run with `publish_release_tag: true` (default `false`) also publishes one. **CI only tags; it never starts a
+  release.** Tag format:
+  **`vMAJOR.MINOR.PATCH-BUILD_BUILDNUMBER`** (e.g. `v2.0.0-BUILD_9`), derived from `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` in `Config/Base.xcconfig` (ADR-0014).
+- **Releases have one entry point: manual `workflow_dispatch` of *iOS Release* on a release tag** ("Use workflow
+  from" → the tag). There is no tag-push trigger and no version input: the release fails unless it runs on a tag
+  and that tag matches the version in the code at that tag.
+- **Protect release tags** with a repository ruleset on `v*`: block updates and deletions (and force pushes). If
+  tag *creation* is also restricted, *iOS CI* must be allowed to bypass it or merges can no longer be tagged.
+- **POC exception (time-boxed):** tags — and therefore releases — may be published from non-`main` branches via a
+  manual *iOS CI* run. **Hardening after the POC:** tag and release from `main` only (guard the tag job on
+  `refs/heads/main` and require the Environments' deployment rule to match) — tracked in ADR-0011 "Post-POC
+  hardening" together with full-SHA Action pinning.
+- **Hotfixes** are a normal fix on `main` with incremented version/build numbers merged via PR, which publishes
+  the tag as above. Because
   the trunk is always releasable, there is no separate hotfix branch to maintain.
 - **Release branches are NOT used and MUST NOT be introduced** for this app. They only earn their keep
   when a release must be hardened/stabilised while `main` keeps moving, or when several past versions are
@@ -61,71 +74,66 @@ This is a **small team practising trunk-based development**. The model is delibe
 
 ## Versioning
 
-- **Marketing version** (`CFBundleShortVersionString`, e.g. `1.4.0`) is derived from the release **tag**
-  (`v1.4.0` → `1.4.0`). It is the single human-facing SemVer.
-- **Build number** (`CFBundleVersion`) is derived **deterministically** from the **release workflow's**
-  `GITHUB_RUN_NUMBER` (which increments by one on every release run). **Do not query App Store Connect for
-  the latest build number** — a network lookup adds a race condition between concurrent releases and pulls
-  release credentials into a step that does not need them. The CI run counter avoids all three and keeps
-  versioning fully derivable from the tagged commit.
-  - **The one rule that must hold:** for a given marketing version each uploaded build number must be
-    **unique and higher** than the previous upload for that version. The run number satisfies this for
-    normal serialised releases. Global cross-version monotonicity is **deliberately not enforced**; if the
-    release workflow is ever reset/replaced such that the run number could regress, apply a documented
-    one-off offset — do **not** reintroduce an App Store Connect lookup.
-  - **Commit SHA is traceability, not the build number.** Embed the short Git SHA (and the tag) as
-    read-only `Info.plist` metadata (e.g. a `GitCommitSHA` key) for traceability only. A SHA is
-    hexadecimal and non-monotonic, so it can never serve as `CFBundleVersion` (which must be
-    period-separated integers).
-- Fastlane sets both at build time (`increment_build_number` / `increment_version_number`); do not
-  hard-code version numbers in the Xcode project for release builds. **Never** edit the build number by
-  hand and never reuse a value for a marketing version.
+- **Single source of truth in code** ([ADR-0011](../../docs/adr/0011-release-pipeline.md) §3a, amended by
+  [ADR-0014](../../docs/adr/0014-build-time-app-identity-configuration.md)): `MARKETING_VERSION`
+  (`CFBundleShortVersionString`) and `CURRENT_PROJECT_VERSION` (`CFBundleVersion`, build `N`) live in
+  `Config/Base.xcconfig`. Developers bump them in a PR; merging to `main` publishes the tag
+  `v<marketing>-BUILD_<N>`, and the release workflow validates the tag against the file.
+- **External promotion build number is `N.1`** ([ADR-0015](../../docs/adr/0015-compile-once-configure-at-promotion.md)):
+  the promoted package of build `N` is uploaded as `N.1` (a valid `CFBundleVersion` — up to three
+  period-separated integers), keeping it unique within the App Store Connect app and traceable to the tag.
+- **Do not query App Store Connect for the build number** — a network lookup adds a race between concurrent
+  releases and pulls release credentials into a step that does not need them.
+- **Every non-Dependabot PR must bump the version.** *iOS CI* fails the PR if its release tag already exists or its
+  build is not higher than the target branch's; Dependabot PRs are exempt and ship with the next bump.
+- **The one rule that must hold:** for a given marketing version each uploaded build number must be
+  **unique and higher** than the previous upload for that version. Never reuse or hand-edit a released value.
+- **Commit SHA is traceability, not the build number.** Embed the short Git SHA as read-only `Info.plist`
+  metadata (`GitCommitSHA`). A SHA is hexadecimal and non-monotonic, so it can never be `CFBundleVersion`.
 
-## Configuration strategy & build-per-environment promotion (frozen)
+## Configuration strategy — compile once, configure at promotion (frozen)
 
-**Frozen decision:** the app ships as **three separate applications**, one per environment, each with its
-own bundle identifier, App Store Connect app record and TestFlight groups. Configuration is resolved at
-**build time (Option B)** — there is **no runtime endpoint selector**. This supersedes the earlier
-runtime-configuration / two-identity option.
+**Frozen decision** ([ADR-0014](../../docs/adr/0014-build-time-app-identity-configuration.md),
+[ADR-0015](../../docs/adr/0015-compile-once-configure-at-promotion.md)): the app ships as **three App Store
+Connect apps** serving **five backends**. The app holds **exactly one backend URL** (`MMOAPIBaseURL` in
+`Info.plist`) and has **no runtime environment selector** and no runtime lookup.
 
-- **Build-time configuration (Option B).** Each environment is compiled with its own settings via
-  `.xcconfig` and build configurations, producing a **distinct binary per environment**. The release job
-  selects the configuration (or passes the bundle ID as an `xcodebuild` build-setting override) so the
-  **tagged commit is built unchanged**.
-- **Build-per-environment promotion.** Because the three apps have distinct bundle IDs (immutable once
-  uploaded), a single binary cannot move between environments. Instead **promote the commit, not the
-  binary**: one release tag builds all three apps from the **same commit**. Equivalence is evidenced by the
-  same commit SHA, pinned Xcode/Ruby/Fastlane/runner image, and locked SPM/Bundler dependencies — and by
-  the Prod app running its own internal (and, where required, external) TestFlight pass before App Store
-  submission.
-- **External-TestFlight promotion is a no-rebuild operation.** Assigning an already-uploaded build to that
-  app's external group is an App Store Connect metadata action (assign to group + Beta App Review), so
-  external testers get the exact binary that passed internal testing for that environment.
+| App | Internal TestFlight | External TestFlight | App Store |
+|---|---|---|---|
+| Dev (`mmo.catchrecordingdev.ios`) | Dev | — | — |
+| Test (`mmo.catchrecordingtest.ios`) | Test | Perf-Test | — |
+| Prod (`mmo.catchrecording.ios`) | Ext-Test (UAT) | Prod (sanity) | Prod |
 
-**Current repo state (must be reconciled):** the app has **no configuration mechanism yet**
-(`AppEnvironment` is an empty placeholder, backend providers are protocol-shaped stubs per ADR-0004, there
-are no `.xcconfig` files and no API base URL), and the Xcode project ships the single hard-coded
-`mmo.catchrecordingdev.ios` with hard-coded version/build values. The test and prod identities and
-CI-derived versioning must be added alongside it.
+- **Identity at build time.** Bundle ID and display name come from `Config/<App>.xcconfig` via the app's
+  scheme/configuration. The **backend URL is never in git**: it is a **GitHub Environment variable**
+  (`MMO_API_BASE_URL`, one per Environment) injected by Fastlane as a command-line build setting.
+- **Compile once, configure at promotion.** Each app is compiled **once** per release (build `N`, internal
+  TestFlight). Promotion to external TestFlight re-uses that **same archive**: Fastlane swaps `MMOAPIBaseURL`
+  to the external stage's URL, sets the build to `N.1`, re-signs and uploads. **No compiler runs.** The
+  promotion job must prove it: identical Mach-O UUID, `codesign --verify --deep --strict`, and the internal
+  backend's host absent from the external package.
+- **Build once from external to App Store.** The Prod App Store submission is the **same `N.1` upload** the
+  sanity testers used.
+- **Vocabulary:** say **"no recompile" / "same compiled code"** for internal → external, and reserve
+  **"build once"** for the same-upload external → App Store step.
 
 ## Application identity & bundle-ID model (frozen)
 
 **Three application identities** — three App Store Connect apps, three TestFlight surfaces:
 
 ```
-mmo.catchrecordingdev.ios     # Dev  — internal + external TestFlight
-mmo.catchrecordingtest.ios    # Test — internal + external TestFlight (business UAT)
-mmo.catchrecording.ios        # Prod — internal + external TestFlight + App Store
+mmo.catchrecordingdev.ios     # Dev  — internal TestFlight
+mmo.catchrecordingtest.ios    # Test — internal + external TestFlight (release testing / perf)
+mmo.catchrecording.ios        # Prod — internal (UAT) + external (sanity) TestFlight + App Store
 ```
 
-- Each environment installs **side by side** on one device (distinct bundle IDs).
+- Each app installs **side by side** on one device (distinct bundle IDs). Within one app, a tester is in the
+  internal **or** the external group, never both.
 - Only the **Prod** app is ever submitted to the App Store; **Dev** and **Test** are TestFlight-only app
   records.
 - Each app has its **own** provisioning profile and entitlements (APNs, associated domains, keychain) and
   an **independent build-number namespace**; external TestFlight on each app triggers its own Apple Beta
   App Review and 90-day build-expiry clock.
-- UAT runs on the **Test** identity against test services; the **Prod** identity gets its own internal +
-  external pass before submission.
 
 ## Release management (development → production)
 
@@ -136,34 +144,42 @@ short-lived feature branch  ──PR──▶  main (trunk, always releasable)
   │  PR CI: SwiftLint · build · unit/UI tests + coverage · SonarCloud PR analysis
   │  GitHub-native gates: CodeQL · Dependabot · secret scanning + push protection
   ▼
-main CI: full tests + SonarCloud main analysis
+main CI: full tests + SonarCloud main analysis + release tag vX.Y.Z-BUILD_N (every non-Dependabot merge)
+  ▼  (manual: iOS Release → Run workflow on the tag — the only way a release starts)
   ▼
-tag  vX.Y.Z  ──▶  single release workflow (Fastlane); one run, six sequential gated jobs
-  ├─ dev-build-internal      [env: dev — no gate]  build+sign Dev → Dev internal TestFlight
-  ├─ test-build-internal     [env: test — APPROVAL A]  build+sign Test → Test internal TestFlight
-  ├─ test-promote-external   [env: test-external — APPROVAL B]  assign SAME Test build → external UAT (no rebuild)
-  ├─ prod-build-internal     [env: prod — APPROVAL C]  build+sign Prod → Prod internal TestFlight
-  ├─ prod-promote-external   [env: prod-external — APPROVAL D]  assign SAME Prod build → external (no rebuild)
-  └─ prod-appstore-submit    [env: prod-appstore — APPROVAL E]  submit SAME Prod build → App Store (phased release)
+ios-release.yml (manual dispatch on a tag) — compile each app ONCE, keep the encrypted .xcarchive (90 days)
+  ├─ dev-build     [env: dev — no gate]     Dev app  N → internal TestFlight (Dev)
+  ├─ test-build    [env: test — APPROVAL A] Test app N → internal TestFlight (Test)
+  └─ prod-build    [env: prod — APPROVAL C] Prod app N → internal TestFlight (Ext-Test / UAT)
+  ▼
+ios-promote.yml (manual dispatch per promotion) — no recompile
+  ├─ test-promote-external [env: test-external — APPROVAL B] same archive → URL Perf-Test, build N.1 → external
+  ├─ prod-promote-external [env: prod-external — APPROVAL D] same archive → URL Prod, build N.1 → external (sanity)
+  └─ prod-appstore-submit  [env: prod-appstore — APPROVAL E] SAME N.1 upload → App Store (phased release)
   ▼
 monitor (App Store Connect metrics + crash reporting)  ──▶  hotfix = fix on main + higher patch tag
 ```
 
+Promotion is a **separate workflow** because a GitHub workflow run is cancelled after **35 days including
+approval waits** (a single approval may wait at most 30 days); testing between stages can exceed that.
+
 ### GitHub Environments & approval gates
 
-Define **six** governed GitHub Environments — one per gated job in the single release workflow. A GitHub
-Environment approval gates the **start of a job**, so each distinct manual approval is its own job /
-environment. Name them for the delivery **stage**, not for physical infrastructure. A stage is reached
-only once the preceding gate is approved, enforcing the promotion order.
+Define **six** governed GitHub Environments. A GitHub Environment approval gates the **start of a job**, so
+each distinct manual approval is its own job / environment. Each Environment (except `prod-appstore`) holds
+exactly **one** backend URL as the variable `MMO_API_BASE_URL`, so the Environment determines the backend.
 
-| Environment | Purpose | Job | Approval |
-|-------------|---------|-----|----------|
-| `dev` | Build → sign → upload the **Dev** app to its **internal** TestFlight group | `dev-build-internal` | None (auto on tag) |
-| `test` | Build → sign → upload the **Test** app to its **internal** TestFlight group | `test-build-internal` | **Required reviewer** (A); prevent self-approval |
-| `test-external` | Assign the **same** Test build to the **external** UAT group (no rebuild) | `test-promote-external` | **Separate required reviewer** (B) |
-| `prod` | Build → sign → upload the **Prod** app to its **internal** TestFlight group | `prod-build-internal` | **Required reviewer** (C); prevent self-approval |
-| `prod-external` | Assign the **same** Prod build to the **external** group (no rebuild) | `prod-promote-external` | **Separate required reviewer** (D) |
-| `prod-appstore` | Submit the **same** Prod build's version to App Store review / phased release | `prod-appstore-submit` | **Required business/release reviewer** (E); prevent self-approval + admin bypass |
+| Environment | Workflow · job | Backend URL | Approval |
+|-------------|----------------|-------------|----------|
+| `dev` | `ios-release` · `dev-build` | Dev | None (auto on tag) |
+| `test` | `ios-release` · `test-build` | Test | **Required reviewer** (A); prevent self-approval |
+| `prod` | `ios-release` · `prod-build` | Ext-Test | **Required reviewer** (C); prevent self-approval |
+| `test-external` | `ios-promote` · `test-promote-external` | Perf-Test | **Required reviewer** (B) |
+| `prod-external` | `ios-promote` · `prod-promote-external` | Prod | **Required reviewer** (D) |
+| `prod-appstore` | `ios-promote` · `prod-appstore-submit` | — (submits `N.1` as-is) | **Required business/release reviewer** (E); prevent self-approval + admin bypass |
+
+A seventh Environment, **`dev_external`** (`ios-release` · `dev-promote-external`, required reviewer), demonstrates
+the gate and the no-recompile promotion on the **Dev** app only; it runs in the same workflow run as `dev-build`.
 
 - Scope each stage's release secrets to its **own** Environment, not the repo, so they are only exposed
   after that stage's approval. Do not mix SonarCloud credentials with signing/release credentials.
@@ -180,8 +196,8 @@ only once the preceding gate is approved, enforcing the promotion order.
   testers, subject to TestFlight Beta App Review). Provide tester-friendly release notes ("what to test",
   "known limitations", environment details, feedback channel). TestFlight builds stay available for a
   limited window (currently up to 90 days).
-- **App Store** for production: submit the **Prod app's** TestFlight-verified build for the App Store
-  version via `upload_to_app_store`, submitted for review then released in phases. Uploading a build,
+- **App Store** for production: submit the **Prod app's `N.1` upload** (the one sanity-tested on external
+  TestFlight) via `upload_to_app_store`, submitted for review then released in phases. Uploading a build,
   submitting a version for review, and releasing an approved version are **three separate actions** — model
   them separately in automation and runbooks.
 
@@ -214,8 +230,9 @@ workflows):**
 
 - **PR CI** (`.github/workflows/ios-ci.yml`) — SwiftLint, build, unit/UI tests with coverage, then the
   **SonarCloud** scan. Runs on pull requests and pushes to `main`.
-- **Release** (`.github/workflows/ios-release.yml`) — tag/`workflow_dispatch`-triggered; runs the Fastlane
-  `beta`/`release` lanes behind the gated Environments above.
+- **Release** (`.github/workflows/ios-release.yml`) — manually dispatched on a release tag; compiles each app once behind the
+  gated Environments above. **Promotion** (`.github/workflows/ios-promote.yml`) — manually dispatched;
+  re-packages and promotes without recompiling.
 - **CodeQL** (`.github/workflows/codeql.yml`) — the separate advanced-setup SAST workflow described above.
 
 **MobSF binary (IPA) scanning** is **not required** for the baseline: SonarCloud + CodeQL + Dependabot +
@@ -254,11 +271,13 @@ step**; if adopted, run it against the signed IPA before the production gate.
   gated Environments** (`dev` / `test` / `test-external` / `prod` / `prod-external` / `prod-appstore`) —
   each stage exposing only the credentials it needs (per-app signing/upload, and the external-distribution
   and App Store submission credentials, are kept separate).
-- Typical secrets: `APP_STORE_CONNECT_KEY_ID`, `APP_STORE_CONNECT_ISSUER_ID`,
-  `APP_STORE_CONNECT_API_KEY_BASE64`, and (if using Match) `MATCH_PASSWORD` +
-  `MATCH_GIT_BASIC_AUTHORIZATION`; plus `SONAR_TOKEN`.
-- Non-sensitive build configuration belongs in **`.xcconfig`** files committed to the repo; inject
-  sensitive values at build time from CI. Document every config key in the config file and the README.
+- Typical secrets: `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_CONTENT` (App Store Connect API key),
+  `APPLE_TEAM_ID`, `MATCH_PASSWORD`, `MATCH_DEPLOY_KEY`, and `ARCHIVE_ENCRYPTION_KEY` (shared by a build
+  Environment and its promotion Environment); plus `SONAR_TOKEN`.
+- **Backend URLs are Environment variables, not secrets** (`MMO_API_BASE_URL`, one per Environment) — not
+  sensitive, auditable, and never committed to git.
+- Non-sensitive build configuration (bundle ID, display name, versions) belongs in **`.xcconfig`** files
+  committed to the repo. Document every config key in the config file and the README.
 - **Never print secrets to logs.** Do not echo signing identities, profiles, API keys or keychain
   contents. Rely on GitHub's masking and keep `set -x` away from secret-bearing steps.
 - **Pin every third-party GitHub Action to a full commit SHA** (a DEFRA supply-chain requirement) and set
@@ -272,7 +291,7 @@ step**; if adopted, run it against the signed IPA before the production gate.
   Bundler dependencies (only where cache keys prevent unsafe cross-context restoration).
 - Use `concurrency:` groups to cancel superseded PR runs but **never** cancel an in-flight release run.
 - Every release must be traceable end to end: **release tag → commit SHA → workflow run → marketing
-  version → build number → archive/IPA checksums → App Store Connect build → TestFlight groups &
+  version → build number (`N` / `N.1`) → Mach-O UUID → App Store Connect build → TestFlight groups &
   sign-off → App Store version & release status**.
 
 ## Real-device testing & data residency (optional maturity step)
@@ -289,13 +308,15 @@ Record adoption and the residency constraint as an **ADR**.
 Record at least these as ADRs under `docs/adr/`:
 
 1. GitHub Actions + Fastlane as the iOS delivery architecture (and the native-app exception).
-2. **Build-time configuration & environment promotion** (Option B; three environments compiled from one
-   commit) — supersedes any runtime-configuration option.
+2. **Build-time app identity configuration** — three apps via `.xcconfig`, backend URL injected from CI
+   ([ADR-0014](../../docs/adr/0014-build-time-app-identity-configuration.md)).
 3. Code-signing strategy and signing-asset custody (three bundle IDs managed by Match).
-4. **Three-application bundle-ID and environment model** (`dev` / `test` / `prod` as separate App Store
-   Connect apps).
-5. **Single-workflow, six-environment release topology** (per-stage and per-external-promotion gates).
-6. **Build-per-environment promotion & commit-equivalence policy** — supersedes build-once-and-promote.
+4. **Three-application bundle-ID and five-backend environment model** (`dev` / `test` / `prod` as separate
+   App Store Connect apps).
+5. **Release topology** — manually dispatched build workflow (on a release tag) + manually dispatched promotion workflow, six gated
+   Environments.
+6. **Compile once, configure at promotion** — no recompile internal → external; build once external → App
+   Store ([ADR-0015](../../docs/adr/0015-compile-once-configure-at-promotion.md)).
 7. Internal & external TestFlight distribution model (per-app internal + external groups).
 8. Cloud real-device testing platform and UK data residency, if adopted.
 9. Production approval and phased-release policy.
@@ -305,9 +326,10 @@ Record at least these as ADRs under `docs/adr/`:
 - [ ] Workflow YAML is valid, least-privilege (`permissions:`), and pins Actions (full commit SHA) + tool versions
 - [ ] Secrets are Environment-scoped per stage, never committed, never logged
 - [ ] Trunk-based/tag-driven model preserved — no release branch introduced
-- [ ] Marketing version derives from the tag; build number from the **release** `GITHUB_RUN_NUMBER` (no App Store Connect query); `GitCommitSHA` embedded as traceability metadata
+- [ ] Versions come from `Config/Base.xcconfig` and the tag; external promotions use `N.1` (no App Store Connect query); `GitCommitSHA` embedded as traceability metadata
 - [ ] The gated Environments (`test`, `test-external`, `prod`, `prod-external`, `prod-appstore`) remain gated by manual approval (`dev` is ungated), with self-approval prevented where supported
-- [ ] Build-per-environment from one tested commit; external-TestFlight promotion is a no-rebuild App Store Connect operation; commit-equivalence (same SHA, pinned toolchain, locked deps) evidenced
+- [ ] Each app compiled once per release; promotion re-uses the same archive and proves it (Mach-O UUID match, `codesign` verify, internal backend host absent); App Store submits the same `N.1` upload
+- [ ] Backend URLs come only from GitHub Environment variables — never committed
 - [ ] SonarCloud quality gate wired and passing; coverage reported
 - [ ] CodeQL and Dependabot maintained as their own separate files
 - [ ] Signing uses App Store Connect API key + temporary keychain; assets never committed

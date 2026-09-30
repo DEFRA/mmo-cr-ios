@@ -1,8 +1,148 @@
+require "fileutils"
+require "json"
+require "uri"
+
 default_platform(:ios)
 
 PROJECT = "record-catch.xcodeproj".freeze
 SCHEME = "record-catch".freeze
 SIMULATOR = "iPhone 17".freeze
+PLIST_BUDDY = "/usr/libexec/PlistBuddy".freeze
+RELEASE_DIR = File.expand_path("../build/release", __dir__).freeze
+ARCHIVE_NAME = "record-catch.xcarchive".freeze
+UUIDS_FILE = "mach-o-uuids.json".freeze
+
+# Test and Prod join this table once their xcconfig files and schemes exist (ADR-0014).
+APPS = {
+  dev: { app_identifier: "mmo.catchrecordingdev.ios", scheme: SCHEME, configuration: "Release" }
+}.freeze
+
+def app_config(app)
+  APPS.fetch(app.to_s.to_sym) { UI.user_error!("Unknown app '#{app}'. Known: #{APPS.keys.join(', ')}") }
+end
+
+def api_base_url!
+  url = ENV.fetch("MMO_API_BASE_URL", "").strip
+  uri = begin
+    URI.parse(url)
+  rescue URI::InvalidURIError
+    nil
+  end
+  unless uri.is_a?(URI::HTTPS) && !uri.host.to_s.empty?
+    UI.user_error!("MMO_API_BASE_URL must be an https:// URL, set as a GitHub Environment variable")
+  end
+  url
+end
+
+def asc_api_key
+  app_store_connect_api_key(
+    key_id: ENV.fetch("ASC_KEY_ID"),
+    issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+    key_content: ENV.fetch("ASC_KEY_CONTENT"),
+    is_key_content_base64: true
+  )
+end
+
+# Isolated temporary keychain + read-only Match; returns the app's App Store profile name.
+def sync_signing(app_identifier, api_key)
+  setup_ci
+  match(
+    type: "appstore",
+    app_identifier: app_identifier,
+    readonly: true,
+    api_key: api_key,
+    # Path to the SSH deploy key written by the workflow; nil locally, where the agent's key is used.
+    git_private_key: ENV["MATCH_GIT_PRIVATE_KEY"]
+  )
+  (lane_context[SharedValues::MATCH_PROVISIONING_PROFILE_MAPPING] || {})[app_identifier] ||
+    ENV.fetch("sigh_#{app_identifier}_appstore_profile-name")
+end
+
+def signing_xcargs(team_id, profile_name)
+  [
+    "DEVELOPMENT_TEAM=#{team_id}",
+    "CODE_SIGN_STYLE=Manual",
+    "CODE_SIGN_IDENTITY=\"Apple Distribution\"",
+    "PROVISIONING_PROFILE_SPECIFIER=\"#{profile_name}\""
+  ]
+end
+
+def plist_value(plist, key)
+  sh(PLIST_BUDDY, "-c", "Print :#{key}", plist, log: false).strip
+end
+
+def set_plist_string(plist, key, value)
+  sh(PLIST_BUDDY, "-c", "Delete :#{key}", plist, log: false, error_callback: ->(_) {})
+  sh(PLIST_BUDDY, "-c", "Add :#{key} string #{value}", plist)
+end
+
+def archived_app(archive)
+  Dir.glob(File.join(archive, "Products", "Applications", "*.app")).first ||
+    UI.user_error!("No .app found in #{archive}")
+end
+
+def expect_archived_app!(archive, app)
+  archived_id = plist_value(File.join(archived_app(archive), "Info.plist"), "CFBundleIdentifier")
+  UI.user_error!("Archive is #{archived_id}, expected #{app[:app_identifier]}") unless archived_id == app[:app_identifier]
+end
+
+def mach_o_uuids(app)
+  executable = File.join(app, plist_value(File.join(app, "Info.plist"), "CFBundleExecutable"))
+  sh("dwarfdump", "--uuid", executable, log: false).scan(/UUID: ([0-9A-F-]+) \((\w+)\)/).sort
+end
+
+def host_present?(app, host)
+  Dir.glob(File.join(app, "**", "*"), File::FNM_DOTMATCH)
+     .select { |path| File.file?(path) }
+     .any? { |path| File.binread(path).include?(host) }
+end
+
+# Set the backend URL and build number in the archive, then export (re-sign) it. The compiler never runs here.
+def configure_and_export(archive, name:, url:, build_number:, team_id:, profile_name:, app:)
+  app_plist = File.join(archived_app(archive), "Info.plist")
+  set_plist_string(app_plist, "MMOAPIBaseURL", url)
+  sh(PLIST_BUDDY, "-c", "Set :CFBundleVersion #{build_number}", app_plist)
+  sh(PLIST_BUDDY, "-c", "Set :ApplicationProperties:CFBundleVersion #{build_number}", File.join(archive, "Info.plist"))
+
+  output_dir = File.join(RELEASE_DIR, name)
+  ipa_name = "record-catch-#{name}.ipa"
+  build_app(
+    project: PROJECT,
+    scheme: app[:scheme],
+    skip_build_archive: true,
+    archive_path: archive,
+    export_method: "app-store",
+    output_directory: output_dir,
+    output_name: ipa_name,
+    export_options: {
+      signingStyle: "manual",
+      teamID: team_id,
+      # Stop Xcode rewriting CFBundleVersion during export; the N / N.1 values are ours.
+      manageAppVersionAndBuildNumber: false,
+      provisioningProfiles: { app[:app_identifier] => profile_name }
+    }
+  )
+
+  ipa = File.join(output_dir, ipa_name)
+  unzipped = File.join(output_dir, "unzipped")
+  sh("unzip", "-q", "-o", ipa, "-d", unzipped)
+  exported_app = Dir.glob(File.join(unzipped, "Payload", "*.app")).first || UI.user_error!("No .app in #{ipa}")
+  [ipa, exported_app]
+end
+
+# Fails unless the exported package is the expected app, backend and build, with unchanged compiled code.
+def verify_package!(exported_app, app:, url:, build_number:, uuids:)
+  plist = File.join(exported_app, "Info.plist")
+  expected = [app[:app_identifier], url, build_number]
+  actual = %w[CFBundleIdentifier MMOAPIBaseURL CFBundleVersion].map { |key| plist_value(plist, key) }
+  UI.user_error!("Package mismatch: expected #{expected}, got #{actual}") unless actual == expected
+
+  exported_uuids = mach_o_uuids(exported_app)
+  UI.user_error!("No Mach-O UUID found in #{exported_app}") if exported_uuids.empty?
+  UI.user_error!("Compiled code differs: #{exported_uuids} vs #{uuids}") unless exported_uuids == uuids
+
+  sh("codesign", "--verify", "--deep", "--strict", "--verbose=2", exported_app)
+end
 
 platform :ios do
   desc "Compile the app and test bundle without running tests — the CI compile gate."
@@ -31,111 +171,110 @@ platform :ios do
     )
   end
 
-  desc "Build, sign and upload the DEV app to its internal TestFlight group."
-  lane :release_dev do
-    build_and_upload(
-      app_identifier: "mmo.catchrecordingdev.ios",
-      # Dev build configuration. The per-environment .xcconfig split is a follow-up owned by the iOS Developer.
-      configuration: "Release"
-    )
-  end
-
-  desc "Sync the DEV signing assets from the Match repo into the local keychain (read-only)."
+  desc "Sync every app's signing assets from the Match repo into the local keychain (read-only)."
   lane :certificates do
     match(
       type: "appstore",
-      app_identifier: "mmo.catchrecordingdev.ios",
+      app_identifier: APPS.values.map { |app| app[:app_identifier] },
       readonly: true
     )
   end
 
-  desc "Distribute the latest uploaded DEV build to external tester groups on TestFlight."
-  lane :distribute_dev_external do
-    api_key = app_store_connect_api_key(
-      key_id: ENV.fetch("ASC_KEY_ID"),
-      issuer_id: ENV.fetch("ASC_ISSUER_ID"),
-      key_content: ENV.fetch("ASC_KEY_CONTENT"),
-      is_key_content_base64: true
-    )
+  desc "Compile the app ONCE with its internal backend URL, upload build N to internal TestFlight, keep the archive (ADR-0015)."
+  lane :build_internal do |options|
+    app = app_config(options[:app])
+    url = api_base_url!
+    team_id = ENV.fetch("APPLE_TEAM_ID")
+    api_key = asc_api_key
+    profile_name = sync_signing(app[:app_identifier], api_key)
 
-    external_groups = ENV.fetch("ASC_EXTERNAL_TESTING_GROUPS", "")
-                         .split(",")
-                         .map(&:strip)
-                         .reject(&:empty?)
-
-    upload_to_testflight(
-      api_key: api_key,
-      app_identifier: "mmo.catchrecordingdev.ios",
-      distribute_only: true,
-      distribute_external: true,
-      groups: external_groups,
-      notify_external_testers: true,
-      skip_waiting_for_build_processing: false
-    )
-  end
-
-  # Parametrised so the future test/prod release lanes reuse the same signed-build-and-upload flow.
-  private_lane :build_and_upload do |options|
-    api_key = app_store_connect_api_key(
-      key_id: ENV.fetch("ASC_KEY_ID"),
-      issuer_id: ENV.fetch("ASC_ISSUER_ID"),
-      key_content: ENV.fetch("ASC_KEY_CONTENT"),
-      is_key_content_base64: true
-    )
-
-    # Creates an isolated temporary keychain on the runner so signing assets never touch the login keychain.
-    setup_ci
-
-    match(
-      type: "appstore",
-      app_identifier: options[:app_identifier],
-      readonly: true,
-      api_key: api_key,
-      # Path to the SSH deploy key written by the release workflow; nil locally, where the agent's key is used.
-      git_private_key: ENV["MATCH_GIT_PRIVATE_KEY"]
-    )
-
-    profile_mapping = lane_context[SharedValues::MATCH_PROVISIONING_PROFILE_MAPPING] || {}
-    profile_name = profile_mapping[options[:app_identifier]] ||
-                   ENV.fetch("sigh_#{options[:app_identifier]}_appstore_profile-name")
-
-    # Version overrides: only set xcargs when explicit environment variables are provided
-    # (e.g. via manual workflow_dispatch). Otherwise, use project.pbxproj build settings directly.
-    xcargs = [
-      "DEVELOPMENT_TEAM=#{ENV.fetch('APPLE_TEAM_ID')}",
-      "CODE_SIGN_STYLE=Manual",
-      "CODE_SIGN_IDENTITY=\"Apple Distribution\"",
-      "PROVISIONING_PROFILE_SPECIFIER=\"#{profile_name}\""
-    ]
-
-    project_version = ENV["CURRENT_PROJECT_VERSION"].to_s.strip
-    xcargs << "CURRENT_PROJECT_VERSION=#{project_version}" unless project_version.empty?
-
-    marketing_version = ENV["MARKETING_VERSION"].to_s.strip
-    xcargs << "MARKETING_VERSION=#{marketing_version}" unless marketing_version.empty?
+    FileUtils.rm_rf(RELEASE_DIR)
+    FileUtils.mkdir_p(RELEASE_DIR)
+    archive = File.join(RELEASE_DIR, ARCHIVE_NAME)
 
     build_app(
       project: PROJECT,
-      scheme: SCHEME,
-      configuration: options[:configuration],
-      export_method: "app-store",
-      output_directory: "build",
+      scheme: app[:scheme],
+      configuration: app[:configuration],
+      archive_path: archive,
+      skip_package_ipa: true,
       clean: true,
-      xcargs: xcargs.join(" "),
-      export_options: {
-        signingStyle: "manual",
-        teamID: ENV.fetch("APPLE_TEAM_ID"),
-        provisioningProfiles: {
-          options[:app_identifier] => profile_name
-        }
-      }
+      xcargs: signing_xcargs(team_id, profile_name).join(" ")
     )
+    expect_archived_app!(archive, app)
+
+    app_plist = File.join(archived_app(archive), "Info.plist")
+    build_number = plist_value(app_plist, "CFBundleVersion")
+    commit = ENV["GITHUB_SHA"].to_s[0, 7]
+    set_plist_string(app_plist, "GitCommitSHA", commit) unless commit.empty?
+
+    uuids = mach_o_uuids(archived_app(archive))
+    File.write(File.join(RELEASE_DIR, UUIDS_FILE), JSON.generate(uuids))
+
+    ipa, exported_app = configure_and_export(
+      archive, name: "internal", url: url, build_number: build_number,
+      team_id: team_id, profile_name: profile_name, app: app
+    )
+    verify_package!(exported_app, app: app, url: url, build_number: build_number, uuids: uuids)
 
     upload_to_testflight(
       api_key: api_key,
-      app_identifier: options[:app_identifier],
+      ipa: ipa,
+      app_identifier: app[:app_identifier],
       distribute_external: false,
       skip_waiting_for_build_processing: true
     )
+    UI.success("#{app[:app_identifier]} build #{build_number} -> internal TestFlight, backend #{url}")
+  end
+
+  desc "Re-package the kept archive with this Environment's backend URL as build N.1 and send it to external TestFlight. No recompile (ADR-0015)."
+  lane :promote_external do |options|
+    app = app_config(options[:app])
+    url = api_base_url!
+    team_id = ENV.fetch("APPLE_TEAM_ID")
+    groups = ENV.fetch("ASC_EXTERNAL_TESTING_GROUPS", "").split(",").map(&:strip).reject(&:empty?)
+    UI.user_error!("ASC_EXTERNAL_TESTING_GROUPS is empty") if groups.empty?
+
+    archive = File.join(RELEASE_DIR, ARCHIVE_NAME)
+    uuids_file = File.join(RELEASE_DIR, UUIDS_FILE)
+    unless File.directory?(archive) && File.file?(uuids_file)
+      UI.user_error!("No archive in #{RELEASE_DIR}; download and decrypt the build job's artifact first")
+    end
+    expect_archived_app!(archive, app)
+
+    app_plist = File.join(archived_app(archive), "Info.plist")
+    internal_url = plist_value(app_plist, "MMOAPIBaseURL")
+    internal_build = plist_value(app_plist, "CFBundleVersion")
+    UI.user_error!("Archive build '#{internal_build}' is not an internal build N") unless internal_build.match?(/\A\d+\z/)
+    external_build = "#{internal_build}.1"
+    uuids = JSON.parse(File.read(uuids_file))
+
+    api_key = asc_api_key
+    profile_name = sync_signing(app[:app_identifier], api_key)
+
+    ipa, exported_app = configure_and_export(
+      archive, name: "external", url: url, build_number: external_build,
+      team_id: team_id, profile_name: profile_name, app: app
+    )
+    verify_package!(exported_app, app: app, url: url, build_number: external_build, uuids: uuids)
+
+    internal_host = URI(internal_url).host
+    if internal_host == URI(url).host
+      UI.important("Internal and external backends share #{internal_host}; leak check not applicable")
+    elsif host_present?(exported_app, internal_host)
+      UI.user_error!("Internal backend #{internal_host} found in the external package")
+    end
+
+    upload_to_testflight(
+      api_key: api_key,
+      ipa: ipa,
+      app_identifier: app[:app_identifier],
+      distribute_external: true,
+      groups: groups,
+      notify_external_testers: true,
+      skip_waiting_for_build_processing: false
+    )
+    UI.success("#{app[:app_identifier]} build #{external_build} -> external TestFlight #{groups}, backend #{url} " \
+               "(same compiled code as build #{internal_build})")
   end
 end

@@ -31,29 +31,29 @@ Compile the app and test bundle without running tests — the CI compile gate.
 
 Build and run the unit tests with code coverage (used by CI). UI tests are excluded for now.
 
-### ios release_dev
-
-```sh
-[bundle exec] fastlane ios release_dev
-```
-
-Build, sign and upload the DEV app to its internal TestFlight group.
-
 ### ios certificates
 
 ```sh
 [bundle exec] fastlane ios certificates
 ```
 
-Sync the DEV signing assets from the Match repo into the local keychain (read-only).
+Sync every app's signing assets from the Match repo into the local keychain (read-only).
 
-### ios distribute_dev_external
+### ios build_internal
 
 ```sh
-[bundle exec] fastlane ios distribute_dev_external
+[bundle exec] fastlane ios build_internal
 ```
 
-Distribute the latest uploaded DEV build to external tester groups on TestFlight.
+Compile the app ONCE with its internal backend URL, upload build N to internal TestFlight, keep the archive (ADR-0015).
+
+### ios promote_external
+
+```sh
+[bundle exec] fastlane ios promote_external
+```
+
+Re-package the kept archive with this Environment's backend URL as build N.1 and send it to external TestFlight. No recompile (ADR-0015).
 
 ----
 

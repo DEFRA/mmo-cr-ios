@@ -156,7 +156,9 @@ openssl smime -inform der -verify -noverify -in *.mobileprovision 2>/dev/null \
   | grep -A2 -E '<key>(Name|application-identifier|TeamIdentifier|ExpirationDate)</key>'
 ```
 
-The `application-identifier` must end in `mmo.catchrecordingdev.ios`.
+The `application-identifier` must end in the bundle ID you are importing — `mmo.catchrecordingdev.ios`,
+`mmo.catchrecordingtest.ios` or `mmo.catchrecording.ios` (one distribution certificate, one App Store profile
+per app; see [environments.md](environments.md)).
 
 ---
 
@@ -250,9 +252,10 @@ repository.
 
 ## CI configuration
 
-CI never imports or creates credentials. The release workflow only needs:
+CI never imports or creates credentials. Every build and promotion Environment (`dev`, `test`,
+`test-external`, `prod`, `prod-external` — see [environments.md](environments.md)) needs:
 
-| `dev` Environment secret | Value |
+| Environment secret | Value |
 | --- | --- |
 | `MATCH_DEPLOY_KEY` | Private half of an SSH deploy key registered **read-only** on the signing repo |
 | `MATCH_PASSWORD` | The passphrase from step 3 |

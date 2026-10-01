@@ -149,7 +149,36 @@ openssl x509 -inform DER -in distribution.cer -noout -subject -dates
 
 Confirm the subject names the correct team, and that the certificate has not expired.
 
-Optionally, check the provisioning profile's bundle identifier, team and expiry match the certificate:
+### 2d. Re-export the private key with an empty password — this step is mandatory
+
+**Match always imports the stored private key with an _empty_ password** when it installs signing assets on a
+CI runner. A `.p12` that still carries its export password is stored without complaint, but every CI run then
+fails to import the key:
+
+```
+security: SecKeychainItemImport: MAC verification failed during PKCS12 import (wrong password?)
+error: No signing certificate "iOS Distribution" found ... with a private key was found.
+```
+
+The `.p12` must also use the legacy PKCS#12 encryption that macOS `security` understands; OpenSSL 3's default
+(AES/SHA-256) produces the same error. Re-export it:
+
+```bash
+# Private key only (prompts for the original export password; add -legacy if OpenSSL reports "unsupported")
+openssl pkcs12 -in app-distribution.p12 -nocerts -nodes -out key.pem
+
+# Passwordless, macOS-compatible PKCS#12. With macOS's built-in LibreSSL, omit -legacy.
+openssl pkcs12 -export -legacy -inkey key.pem -in cert.pem -out match-key.p12 -passout pass:
+
+# Must succeed with an empty password
+openssl pkcs12 -in match-key.p12 -passin pass: -noout -legacy && echo "OK: empty password"
+```
+
+`key.pem` is the **unencrypted private key** — it is removed with the scratch directory in Step 5.
+
+### 2e. Check the provisioning profile (optional)
+
+Check the provisioning profile's bundle identifier, team and expiry match the certificate:
 
 ```bash
 openssl smime -inform der -verify -noverify -in *.mobileprovision 2>/dev/null \
@@ -191,7 +220,7 @@ Match prompts for three paths. **Use absolute paths — a leading `~` is not exp
 | Prompt | File |
 | --- | --- |
 | Certificate (`.cer`) path | `/home/<user>/signing-import/distribution.cer` (the **DER** file from 2b) |
-| Private key (`.p12`) path | `/home/<user>/signing-import/app-distribution.p12` |
+| Private key (`.p12`) path | `/home/<user>/signing-import/match-key.p12` (the **passwordless** file from 2d — never the original `.p12`) |
 | Provisioning profile path | `/home/<user>/signing-import/<profile>.mobileprovision` |
 
 You will also be asked for:
@@ -283,4 +312,5 @@ destroys both in an `always()` step.
 | Push rejected at the end of the import | `MATCH_GIT_PRIVATE_KEY` is set, forcing the read-only deploy key | `unset MATCH_GIT_PRIVATE_KEY` |
 | `sh: 1: security: Permission denied` | `security` is macOS-only; on Linux/WSL the passphrase cannot be cached in a keychain | Harmless — always `export MATCH_PASSWORD` |
 | Prompted for the Match passphrase on every run | Same cause as above | `export MATCH_PASSWORD` |
+| `MAC verification failed during PKCS12 import (wrong password?)` in CI, then `No signing certificate "iOS Distribution" found ... with a private key` | The stored `.p12` has an export password, or uses OpenSSL 3's default encryption | Step 2d, then re-run Step 3 — the import replaces the stored key for that certificate |
 | `digital envelope routines::unsupported` | `.p12` uses legacy RC2 encryption | Add `-legacy` to the `openssl pkcs12` command |

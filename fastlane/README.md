@@ -45,7 +45,7 @@ Sync every app's signing assets from the Match repo into the local keychain (rea
 [bundle exec] fastlane ios build_internal
 ```
 
-Compile the app ONCE with its internal backend URL, upload build N to internal TestFlight, keep the archive (ADR-0015).
+Compile the app ONCE with its internal backend URL, upload build N to internal TestFlight, keep the archive.
 
 ### ios promote_external
 
@@ -53,7 +53,7 @@ Compile the app ONCE with its internal backend URL, upload build N to internal T
 [bundle exec] fastlane ios promote_external
 ```
 
-Re-package the kept archive with this Environment's backend URL as build N.1 and send it to external TestFlight. No recompile (ADR-0015).
+Re-package the kept archive with this Environment's backend URL as build N.1 and send it to external TestFlight. No recompile.
 
 ----
 

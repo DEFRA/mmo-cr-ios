@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   dev-build:
-    name: Dev → compile once, internal TestFlight
+    name: Dev → compile, internal TestFlight
     runs-on: macos-26
     timeout-minutes: 45
     environment: dev
@@ -40,7 +40,7 @@ jobs:
           MATCH_DEPLOY_KEY: ${{ secrets.MATCH_DEPLOY_KEY }}
         run: bash .github/workflows/scripts/setup-match-ssh-key.sh
 
-      - name: Compile once, sign & upload DEV build N to internal TestFlight
+      - name: Compile sign & upload build to internal TestFlight
         env:
           # The one backend URL for this stage — a `dev` Environment variable, never committed (ADR-0014).
           MMO_API_BASE_URL: ${{ vars.MMO_API_BASE_URL }}
@@ -72,7 +72,7 @@ jobs:
 
   # Demo of the ADR-0015 promotion path on the Dev app. Test/Prod promotions will run from ios-promote.yml.
   dev-promote-external:
-    name: Dev → re-package (no recompile), external TestFlight
+    name: Dev → re-package for external TestFlight
     needs: dev-build
     runs-on: macos-26
     timeout-minutes: 45
@@ -105,7 +105,7 @@ jobs:
           MATCH_DEPLOY_KEY: ${{ secrets.MATCH_DEPLOY_KEY }}
         run: bash .github/workflows/scripts/setup-match-ssh-key.sh
 
-      - name: Re-package as build N.1 with the external backend & upload to external TestFlight
+      - name: Re-package with the external backend & upload to external TestFlight
         env:
           # The external backend URL — a `dev_external` Environment variable.
           MMO_API_BASE_URL: ${{ vars.MMO_API_BASE_URL }}

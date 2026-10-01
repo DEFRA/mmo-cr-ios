@@ -12,7 +12,7 @@ RELEASE_DIR = File.expand_path("../build/release", __dir__).freeze
 ARCHIVE_NAME = "record-catch.xcarchive".freeze
 UUIDS_FILE = "mach-o-uuids.json".freeze
 
-# Test and Prod join this table once their xcconfig files and schemes exist (ADR-0014).
+# Test and Prod join this table once their xcconfig files and schemes exist.
 APPS = {
   dev: { app_identifier: "mmo.catchrecordingdev.ios", scheme: SCHEME, configuration: "Release" }
 }.freeze
@@ -54,6 +54,11 @@ def sync_signing(app_identifier, api_key)
     # Path to the SSH deploy key written by the workflow; nil locally, where the agent's key is used.
     git_private_key: ENV["MATCH_GIT_PRIVATE_KEY"]
   )
+  # Match reports success even when the private key fails to import; catch it here, not deep inside xcodebuild.
+  if sh("security", "find-identity", "-v", "-p", "codesigning", log: false).include?("0 valid identities found")
+    UI.user_error!("Signing certificate installed without its private key: the .p12 in the Match repo " \
+                   "must have an empty password")
+  end
   (lane_context[SharedValues::MATCH_PROVISIONING_PROFILE_MAPPING] || {})[app_identifier] ||
     ENV.fetch("sigh_#{app_identifier}_appstore_profile-name")
 end
@@ -180,7 +185,7 @@ platform :ios do
     )
   end
 
-  desc "Compile the app ONCE with its internal backend URL, upload build N to internal TestFlight, keep the archive (ADR-0015)."
+  desc "Compile the app ONCE with its internal backend URL, upload build N to internal TestFlight, keep the archive."
   lane :build_internal do |options|
     app = app_config(options[:app])
     url = api_base_url!
@@ -227,7 +232,7 @@ platform :ios do
     UI.success("#{app[:app_identifier]} build #{build_number} -> internal TestFlight, backend #{url}")
   end
 
-  desc "Re-package the kept archive with this Environment's backend URL as build N.1 and send it to external TestFlight. No recompile (ADR-0015)."
+  desc "Re-package the kept archive with this Environment's backend URL as build N.1 and send it to external TestFlight. No recompile."
   lane :promote_external do |options|
     app = app_config(options[:app])
     url = api_base_url!

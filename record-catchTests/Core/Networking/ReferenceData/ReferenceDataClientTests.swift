@@ -30,6 +30,14 @@ final class ReferenceDataClientTests: XCTestCase {
         loadFixture(named: "vessel-item-response")
     }
 
+    private func loadSpeciesFixture() -> Data {
+        loadFixture(named: "species-response")
+    }
+
+    private func loadSpeciesItemFixture() -> Data {
+        loadFixture(named: "species-item-response")
+    }
+
     private struct StaticTokenProvider: AuthTokenProviding {
         let token: String?
         func bearerToken() async throws -> String? { token }
@@ -187,6 +195,156 @@ final class ReferenceDataClientTests: XCTestCase {
 
         do {
             _ = try await sut.fetchVessels()
+            XCTFail("Expected decoding error")
+        } catch let error as APIError {
+            guard case .decoding = error else {
+                return XCTFail("Expected .decoding, got \(error)")
+            }
+        } catch {
+            XCTFail("Expected APIError, got \(error)")
+        }
+    }
+
+    // MARK: Decoding — collection route (fetchSpecies)
+
+    func test_fetchSpecies_decodesFixture_intoExpectedSpeciesOptions() async throws {
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: loadSpeciesFixture())
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        let species = try await sut.fetchSpecies()
+
+        XCTAssertEqual(species.count, 3)
+        XCTAssertEqual(species[0].id, "5E9E48CF-7BCE-4653-ABA9-9F54591CC814")
+        XCTAssertEqual(species[0].name, "Queen scallop (QSC)")
+        XCTAssertEqual(species[1].name, "Alepocephalus bairdii (ALC)")
+        XCTAssertEqual(species[2].name, "00000000-0000-4000-8000-000000000099")
+    }
+
+    func test_fetchSpecies_toleratesMinimalSpecies_withOnlyId() async throws {
+        let jsonString = """
+        {
+          "dataset": "species",
+          "collectionId": "00000000-0000-4000-8000-000000000040",
+          "schemaVersion": "1.0",
+          "version": "v1",
+          "view": "canonical",
+          "total": 1,
+          "items": [ { "id": "1" } ]
+        }
+        """
+        let json = Data(jsonString.utf8)
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: json)
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        let species = try await sut.fetchSpecies()
+
+        XCTAssertEqual(species, [SpeciesOption(id: "1", name: "1")])
+    }
+
+    func test_fetchSpecies_requestsCollectionURL_withNoItemIdSegment() async throws {
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: loadSpeciesFixture())
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        _ = try await sut.fetchSpecies()
+
+        XCTAssertEqual(
+            httpClient.receivedRequests.first?.url?.absoluteString,
+            "http://localhost:3002/api/v1/reference-data/species"
+        )
+    }
+
+    // MARK: Decoding — single-item route (fetchSpecies(id:))
+
+    func test_fetchSpeciesItem_decodesBareItemFixture_intoExpectedSpeciesOption() async throws {
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: loadSpeciesItemFixture())
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        let species = try await sut.fetchSpecies(id: "5E9E48CF-7BCE-4653-ABA9-9F54591CC814")
+
+        XCTAssertEqual(species.id, "5E9E48CF-7BCE-4653-ABA9-9F54591CC814")
+        XCTAssertEqual(species.name, "Queen scallop (QSC)")
+    }
+
+    func test_fetchSpeciesItem_requestsItemURL_withPercentEncodedId() async throws {
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: loadSpeciesItemFixture())
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        _ = try await sut.fetchSpecies(id: "id with spaces")
+
+        XCTAssertEqual(
+            httpClient.receivedRequests.first?.url?.absoluteString,
+            "http://localhost:3002/api/v1/reference-data/species/id%20with%20spaces"
+        )
+    }
+
+    func test_fetchSpeciesItem_throwsNotFound_on404() async {
+        let httpClient = StubHTTPClient.statusOnly(404)
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try! makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        do {
+            _ = try await sut.fetchSpecies(id: "unknown-id")
+            XCTFail("Expected .notFound")
+        } catch let error as APIError {
+            XCTAssertEqual(error, .notFound)
+        } catch {
+            XCTFail("Expected APIError, got \(error)")
+        }
+    }
+
+    func test_fetchSpeciesItem_throwsDecoding_onMalformedJSON() async {
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: Data("not json".utf8))
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try! makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        do {
+            _ = try await sut.fetchSpecies(id: "5E9E48CF-7BCE-4653-ABA9-9F54591CC814")
+            XCTFail("Expected decoding error")
+        } catch let error as APIError {
+            guard case .decoding = error else {
+                return XCTFail("Expected .decoding, got \(error)")
+            }
+        } catch {
+            XCTFail("Expected APIError, got \(error)")
+        }
+    }
+
+    func test_fetchSpecies_throwsDecoding_onMalformedJSON() async {
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: Data("not json".utf8))
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try! makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        do {
+            _ = try await sut.fetchSpecies()
             XCTFail("Expected decoding error")
         } catch let error as APIError {
             guard case .decoding = error else {

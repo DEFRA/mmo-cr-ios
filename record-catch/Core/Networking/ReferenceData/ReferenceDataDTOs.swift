@@ -36,3 +36,25 @@ nonisolated struct VesselDTO: Decodable, Sendable {
     let activeFrom: String?
     let activeTo: String?
 }
+
+/// A single localised/common name entry nested inside a canonical-view species item's
+/// `commonNames`/`localNames` arrays.
+nonisolated struct SpeciesNameDTO: Decodable, Sendable {
+    let id: String?
+    let countryCode: String?
+    let name: String
+}
+
+/// Wire shape for a single item in the `species` dataset's canonical view. Only `id` is required;
+/// every other field is optional to match the real API, which can omit any of them. `name` is
+/// deliberately **not** a top-level field on the wire — the API models it as the `commonNames`
+/// array — so `SpeciesOption.init(dto:)` derives a single display `name` from it (see ADR-0018
+/// addendum).
+nonisolated struct SpeciesDTO: Decodable, Sendable {
+    let id: String
+    let faoCode: String?
+    let scientificName: String?
+    let commonNames: [SpeciesNameDTO]?
+    let localNames: [SpeciesNameDTO]?
+    let active: Bool?
+}

@@ -80,4 +80,73 @@ final class StubReferenceDataClientTests: XCTestCase {
             XCTFail("Expected APIError, got \(error)")
         }
     }
+
+    // MARK: fetchSpecies
+
+    func test_fetchSpecies_returnsConfiguredSpecies() async throws {
+        let species = SpeciesOption(id: "1", name: "Atlantic cod (COD)")
+        let sut = StubReferenceDataClient(species: [species])
+
+        let result = try await sut.fetchSpecies()
+
+        XCTAssertEqual(result, [species])
+    }
+
+    func test_fetchSpecies_throwsConfiguredError() async {
+        let sut = StubReferenceDataClient(error: .unauthorized)
+
+        do {
+            _ = try await sut.fetchSpecies()
+            XCTFail("Expected an error")
+        } catch let error as APIError {
+            XCTAssertEqual(error, .unauthorized)
+        } catch {
+            XCTFail("Expected APIError, got \(error)")
+        }
+    }
+
+    func test_init_defaults_toEmptySpeciesAndNoError() async throws {
+        let sut = StubReferenceDataClient()
+
+        let result = try await sut.fetchSpecies()
+
+        XCTAssertTrue(result.isEmpty)
+    }
+
+    // MARK: fetchSpecies(id:)
+
+    func test_fetchSpeciesItem_returnsConfiguredSpecies() async throws {
+        let species = SpeciesOption(id: "1", name: "Atlantic cod (COD)")
+        let sut = StubReferenceDataClient(speciesItem: species)
+
+        let result = try await sut.fetchSpecies(id: "1")
+
+        XCTAssertEqual(result, species)
+    }
+
+    func test_fetchSpeciesItem_throwsConfiguredError() async {
+        let sut = StubReferenceDataClient(error: .unauthorized)
+
+        do {
+            _ = try await sut.fetchSpecies(id: "1")
+            XCTFail("Expected an error")
+        } catch let error as APIError {
+            XCTAssertEqual(error, .unauthorized)
+        } catch {
+            XCTFail("Expected APIError, got \(error)")
+        }
+    }
+
+    func test_fetchSpeciesItem_throwsNotFound_whenNoSpeciesConfigured() async {
+        let sut = StubReferenceDataClient()
+
+        do {
+            _ = try await sut.fetchSpecies(id: "unknown")
+            XCTFail("Expected .notFound")
+        } catch let error as APIError {
+            XCTAssertEqual(error, .notFound)
+        } catch {
+            XCTFail("Expected APIError, got \(error)")
+        }
+    }
 }

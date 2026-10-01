@@ -18,11 +18,14 @@
 
 import Foundation
 
-/// Fetches reference-data collections/items. Only vessels are exposed today; a future dataset adds
-/// new methods here following the same `fetch<Item>`/`fetchItem<Item>` shape internally.
+/// Fetches reference-data collections/items. Vessels and species are exposed today; a future
+/// dataset adds new methods here following the same `fetch<Item>`/`fetchItem<Item>` shape
+/// internally.
 nonisolated protocol ReferenceDataFetching: Sendable {
     func fetchVessels() async throws -> [VesselOption]
     func fetchVessel(id: String) async throws -> VesselOption
+    func fetchSpecies() async throws -> [SpeciesOption]
+    func fetchSpecies(id: String) async throws -> SpeciesOption
 }
 
 /// Production implementation: builds a request via `makeReferenceDataRequest`/
@@ -58,6 +61,16 @@ nonisolated struct RemoteReferenceDataClient: ReferenceDataFetching {
     func fetchVessel(id: String) async throws -> VesselOption {
         let dto: VesselDTO = try await fetchItem(.vessels, itemId: id)
         return VesselOption(dto: dto)
+    }
+
+    func fetchSpecies() async throws -> [SpeciesOption] {
+        let envelope: ReferenceDataEnvelope<SpeciesDTO> = try await fetch(.species)
+        return envelope.items.map(SpeciesOption.init(dto:))
+    }
+
+    func fetchSpecies(id: String) async throws -> SpeciesOption {
+        let dto: SpeciesDTO = try await fetchItem(.species, itemId: id)
+        return SpeciesOption(dto: dto)
     }
 
     /// Fetches and decodes an envelope for `dataset`'s collection route, mapping every failure
@@ -179,11 +192,21 @@ nonisolated struct RemoteReferenceDataClient: ReferenceDataFetching {
 nonisolated struct StubReferenceDataClient: ReferenceDataFetching {
     var vessels: [VesselOption]
     var vessel: VesselOption?
+    var species: [SpeciesOption]
+    var speciesItem: SpeciesOption?
     var error: APIError?
 
-    init(vessels: [VesselOption] = [], vessel: VesselOption? = nil, error: APIError? = nil) {
+    init(
+        vessels: [VesselOption] = [],
+        vessel: VesselOption? = nil,
+        species: [SpeciesOption] = [],
+        speciesItem: SpeciesOption? = nil,
+        error: APIError? = nil
+    ) {
         self.vessels = vessels
         self.vessel = vessel
+        self.species = species
+        self.speciesItem = speciesItem
         self.error = error
     }
 
@@ -195,6 +218,17 @@ nonisolated struct StubReferenceDataClient: ReferenceDataFetching {
     func fetchVessel(id: String) async throws -> VesselOption {
         if let error { throw error }
         if let vessel { return vessel }
+        throw APIError.notFound
+    }
+
+    func fetchSpecies() async throws -> [SpeciesOption] {
+        if let error { throw error }
+        return species
+    }
+
+    func fetchSpecies(id: String) async throws -> SpeciesOption {
+        if let error { throw error }
+        if let speciesItem { return speciesItem }
         throw APIError.notFound
     }
 }

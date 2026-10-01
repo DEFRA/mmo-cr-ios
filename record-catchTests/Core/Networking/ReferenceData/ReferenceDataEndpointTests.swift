@@ -123,4 +123,33 @@ final class ReferenceDataEndpointTests: XCTestCase {
             "http://localhost:3002/api/v1/reference-data/vessels/item%20with%20spaces"
         )
     }
+
+    // MARK: Species dataset
+
+    func test_makeRequest_buildsExpectedURL_forSpeciesDataset() {
+        let request = makeReferenceDataRequest(
+            baseURL: baseURL,
+            dataset: .species,
+            bearerToken: nil
+        )
+
+        XCTAssertEqual(
+            request.url?.absoluteString,
+            "http://localhost:3002/api/v1/reference-data/species"
+        )
+    }
+
+    func test_makeItemRequest_buildsExpectedURL_forSpeciesDataset() {
+        let request = makeReferenceDataItemRequest(
+            baseURL: baseURL,
+            dataset: .species,
+            itemId: "5E9E48CF-7BCE-4653-ABA9-9F54591CC814",
+            bearerToken: nil
+        )
+
+        XCTAssertEqual(
+            request.url?.absoluteString,
+            "http://localhost:3002/api/v1/reference-data/species/5E9E48CF-7BCE-4653-ABA9-9F54591CC814"
+        )
+    }
 }

@@ -253,7 +253,7 @@ step**; if adopted, run it against the signed IPA before the production gate.
      create its profile (`match appstore --app_identifier <id>`), never a new certificate. When importing
      a key, store it as an **unencrypted PEM RSA key** (the format Fastlane writes). `match` installs keys
      with an empty password, and macOS rejects OpenSSL-made PKCS#12 files that have an empty password.
-     Procedure: `docs/release/fastlane-match-signing.md`.
+     Procedure: `iOS/fastlane-match-signing.md` in the `mmo-cr-devops` repository.
   2. **Manual `.p12` + provisioning profile (fallback)** — base64-encoded certificate and profiles stored
      as protected Environment secrets, decoded and imported into a temporary keychain during the release
      job. Simpler footprint but manual renewal/rotation and higher mismatch risk. Base64 is encoding only

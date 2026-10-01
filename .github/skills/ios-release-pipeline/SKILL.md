@@ -105,7 +105,7 @@ source of truth; wire it as a required check on `main`.
 - **Signing:** implement whichever the ADR selected (Match → manual `.p12` → Xcode Cloud managed signing).
   If Match, add a `Matchfile` and use a read-only, encrypted cert repo covering the **three** bundle IDs, with
   one shared team distribution certificate (key stored as unencrypted PEM) and a Match-generated profile per
-  bundle ID (see `docs/release/fastlane-match-signing.md`);
+  bundle ID (see `iOS/fastlane-match-signing.md` in the `mmo-cr-devops` repository);
   if manual, import a base64 `.p12` + profile into a temporary keychain deleted at job end. Either way use
   the **App Store Connect API key**, never Apple ID + password, and never commit signing assets.
 
@@ -118,7 +118,7 @@ source of truth; wire it as a required check on `main`.
   `ARCHIVE_ENCRYPTION_KEY`; plus `SONAR_TOKEN` (keep SonarCloud credentials separate from signing/release
   credentials).
 - Each Environment except `prod-appstore` holds one **variable** `MMO_API_BASE_URL` (its backend URL).
-  See [docs/release/environments.md](../../../docs/release/environments.md).
+  See `iOS/environments.md` in the `mmo-cr-devops` repository.
 - Never echo secrets; rely on masking; keep `set -x` away from secret-bearing steps.
 
 ### 7. CodeQL — separate advanced-setup workflow `.github/workflows/codeql.yml`

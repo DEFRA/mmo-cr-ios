@@ -101,7 +101,7 @@ has been removed, together with its `BUILD_CERTIFICATE_BASE64`, `P12_PASSWORD`,
 release job receives signing secrets; PR CI never does.
 
 Every administrator procedure is documented step by step, with the reason for each step, in the
-[Fastlane Match signing runbook](../release/fastlane-match-signing.md). It covers importing the existing
+Fastlane Match signing runbook (`iOS/fastlane-match-signing.md` in the `mmo-cr-devops` repository). It covers importing the existing
 certificate and key into an empty store, adding the Test and Prod profiles, and replacing a stored key.
 
 ## Consequences

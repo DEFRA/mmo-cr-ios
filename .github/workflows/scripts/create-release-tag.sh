@@ -12,9 +12,15 @@ fi
 
 TAG_NAME="v${MARKETING_VERSION}-BUILD_${PROJECT_BUILD}"
 
-# Validate if tag already exists on remote
-if git ls-remote --tags origin "refs/tags/${TAG_NAME}" | grep -q "refs/tags/${TAG_NAME}$"; then
-  echo "::error::Tag '${TAG_NAME}' already exists on remote. Increment CURRENT_PROJECT_VERSION in project.pbxproj before merging to main." >&2
+REMOTE_REFS="$(git ls-remote --tags origin "refs/tags/${TAG_NAME}" "refs/tags/${TAG_NAME}^{}")"
+if [[ -n "${REMOTE_REFS}" ]]; then
+  # The peeled ^{} line (annotated tags) sorts last and is the commit; a lightweight tag has only one line.
+  TAGGED_COMMIT="$(tail -n1 <<< "${REMOTE_REFS}" | cut -f1)"
+  if [[ "${TAGGED_COMMIT}" == "$(git rev-parse HEAD)" ]]; then
+    echo "Tag '${TAG_NAME}' already points at this commit; nothing to do."
+    exit 0
+  fi
+  echo "::error::Tag '${TAG_NAME}' already exists on another commit (${TAGGED_COMMIT}). Increment CURRENT_PROJECT_VERSION in project.pbxproj before merging to main." >&2
   exit 1
 fi
 

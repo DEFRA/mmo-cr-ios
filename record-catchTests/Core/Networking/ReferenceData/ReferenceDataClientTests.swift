@@ -46,6 +46,10 @@ final class ReferenceDataClientTests: XCTestCase {
         loadFixture(named: "port-item-response")
     }
 
+    private func loadManifestFixture() -> Data {
+        loadFixture(named: "manifest-response")
+    }
+
     private struct StaticTokenProvider: AuthTokenProviding {
         let token: String?
         func bearerToken() async throws -> String? { token }
@@ -165,9 +169,9 @@ final class ReferenceDataClientTests: XCTestCase {
 
         do {
             _ = try await sut.fetchVessel(id: "unknown-id")
-            XCTFail("Expected .notFound")
+            XCTFail("Expected a 404 response")
         } catch let error as APIError {
-            XCTAssertEqual(error, .notFound)
+            XCTAssertTrue(error.isNotFound)
         } catch {
             XCTFail("Expected APIError, got \(error)")
         }
@@ -315,9 +319,9 @@ final class ReferenceDataClientTests: XCTestCase {
 
         do {
             _ = try await sut.fetchSpecies(id: "unknown-id")
-            XCTFail("Expected .notFound")
+            XCTFail("Expected a 404 response")
         } catch let error as APIError {
-            XCTAssertEqual(error, .notFound)
+            XCTAssertTrue(error.isNotFound)
         } catch {
             XCTFail("Expected APIError, got \(error)")
         }
@@ -470,9 +474,9 @@ final class ReferenceDataClientTests: XCTestCase {
 
         do {
             _ = try await sut.fetchPort(id: "unknown-id")
-            XCTFail("Expected .notFound")
+            XCTFail("Expected a 404 response")
         } catch let error as APIError {
-            XCTAssertEqual(error, .notFound)
+            XCTAssertTrue(error.isNotFound)
         } catch {
             XCTFail("Expected APIError, got \(error)")
         }
@@ -515,6 +519,158 @@ final class ReferenceDataClientTests: XCTestCase {
             }
         } catch {
             XCTFail("Expected APIError, got \(error)")
+        }
+    }
+
+    // MARK: Decoding — manifest (fetchManifest)
+
+    func test_fetchManifest_decodesFixture_intoExpectedManifest() async throws {
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: loadManifestFixture())
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        let manifest = try await sut.fetchManifest()
+
+        XCTAssertEqual(manifest.manifestId, "00000000-0000-4000-8000-000000000001")
+        XCTAssertEqual(manifest.datasets.count, 6)
+        let ports = manifest.datasets.first { $0.dataset == "ports" }
+        XCTAssertEqual(ports?.itemCount, 624)
+        // Entries for datasets the app doesn't model yet (`gears`, `map-land`,
+        // `map-statistical-areas`) must decode harmlessly rather than failing the manifest.
+        XCTAssertTrue(manifest.datasets.contains { $0.dataset == "gears" })
+        XCTAssertTrue(manifest.datasets.contains { $0.dataset == "map-land" })
+        XCTAssertTrue(manifest.datasets.contains { $0.dataset == "map-statistical-areas" })
+    }
+
+    func test_fetchManifest_requestsManifestURL() async throws {
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: loadManifestFixture())
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        _ = try await sut.fetchManifest()
+
+        XCTAssertEqual(
+            httpClient.receivedRequests.first?.url?.absoluteString,
+            "http://localhost:3002/api/v1/reference-data/manifest"
+        )
+    }
+
+    func test_fetchManifest_bypassesLocalHTTPCache() async throws {
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: loadManifestFixture())
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        _ = try await sut.fetchManifest()
+
+        // Without this, `URLCache` would silently serve an up-to-an-hour-stale manifest (the API
+        // sends `Cache-Control: max-age=3600`), defeating its purpose as a change-detection
+        // signal (see ADR-0018 addendum "URLCache position").
+        XCTAssertEqual(httpClient.receivedRequests.first?.cachePolicy, .reloadIgnoringLocalCacheData)
+    }
+
+    func test_fetchManifest_throwsDecoding_onMalformedJSON() async {
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: Data("not json".utf8))
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try! makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        do {
+            _ = try await sut.fetchManifest()
+            XCTFail("Expected decoding error")
+        } catch let error as APIError {
+            guard case .decoding = error else {
+                return XCTFail("Expected .decoding, got \(error)")
+            }
+        } catch {
+            XCTFail("Expected APIError, got \(error)")
+        }
+    }
+
+    func test_fetchManifest_throwsServiceUnavailable_on503() async {
+        let httpClient = StubHTTPClient.statusOnly(503)
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try! makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        do {
+            _ = try await sut.fetchManifest()
+            XCTFail("Expected a 503 response")
+        } catch let error as APIError {
+            XCTAssertTrue(error.isServiceUnavailable)
+        } catch {
+            XCTFail("Expected APIError, got \(error)")
+        }
+    }
+
+    // MARK: Correlation header (x-cdp-request-id)
+
+    func test_everyRequest_sendsCorrelationHeader() async throws {
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: loadVesselsFixture())
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        _ = try await sut.fetchVessels()
+
+        let requestId = httpClient.receivedRequests.first?.value(forHTTPHeaderField: "x-cdp-request-id")
+        XCTAssertNotNil(requestId)
+        XCTAssertFalse(requestId?.isEmpty ?? true)
+    }
+
+    func test_consecutiveRequests_sendDifferentCorrelationHeaders() async throws {
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: loadVesselsFixture())
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        _ = try await sut.fetchVessels()
+        _ = try await sut.fetchVessels()
+
+        let ids = httpClient.receivedRequests.compactMap { $0.value(forHTTPHeaderField: "x-cdp-request-id") }
+        XCTAssertEqual(ids.count, 2)
+        XCTAssertNotEqual(ids[0], ids[1])
+    }
+
+    // MARK: Fetch-all invariant — no query parameters are ever sent
+
+    func test_everyCollectionRequest_sendsNoQueryParameters() async throws {
+        // The backend treats any query key other than `view` as narrowing the request, silently
+        // engaging pagination at its `defaultLimit` (see ADR-0018 addendum "Fetch-all, no query
+        // parameters"). The app relies on every request having zero query parameters so it always
+        // gets the full collection back. The stub always returns the vessels-collection fixture
+        // regardless of route, so `fetchVessel`/`fetchManifest` are expected to fail to decode —
+        // this test only cares about the *requests sent*, not successful decoding.
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: loadVesselsFixture())
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        _ = try? await sut.fetchVessels()
+        _ = try? await sut.fetchVessel(id: vesselId)
+        _ = try? await sut.fetchManifest()
+
+        XCTAssertEqual(httpClient.receivedRequests.count, 3)
+        for request in httpClient.receivedRequests {
+            XCTAssertNil(request.url?.query, "Request to \(request.url?.absoluteString ?? "?") must carry no query string")
         }
     }
 }

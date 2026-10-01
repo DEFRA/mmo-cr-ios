@@ -24,13 +24,13 @@ final class StubReferenceDataClientTests: XCTestCase {
     }
 
     func test_fetchVessels_throwsConfiguredError() async {
-        let sut = StubReferenceDataClient(error: .unauthorized)
+        let sut = StubReferenceDataClient(error: .response(status: 401, details: nil))
 
         do {
             _ = try await sut.fetchVessels()
             XCTFail("Expected an error")
         } catch let error as APIError {
-            XCTAssertEqual(error, .unauthorized)
+            XCTAssertEqual(error, .response(status: 401, details: nil))
         } catch {
             XCTFail("Expected APIError, got \(error)")
         }
@@ -56,13 +56,13 @@ final class StubReferenceDataClientTests: XCTestCase {
     }
 
     func test_fetchVessel_throwsConfiguredError() async {
-        let sut = StubReferenceDataClient(error: .unauthorized)
+        let sut = StubReferenceDataClient(error: .response(status: 401, details: nil))
 
         do {
             _ = try await sut.fetchVessel(id: "1")
             XCTFail("Expected an error")
         } catch let error as APIError {
-            XCTAssertEqual(error, .unauthorized)
+            XCTAssertEqual(error, .response(status: 401, details: nil))
         } catch {
             XCTFail("Expected APIError, got \(error)")
         }
@@ -73,9 +73,9 @@ final class StubReferenceDataClientTests: XCTestCase {
 
         do {
             _ = try await sut.fetchVessel(id: "unknown")
-            XCTFail("Expected .notFound")
+            XCTFail("Expected a 404 response")
         } catch let error as APIError {
-            XCTAssertEqual(error, .notFound)
+            XCTAssertEqual(error, .response(status: 404, details: nil))
         } catch {
             XCTFail("Expected APIError, got \(error)")
         }
@@ -93,13 +93,13 @@ final class StubReferenceDataClientTests: XCTestCase {
     }
 
     func test_fetchSpecies_throwsConfiguredError() async {
-        let sut = StubReferenceDataClient(error: .unauthorized)
+        let sut = StubReferenceDataClient(error: .response(status: 401, details: nil))
 
         do {
             _ = try await sut.fetchSpecies()
             XCTFail("Expected an error")
         } catch let error as APIError {
-            XCTAssertEqual(error, .unauthorized)
+            XCTAssertEqual(error, .response(status: 401, details: nil))
         } catch {
             XCTFail("Expected APIError, got \(error)")
         }
@@ -125,13 +125,13 @@ final class StubReferenceDataClientTests: XCTestCase {
     }
 
     func test_fetchSpeciesItem_throwsConfiguredError() async {
-        let sut = StubReferenceDataClient(error: .unauthorized)
+        let sut = StubReferenceDataClient(error: .response(status: 401, details: nil))
 
         do {
             _ = try await sut.fetchSpecies(id: "1")
             XCTFail("Expected an error")
         } catch let error as APIError {
-            XCTAssertEqual(error, .unauthorized)
+            XCTAssertEqual(error, .response(status: 401, details: nil))
         } catch {
             XCTFail("Expected APIError, got \(error)")
         }
@@ -142,9 +142,9 @@ final class StubReferenceDataClientTests: XCTestCase {
 
         do {
             _ = try await sut.fetchSpecies(id: "unknown")
-            XCTFail("Expected .notFound")
+            XCTFail("Expected a 404 response")
         } catch let error as APIError {
-            XCTAssertEqual(error, .notFound)
+            XCTAssertEqual(error, .response(status: 404, details: nil))
         } catch {
             XCTFail("Expected APIError, got \(error)")
         }
@@ -162,13 +162,13 @@ final class StubReferenceDataClientTests: XCTestCase {
     }
 
     func test_fetchPorts_throwsConfiguredError() async {
-        let sut = StubReferenceDataClient(error: .unauthorized)
+        let sut = StubReferenceDataClient(error: .response(status: 401, details: nil))
 
         do {
             _ = try await sut.fetchPorts()
             XCTFail("Expected an error")
         } catch let error as APIError {
-            XCTAssertEqual(error, .unauthorized)
+            XCTAssertEqual(error, .response(status: 401, details: nil))
         } catch {
             XCTFail("Expected APIError, got \(error)")
         }
@@ -194,13 +194,13 @@ final class StubReferenceDataClientTests: XCTestCase {
     }
 
     func test_fetchPortItem_throwsConfiguredError() async {
-        let sut = StubReferenceDataClient(error: .unauthorized)
+        let sut = StubReferenceDataClient(error: .response(status: 401, details: nil))
 
         do {
             _ = try await sut.fetchPort(id: "1")
             XCTFail("Expected an error")
         } catch let error as APIError {
-            XCTAssertEqual(error, .unauthorized)
+            XCTAssertEqual(error, .response(status: 401, details: nil))
         } catch {
             XCTFail("Expected APIError, got \(error)")
         }
@@ -211,9 +211,50 @@ final class StubReferenceDataClientTests: XCTestCase {
 
         do {
             _ = try await sut.fetchPort(id: "unknown")
-            XCTFail("Expected .notFound")
+            XCTFail("Expected a 404 response")
         } catch let error as APIError {
-            XCTAssertEqual(error, .notFound)
+            XCTAssertEqual(error, .response(status: 404, details: nil))
+        } catch {
+            XCTFail("Expected APIError, got \(error)")
+        }
+    }
+
+    // MARK: fetchManifest
+
+    func test_fetchManifest_returnsConfiguredManifest() async throws {
+        let manifest = ReferenceDataManifest(
+            manifestId: "00000000-0000-4000-8000-000000000001",
+            version: "2026-01-01T00:00:00Z",
+            datasets: []
+        )
+        let sut = StubReferenceDataClient(manifest: manifest)
+
+        let result = try await sut.fetchManifest()
+
+        XCTAssertEqual(result, manifest)
+    }
+
+    func test_fetchManifest_throwsConfiguredError() async {
+        let sut = StubReferenceDataClient(error: .response(status: 401, details: nil))
+
+        do {
+            _ = try await sut.fetchManifest()
+            XCTFail("Expected an error")
+        } catch let error as APIError {
+            XCTAssertEqual(error, .response(status: 401, details: nil))
+        } catch {
+            XCTFail("Expected APIError, got \(error)")
+        }
+    }
+
+    func test_fetchManifest_throwsServiceUnavailable_whenNoManifestConfigured() async {
+        let sut = StubReferenceDataClient()
+
+        do {
+            _ = try await sut.fetchManifest()
+            XCTFail("Expected a 503 response")
+        } catch let error as APIError {
+            XCTAssertTrue(error.isServiceUnavailable)
         } catch {
             XCTFail("Expected APIError, got \(error)")
         }

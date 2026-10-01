@@ -403,6 +403,177 @@ future change decides the caching/offline story (624 items is substantially larg
 species/vessel fixtures) before wiring a view model to it, and at that point should also decide
 whether/how `PortSearchProviding` itself is replaced or wrapped by the reference-data connector.
 
+## Addendum (2026-10): manifest endpoint, simplified error model, correlation id
+
+This addendum closes out a review of the connector against the backend's authoritative
+`docs/api-reference.md`, scoped by an explicit decision on what to pick up now versus park:
+**picked up** — the manifest endpoint, the API's standard error envelope, and request
+correlation; **parked, deliberately, not omitted** — local persistence/caching, retry/backoff,
+query parameters (including pagination and the ports radius search), and `view=mobile`. Each
+parked item is recorded in its own subsection below so it reads as a decision, not a gap.
+
+### Manifest
+
+`GET {baseURL}/api/v1/reference-data/manifest` is now modelled: `ReferenceDataFetching` gained
+`fetchManifest() async throws -> ReferenceDataManifest`, implemented by both
+`RemoteReferenceDataClient` and `StubReferenceDataClient`. The manifest is a **third, distinct**
+response shape — a single bare object with no collection/item split:
+
+```json
+{
+  "manifestId": "…",
+  "version": "…",
+  "datasets": [
+    {
+      "dataset": "ports",
+      "collectionId": "00000000-0000-4000-8000-000000000030",
+      "version": "ports-from-excel-1",
+      "schemaVersion": "1.0",
+      "format": "json",
+      "itemCount": 624,
+      "lastModified": "…",
+      "url": "…"
+    }
+  ]
+}
+```
+
+`ReferenceDataManifestEntry.dataset`/`.format` are kept as plain `String`, not `ReferenceDataset`,
+so entries for datasets the app doesn't model yet (`gears`, `map-land`, `map-statistical-areas`,
+`map-ports`) decode harmlessly instead of failing the whole manifest. The manifest route is **not**
+a `ReferenceDataset` case — it isn't a dataset and has no single-item route, so it gets its own
+request builder, `makeReferenceDataManifestRequest`, rather than reusing
+`makeReferenceDataRequest`.
+
+**Intended purpose, not yet realised:** the manifest's per-dataset `version`/`itemCount`/
+`lastModified` is the intended cheap way to detect "has a dataset changed?" without downloading
+every collection — the prerequisite for any future sync strategy. **Nothing consumes it yet.**
+Like `fetchVessels()`/`fetchSpecies()`/`fetchPorts()` before it, `fetchManifest()` is
+connector-only: not wired into `AppEnvironment`, any view model, or any persistence.
+
+### `URLCache` position (and why the manifest bypasses it)
+
+`makeReferenceDataManifestRequest` sets `request.cachePolicy = .reloadIgnoringLocalCacheData`; no
+other request builder sets a cache policy, so every other route uses
+`URLSessionConfiguration.default`'s `.useProtocolCachePolicy`. This was a deliberate, not
+accidental, decision once surfaced:
+
+- The API sends `Cache-Control: public, max-age=3600` on every response. With the default policy,
+  `URLCache.shared` will — entirely inside the URL Loading System, with no code in this connector
+  aware of it — serve a cached vessels/species/ports response for up to an hour without a network
+  round-trip, including transparent `If-None-Match`/`304` revalidation when the cache entry is
+  stale (see Apple's [`URLCache`](https://developer.apple.com/documentation/foundation/urlcache)
+  and [TN3151](https://developer.apple.com/documentation/technotes/tn3151-choosing-the-right-networking-api)).
+  For the three dataset routes this is a free bandwidth win and is left as the platform default.
+- The manifest's entire purpose is to answer "has anything changed?" — serving it from an
+  hour-stale cache would silently defeat that, so it alone forces a real network round trip on
+  every call.
+- Because this is an incidental consequence of leaving `URLSessionConfiguration.default`
+  unmodified rather than a feature we built, there was a live risk it would never be written down.
+  It's recorded here specifically so a future reader doesn't mistake the dataset routes for being
+  uncached.
+
+**Correctness fix, not a new feature:** `throwIfError(for:)`'s status mapping previously let `300
+..<400` fall through to a `default:` branch, turning a stray `304` into an
+`APIError.response(status: 304, details: nil)` — a success mis-reported as a failure. In practice
+this was always latent rather than live, precisely because of the `URLCache` behaviour just
+described: `URLSession` resolves `If-None-Match` revalidation internally and hands the caller a
+`200`, so a raw `304` never reached this code path. Fixed anyway, because "latent" is not the same
+as "impossible" (e.g. a future caller supplying its own `URLSession` with a non-default cache
+policy).
+
+### Standard error envelope, parsed — and the error model collapsed
+
+The API's non-2xx responses carry `{ "error": { "code", "message", "traceId", "dataset",
+"retryable" } }`. Previously the connector mapped only the HTTP status and discarded this body
+entirely. It is now decoded into `APIErrorDetails` (`Decodable, Equatable, Sendable`) —
+**deliberately omitting `message` and `details`**: server-authored free text must never become
+user-facing copy (GOV.UK content patterns, `figma-design.instructions.md` §6) and `details` can
+echo request input back, which is not a shape we want flowing into logs or UI.
+
+Decoding the envelope made the original nine-case `APIError` worth simplifying rather than just
+extending. The backend already gives every failure a stable, machine-readable `code` and an
+explicit `retryable` flag, so separate `.unauthorized`/`.forbidden`/`.notFound`/`.transport`/
+`.server` cases were carrying no information `status` + `details?.code` don't already carry — five
+near-identical cases that would each need an identical diagnostics payload bolted on. The enum
+**collapsed from nine cases to five**:
+
+```swift
+enum APIError: Error, Sendable, Equatable {
+    case invalidConfiguration
+    case offline
+    case timedOut
+    case decoding(String)
+    case response(status: Int, details: APIErrorDetails?)
+}
+```
+
+with intent-revealing helpers (`isUnauthorized`, `isForbidden`, `isNotFound`,
+`isServiceUnavailable`, `isRetryable`, `errorCode`, `traceId`) so call sites still read naturally
+and don't pattern-match raw status integers. `isRetryable` prefers the server's own `retryable`
+flag when present, falling back to the known-transient cases (`.offline`, `.timedOut`, any `5xx`)
+otherwise — distinguishing e.g. a `503 reference_data_unavailable` from a `503
+authentication_service_unavailable`, which were previously indistinguishable.
+
+This was accepted as a source-breaking change to `APIError` on the basis that it was free: there
+were (and remain) zero production call sites, so every affected use was test-only churn. A
+malformed or absent error body decodes to `details: nil` rather than throwing or masking the real
+HTTP-status failure — `decodeErrorDetails` is `try?`-based by construction, never allowed to turn
+a real failure into a silently-swallowed one.
+
+### Correlation id (`x-cdp-request-id`)
+
+Every request built by `makeGETRequest` now carries a fresh `UUID().uuidString` on
+`x-cdp-request-id`. The backend echoes this value back as the error envelope's `traceId`,
+directly serving the DEFRA mobile requirement to let a user share diagnostics for support — a
+failure can now be correlated end-to-end from the app's log line, through
+`APIErrorDetails.traceId`, to the backend's own logs for that request. The id is generated by the
+caller and passed in as a parameter (defaulting to a fresh `UUID` per call) rather than generated
+inside the request builder itself, so it stays a pure function and is directly assertable in
+tests.
+
+`NetworkLogger`/`NetworkLogEntry` gained optional `errorCode`/`traceId` fields, populated only on
+failure from the decoded `APIErrorDetails`. Both remain non-sensitive (a machine-readable failure
+code and a correlation GUID, never request/response content), so the "never log headers, the
+token, or response bodies" guarantee from §7 is unchanged — these two fields are structurally
+incapable of carrying either.
+
+### Fetch-all, no query parameters (confirmed existing behaviour, made explicit)
+
+Every request builder in `ReferenceDataEndpoint.swift` already sent zero query parameters; this is
+now called out explicitly as a load-bearing invariant, not an incidental fact, because of how the
+backend's pagination engages. The backend treats a request as a "fetch everything" request only
+when **no** query key other than `view` is present; the moment any other parameter is added
+(`query`, `code`, `ids`, …), pagination silently engages at the backend's `defaultLimit` — which is
+exactly how omitting `view` and every other parameter gets the app all 624 ports in one response
+instead of a paginated slice. A regression test
+(`test_everyCollectionRequest_sendsNoQueryParameters`) asserts `URLComponents(url:).query == nil`
+for the vessels/item/manifest routes, so this invariant breaks loudly if it's ever accidentally
+violated by a future change.
+
+### Parked (deliberately, not omitted): persistence, retry/backoff, query parameters, `view=mobile`
+
+The following were identified during the same review and explicitly **not** picked up in this
+change, by team decision rather than oversight:
+
+- **Local persistence/caching of fetched reference data.** Still out of scope, as it has been
+  since the original ADR — the manifest above is the intended *basis* for a future
+  change-detection/sync design, not that design itself.
+- **Retry/backoff.** `isRetryable` now exists on `APIError` specifically so this is a model change,
+  not a new model, when it is eventually implemented; no retry loop exists yet.
+- **Query parameters for the reference-data service on mobile.** The app fetches each dataset in
+  full and will continue to; no filtering/search/pagination query parameters (`query`, `code`,
+  `countryCode`, `ids`, `offset`/`limit`, `sort`, `includeInactive`) are planned, including the
+  ports radius search (`latitude`/`longitude`/`radiusKm`). The "Fetch-all, no query parameters"
+  section above is the resulting invariant.
+- **`view=mobile`.** The app is **not** using it, for any dataset — the existing canonical-view
+  correction note stands unchanged. `Accept-Language` (relevant to the mobile view's species
+  `displayName` resolution) remains unsent for the same reason.
+- **GeoJSON map layers (`/map/land`, `/map/statistical-areas`, `/map/ports`) and
+  `/health/ready`.** Unimplemented and not reconsidered in this pass; the app's
+  bundled/precomputed offline map data (`scripts/generate-offline-map-data.sh`) remains the map
+  data source.
+
 ## References
 
 - Apple, *NSAllowsLocalNetworking / `NSExceptionDomains`* —

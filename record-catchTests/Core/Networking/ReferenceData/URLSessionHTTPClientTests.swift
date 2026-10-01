@@ -71,7 +71,7 @@ final class URLSessionHTTPClientTests: XCTestCase {
         XCTAssertNotNil(sut)
     }
 
-    func test_send_throwsTransportCodeMinusOne_whenResponseIsNotHTTPURLResponse() async {
+    func test_send_throwsResponseWithStatusMinusOne_whenResponseIsNotHTTPURLResponse() async {
         let url = URL(string: "https://example.invalid/resource")!
         StubURLProtocol.plainResponseProvider = { request in
             URLResponse(url: request.url!, mimeType: nil, expectedContentLength: 0, textEncodingName: nil)
@@ -82,7 +82,7 @@ final class URLSessionHTTPClientTests: XCTestCase {
             _ = try await sut.send(URLRequest(url: url))
             XCTFail("Expected an error")
         } catch let error as APIError {
-            XCTAssertEqual(error, .transport(code: -1))
+            XCTAssertEqual(error, .response(status: -1, details: nil))
         } catch {
             XCTFail("Expected APIError, got \(error)")
         }

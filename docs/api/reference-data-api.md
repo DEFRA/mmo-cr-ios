@@ -110,7 +110,8 @@ canonical DTO silently yields `nil`/empty for every field the mobile shape flatt
 
 ### Error responses
 
-Non-2xx responses (both routes) use a distinct, envelope-free error shape:
+Non-2xx responses (both routes, and the manifest route) carry a distinct, envelope-free error
+shape:
 
 ```json
 {
@@ -123,9 +124,82 @@ Non-2xx responses (both routes) use a distinct, envelope-free error shape:
 }
 ```
 
-`RemoteReferenceDataClient` maps the **status code** (not this body) into `APIError` — see
-ADR-0018 §6 for the full mapping table. The body's `code`/`traceId` are not currently parsed by the
-app; they're documented here for anyone debugging against the raw API directly.
+`RemoteReferenceDataClient` maps every non-2xx response to `APIError.response(status:details:)`.
+`details` decodes this body's `code`/`traceId`/`retryable` (via `APIErrorDetails`) whenever it
+matches the shape above; it is `nil` when the body is empty, absent, or doesn't match (a malformed
+error body never masks the real HTTP-status failure). `message` and `dataset`'s sibling `details`
+field are deliberately **not** surfaced — server-authored text must never become user-facing copy.
+See the ADR-0018 addendum "Standard error envelope, parsed — and the error model collapsed" for
+the full `APIError` shape and the `is*`/`isRetryable` helpers call sites should use instead of
+matching raw status integers.
+
+### Correlation id (`x-cdp-request-id`)
+
+Every request (all three dataset routes, both item routes, and the manifest route) sends a fresh
+`x-cdp-request-id: <UUID>` header. The backend echoes it back as the error envelope's `traceId`
+above, so a specific failure can be correlated end-to-end: quote the `traceId` from
+`APIError.traceId`/the app's log output when asking the backend team to look up a request. See the
+ADR-0018 addendum "Correlation id".
+
+## Manifest
+
+```
+GET {baseURL}/api/v1/reference-data/manifest
+Header: Authorization: Bearer <token>   (omitted entirely when no token is configured)
+```
+
+Returns the active version/GUID/item-count of every persisted dataset — a single bare object, not
+an envelope and not a dataset in its own right:
+
+```json
+{
+  "manifestId": "…",
+  "version": "…",
+  "datasets": [
+    {
+      "dataset": "ports",
+      "collectionId": "00000000-0000-4000-8000-000000000030",
+      "version": "ports-from-excel-1",
+      "schemaVersion": "1.0",
+      "format": "json",
+      "itemCount": 624,
+      "lastModified": "…",
+      "url": "…"
+    }
+  ]
+}
+```
+
+`ReferenceDataFetching.fetchManifest()` decodes this into `ReferenceDataManifest`. Entries for
+datasets the app doesn't model yet (`gears`, `map-land`, `map-statistical-areas`, `map-ports`)
+decode harmlessly — `dataset`/`format` are plain `String`, not `ReferenceDataset`. Unlike every
+other route, the manifest request sets `cachePolicy = .reloadIgnoringLocalCacheData`: the API
+serves it with `Cache-Control: max-age=3600`, which would otherwise let `URLCache` silently serve
+an hour-old manifest and defeat its purpose as a change-detection signal. See the ADR-0018
+addendum "Manifest" and "`URLCache` position".
+
+**Connector-only, like every other route in this file.** `fetchManifest()` is not wired into
+`AppEnvironment`, any view model, or any persistence — it exists as the future basis for a
+change-detection/sync strategy, not that strategy itself.
+
+## Query parameters: none, by design — fetch everything, every time
+
+**No request built by this connector ever sends a query parameter**, including `view` (see above)
+and including any dataset-specific filter the live API supports (`query`, `code`, `countryCode`,
+`ids`, `sort`, `includeInactive`, or — for ports — the `latitude`/`longitude`/`radiusKm` radius
+search). This isn't an oversight: the app always wants the **entire** collection, and the backend's
+pagination behaviour makes that a load-bearing invariant, not a style choice.
+
+⚠️ **Pagination trap.** A request with **no** query key other than `view` is treated by the
+backend as a "fetch everything" request and returns the full, unpaginated collection — this is
+exactly why a bare `GET /ports` returns all 624 items. The moment **any other** query parameter is
+added, the backend silently engages pagination at its own default page size. Adding a filter in
+future **must** also send explicit `offset`/`limit` and read the response's pagination metadata —
+never add a bare filter parameter and assume the full result set still comes back. A regression
+test (`test_everyCollectionRequest_sendsNoQueryParameters`) locks in today's no-query-parameters
+behaviour so this doesn't regress silently. See the ADR-0018 addendum "Fetch-all, no query
+parameters" and "Parked" sections for the full list of parked (not forgotten) capabilities —
+persistence, retry/backoff, query parameters/pagination/radius search, and `view=mobile`.
 
 ### Authentication behaviour (verified against the local stub)
 
@@ -288,5 +362,5 @@ backend over the LAN:
 configured base URL and reports the decoded vessel count. It is **not** part of the automated
 `record-catchTests` suite (it requires a live backend) — invoke it manually while developing
 against a real backend (e.g. via Xcode's "Run Code Snippet" tooling). It is not yet updated to also
-smoke-check `fetchSpecies()`/`fetchPorts()`; that is left for a future change alongside this doc's
-step 7 note.
+smoke-check `fetchSpecies()`/`fetchPorts()`/`fetchManifest()`; that is left for a future change
+alongside this doc's step 7 note.

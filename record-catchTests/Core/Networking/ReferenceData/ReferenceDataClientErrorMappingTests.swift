@@ -56,31 +56,119 @@ final class ReferenceDataClientErrorMappingTests: XCTestCase {
 
     // MARK: Error mapping (fetchVessels — the full status-mapping set)
 
-    func test_fetchVessels_throwsUnauthorized_on401() async {
-        await assertMaps(statusCode: 401, to: .unauthorized)
+    func test_fetchVessels_throwsResponseWithUnauthorizedStatus_on401() async {
+        await assertMaps(statusCode: 401, to: .response(status: 401, details: nil))
+        await assertIsUnauthorized(statusCode: 401)
     }
 
-    func test_fetchVessels_throwsForbidden_on403() async {
-        await assertMaps(statusCode: 403, to: .forbidden)
+    func test_fetchVessels_throwsResponseWithForbiddenStatus_on403() async {
+        await assertMaps(statusCode: 403, to: .response(status: 403, details: nil))
+        await assertIsForbidden(statusCode: 403)
     }
 
-    func test_fetchVessels_throwsNotFound_on404() async {
-        await assertMaps(statusCode: 404, to: .notFound)
+    func test_fetchVessels_throwsResponseWithNotFoundStatus_on404() async {
+        await assertMaps(statusCode: 404, to: .response(status: 404, details: nil))
+        await assertIsNotFound(statusCode: 404)
     }
 
-    func test_fetchVessels_throwsTransport_onOther4xx() async {
-        await assertMaps(statusCode: 418, to: .transport(code: 418))
+    func test_fetchVessels_throwsResponse_onOther4xx() async {
+        await assertMaps(statusCode: 418, to: .response(status: 418, details: nil))
     }
 
-    func test_fetchVessels_throwsTransport_onStatusCodeOutsideKnownRanges() async {
-        // A status code below 200 falls through every named `case` (including `2xx`, `4xx` and
-        // `5xx`), reaching `throwIfError`'s `default:` branch — not expected from a real server,
-        // but the mapping must still be total (see ADR-0018 §6).
-        await assertMaps(statusCode: 100, to: .transport(code: 100))
+    func test_fetchVessels_throwsResponse_onStatusCodeOutsideKnownRanges() async {
+        // A status code below 200 (and, equally, 3xx such as a bodyless 304) is not in `200..<300`
+        // and so is still mapped to `.response` — the mapping must be total (see ADR-0018 §6 and
+        // its "Simplified error model" addendum).
+        await assertMaps(statusCode: 100, to: .response(status: 100, details: nil))
     }
 
-    func test_fetchVessels_throwsServer_on5xx() async {
-        await assertMaps(statusCode: 503, to: .server(status: 503))
+    func test_fetchVessels_throwsResponseWithServiceUnavailableStatus_on503() async {
+        await assertMaps(statusCode: 503, to: .response(status: 503, details: nil))
+        await assertIsServiceUnavailable(statusCode: 503)
+    }
+
+    func test_fetchVessels_throwsResponse_on304NotModified() async {
+        // Previously fell through to a bogus `.transport(code: 304)` — now a correctly-typed
+        // `.response`, since the connector has no client-side cache to fall back on for a
+        // bodyless revalidation response (see ADR-0018 addendum "304 handling").
+        await assertMaps(statusCode: 304, to: .response(status: 304, details: nil))
+    }
+
+    func test_fetchVessels_decodesErrorEnvelope_fromResponseBody() async {
+        let httpClient = StubHTTPClient.success(
+            statusCode: 503,
+            jsonData: Data("""
+            {
+              "error": {
+                "code": "reference_data_unavailable",
+                "traceId": "5b1e6e2a-6e77-4c1a-9b3a-2e6f9a7d9c11",
+                "dataset": "vessels",
+                "retryable": true
+              }
+            }
+            """.utf8)
+        )
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try! makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        do {
+            _ = try await sut.fetchVessels()
+            XCTFail("Expected an error")
+        } catch let error as APIError {
+            XCTAssertEqual(error.errorCode, "reference_data_unavailable")
+            XCTAssertEqual(error.traceId, "5b1e6e2a-6e77-4c1a-9b3a-2e6f9a7d9c11")
+            XCTAssertTrue(error.isRetryable, "Server's own retryable: true must be honoured")
+            XCTAssertTrue(error.isServiceUnavailable)
+        } catch {
+            XCTFail("Expected APIError, got \(error)")
+        }
+    }
+
+    func test_fetchVessels_mapsToNilDetails_whenErrorBodyIsMalformed() async {
+        let httpClient = StubHTTPClient.success(statusCode: 503, jsonData: Data("not json".utf8))
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try! makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        do {
+            _ = try await sut.fetchVessels()
+            XCTFail("Expected an error")
+        } catch let error as APIError {
+            // A malformed error body must never mask the real HTTP-status failure.
+            XCTAssertEqual(error, .response(status: 503, details: nil))
+            XCTAssertTrue(error.isServiceUnavailable)
+            XCTAssertNil(error.errorCode)
+        } catch {
+            XCTFail("Expected APIError, got \(error)")
+        }
+    }
+
+    func test_fetchVessels_isNotRetryable_whenServerExplicitlySaysSo() async {
+        let httpClient = StubHTTPClient.success(
+            statusCode: 503,
+            jsonData: Data("""
+            { "error": { "code": "reference_data_unavailable", "retryable": false } }
+            """.utf8)
+        )
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try! makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        do {
+            _ = try await sut.fetchVessels()
+            XCTFail("Expected an error")
+        } catch let error as APIError {
+            XCTAssertFalse(error.isRetryable, "Explicit retryable: false must override the 5xx-derived default")
+        } catch {
+            XCTFail("Expected APIError, got \(error)")
+        }
     }
 
     func test_fetchVessels_throwsOffline_onNotConnectedToInternet() async {
@@ -95,11 +183,12 @@ final class ReferenceDataClientErrorMappingTests: XCTestCase {
         await assertMapsURLError(.timedOut, to: .timedOut)
     }
 
-    func test_fetchVessels_throwsTransport_onUnmappedURLError() async {
+    func test_fetchVessels_throwsResponseWithNilDetails_onUnmappedURLError() async {
         // Any `URLError` not explicitly named above (offline/timed-out) falls through to
-        // `mapURLError`'s `default:` branch, carrying the raw `errorCode` (see ADR-0018 §6).
+        // `mapURLError`'s `default:` branch, carrying the raw (always-negative) `errorCode` — not
+        // a real HTTP status — with no decoded envelope (see ADR-0018 §6).
         let code = URLError.Code.cannotFindHost
-        await assertMapsURLError(code, to: .transport(code: code.rawValue))
+        await assertMapsURLError(code, to: .response(status: code.rawValue, details: nil))
     }
 
     // MARK: Security — never logs the token or headers
@@ -137,6 +226,44 @@ final class ReferenceDataClientErrorMappingTests: XCTestCase {
         }
     }
 
+    func test_fetchVessels_logsErrorCodeAndTraceId_butNeverTokenOrAuthorizationHeader_onFailure() async throws {
+        let sink = RecordingNetworkLogSink()
+        let httpClient = StubHTTPClient.success(
+            statusCode: 503,
+            jsonData: Data("""
+            {
+              "error": {
+                "code": "reference_data_unavailable",
+                "traceId": "5b1e6e2a-6e77-4c1a-9b3a-2e6f9a7d9c11",
+                "retryable": true
+              }
+            }
+            """.utf8)
+        )
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: "super-secret-token"),
+            logger: NetworkLogger(sink: sink)
+        )
+
+        do {
+            _ = try await sut.fetchVessels()
+            XCTFail("Expected an error")
+        } catch {
+            // Expected — asserting on the logged output below, not the thrown error here.
+        }
+
+        XCTAssertFalse(sink.messages.isEmpty)
+        let joined = sink.messages.joined(separator: "\n")
+        XCTAssertTrue(joined.contains("reference_data_unavailable"))
+        XCTAssertTrue(joined.contains("5b1e6e2a-6e77-4c1a-9b3a-2e6f9a7d9c11"))
+        for message in sink.messages {
+            XCTAssertFalse(message.contains("super-secret-token"))
+            XCTAssertFalse(message.contains("Authorization"))
+        }
+    }
+
     // MARK: Helpers
 
     private func assertMaps(
@@ -157,6 +284,49 @@ final class ReferenceDataClientErrorMappingTests: XCTestCase {
             XCTFail("Expected \(expected)", file: file, line: line)
         } catch let error as APIError {
             XCTAssertEqual(error, expected, file: file, line: line)
+        } catch {
+            XCTFail("Expected APIError, got \(error)", file: file, line: line)
+        }
+    }
+
+    private func assertIsUnauthorized(statusCode: Int, file: StaticString = #filePath, line: UInt = #line) async {
+        await assertFlag(statusCode: statusCode, flag: \.isUnauthorized, file: file, line: line)
+    }
+
+    private func assertIsForbidden(statusCode: Int, file: StaticString = #filePath, line: UInt = #line) async {
+        await assertFlag(statusCode: statusCode, flag: \.isForbidden, file: file, line: line)
+    }
+
+    private func assertIsNotFound(statusCode: Int, file: StaticString = #filePath, line: UInt = #line) async {
+        await assertFlag(statusCode: statusCode, flag: \.isNotFound, file: file, line: line)
+    }
+
+    private func assertIsServiceUnavailable(
+        statusCode: Int,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) async {
+        await assertFlag(statusCode: statusCode, flag: \.isServiceUnavailable, file: file, line: line)
+    }
+
+    private func assertFlag(
+        statusCode: Int,
+        flag: KeyPath<APIError, Bool>,
+        file: StaticString,
+        line: UInt
+    ) async {
+        let httpClient = StubHTTPClient.statusOnly(statusCode)
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try! makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        do {
+            _ = try await sut.fetchVessels()
+            XCTFail("Expected an error", file: file, line: line)
+        } catch let error as APIError {
+            XCTAssertTrue(error[keyPath: flag], file: file, line: line)
         } catch {
             XCTFail("Expected APIError, got \(error)", file: file, line: line)
         }

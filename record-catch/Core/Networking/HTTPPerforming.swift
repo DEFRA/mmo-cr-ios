@@ -43,7 +43,7 @@ nonisolated final class URLSessionHTTPClient: HTTPPerforming {
         guard let httpResponse = response as? HTTPURLResponse else {
             // A non-HTTP response (e.g. a file:// or custom scheme) is not expected for this
             // connector; surface it the same way an unmapped transport failure would.
-            throw APIError.transport(code: -1)
+            throw APIError.response(status: -1, details: nil)
         }
         return (data, httpResponse)
     }

@@ -9,18 +9,20 @@
 //  future call sites/tests. **Neither is wired into `AppEnvironment` or any view model in this
 //  change** — this is the connector only (see ADR-0018 for the exact scope boundary).
 //
-//  The live API has two distinct routes/response shapes for the `vessels` dataset (verified by
-//  direct probing of the running backend — see ADR-0018's correction note): a **collection** route
-//  returning a `ReferenceDataEnvelope`, and a **single-item** route returning a **bare** item
-//  object. `fetch<Item>` and `fetchItem<Item>` below model each shape separately rather than
-//  forcing the bare item through the envelope decoder.
+//  The live API has two distinct routes/response shapes for the dataset routes (verified by
+//  direct probing of the running backend — see ADR-0018's correction note): a **collection**
+//  route returning a `ReferenceDataEnvelope`, and a **single-item** route returning a **bare**
+//  item object. `fetch<Item>` and `fetchItem<Item>` below model each shape separately rather than
+//  forcing the bare item through the envelope decoder. `fetchManifest()` is a third, distinct
+//  shape again — a single bare manifest object with no collection/item split (see ADR-0018
+//  addendum "Manifest").
 //
 
 import Foundation
 
-/// Fetches reference-data collections/items. Vessels, species and ports are exposed today; a
-/// future dataset adds new methods here following the same `fetch<Item>`/`fetchItem<Item>` shape
-/// internally.
+/// Fetches reference-data collections/items. Vessels, species, ports and the manifest are
+/// exposed today; a future dataset adds new methods here following the same
+/// `fetch<Item>`/`fetchItem<Item>` shape internally.
 nonisolated protocol ReferenceDataFetching: Sendable {
     func fetchVessels() async throws -> [VesselOption]
     func fetchVessel(id: String) async throws -> VesselOption
@@ -28,13 +30,15 @@ nonisolated protocol ReferenceDataFetching: Sendable {
     func fetchSpecies(id: String) async throws -> SpeciesOption
     func fetchPorts() async throws -> [PortOption]
     func fetchPort(id: String) async throws -> PortOption
+    func fetchManifest() async throws -> ReferenceDataManifest
 }
 
 /// Production implementation: builds a request via `makeReferenceDataRequest`/
-/// `makeReferenceDataItemRequest`, sends it via the injected `HTTPPerforming`, and maps the HTTP
-/// status / decode result into `APIError` (see the mapping table in ADR-0018 §6). Logs
-/// method/path/status/duration via `NetworkLogger` — never headers, the token, or the response
-/// body.
+/// `makeReferenceDataItemRequest`/`makeReferenceDataManifestRequest`, sends it via the injected
+/// `HTTPPerforming`, and maps the HTTP status / decode result into `APIError` (see ADR-0018 §6
+/// and its "Simplified error model" addendum). Logs method/path/status/duration and — on failure
+/// — the API's own `errorCode`/`traceId` via `NetworkLogger` — never headers, the token, or the
+/// response body.
 nonisolated struct RemoteReferenceDataClient: ReferenceDataFetching {
     private let httpClient: HTTPPerforming
     private let configuration: APIConfiguration
@@ -85,6 +89,14 @@ nonisolated struct RemoteReferenceDataClient: ReferenceDataFetching {
         return PortOption(dto: dto)
     }
 
+    func fetchManifest() async throws -> ReferenceDataManifest {
+        let token = await resolvedToken()
+        let request = makeReferenceDataManifestRequest(baseURL: configuration.baseURL, bearerToken: token)
+        return try await send(request, fallbackPath: "manifest") { data in
+            try self.decoder.decode(ReferenceDataManifest.self, from: data)
+        }
+    }
+
     /// Fetches and decodes an envelope for `dataset`'s collection route, mapping every failure
     /// mode into `APIError`. Generic over `Item` so a future dataset reuses this exact path.
     private func fetch<Item: Decodable & Sendable>(
@@ -96,7 +108,7 @@ nonisolated struct RemoteReferenceDataClient: ReferenceDataFetching {
             dataset: dataset,
             bearerToken: token
         )
-        return try await send(request, dataset: dataset) { data in
+        return try await send(request, fallbackPath: dataset.rawValue) { data in
             try self.decoder.decode(ReferenceDataEnvelope<Item>.self, from: data)
         }
     }
@@ -116,7 +128,7 @@ nonisolated struct RemoteReferenceDataClient: ReferenceDataFetching {
             itemId: itemId,
             bearerToken: token
         )
-        return try await send(request, dataset: dataset) { data in
+        return try await send(request, fallbackPath: dataset.rawValue) { data in
             try self.decoder.decode(Item.self, from: data)
         }
     }
@@ -131,27 +143,37 @@ nonisolated struct RemoteReferenceDataClient: ReferenceDataFetching {
         }
     }
 
-    /// Sends `request`, logs it, maps the HTTP status into `APIError`, and decodes the body with
-    /// `decode` on success — shared by both the collection and single-item routes above.
+    /// Sends `request`, logs it, maps any non-2xx status (or decoded error envelope) into
+    /// `APIError.response`, and decodes the body with `decode` on success — shared by every
+    /// route above. `fallbackPath` is used only if the request's URL is somehow absent, and is
+    /// otherwise purely a logging label (e.g. `"manifest"`, or a `ReferenceDataset`'s raw value).
     private func send<Item>(
         _ request: URLRequest,
-        dataset: ReferenceDataset,
+        fallbackPath: String,
         decode: (Data) throws -> Item
     ) async throws -> Item {
-        let path = request.url?.path ?? dataset.rawValue
+        let path = request.url?.path ?? fallbackPath
         let startedAt = Date()
 
         do {
             let (data, response) = try await httpClient.send(request)
             let duration = Date().timeIntervalSince(startedAt)
+            let statusCode = response.statusCode
+            let isSuccess = (200..<300).contains(statusCode)
+            let details = isSuccess ? nil : Self.decodeErrorDetails(from: data, decoder: decoder)
+
             logger.log(NetworkLogEntry(
                 method: "GET",
                 path: path,
-                statusCode: response.statusCode,
-                durationSeconds: duration
+                statusCode: statusCode,
+                durationSeconds: duration,
+                errorCode: details?.code,
+                traceId: details?.traceId
             ))
 
-            try Self.throwIfError(for: response.statusCode)
+            guard isSuccess else {
+                throw APIError.response(status: statusCode, details: details)
+            }
 
             do {
                 return try decode(data)
@@ -167,24 +189,16 @@ nonisolated struct RemoteReferenceDataClient: ReferenceDataFetching {
         }
     }
 
-    /// Maps an HTTP status code to `APIError`, or does nothing for `2xx`.
-    private static func throwIfError(for statusCode: Int) throws {
-        switch statusCode {
-        case 200..<300:
-            return
-        case 401:
-            throw APIError.unauthorized
-        case 403:
-            throw APIError.forbidden
-        case 404:
-            throw APIError.notFound
-        case 400..<500:
-            throw APIError.transport(code: statusCode)
-        case 500..<600:
-            throw APIError.server(status: statusCode)
-        default:
-            throw APIError.transport(code: statusCode)
+    /// Best-effort decode of the API's standard error envelope (`{ "error": { ... } }`) from a
+    /// non-2xx response body. Returns `nil` — never throws — when the body is empty or doesn't
+    /// match the envelope shape, so a malformed error body can never mask the real HTTP-status
+    /// failure (see ADR-0018 addendum "Simplified error model").
+    private static func decodeErrorDetails(from data: Data, decoder: JSONDecoder) -> APIErrorDetails? {
+        guard !data.isEmpty else { return nil }
+        struct ErrorEnvelope: Decodable {
+            let error: APIErrorDetails
         }
+        return try? decoder.decode(ErrorEnvelope.self, from: data).error
     }
 
     private static func mapURLError(_ error: URLError) -> APIError {
@@ -194,7 +208,7 @@ nonisolated struct RemoteReferenceDataClient: ReferenceDataFetching {
         case .timedOut:
             return .timedOut
         default:
-            return .transport(code: error.errorCode)
+            return .response(status: error.errorCode, details: nil)
         }
     }
 }
@@ -208,6 +222,7 @@ nonisolated struct StubReferenceDataClient: ReferenceDataFetching {
     var speciesItem: SpeciesOption?
     var ports: [PortOption]
     var portItem: PortOption?
+    var manifest: ReferenceDataManifest?
     var error: APIError?
 
     init(
@@ -217,6 +232,7 @@ nonisolated struct StubReferenceDataClient: ReferenceDataFetching {
         speciesItem: SpeciesOption? = nil,
         ports: [PortOption] = [],
         portItem: PortOption? = nil,
+        manifest: ReferenceDataManifest? = nil,
         error: APIError? = nil
     ) {
         self.vessels = vessels
@@ -225,6 +241,7 @@ nonisolated struct StubReferenceDataClient: ReferenceDataFetching {
         self.speciesItem = speciesItem
         self.ports = ports
         self.portItem = portItem
+        self.manifest = manifest
         self.error = error
     }
 
@@ -236,7 +253,7 @@ nonisolated struct StubReferenceDataClient: ReferenceDataFetching {
     func fetchVessel(id: String) async throws -> VesselOption {
         if let error { throw error }
         if let vessel { return vessel }
-        throw APIError.notFound
+        throw APIError.response(status: 404, details: nil)
     }
 
     func fetchSpecies() async throws -> [SpeciesOption] {
@@ -247,7 +264,7 @@ nonisolated struct StubReferenceDataClient: ReferenceDataFetching {
     func fetchSpecies(id: String) async throws -> SpeciesOption {
         if let error { throw error }
         if let speciesItem { return speciesItem }
-        throw APIError.notFound
+        throw APIError.response(status: 404, details: nil)
     }
 
     func fetchPorts() async throws -> [PortOption] {
@@ -258,6 +275,12 @@ nonisolated struct StubReferenceDataClient: ReferenceDataFetching {
     func fetchPort(id: String) async throws -> PortOption {
         if let error { throw error }
         if let portItem { return portItem }
-        throw APIError.notFound
+        throw APIError.response(status: 404, details: nil)
+    }
+
+    func fetchManifest() async throws -> ReferenceDataManifest {
+        if let error { throw error }
+        if let manifest { return manifest }
+        throw APIError.response(status: 503, details: nil)
     }
 }

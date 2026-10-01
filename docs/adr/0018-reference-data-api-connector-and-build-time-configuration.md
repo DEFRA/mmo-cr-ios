@@ -12,12 +12,12 @@ read-only collections (vessels today; ports/gear/species are expected to follow 
 later) at:
 
 ```
-GET {baseURL}/api/v1/reference-data/{dataset}?view=mobile
+GET {baseURL}/api/v1/reference-data/{dataset}
 Header: Authorization: Bearer <token>
 ```
 
-(plus a single-item route, `GET {baseURL}/api/v1/reference-data/{dataset}/{itemId}?view=mobile`,
-returning a bare item rather than the collection envelope — see the correction note below), verified
+(plus a single-item route, `GET {baseURL}/api/v1/reference-data/{dataset}/{itemId}`,
+returning a bare item rather than the collection envelope — see the correction notes below), verified
 by hand against a locally-running instance at `http://localhost:3002`. This ADR records
 how the app talks to it: a typed, testable `async`/`await` connector, how the base URL is supplied
 per build configuration, and how a bearer token is threaded through pending real authentication.
@@ -81,14 +81,19 @@ The API wraps every dataset in the same envelope shape (`dataset`, `collectionId
 + domain mapping, not a new networking shape. `ReferenceDataset` is a `String`-backed enum
 currently containing only `.vessels`; there is deliberately no "list collections" endpoint to
 model, since the live contract doesn't expose one. The single-item route (`GET
-.../{dataset}/{itemId}?view=mobile`) returns a **bare** item, not an envelope, and is modelled
+.../{dataset}/{itemId}`) returns a **bare** item, not an envelope, and is modelled
 separately rather than forced through the same decoder.
 
 `VesselOption` (the domain-facing value type, alongside `PortOption`/`GearOption` in
-`Features/Common/Data/`) requires only `id` and `name`; `pln`, `cfr`, `displayName` and
-`lengthOverallMetres` are all optional, matching the real API which can omit any of them.
-`displayName` is derived (`"NAME PLN"`, falling back to `NAME`) when the API doesn't supply one, so
-call sites always have a single display string to render.
+`Features/Common/Data/`) models the API's **canonical** view (see the second correction note
+below). It requires only `id` and `name`; every other field — `namePln`, the nested `identifiers`
+(`cfr`, `uvi`, `mmsi`, `ircs`, `externalMark`, `registrationNumber`), `typeCode`,
+`registrationCountryCode`, `lengthOverallMetres`, `status`, `activeFrom`, `activeTo` — is optional,
+matching the real API which can omit or `null` any of them. The wire DTO's nested `identifiers`
+object is **flattened** into top-level properties on `VesselOption` for convenience at call sites.
+`displayName` is always populated: the API's `namePln` when supplied, otherwise derived as
+`"NAME EXTERNAL_MARK"`, falling back to `NAME` alone — so call sites always have a single display
+string to render.
 
 ### 3. Build-time `APIBaseURL` via `.xcconfig`, aligned with the frozen Option-B decision
 
@@ -228,14 +233,15 @@ misread as evidence that a collection is addressed by a `{collectionId}` path se
 
 **Verified live contract (corrected):**
 
-- Collection: `GET {baseURL}/api/v1/reference-data/{dataset}?view=mobile` → the
+- Collection: `GET {baseURL}/api/v1/reference-data/{dataset}` → the
   `ReferenceDataEnvelope` (unchanged shape, still carries `collectionId` as a response field).
-- Single item: `GET {baseURL}/api/v1/reference-data/{dataset}/{itemId}?view=mobile` → a **bare**
+- Single item: `GET {baseURL}/api/v1/reference-data/{dataset}/{itemId}` → a **bare**
   item object (not an envelope). Unknown `itemId` → `404` with an `{"error": {"code","message",
   "traceId","retryable"}}` body.
 - Omitting `Authorization` entirely → `401`. An invalid bearer token value currently → `200` on
   the local stub (it does not validate token values — not proof that auth is enforced).
-- `view` defaults to `canonical` when omitted; the app always sends `view=mobile` explicitly.
+- `view` defaults to `canonical` when omitted — see the second correction note below for why the
+  app relies on that default and sends no `view` parameter at all.
 
 **What changed in the code:** `makeReferenceDataRequest` (§1/§2) dropped its `collectionId`
 parameter and now builds the collection URL with no extra path segment; a new
@@ -244,6 +250,52 @@ parameter and now builds the collection URL with no extra path segment; a new
 private decode path in `RemoteReferenceDataClient` decodes the bare single-item response instead
 of forcing it through the envelope decoder. The HTTP-status/`URLError` → `APIError` mapping in §6
 was **not** affected by this correction and required no changes.
+
+## Correction (post-acceptance): the connector uses the canonical view, not `view=mobile`
+
+This ADR originally documented every request as carrying `?view=mobile`, and `VesselDTO` was
+modelled on that reduced shape (flat `pln`, `cfr`, `displayName` fields). **The connector no longer
+sends a `view` parameter at all**, and the DTO/domain model were rebuilt around the API's default
+**canonical** view.
+
+**Decision:** omit `view` entirely and consume the canonical shape.
+
+**Rationale:** the canonical view is a strict **superset** of the mobile view. The mobile view
+discards `uvi`, `mmsi`, `ircs`, `typeCode`, `registrationCountryCode`, `status`, `activeFrom` and
+`activeTo`, none of which the app can recover without a second request. Taking the canonical shape
+keeps every field the reference data exposes available to future features (vessel detail, filtering
+by status/active date range) at no extra network cost, and removes a query parameter the app would
+otherwise have to keep in sync with the backend's view definitions.
+
+**Trade-off accepted:** the canonical payload is larger per item than the mobile view. That is
+deliberate and currently immaterial — the dataset is small, the connector is not yet on any user
+journey, and no caching/sync layer exists to size against. If payload size later matters (large
+vessel collections over poor coastal connectivity), revisiting `view=mobile` — or a server-side
+field selector — should be reconsidered **together** with the deferred offline-caching design,
+not in isolation.
+
+**Shape differences that matter (verified against the running backend):**
+
+| Mobile view | Canonical view |
+|---|---|
+| `pln` (flat) | `identifiers.externalMark` / `identifiers.registrationNumber` (nested) |
+| `cfr` (flat) | `identifiers.cfr` (nested) |
+| `displayName` (flat) | `namePln` |
+| — | `uvi`, `mmsi`, `ircs`, `typeCode`, `registrationCountryCode`, `status`, `activeFrom`, `activeTo` |
+
+⚠️ **The two shapes are not interchangeable.** Decoding a `view=mobile` response with the current
+canonical `VesselDTO` **fails silently**, not loudly: `identifiers` is absent, so every identifier
+(`cfr`, `externalMark`, …) decodes as `nil` and `displayName` degrades to the bare vessel name,
+while `id`/`name` still decode successfully. If `view=mobile` is ever reintroduced, `VesselDTO`,
+`VesselOption.init(dto:)` and both JSON fixtures must change with it.
+
+**What changed in the code:** `makeReferenceDataRequest`/`makeReferenceDataItemRequest` build URLs
+with no `queryItems`; `VesselDTO` gained `namePln`, a nested `VesselIdentifiersDTO`, `typeCode`,
+`registrationCountryCode`, `status`, `activeFrom` and `activeTo`; `VesselOption` carries all of
+them (flattening `identifiers`) and derives `displayName` from `namePln` → `"NAME EXTERNAL_MARK"` →
+`NAME`; both test fixtures were replaced with real canonical payloads captured from the running
+backend. The HTTP-status/`URLError` → `APIError` mapping in §6, the configuration mechanism (§3)
+and the token seam (§5) were **not** affected.
 
 ## References
 

@@ -11,7 +11,7 @@ implemented today (`ReferenceDataset.vessels`).
 ### Collection route
 
 ```
-GET {baseURL}/api/v1/reference-data/{dataset}?view=mobile
+GET {baseURL}/api/v1/reference-data/{dataset}
 Header: Authorization: Bearer <token>   (omitted entirely when no token is configured)
 ```
 
@@ -24,36 +24,41 @@ field inside the envelope below, never as a request path component. Returns the 
   "collectionId": "00000000-0000-4000-8000-000000000010",
   "schemaVersion": "1.0",
   "version": "local-seed-1",
-  "view": "mobile",
+  "view": "canonical",
   "total": 2,
   "items": [
     {
       "id": "00000000-0000-4000-8000-000000000011",
       "name": "ACHILLES",
-      "pln": "PH1234",
-      "cfr": "GBR000A1234",
-      "displayName": "ACHILLES PH1234",
-      "lengthOverallMetres": 8.74
-    },
-    {
-      "id": "00000000-0000-4000-8000-000000000012",
-      "name": "SEA SPRAY",
-      "pln": "BM45",
-      "cfr": "GBR000B5678",
-      "displayName": "SEA SPRAY BM45",
-      "lengthOverallMetres": 11.2
+      "namePln": "ACHILLES PH1234",
+      "identifiers": {
+        "cfr": "GBR000A1234",
+        "uvi": null,
+        "mmsi": "232001234",
+        "ircs": "MABC7",
+        "externalMark": "PH1234",
+        "registrationNumber": "PH1234"
+      },
+      "typeCode": "FISHING",
+      "registrationCountryCode": "GBR",
+      "lengthOverallMetres": 8.74,
+      "status": "active",
+      "activeFrom": "2015-03-17",
+      "activeTo": null
     }
   ]
 }
 ```
 
-Only `id` and `name` are required on a vessel item — `pln`, `cfr`, `displayName` and
-`lengthOverallMetres` may all be omitted.
+Only `id` and `name` are required on a vessel item; every other field may be omitted or `null`.
+Note the vessel identifiers (`cfr`, `uvi`, `mmsi`, `ircs`, `externalMark`, `registrationNumber`)
+are **nested** under an `identifiers` object — `VesselOption` flattens them into top-level
+properties. Unknown fields are ignored by the decoder.
 
 ### Single-item route
 
 ```
-GET {baseURL}/api/v1/reference-data/{dataset}/{itemId}?view=mobile
+GET {baseURL}/api/v1/reference-data/{dataset}/{itemId}
 Header: Authorization: Bearer <token>   (omitted entirely when no token is configured)
 ```
 
@@ -63,10 +68,21 @@ Returns a **bare** item object — **not** wrapped in the envelope above:
 {
   "id": "00000000-0000-4000-8000-000000000011",
   "name": "ACHILLES",
-  "pln": "PH1234",
-  "cfr": "GBR000A1234",
-  "displayName": "ACHILLES PH1234",
-  "lengthOverallMetres": 8.74
+  "namePln": "ACHILLES PH1234",
+  "identifiers": {
+    "cfr": "GBR000A1234",
+    "uvi": null,
+    "mmsi": "232001234",
+    "ircs": "MABC7",
+    "externalMark": "PH1234",
+    "registrationNumber": "PH1234"
+  },
+  "typeCode": "FISHING",
+  "registrationCountryCode": "GBR",
+  "lengthOverallMetres": 8.74,
+  "status": "active",
+  "activeFrom": "2015-03-17",
+  "activeTo": null
 }
 ```
 
@@ -74,8 +90,16 @@ An unknown `itemId` returns `404` with the error-response shape below.
 
 ### `view` query parameter
 
-`view` defaults to `canonical` when omitted; the app always requests `view=mobile` explicitly on
-both routes above.
+`view` defaults to `canonical` when omitted. **The app deliberately sends no `view` parameter on
+either route**, so it always receives the canonical shape — which is what `VesselDTO`/`VesselOption`
+model.
+
+The API also offers a reduced `?view=mobile` shape (flat `pln`/`cfr`/`displayName` fields, no
+`identifiers` object). The app does **not** use it: the canonical view is a superset, so taking it
+avoids losing fields (`uvi`, `mmsi`, `ircs`, `typeCode`, `status`, the active date range) that the
+mobile view omits. If you ever add `view=mobile` back, `VesselDTO` must change with it — the two
+shapes are not interchangeable, and decoding mobile JSON with the canonical DTO silently yields
+`nil` for every identifier.
 
 ### Error responses
 
@@ -107,7 +131,8 @@ app; they're documented here for anyone debugging against the raw API directly.
 ### ⚠️ Pitfall record: how the collection-id path segment got invented
 
 An earlier version of this document (and ADR-0018) claimed the collection route was
-`/api/v1/reference-data/{dataset}/{collectionId}?view=mobile`. That was **wrong**, and was
+`/api/v1/reference-data/{dataset}/{collectionId}?view=mobile`. Both the `{collectionId}`
+segment and the `view=mobile` parameter are gone. That was **wrong**, and was
 re-derived by directly probing the running backend. Root cause: the original sample `curl` used an
 unset `$VESSEL_ID` shell variable, so the URL collapsed to `.../vessels/?view=mobile` — the
 trailing slash happened to still route to the **collection** endpoint on the local stub server,

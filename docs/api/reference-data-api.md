@@ -1,15 +1,15 @@
-# Reference data API (vessels, species)
+# Reference data API (vessels, species, ports)
 
-See ADR-0018 for the full design rationale (including its dated addendum covering the `species`
-dataset). This document is the quick developer reference for running the app against a local
-reference-data backend.
+See ADR-0018 for the full design rationale (including its dated addenda covering the `species`
+and `ports` datasets). This document is the quick developer reference for running the app against
+a local reference-data backend.
 
 ## Endpoints
 
-There are **two** routes, with **two different response shapes**, modelled for two datasets today:
-`ReferenceDataset.vessels` and `ReferenceDataset.species`. Both share the same
-`ReferenceDataEnvelope`/bare-item shapes described below — only the DTO/domain type differs per
-dataset.
+There are **two** routes, with **two different response shapes**, modelled for three datasets today:
+`ReferenceDataset.vessels`, `ReferenceDataset.species` and `ReferenceDataset.ports`. All three share
+the same `ReferenceDataEnvelope`/bare-item shapes described below — only the DTO/domain type
+differs per dataset.
 
 ### Collection route
 
@@ -94,13 +94,14 @@ An unknown `itemId` returns `404` with the error-response shape below.
 ### `view` query parameter
 
 `view` defaults to `canonical` when omitted. **The app deliberately sends no `view` parameter on
-either route, for either dataset**, so it always receives the canonical shape — which is what
-`VesselDTO`/`VesselOption` and `SpeciesDTO`/`SpeciesOption` model.
+either route, for any dataset**, so it always receives the canonical shape — which is what
+`VesselDTO`/`VesselOption`, `SpeciesDTO`/`SpeciesOption` and `PortDTO`/`PortOption` all model.
 
 The API also offers a reduced `?view=mobile` shape per dataset (for vessels: flat
 `pln`/`cfr`/`displayName` fields, no `identifiers` object; for species: flat `id`/`faoCode`/
-`scientificName`/`displayName`, no `commonNames`/`localNames` arrays). The app does **not** use
-`view=mobile` for either dataset: the canonical view is a superset, so taking it avoids losing
+`scientificName`/`displayName`, no `commonNames`/`localNames` arrays; ports have not been checked
+against a `view=mobile` shape — only canonical has been verified). The app does **not** use
+`view=mobile` for any dataset: the canonical view is a superset, so taking it avoids losing
 fields (vessels: `uvi`, `mmsi`, `ircs`, `typeCode`, `status`, the active date range; species:
 `commonNames`/`localNames` beyond the single GBR entry the mobile `displayName` already picks, and
 `active`) that the mobile view omits. If you ever add `view=mobile` back for a dataset, its DTO
@@ -194,6 +195,53 @@ backwards-compatibility seam** for its persisted (`CatchRecordDraftStore`) paylo
 app's own `Codable` shape going forward, not guaranteed to decode a payload written by a previous
 version of the type. See the ADR-0018 addendum for why this was an accepted, deliberate trade-off.
 
+## Ports dataset
+
+The `ports` dataset (`ReferenceDataset.ports`) follows the exact same two routes/response shapes
+above — only the item shape differs. Verified against the local backend at
+`http://localhost:3002` (624 items in the canonical view):
+
+```json
+{
+  "dataset": "ports",
+  "collectionId": "00000000-0000-4000-8000-000000000030",
+  "schemaVersion": "1.0",
+  "version": "ports-from-excel-1",
+  "view": "canonical",
+  "total": 624,
+  "items": [
+    {
+      "id": "49e319b2-9e65-45aa-a80e-0cf4b20bfe79",
+      "code": "GBAOT",
+      "name": "Abbotsbury",
+      "countryCode": "GBR",
+      "coordinate": { "latitude": 50.6666984558105, "longitude": -2.59999990463257 },
+      "active": true
+    }
+  ]
+}
+```
+
+Only `id` and `name` are required on a port item; `code`, `countryCode`, `coordinate` and `active`
+may all be omitted or `null`. `coordinate` decodes directly into the pre-existing `PortCoordinate`
+type (see `PortOption.swift`, ADR-0004) since the API's `{ "latitude", "longitude" }` shape already
+matches it field-for-field. A small number of the 624 seeded ports (e.g. `"Fowey"`) have a `null`
+coordinate — `PortOption.coordinate` was already optional for this reason, so no further change was
+needed to tolerate it. Unknown fields are ignored by the decoder.
+
+The single-item route (`GET {baseURL}/api/v1/reference-data/ports/{itemId}`) returns the same item
+shape as above, bare (not wrapped in the envelope) — identical in structure to the vessel/species
+single-item routes.
+
+**`PortOption` predates this connector (ADR-0004) and already carries persisted drafts — unlike
+`SpeciesOption`, a backwards-compatibility seam is required.** `PortOption` gained three new fields
+sourced only from `init(dto:)`: `code`, `countryCode` and `isActive` (mapped from the API's
+`active`). All three are modelled as **`Optional` types with no non-optional default** so that
+`CatchRecordDraft` JSON persisted before this change (ADR-0014) — which has no `code`/
+`countryCode`/`isActive` keys at all — still decodes successfully via the synthesised `Codable`
+conformance, with those fields simply `nil`. See the ADR-0018 addendum for why this is the opposite
+trade-off to `SpeciesOption`'s "no migration path" decision, and why it was necessary here.
+
 ## Configuration
 
 | Info.plist key | Source | Debug value | Release value |
@@ -240,4 +288,5 @@ backend over the LAN:
 configured base URL and reports the decoded vessel count. It is **not** part of the automated
 `record-catchTests` suite (it requires a live backend) — invoke it manually while developing
 against a real backend (e.g. via Xcode's "Run Code Snippet" tooling). It is not yet updated to also
-smoke-check `fetchSpecies()`; that is left for a future change alongside this doc's step 7 note.
+smoke-check `fetchSpecies()`/`fetchPorts()`; that is left for a future change alongside this doc's
+step 7 note.

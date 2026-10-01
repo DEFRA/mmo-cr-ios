@@ -38,6 +38,14 @@ final class ReferenceDataClientTests: XCTestCase {
         loadFixture(named: "species-item-response")
     }
 
+    private func loadPortsFixture() -> Data {
+        loadFixture(named: "ports-response")
+    }
+
+    private func loadPortItemFixture() -> Data {
+        loadFixture(named: "port-item-response")
+    }
+
     private struct StaticTokenProvider: AuthTokenProviding {
         let token: String?
         func bearerToken() async throws -> String? { token }
@@ -345,6 +353,161 @@ final class ReferenceDataClientTests: XCTestCase {
 
         do {
             _ = try await sut.fetchSpecies()
+            XCTFail("Expected decoding error")
+        } catch let error as APIError {
+            guard case .decoding = error else {
+                return XCTFail("Expected .decoding, got \(error)")
+            }
+        } catch {
+            XCTFail("Expected APIError, got \(error)")
+        }
+    }
+
+    // MARK: Decoding — collection route (fetchPorts)
+
+    func test_fetchPorts_decodesFixture_intoExpectedPortOptions() async throws {
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: loadPortsFixture())
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        let ports = try await sut.fetchPorts()
+
+        XCTAssertEqual(ports.count, 3)
+        XCTAssertEqual(ports[0].id, "49e319b2-9e65-45aa-a80e-0cf4b20bfe79")
+        XCTAssertEqual(ports[0].name, "Abbotsbury")
+        XCTAssertEqual(ports[0].code, "GBAOT")
+        XCTAssertEqual(ports[0].countryCode, "GBR")
+        XCTAssertEqual(ports[0].coordinate, PortCoordinate(latitude: 50.6666984558105, longitude: -2.59999990463257))
+        XCTAssertEqual(ports[0].isActive, true)
+        XCTAssertEqual(ports[1].name, "Fowey")
+        XCTAssertNil(ports[1].coordinate, "A handful of real ports have no coordinate — must not fail to decode")
+    }
+
+    func test_fetchPorts_toleratesMinimalPort_withOnlyIdAndName() async throws {
+        let jsonString = """
+        {
+          "dataset": "ports",
+          "collectionId": "00000000-0000-4000-8000-000000000030",
+          "schemaVersion": "1.0",
+          "version": "v1",
+          "view": "canonical",
+          "total": 1,
+          "items": [ { "id": "1", "name": "MINIMAL" } ]
+        }
+        """
+        let json = Data(jsonString.utf8)
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: json)
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        let ports = try await sut.fetchPorts()
+
+        XCTAssertEqual(ports, [PortOption(id: "1", name: "MINIMAL")])
+    }
+
+    func test_fetchPorts_requestsCollectionURL_withNoItemIdSegment() async throws {
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: loadPortsFixture())
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        _ = try await sut.fetchPorts()
+
+        XCTAssertEqual(
+            httpClient.receivedRequests.first?.url?.absoluteString,
+            "http://localhost:3002/api/v1/reference-data/ports"
+        )
+    }
+
+    // MARK: Decoding — single-item route (fetchPort(id:))
+
+    func test_fetchPortItem_decodesBareItemFixture_intoExpectedPortOption() async throws {
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: loadPortItemFixture())
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        let port = try await sut.fetchPort(id: "49e319b2-9e65-45aa-a80e-0cf4b20bfe79")
+
+        XCTAssertEqual(port.id, "49e319b2-9e65-45aa-a80e-0cf4b20bfe79")
+        XCTAssertEqual(port.name, "Abbotsbury")
+        XCTAssertEqual(port.code, "GBAOT")
+    }
+
+    func test_fetchPortItem_requestsItemURL_withPercentEncodedId() async throws {
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: loadPortItemFixture())
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        _ = try await sut.fetchPort(id: "id with spaces")
+
+        XCTAssertEqual(
+            httpClient.receivedRequests.first?.url?.absoluteString,
+            "http://localhost:3002/api/v1/reference-data/ports/id%20with%20spaces"
+        )
+    }
+
+    func test_fetchPortItem_throwsNotFound_on404() async {
+        let httpClient = StubHTTPClient.statusOnly(404)
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try! makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        do {
+            _ = try await sut.fetchPort(id: "unknown-id")
+            XCTFail("Expected .notFound")
+        } catch let error as APIError {
+            XCTAssertEqual(error, .notFound)
+        } catch {
+            XCTFail("Expected APIError, got \(error)")
+        }
+    }
+
+    func test_fetchPortItem_throwsDecoding_onMalformedJSON() async {
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: Data("not json".utf8))
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try! makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        do {
+            _ = try await sut.fetchPort(id: "49e319b2-9e65-45aa-a80e-0cf4b20bfe79")
+            XCTFail("Expected decoding error")
+        } catch let error as APIError {
+            guard case .decoding = error else {
+                return XCTFail("Expected .decoding, got \(error)")
+            }
+        } catch {
+            XCTFail("Expected APIError, got \(error)")
+        }
+    }
+
+    func test_fetchPorts_throwsDecoding_onMalformedJSON() async {
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: Data("not json".utf8))
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try! makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        do {
+            _ = try await sut.fetchPorts()
             XCTFail("Expected decoding error")
         } catch let error as APIError {
             guard case .decoding = error else {

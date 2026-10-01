@@ -149,4 +149,73 @@ final class StubReferenceDataClientTests: XCTestCase {
             XCTFail("Expected APIError, got \(error)")
         }
     }
+
+    // MARK: fetchPorts
+
+    func test_fetchPorts_returnsConfiguredPorts() async throws {
+        let port = PortOption(id: "1", name: "Aberdeen")
+        let sut = StubReferenceDataClient(ports: [port])
+
+        let result = try await sut.fetchPorts()
+
+        XCTAssertEqual(result, [port])
+    }
+
+    func test_fetchPorts_throwsConfiguredError() async {
+        let sut = StubReferenceDataClient(error: .unauthorized)
+
+        do {
+            _ = try await sut.fetchPorts()
+            XCTFail("Expected an error")
+        } catch let error as APIError {
+            XCTAssertEqual(error, .unauthorized)
+        } catch {
+            XCTFail("Expected APIError, got \(error)")
+        }
+    }
+
+    func test_init_defaults_toEmptyPortsAndNoError() async throws {
+        let sut = StubReferenceDataClient()
+
+        let result = try await sut.fetchPorts()
+
+        XCTAssertTrue(result.isEmpty)
+    }
+
+    // MARK: fetchPort(id:)
+
+    func test_fetchPortItem_returnsConfiguredPort() async throws {
+        let port = PortOption(id: "1", name: "Aberdeen")
+        let sut = StubReferenceDataClient(portItem: port)
+
+        let result = try await sut.fetchPort(id: "1")
+
+        XCTAssertEqual(result, port)
+    }
+
+    func test_fetchPortItem_throwsConfiguredError() async {
+        let sut = StubReferenceDataClient(error: .unauthorized)
+
+        do {
+            _ = try await sut.fetchPort(id: "1")
+            XCTFail("Expected an error")
+        } catch let error as APIError {
+            XCTAssertEqual(error, .unauthorized)
+        } catch {
+            XCTFail("Expected APIError, got \(error)")
+        }
+    }
+
+    func test_fetchPortItem_throwsNotFound_whenNoPortConfigured() async {
+        let sut = StubReferenceDataClient()
+
+        do {
+            _ = try await sut.fetchPort(id: "unknown")
+            XCTFail("Expected .notFound")
+        } catch let error as APIError {
+            XCTAssertEqual(error, .notFound)
+        } catch {
+            XCTFail("Expected APIError, got \(error)")
+        }
+    }
 }

@@ -12,14 +12,15 @@
 
 import Foundation
 
-/// The reference-data datasets the app knows how to fetch. `vessels` and `species` are concretely
-/// modelled today; the live API's envelope shape is generic (`ReferenceDataEnvelope`), so a future
-/// dataset (ports, gear) is a new case here plus a new DTO/domain mapping — not a new networking
-/// shape. There is deliberately no "list collections" endpoint, since the live contract exposes
-/// none.
+/// The reference-data datasets the app knows how to fetch. `vessels`, `species` and `ports` are
+/// concretely modelled today; the live API's envelope shape is generic (`ReferenceDataEnvelope`),
+/// so a future dataset (gear) is a new case here plus a new DTO/domain mapping — not a new
+/// networking shape. There is deliberately no "list collections" endpoint, since the live contract
+/// exposes none.
 nonisolated enum ReferenceDataset: String, Sendable {
     case vessels
     case species
+    case ports
 }
 
 /// Builds the `URLRequest` for `GET {baseURL}/api/v1/reference-data/{dataset}` — the

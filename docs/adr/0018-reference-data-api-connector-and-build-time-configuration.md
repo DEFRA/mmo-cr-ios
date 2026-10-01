@@ -343,6 +343,66 @@ decides the caching/offline story (216 items is larger than the 2-vessel fixture
 consuming this will need to decide whether to fetch-and-cache eagerly or lazily) before wiring a
 view model to it.
 
+## Addendum (2026-10): third dataset — `ports`
+
+Extends §2 and the species addendum to a third dataset, again confirming the generic-envelope
+design held without any networking-shape change: `ReferenceDataset` gained a `.ports` case,
+`ReferenceDataFetching` gained `fetchPorts()`/`fetchPort(id:)`, and `RemoteReferenceDataClient`
+reused its existing generic `fetch<Item>`/`fetchItem<Item>` paths unchanged. See
+`docs/api/reference-data-api.md` for the full wire shape, verified live against the local backend
+(624 items, `collectionId` `00000000-0000-4000-8000-000000000030`, `version`
+`"ports-from-excel-1"`).
+
+**`ports` predates this connector — unlike `species`, it reuses and extends an existing ADR-0004
+domain type.** `PortOption` already existed (ADR-0004) for the bundled-GeoJSON port search and
+favourites providers, with only `id`, `name` and an optional `coordinate`. Rather than introduce a
+parallel `PortOption`-like type for the API-sourced shape, `PortDTO.init(dto:)` maps into the
+**same** `PortOption`, which gained three further fields sourced only from the API: `code`,
+`countryCode` and `isActive`.
+
+**Deliberate alignment with `VesselOption`'s precedent, not `SpeciesOption`'s: a backwards-compatibility
+seam is required here.** `PortOption` is already persisted inside `CatchRecordDraftStore`'s
+JSON-encoded `CatchRecordDraftPayload` (ADR-0014), predating this connector by some margin — so,
+unlike the species addendum's accepted break, previously-persisted drafts **must** continue to
+decode. The three new fields are therefore modelled as **`Optional` types with no non-optional
+default** (`code: String?`, `countryCode: String?`, `isActive: Bool?`), never as non-optional
+properties with a `= false`/`= true` default — the species addendum already established
+empirically that Swift's synthesised `Decodable` does not consult a property's default value for a
+missing key, so a non-optional default would have broken exactly the drafts this decision protects.
+A persisted payload predating these fields decodes with all three simply `nil`.
+
+**`coordinate` reuses `PortCoordinate` directly — the shapes already matched field-for-field.**
+`PortDTO.coordinate: PortCoordinate?` decodes the API's `{ "latitude", "longitude" }` object
+straight into the pre-existing ADR-0004 type with no translation step. A small number of the 624
+ports (e.g. `"Fowey"`) have a `null` coordinate on the live backend; `PortOption.coordinate` was
+already optional for exactly this reason (hand-built/demo ports with no known location), so no
+further change was needed to tolerate it.
+
+**`isActive` is left `nil`-tolerant, not defaulted true, despite every sampled item being
+`active: true`.** The 624-item sample observed during verification contained no inactive ports, but
+`active` is still modelled as an `Optional` (mirroring `SpeciesOption`'s `active` precedent in
+spirit, but via optionality here rather than a default) so a future inactive port — or a response
+omitting the field — maps to `isActive == nil` rather than silently asserting a wrong default.
+Call sites that care about active/inactive should treat `nil` as "unknown, API didn't say" and
+decide their own fallback; the connector itself does not interpret the flag.
+
+**Fixtures added, mirroring the vessel/species pattern:** `ports-response.json` (envelope, 3 items:
+one full item with an `unknownExtraField` to confirm decoder tolerance, one with a `null`
+coordinate matching the real "Fowey" case, and one minimal `{"id", "name"}`-only item) and
+`port-item-response.json` (bare item), alongside the existing vessel/species fixtures.
+`PortOptionMappingTests` mirrors `VesselOptionMappingTests`/`SpeciesOptionMappingTests` and adds a
+dedicated backwards-compatibility test asserting that pre-existing persisted JSON lacking `code`/
+`countryCode`/`isActive` keys still decodes successfully with those fields `nil`.
+`ReferenceDataClientTests`/`ReferenceDataEndpointTests`/`StubReferenceDataClientTests` each gained a
+parallel ports-dataset test group.
+
+**Still connector-only.** As with vessels and species, this addendum does **not** wire
+`fetchPorts()` into `PortSearchProviding`, `BundledPortSearchProvider`, `FavouritePortsProviding`,
+or any view model — the app's port-selection UI continues to use the bundled GeoJSON port list. A
+future change decides the caching/offline story (624 items is substantially larger than the
+species/vessel fixtures) before wiring a view model to it, and at that point should also decide
+whether/how `PortSearchProviding` itself is replaced or wrapped by the reference-data connector.
+
 ## References
 
 - Apple, *NSAllowsLocalNetworking / `NSExceptionDomains`* —
@@ -361,8 +421,8 @@ view model to it.
   distinct from the reference-data caching explicitly deferred here).
 - ADR-0016 (coverage strategy — this connector's coverage targets follow the same ≥95%
   core-logic / 100% error-handling bars).
-- `docs/api/reference-data-api.md` (developer-facing wire-shape reference for both `vessels` and
-  `species`, kept in sync with this ADR's addenda).
+- `docs/api/reference-data-api.md` (developer-facing wire-shape reference for `vessels`,
+  `species` and `ports`, kept in sync with this ADR's addenda).
 - `.github/instructions/ci-cd.instructions.md` (frozen build-time/Option-B configuration decision
   and the three-environment split this ADR does not yet implement).
 - `.github/instructions/security.instructions.md` (encryption in transit, Keychain, secrets).

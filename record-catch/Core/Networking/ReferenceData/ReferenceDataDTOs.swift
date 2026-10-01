@@ -58,3 +58,18 @@ nonisolated struct SpeciesDTO: Decodable, Sendable {
     let localNames: [SpeciesNameDTO]?
     let active: Bool?
 }
+
+/// Wire shape for a single item in the `ports` dataset's canonical view (verified against the
+/// local backend at `http://localhost:3002`, 624 items). Only `id` and `name` are required; every
+/// other field may be omitted or `null` to match the real API. `coordinate` decodes directly into
+/// the existing `PortCoordinate` type (see `PortOption.swift`) since the API's `{latitude,
+/// longitude}` shape already matches it field-for-field — a handful of items (e.g. "Fowey") have a
+/// `null` coordinate.
+nonisolated struct PortDTO: Decodable, Sendable {
+    let id: String
+    let name: String
+    let code: String?
+    let countryCode: String?
+    let coordinate: PortCoordinate?
+    let active: Bool?
+}

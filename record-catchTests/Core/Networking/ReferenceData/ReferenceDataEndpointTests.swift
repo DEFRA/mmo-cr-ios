@@ -152,4 +152,33 @@ final class ReferenceDataEndpointTests: XCTestCase {
             "http://localhost:3002/api/v1/reference-data/species/5E9E48CF-7BCE-4653-ABA9-9F54591CC814"
         )
     }
+
+    // MARK: Ports dataset
+
+    func test_makeRequest_buildsExpectedURL_forPortsDataset() {
+        let request = makeReferenceDataRequest(
+            baseURL: baseURL,
+            dataset: .ports,
+            bearerToken: nil
+        )
+
+        XCTAssertEqual(
+            request.url?.absoluteString,
+            "http://localhost:3002/api/v1/reference-data/ports"
+        )
+    }
+
+    func test_makeItemRequest_buildsExpectedURL_forPortsDataset() {
+        let request = makeReferenceDataItemRequest(
+            baseURL: baseURL,
+            dataset: .ports,
+            itemId: "49e319b2-9e65-45aa-a80e-0cf4b20bfe79",
+            bearerToken: nil
+        )
+
+        XCTAssertEqual(
+            request.url?.absoluteString,
+            "http://localhost:3002/api/v1/reference-data/ports/49e319b2-9e65-45aa-a80e-0cf4b20bfe79"
+        )
+    }
 }

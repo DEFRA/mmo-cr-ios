@@ -56,8 +56,8 @@ def sync_signing(app_identifier, api_key)
   )
   # Match reports success even when the private key fails to import; catch it here, not deep inside xcodebuild.
   if sh("security", "find-identity", "-v", "-p", "codesigning", log: false).include?("0 valid identities found")
-    UI.user_error!("Signing certificate installed without its private key: the .p12 in the Match repo " \
-                   "must have an empty password")
+    UI.user_error!("Signing certificate installed without its private key: the key in the Match repo must be an " \
+                   "unencrypted PEM key")
   end
   (lane_context[SharedValues::MATCH_PROVISIONING_PROFILE_MAPPING] || {})[app_identifier] ||
     ENV.fetch("sigh_#{app_identifier}_appstore_profile-name")
@@ -276,6 +276,8 @@ platform :ios do
       app_identifier: app[:app_identifier],
       distribute_external: true,
       groups: groups,
+      # Shown to external testers as "What to Test"; Apple requires it for external distribution.
+      changelog: "Version #{plist_value(app_plist, 'CFBundleShortVersionString')} (#{external_build})",
       notify_external_testers: true,
       skip_waiting_for_build_processing: false
     )

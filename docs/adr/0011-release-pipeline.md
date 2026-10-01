@@ -80,10 +80,15 @@ a `MATCH_PASSWORD` passphrase and stored in the **private** repo
   because GitHub will not accept the same key on two repositories; `actions/checkout` uses the
   `GITHUB_TOKEN`, so there is no conflict.
 - **CI never mints credentials.** `setup_ci` creates an isolated temporary keychain (`fastlane_tmp_keychain`)
-  and `match(readonly: true)` only fetches existing assets. Certificate/profile creation and renewal are a
-  deliberate, local act by a signing administrator holding Apple Developer App Manager rights and write
-  access to the signing repo (`bundle exec fastlane match appstore`). A `certificates` lane exists so
-  developers can sync read-only.
+  and `match(readonly: true)` only fetches existing assets. All three apps share the team's single Apple
+  Distribution certificate; each app has its own App Store profile. Adding an app's profile
+  (`bundle exec fastlane match appstore --app_identifier <bundle-id>`) is a deliberate, local act by a signing
+  administrator holding Apple Developer App Manager rights and write access to the signing repo; Match never
+  creates a certificate. A `certificates` lane exists so developers can sync read-only.
+- The certificate's private key is stored as an **unencrypted PEM RSA key** (the format Fastlane itself
+  writes, under a `.p12` file name). `match` installs it with an empty password, and macOS rejects
+  OpenSSL-made PKCS#12 files that have an empty password. The release lane fails fast if a certificate
+  installs without its private key.
 - The provisioning profile name is taken from Match's
   `SharedValues::MATCH_PROVISIONING_PROFILE_MAPPING` (falling back to sigh's env var) and passed to
   `build_app` as `PROVISIONING_PROFILE_SPECIFIER` plus the `export_options` mapping, so no profile name is
@@ -95,9 +100,9 @@ has been removed, together with its `BUILD_CERTIFICATE_BASE64`, `P12_PASSWORD`,
 `BUILD_PROVISION_PROFILE_BASE64`, `KEYCHAIN_PASSWORD` and `PROVISIONING_PROFILE_NAME` secrets. Only the
 release job receives signing secrets; PR CI never does.
 
-The one-off administrator procedure for populating the store — GitHub SSH access, converting the existing
-certificate to DER and running `fastlane match import` — is documented in
-[Fastlane Match — importing existing signing assets](../release/fastlane-match-signing.md).
+Every administrator procedure is documented step by step, with the reason for each step, in the
+[Fastlane Match signing runbook](../release/fastlane-match-signing.md). It covers importing the existing
+certificate and key into an empty store, adding the Test and Prod profiles, and replacing a stored key.
 
 ## Consequences
 

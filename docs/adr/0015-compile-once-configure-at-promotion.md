@@ -99,6 +99,23 @@ that App Store Connect accepts an edited-archive export. If it is rejected, the 
 The Dev demo keeps build and promotion in one run for convenience; Test and Prod promotions use the separate
 `ios-promote.yml` described above.
 
+## Planned follow-up: a GitHub Release per Prod TestFlight stage
+
+Not implemented yet — to be added with the Prod jobs. CI only creates tags; the release pipeline will record each
+Prod TestFlight distribution as a GitHub Release, created as the job's last step **after** the upload succeeds:
+
+| Stage | Build | Tag | Release | Marked as |
+|---|---|---|---|---|
+| Prod → internal TestFlight (UAT) | `N` | `v<marketing>-BUILD_<N>` (created by CI) | `v<marketing> (<N>) — UAT` | Pre-release |
+| Prod → external TestFlight (prod candidate) | `N.1` | `v<marketing>-BUILD_<N>.1` on the same commit (created by the release step) | `v<marketing> (<N>.1) — Prod candidate` | Pre-release |
+| App Store submission | same `N.1` | — | the `N.1` release | Full release, marked **Latest** |
+
+- Notes: changes since the previous release tag plus app, version, build, channel, commit and workflow-run link.
+  No backend URLs and no IPA attached (public repository).
+- Idempotent on re-run (skip if the release exists); only these jobs get `contents: write`.
+- `validate-release-tag.sh` already rejects `.1` tags, so a promotion tag can never be released again.
+- If the `v*` tag ruleset restricts tag creation, the release workflow needs a bypass to create the `.1` tag.
+
 ## Sources
 
 - GitHub Actions limits (35-day run, 30-day approval): https://docs.github.com/en/actions/reference/limits

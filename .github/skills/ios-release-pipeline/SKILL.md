@@ -103,7 +103,9 @@ source of truth; wire it as a required check on `main`.
   - `submit_appstore` — submit the **Prod** app's `N.1` upload for review with **phased release** on.
     Uploading, submitting for review and releasing are separate actions.
 - **Signing:** implement whichever the ADR selected (Match → manual `.p12` → Xcode Cloud managed signing).
-  If Match, add a `Matchfile` and use a read-only, encrypted cert repo covering the **three** bundle IDs;
+  If Match, add a `Matchfile` and use a read-only, encrypted cert repo covering the **three** bundle IDs, with
+  one shared team distribution certificate (key stored as unencrypted PEM) and a Match-generated profile per
+  bundle ID (see `docs/release/fastlane-match-signing.md`);
   if manual, import a base64 `.p12` + profile into a temporary keychain deleted at job end. Either way use
   the **App Store Connect API key**, never Apple ID + password, and never commit signing assets.
 

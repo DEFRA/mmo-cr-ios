@@ -32,7 +32,7 @@ assignment to groups is managed outside the pipeline.
 | Internal TestFlight group (members need App Store Connect roles; max 100) | Done | To do | To do |
 | External TestFlight group(s) + Beta App Review information | n/a | To do | To do |
 | App Store listing, privacy details, phased release | n/a | n/a | To do |
-| Match App Store profile (signing admin runs `bundle exec fastlane match appstore` for the new identity) | Done | To do | To do |
+| Match App Store profile ([signing runbook](fastlane-match-signing.md#part-b--add-a-new-app-to-the-store-test-prod), Part B) | Done | To do | To do |
 
 ## One-off setup per GitHub Environment
 
@@ -77,6 +77,11 @@ After approval E, the same `N.1` upload is submitted for review with phased rele
 
 **How a tester confirms their backend.** The app logs its backend URL, version, build and commit at every launch
 (shareable via the in-app diagnostics log). Build `N` = internal backend, `N.1` = external backend.
+
+**Planned: GitHub Releases for Prod (not yet implemented).** When the Prod jobs land, each successful Prod
+TestFlight upload will also create a GitHub Release: build `N` as *UAT* (pre-release, existing tag) and build `N.1`
+as *Prod candidate* (pre-release, new tag `v<marketing>-BUILD_<N>.1`), with the `N.1` release becoming the full
+*Latest* release on App Store submission. Details: ADR-0015, "Planned follow-up".
 
 ## Revisit when the mapping is confirmed
 

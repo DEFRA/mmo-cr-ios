@@ -1,12 +1,15 @@
-# Reference data API (vessels)
+# Reference data API (vessels, species)
 
-See ADR-0018 for the full design rationale. This document is the quick developer reference for
-running the app against a local reference-data backend.
+See ADR-0018 for the full design rationale (including its dated addendum covering the `species`
+dataset). This document is the quick developer reference for running the app against a local
+reference-data backend.
 
 ## Endpoints
 
-There are **two** routes, with **two different response shapes**. Only the `vessels` dataset is
-implemented today (`ReferenceDataset.vessels`).
+There are **two** routes, with **two different response shapes**, modelled for two datasets today:
+`ReferenceDataset.vessels` and `ReferenceDataset.species`. Both share the same
+`ReferenceDataEnvelope`/bare-item shapes described below — only the DTO/domain type differs per
+dataset.
 
 ### Collection route
 
@@ -91,15 +94,18 @@ An unknown `itemId` returns `404` with the error-response shape below.
 ### `view` query parameter
 
 `view` defaults to `canonical` when omitted. **The app deliberately sends no `view` parameter on
-either route**, so it always receives the canonical shape — which is what `VesselDTO`/`VesselOption`
-model.
+either route, for either dataset**, so it always receives the canonical shape — which is what
+`VesselDTO`/`VesselOption` and `SpeciesDTO`/`SpeciesOption` model.
 
-The API also offers a reduced `?view=mobile` shape (flat `pln`/`cfr`/`displayName` fields, no
-`identifiers` object). The app does **not** use it: the canonical view is a superset, so taking it
-avoids losing fields (`uvi`, `mmsi`, `ircs`, `typeCode`, `status`, the active date range) that the
-mobile view omits. If you ever add `view=mobile` back, `VesselDTO` must change with it — the two
-shapes are not interchangeable, and decoding mobile JSON with the canonical DTO silently yields
-`nil` for every identifier.
+The API also offers a reduced `?view=mobile` shape per dataset (for vessels: flat
+`pln`/`cfr`/`displayName` fields, no `identifiers` object; for species: flat `id`/`faoCode`/
+`scientificName`/`displayName`, no `commonNames`/`localNames` arrays). The app does **not** use
+`view=mobile` for either dataset: the canonical view is a superset, so taking it avoids losing
+fields (vessels: `uvi`, `mmsi`, `ircs`, `typeCode`, `status`, the active date range; species:
+`commonNames`/`localNames` beyond the single GBR entry the mobile `displayName` already picks, and
+`active`) that the mobile view omits. If you ever add `view=mobile` back for a dataset, its DTO
+must change with it — the two shapes are not interchangeable, and decoding mobile JSON with the
+canonical DTO silently yields `nil`/empty for every field the mobile shape flattens away.
 
 ### Error responses
 
@@ -140,6 +146,53 @@ which was misread as evidence of a `{collectionId}` path segment. There is no su
 `collectionId` is a response field only. If you're tempted to re-derive the contract from a curl
 transcript, watch out for exactly this: an empty/unset path variable silently producing a
 "working" URL that isn't the one you think it is.
+
+## Species dataset
+
+The `species` dataset (`ReferenceDataset.species`) follows the exact same two routes/response
+shapes above — only the item shape differs. Verified against the local backend at
+`http://localhost:3002` (216 items in the canonical view):
+
+```json
+{
+  "dataset": "species",
+  "collectionId": "00000000-0000-4000-8000-000000000040",
+  "schemaVersion": "1.0",
+  "version": "species-excel-1",
+  "view": "canonical",
+  "total": 216,
+  "items": [
+    {
+      "id": "5E9E48CF-7BCE-4653-ABA9-9F54591CC814",
+      "faoCode": "QSC",
+      "scientificName": "Aequipecten opercularis",
+      "commonNames": [
+        { "id": "84ac2d6c-3563-5cc9-9009-b0738509d29a", "countryCode": "GBR", "name": "Queen scallop" }
+      ],
+      "localNames": [],
+      "active": true
+    }
+  ]
+}
+```
+
+Only `id` is required on a species item; every other field may be omitted or `null`. Unlike
+vessels, the API has **no top-level display name** for a species — `commonNames`/`localNames` are
+arrays of `{ id, countryCode, name }` entries (see `SpeciesNameDTO`), and `SpeciesOption.init(dto:)`
+derives a single `name` of the form `"Common name (FAOCODE)"`: it prefers the first `GBR`
+`commonNames` entry, falling back to the first entry of any country, then `scientificName`, then
+`id` — so every mapped species always has a non-empty name. `active` defaults to `true` when the
+API omits it, matching its own observed default on the local stub (every one of the 216 seeded
+items is `"active": true`).
+
+The single-item route (`GET {baseURL}/api/v1/reference-data/species/{itemId}`) returns the same
+item shape as above, bare (not wrapped in the envelope) — identical in structure to the vessel
+single-item route.
+
+**Note on `SpeciesOption`'s `Codable` shape:** unlike `VesselOption`, `SpeciesOption` has **no
+backwards-compatibility seam** for its persisted (`CatchRecordDraftStore`) payload — it is this
+app's own `Codable` shape going forward, not guaranteed to decode a payload written by a previous
+version of the type. See the ADR-0018 addendum for why this was an accepted, deliberate trade-off.
 
 ## Configuration
 
@@ -186,4 +239,5 @@ backend over the LAN:
 `DEBUG`-only `verifyReferenceDataConnectivity()` function that performs one real call against the
 configured base URL and reports the decoded vessel count. It is **not** part of the automated
 `record-catchTests` suite (it requires a live backend) — invoke it manually while developing
-against a real backend (e.g. via Xcode's "Run Code Snippet" tooling).
+against a real backend (e.g. via Xcode's "Run Code Snippet" tooling). It is not yet updated to also
+smoke-check `fetchSpecies()`; that is left for a future change alongside this doc's step 7 note.

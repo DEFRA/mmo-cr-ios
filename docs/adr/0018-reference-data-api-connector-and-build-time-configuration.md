@@ -297,6 +297,52 @@ them (flattening `identifiers`) and derives `displayName` from `namePln` → `"N
 backend. The HTTP-status/`URLError` → `APIError` mapping in §6, the configuration mechanism (§3)
 and the token seam (§5) were **not** affected.
 
+## Addendum (2026-10): second dataset — `species`
+
+Extends §2 ("A generic envelope, one concrete dataset") to a second dataset, confirming the
+generic-envelope design held without any networking-shape change — exactly as predicted:
+`ReferenceDataset` gained a `.species` case, `ReferenceDataFetching` gained
+`fetchSpecies()`/`fetchSpecies(id:)`, and `RemoteReferenceDataClient` reused its existing generic
+`fetch<Item>`/`fetchItem<Item>` paths unchanged. See `docs/api/reference-data-api.md` for the full
+wire shape, verified live against the local backend (216 items).
+
+**`SpeciesOption` has no top-level API name, unlike `VesselOption`.** The API models a species'
+display text only via `commonNames`/`localNames` arrays (`{ id, countryCode, name }` entries — see
+`SpeciesNameDTO`), not a flat field. `SpeciesOption.init(dto:)` derives a single `name` of the form
+`"Common name (FAOCODE)"`, preferring the first `GBR` common name, then falling back to the first
+entry of any country, then `scientificName`, then `id` — preserving the `"Common name (CODE)"` form
+the app's existing stubbed species list and UI tests already assume.
+
+**Deliberate, accepted break from `VesselOption`'s precedent: no backwards-compatibility seam.**
+`VesselOption` is not currently persisted anywhere in the app. `SpeciesOption`, by contrast, is
+already persisted inside `CatchRecordDraftStore`'s JSON-encoded `CatchRecordDraftPayload` (see
+ADR-0014) via its synthesised `Codable` conformance. Widening `SpeciesOption` with new
+non-optional-with-default fields (e.g. `isActive: Bool`) means **Swift's synthesised `Decodable`
+does not consult a property's default value for a missing key** — verified empirically (a missing
+key throws `DecodingError.keyNotFound` even when the property declares `= true`), not merely
+assumed. The team's explicit decision for this change was: **this is the species shape going
+forward, with no migration path for previously-persisted drafts** — an unsent draft saved by an
+older build of the app will fail to decode on this version and silently resume as a blank journey
+(see `DraftActionViewModel.resumeDraft()`'s `try? await draftStore.loadDraft(...)`, which already
+treats "no payload" and "failed to decode a payload" identically). This was assessed as acceptable
+pre-release (no production users yet) and is recorded here rather than silently shipped. If
+`SpeciesOption`'s wire/persisted shape must change again after real users carry persisted drafts,
+revisit this decision — a hand-written `init(from:)` with `decodeIfPresent` defaults (the pattern
+rejected here) is the fallback if backwards compatibility is ever required.
+
+**Fixtures added, mirroring the vessel pattern:** `species-response.json` (envelope, 3 items
+including one minimal `{"id": ...}` item) and `species-item-response.json` (bare item) alongside
+the existing `vessels-response.json`/`vessel-item-response.json`. `SpeciesOptionMappingTests`
+mirrors `VesselOptionMappingTests`; `ReferenceDataClientTests`/`ReferenceDataEndpointTests`/
+`StubReferenceDataClientTests` each gained a parallel species-dataset test group.
+
+**Still connector-only.** As with vessels, this addendum does **not** wire `fetchSpecies()` into
+`StubSpeciesSearchProvider`, `FavouriteSpeciesProviding`, or any view model — the app's
+species-selection UI continues to use its existing stubbed FAO species list. A future change
+decides the caching/offline story (216 items is larger than the 2-vessel fixture; a real screen
+consuming this will need to decide whether to fetch-and-cache eagerly or lazily) before wiring a
+view model to it.
+
 ## References
 
 - Apple, *NSAllowsLocalNetworking / `NSExceptionDomains`* —
@@ -315,6 +361,8 @@ and the token seam (§5) were **not** affected.
   distinct from the reference-data caching explicitly deferred here).
 - ADR-0016 (coverage strategy — this connector's coverage targets follow the same ≥95%
   core-logic / 100% error-handling bars).
+- `docs/api/reference-data-api.md` (developer-facing wire-shape reference for both `vessels` and
+  `species`, kept in sync with this ADR's addenda).
 - `.github/instructions/ci-cd.instructions.md` (frozen build-time/Option-B configuration decision
   and the three-environment split this ADR does not yet implement).
 - `.github/instructions/security.instructions.md` (encryption in transit, Keychain, secrets).

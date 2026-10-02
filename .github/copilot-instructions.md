@@ -144,8 +144,8 @@ only when the user asks for one. At the end of implementation, if no review has 
 
 Prefer running via fastlane once configured. Common commands:
 
-- Build: `xcodebuild build -scheme <Scheme> -destination 'platform=iOS Simulator,name=iPhone 15'`
-- Test: `xcodebuild test -scheme <Scheme> -destination 'platform=iOS Simulator,name=iPhone 15'`
+- Build: `xcodebuild build -scheme <Scheme> -destination 'platform=iOS Simulator,name=iPhone 18 Pro'`
+- Test: `xcodebuild test -scheme <Scheme> -destination 'platform=iOS Simulator,name=iPhone 18 Pro'`
 - fastlane (once set up): `fastlane test`, `fastlane beta`, `fastlane release`
 
 See [ci-cd instructions](.github/instructions/ci-cd.instructions.md) and the

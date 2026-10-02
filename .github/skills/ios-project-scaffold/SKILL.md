@@ -43,6 +43,6 @@ feature module that matches existing conventions.
 - [security instructions](../../instructions/security.instructions.md) (Keychain, ATS, no secrets)
 
 ## Validate
-- Project builds: `xcodebuild build -scheme <Scheme> -destination 'platform=iOS Simulator,name=iPhone 15'`.
+- Project builds: `xcodebuild build -scheme <Scheme> -destination 'platform=iOS Simulator,name=iPhone 18 Pro'`.
 - Sample tests pass: `xcodebuild test ...` or `fastlane test`.
 - Structure matches `references/project-structure.md` and any ADRs.

@@ -69,11 +69,12 @@ struct HomeView: View {
     @ViewBuilder
     private var content: some View {
         VStack(alignment: .leading, spacing: AppSpacing.large) {
-            VStack(alignment: .leading, spacing: AppSpacing.medium) {
-                ParagraphText(text: languageStore.localized("home.intro.viewSubmitted"))
-                ParagraphText(text: languageStore.localized("home.intro.selectDate"))
-                ParagraphText(text: languageStore.localized("home.intro.webOnly"))
+            
+            PrimaryButton(title: languageStore.localized("home.createRecord.button")) {
+                router.startNew()
             }
+            .accessibilityIdentifier("Home.createRecordButton")
+            ParagraphText(text: languageStore.localized("home.intro.webOnly"))
 
             recordsListSection
 
@@ -81,31 +82,31 @@ struct HomeView: View {
 
             ExpandableHelpSection(
                 title: languageStore.localized("home.help.title"),
-                accessibilityIdentifier: "Home.statusHelp",
-                items: [
-                    HelpItem(
-                        heading: languageStore.localized("home.help.unsent.heading"),
-                        description: languageStore.localized("home.help.unsent.description")
-                    ),
-                    HelpItem(
-                        heading: languageStore.localized("home.help.submitted.heading"),
-                        description: languageStore.localized("home.help.submitted.description")
-                    ),
-                    HelpItem(
-                        heading: languageStore.localized("home.help.amended.heading"),
-                        description: languageStore.localized("home.help.amended.description")
-                    ),
-                    HelpItem(
-                        heading: languageStore.localized("home.help.late.heading"),
-                        description: languageStore.localized("home.help.late.description")
-                    )
-                ]
-            )
-
-            PrimaryButton(title: languageStore.localized("home.createRecord.button")) {
-                router.startNew()
+                accessibilityIdentifier: "Home.statusHelp"
+            ) {
+                VStack(alignment: .leading, spacing: AppSpacing.medium) {
+                    HelpItemsList(items: [
+                        HelpItem(
+                            heading: languageStore.localized("home.help.unsent.heading"),
+                            description: languageStore.localized("home.help.unsent.description")
+                        ),
+                        HelpItem(
+                            heading: languageStore.localized("home.help.submitted.heading"),
+                            description: languageStore.localized("home.help.submitted.description")
+                        ),
+                        HelpItem(
+                            heading: languageStore.localized("home.help.amended.heading"),
+                            description: languageStore.localized("home.help.amended.description")
+                        ),
+                        HelpItem(
+                            heading: languageStore.localized("home.help.late.heading"),
+                            description: languageStore.localized("home.help.late.description")
+                        )
+                    ])
+                    statusHelpFootnote
+                }
             }
-            .accessibilityIdentifier("Home.createRecordButton")
+
         }
     }
 
@@ -159,7 +160,7 @@ struct HomeView: View {
         .accessibilityIdentifier("Home.records.error")
     }
 
-    /// "How to record a catch" — a richer disclosure section (multiple
+    /// "Help with catch recording" — a richer disclosure section (multiple
     /// sub-headings, paragraphs and a bullet list) explaining what/when to
     /// record and how to get help. Uses the generic `content:` initializer of
     /// `ExpandableHelpSection` since its shape doesn't fit the flat
@@ -201,6 +202,19 @@ struct HomeView: View {
             .fontWeight(.bold)
             .foregroundStyle(AppColors.textPrimary)
             .accessibilityAddTraits(.isHeader)
+    }
+
+    // TODO: The design links "Check the How to record a catch tab" — destination unresolved
+    // (no such tab exists; see docs/design-specs/home.md deviation register). Rendered as plain
+    // text until the target is confirmed, to avoid shipping a non-functional link.
+    private var statusHelpFootnote: some View {
+        ParagraphText(
+            text: String(
+                format: languageStore.localized("home.help.footnote.body"),
+                languageStore.localized("home.help.footnote.link")
+            )
+        )
+        .accessibilityIdentifier("Home.statusHelp.footnote")
     }
 
     /// Renders a simple bullet list, matching the established "•" + text row

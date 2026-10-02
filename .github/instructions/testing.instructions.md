@@ -52,7 +52,7 @@ Write tests alongside the code (same change, not a follow-up), and run the full 
 
 ## Running
 
-- Local/CI: `xcodebuild test -scheme <Scheme> -destination 'platform=iOS Simulator,name=iPhone 15'`
+- Local/CI: `xcodebuild test -scheme <Scheme> -destination 'platform=iOS Simulator,name=iPhone 18 Pro'`
   (or `fastlane test`). Every PR runs build + test + lint + SonarCloud before merge.
 - Device coverage: also validate on a **representative range of real devices** and current + latest iOS
   versions per DEFRA mobile standards; enrol a device in Apple beta programmes to catch upcoming issues.

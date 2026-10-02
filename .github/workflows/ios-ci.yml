@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       publish_release_tag:
-        description: "Publish release tag v<marketing>-BUILD_<build> once CI passes (does not start a release)"
+        description: "Publish release tag after CI passes"
         type: boolean
         default: false
   merge_group:

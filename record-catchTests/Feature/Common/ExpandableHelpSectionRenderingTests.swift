@@ -15,7 +15,7 @@ private struct ExpandableHelpSectionHost: View {
     }
 
     var body: some View {
-        ExpandableHelpSection(title: "Understanding catch record statuses", accessibilityIdentifier: accessibilityIdentifier) {
+        ExpandableHelpSection(title: "Catch record statuses", accessibilityIdentifier: accessibilityIdentifier) {
             HelpItemsList(items: [
                 HelpItem(heading: "Unsent:", description: "Saved on your device and not yet submitted.")
             ])
@@ -39,7 +39,7 @@ final class ExpandableHelpSectionRenderingTests: XCTestCase {
     func test_render_itemsInitializer_rendersHelpItemsList() {
         ViewRenderingHarness.render(
             ExpandableHelpSection(
-                title: "Understanding catch record statuses",
+                title: "Catch record statuses",
                 items: [
                     HelpItem(heading: "Unsent:", description: "Saved on your device and not yet submitted."),
                     HelpItem(heading: "Submitted:", description: "Received by the MMO.")

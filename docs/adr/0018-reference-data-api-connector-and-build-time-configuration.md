@@ -1,0 +1,599 @@
+# ADR 0018 — Reference data API connector and build-time configuration
+
+- Status: Accepted
+- Date: 2026-09
+- Deciders: iOS engineering
+- Context tags: networking, architecture, security, build-configuration, native-iOS
+
+## Context
+
+The app's first real backend now exists for local development: an MMO reference-data API exposing
+read-only collections (vessels today; ports/gear/species are expected to follow the same shape
+later) at:
+
+```
+GET {baseURL}/api/v1/reference-data/{dataset}
+Header: Authorization: Bearer <token>
+```
+
+(plus a single-item route, `GET {baseURL}/api/v1/reference-data/{dataset}/{itemId}`,
+returning a bare item rather than the collection envelope — see the correction notes below), verified
+by hand against a locally-running instance at `http://localhost:3002`. This ADR records
+how the app talks to it: a typed, testable `async`/`await` connector, how the base URL is supplied
+per build configuration, and how a bearer token is threaded through pending real authentication.
+
+This ADR **extends, not replaces**, ADR-0004. ADR-0004 introduced the app's first
+networking-shaped abstraction — `async throws` provider protocols (`PortSearchProviding`,
+`FavouritePortsProviding`) backed by in-memory/bundled stubs, explicitly deferring "the real
+Ports/Favourites API" to a future ADR. This is that future ADR for the **vessels** dataset: the
+first protocol-shaped seam from ADR-0004 to get a real, network-backed implementation. It does
+**not** touch the existing stub providers (`StaticVesselProvider`, `BundledPortSearchProvider`,
+`StubSpeciesSearchProvider`, `StubGearSearchProvider`) or any view/view model — those keep using
+their existing stub seams until a follow-up change wires a view model to the new connector.
+
+Per `.github/instructions/ci-cd.instructions.md`, the frozen configuration strategy for this app
+is **build-time configuration ("Option B")**: each environment is compiled with its own
+`.xcconfig`-driven settings, there is **no runtime endpoint selector**. That document also records
+the "current repo state" gap this ADR starts to close: "the app has no configuration mechanism yet
+... there are no `.xcconfig` files and no API base URL". This ADR adds the `.xcconfig` +
+`APIBaseURL` mechanism for the **existing single `record-catch` scheme's Debug/Release
+configurations only** — it does **not** introduce the three-environment/three-bundle-ID split
+that document separately describes; that remains a distinct, larger piece of work for the iOS
+DevOps track.
+
+Explicitly out of scope: offline caching, persistence, an outbound sync/write queue, and conflict
+resolution. The app's `RecordsRepository`/`CatchRecordDraft` offline-first persistence already
+exists for catch records (ADR-0014); reference-data caching for *this* connector (so a vessel list
+survives a lost connection) is deferred to its own follow-up ADR once a real screen consumes it.
+Real OAuth/OIDC authentication is similarly deferred; only a seam is introduced here.
+
+## Decision
+
+### 1. Typed, async/await `URLSession` connector behind a protocol
+
+Per Apple's networking guidance (TN3151), `URLSession` is the recommended HTTP client and has
+first-class `async`/`await` support — no third-party HTTP library is introduced.
+
+```swift
+protocol HTTPPerforming: Sendable {
+    func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse)
+}
+
+protocol ReferenceDataFetching: Sendable {
+    func fetchVessels() async throws -> [VesselOption]
+    func fetchVessel(id: String) async throws -> VesselOption
+}
+```
+
+`RemoteReferenceDataClient` implements `ReferenceDataFetching` over an injected `HTTPPerforming`,
+`APIConfiguration` and `AuthTokenProviding` — mirroring the dependency-injected, protocol-first
+shape ADR-0004 already established for `PortSearchProviding`/`FavouritePortsProviding`, so it is
+unit-testable with an in-memory `StubHTTPClient` and requires no live network in the test suite. A
+`StubReferenceDataClient` (fixture-backed) is also provided for future call sites/tests, following
+the same "real + stub pair" pattern as the existing providers. **Neither is wired into
+`AppEnvironment` or any view model in this change** — this PR is the connector only.
+
+### 2. A generic envelope, one concrete dataset
+
+The API wraps every dataset in the same envelope shape (`dataset`, `collectionId`,
+`schemaVersion`, `version`, `view`, `total`, `items`). We model that generically —
+`ReferenceDataEnvelope<Item: Decodable & Sendable>` — so adding a second dataset later is a new DTO
++ domain mapping, not a new networking shape. `ReferenceDataset` is a `String`-backed enum
+currently containing only `.vessels`; there is deliberately no "list collections" endpoint to
+model, since the live contract doesn't expose one. The single-item route (`GET
+.../{dataset}/{itemId}`) returns a **bare** item, not an envelope, and is modelled
+separately rather than forced through the same decoder.
+
+`VesselOption` (the domain-facing value type, alongside `PortOption`/`GearOption` in
+`Features/Common/Data/`) models the API's **canonical** view (see the second correction note
+below). It requires only `id` and `name`; every other field — `namePln`, the nested `identifiers`
+(`cfr`, `uvi`, `mmsi`, `ircs`, `externalMark`, `registrationNumber`), `typeCode`,
+`registrationCountryCode`, `lengthOverallMetres`, `status`, `activeFrom`, `activeTo` — is optional,
+matching the real API which can omit or `null` any of them. The wire DTO's nested `identifiers`
+object is **flattened** into top-level properties on `VesselOption` for convenience at call sites.
+`displayName` is always populated: the API's `namePln` when supplied, otherwise derived as
+`"NAME EXTERNAL_MARK"`, falling back to `NAME` alone — so call sites always have a single display
+string to render.
+
+### 3. Build-time `APIBaseURL` via `.xcconfig`, aligned with the frozen Option-B decision
+
+Two new `.xcconfig` files (`Config/Debug.xcconfig`, `Config/Release.xcconfig`) each define
+`API_BASE_URL`, wired to the app target's Debug/Release build configurations via
+`BASE_CONFIGURATION_REFERENCE`. Debug points at `http://localhost:3002` (the `$()`-escaped `//` is
+required so `.xcconfig` doesn't treat it as a comment); Release is a placeholder HTTPS value
+pending a real production endpoint. Two per-configuration `Info.plist` files
+(`Info-Debug.plist`/`Info-Release.plist`), selected via `INFOPLIST_FILE`, expose `API_BASE_URL` to
+the app as `APIBaseURL`, while `GENERATE_INFOPLIST_FILE` stays `YES` so the target's existing
+`INFOPLIST_KEY_*` build settings (Face ID usage description, scene manifest, orientations, export
+compliance) continue to merge into the generated plist rather than being silently dropped — this
+was verified against a real Debug build before the rest of this change was written (see
+Consequences).
+
+`APIConfiguration` reads `APIBaseURL` from `Bundle.main` and throws
+`APIError.invalidConfiguration` if it is missing, blank, or fails to parse as a URL. As
+defence-in-depth against a misconfigured Release build ever shipping an `http://` endpoint, it also
+**rejects any non-`https` scheme unless compiled under `#if DEBUG`** — so a plain-HTTP base URL can
+only ever be accepted in a debug build of the app, never in a release/App-Store binary, regardless
+of what a `.xcconfig` happens to contain.
+
+### 4. Debug-only, narrowly-scoped ATS exception — never `NSAllowsArbitraryLoads`
+
+`security.instructions.md` and DEFRA's mobile standards both mandate all traffic be encrypted and
+forbid disabling ATS wholesale. `http://localhost:3002` (and, for on-device testing over a LAN, the
+Mac's LAN IP) is not HTTPS, so the **Debug** `Info.plist` carries a narrowly-scoped exception:
+
+```xml
+<key>NSAppTransportSecurity</key>
+<dict>
+    <key>NSExceptionDomains</key>
+    <dict>
+        <key>localhost</key>
+        <dict>
+            <key>NSExceptionAllowsInsecureHTTPLoads</key><true/>
+        </dict>
+    </dict>
+</dict>
+```
+
+per Apple's guidance on `NSExceptionDomains` (scoped per-domain) rather than
+`NSAllowsArbitraryLoads` (global, and increasingly restricted — see the cited
+`NSAllowsLocalNetworking` documentation on iOS 17+ no longer implicitly trusting raw LAN IP
+addresses). The **Release** `Info.plist` carries **no** `NSAppTransportSecurity` key at all, so
+Release inherits the platform default of requiring HTTPS everywhere. Testing on a physical device
+against the Mac's LAN IP requires adding that specific IP as a further `NSExceptionDomains` entry
+in the **Debug** plist only (documented in `docs/api/reference-data-api.md`); per Apple's TN3179,
+the local-network *privacy* prompt (`NSLocalNetworkUsageDescription`, also Debug-only) is a
+separate mechanism from the ATS *encryption* exception and both are required for on-device testing.
+
+### 5. Token seam: DEBUG-only environment variable, no committed value, successor is Keychain
+
+There is no real auth flow yet (OAuth/OIDC is explicitly out of scope here). Rather than invent a
+throwaway login screen, we introduce the minimal seam the real implementation will later replace:
+
+```swift
+protocol AuthTokenProviding: Sendable {
+    func bearerToken() async throws -> String?
+}
+```
+
+`EnvironmentTokenProvider`, compiled only under `#if DEBUG`, reads
+`ProcessInfo.processInfo.environment["REFERENCE_DATA_API_TOKEN"]` and returns `nil` when unset or
+blank — **no default value is ever committed** to source, `.xcconfig`, or `Info.plist`, satisfying
+the DEFRA "never commit secrets" constraint even for a local-dev-only token. When the provider
+returns `nil`, the request is built **without** an `Authorization` header at all (never an empty or
+placeholder one), so an unauthenticated call reaches the real API and its `401` response surfaces
+through the normal error path as `APIError.unauthorized` — a clear, actionable failure rather than
+a silent one. The shared `record-catch` scheme declares `REFERENCE_DATA_API_TOKEN` with an
+**empty** value in its `EnvironmentVariables` so it is discoverable in Xcode's scheme editor
+without committing a value.
+
+**This is explicitly a placeholder.** `Core/Security/KeychainStoring.swift` already exists for
+persisted secrets (see ADR-0009); once real OAuth/OIDC authentication lands, the successor to
+`EnvironmentTokenProvider` is a `KeychainStoring`-backed token provider (storing/refreshing a real
+access token), and `EnvironmentTokenProvider` is deleted. No production/Release code path can reach
+`EnvironmentTokenProvider`, since it does not exist outside `#if DEBUG`.
+
+### 6. Status/error mapping is total and typed
+
+`APIError` is a `Sendable`, `Equatable` enum (`invalidConfiguration`, `offline`, `timedOut`,
+`transport(code:)`, `unauthorized`, `forbidden`, `notFound`, `server(status:)`,
+`decoding(String)`), so every failure mode the connector can produce is enumerable and testable
+rather than a stringly-typed `Error`. HTTP statuses map deterministically (`401` →
+`.unauthorized`, `403` → `.forbidden`, `404` → `.notFound`, other `4xx` → `.transport(code:)`,
+`5xx` → `.server(status:)`); `URLError.notConnectedToInternet`/`.networkConnectionLost` map to
+`.offline` (a transient, retryable condition — consistent with the app's offline-first posture,
+even though this connector does not itself implement a retry/queue) and `URLError.timedOut` to
+`.timedOut`; a `DecodingError` becomes `.decoding(String)` carrying a non-sensitive description.
+
+### 7. Structured logging, never the token or headers
+
+`NetworkLogger` logs method, path and status via `OSLog`/`Logger` (subsystem
+`uk.gov.defra.record-catch`, category `networking`), matching the DEFRA requirement to log errors
+with a configurable debug level. The request URL is logged at `privacy: .private`. Headers,
+`Authorization` values, the token itself, and response bodies are **never** logged — enforced by
+construction (the logger is only ever handed method/path/status/duration, never the `URLRequest` or
+raw response), and the log sink is injectable so a test can assert none of that data ever appears
+in emitted log lines.
+
+## Consequences
+
+- `URLSessionHTTPClient` (`timeoutIntervalForRequest = 15s`, `waitsForConnectivity = false`) is the
+  only concrete `HTTPPerforming`; failing fast when offline (rather than waiting indefinitely for
+  connectivity) matches "the app must remain useful/responsive without connectivity" — the caller
+  gets `.offline` promptly instead of a hung request.
+- The Debug/Release `Info.plist` split was verified against a real Debug build before the rest of
+  the connector was written: the existing `INFOPLIST_KEY_NSFaceIDUsageDescription`, scene manifest,
+  orientation and `ITSAppUsesNonExemptEncryption` settings all still merge correctly into the
+  generated plist alongside the new `APIBaseURL`/ATS/local-network keys, so no fallback
+  (moving those settings into the plist files directly) was needed.
+- This is a **connector only**. No view, view model, or `AppEnvironment` changes in this PR;
+  `StaticVesselProvider` and `VesselProviding` are untouched. A future change wires a real screen to
+  `ReferenceDataFetching` and, at that point, must also decide the offline caching/sync story this
+  ADR deliberately defers.
+- Developers must export `REFERENCE_DATA_API_TOKEN` in their own environment (e.g. via Xcode's
+  scheme editor or a shell export before `xcodebuild`) to authenticate against a local backend that
+  requires it; forgetting to do so produces a clear `.unauthorized` failure rather than a silent one,
+  and is documented in `docs/api/reference-data-api.md`.
+- The three-environment/three-bundle-ID build-time configuration split described in
+  `ci-cd.instructions.md` remains **not yet implemented** — this ADR only adds Debug/Release
+  `.xcconfig`s for the existing single scheme. That remains open work for the iOS DevOps track.
+
+## Correction (post-acceptance): the collection route has no `{collectionId}` path segment
+
+This ADR originally documented the collection route as
+`GET {baseURL}/api/v1/reference-data/{dataset}/{collectionId}?view=mobile`. **That was wrong**,
+discovered and corrected by directly probing the running local backend at
+`http://localhost:3002` rather than re-reading the original sample transcript.
+
+**Root cause:** the original sample `curl` command referenced an unset `$VESSEL_ID` shell
+variable. With that variable empty, the URL collapsed to `.../vessels/?view=mobile` — the
+trailing slash still routed to the **collection** endpoint on the local stub server, which was
+misread as evidence that a collection is addressed by a `{collectionId}` path segment. It isn't:
+`collectionId` is a **response** field inside the envelope, never a request path component.
+
+**Verified live contract (corrected):**
+
+- Collection: `GET {baseURL}/api/v1/reference-data/{dataset}` → the
+  `ReferenceDataEnvelope` (unchanged shape, still carries `collectionId` as a response field).
+- Single item: `GET {baseURL}/api/v1/reference-data/{dataset}/{itemId}` → a **bare**
+  item object (not an envelope). Unknown `itemId` → `404` with an `{"error": {"code","message",
+  "traceId","retryable"}}` body.
+- Omitting `Authorization` entirely → `401`. An invalid bearer token value currently → `200` on
+  the local stub (it does not validate token values — not proof that auth is enforced).
+- `view` defaults to `canonical` when omitted — see the second correction note below for why the
+  app relies on that default and sends no `view` parameter at all.
+
+**What changed in the code:** `makeReferenceDataRequest` (§1/§2) dropped its `collectionId`
+parameter and now builds the collection URL with no extra path segment; a new
+`makeReferenceDataItemRequest` builds the single-item URL; `ReferenceDataFetching` gained
+`fetchVessel(id:)` alongside the renamed `fetchVessels()` (no `collectionId` parameter); a new
+private decode path in `RemoteReferenceDataClient` decodes the bare single-item response instead
+of forcing it through the envelope decoder. The HTTP-status/`URLError` → `APIError` mapping in §6
+was **not** affected by this correction and required no changes.
+
+## Correction (post-acceptance): the connector uses the canonical view, not `view=mobile`
+
+This ADR originally documented every request as carrying `?view=mobile`, and `VesselDTO` was
+modelled on that reduced shape (flat `pln`, `cfr`, `displayName` fields). **The connector no longer
+sends a `view` parameter at all**, and the DTO/domain model were rebuilt around the API's default
+**canonical** view.
+
+**Decision:** omit `view` entirely and consume the canonical shape.
+
+**Rationale:** the canonical view is a strict **superset** of the mobile view. The mobile view
+discards `uvi`, `mmsi`, `ircs`, `typeCode`, `registrationCountryCode`, `status`, `activeFrom` and
+`activeTo`, none of which the app can recover without a second request. Taking the canonical shape
+keeps every field the reference data exposes available to future features (vessel detail, filtering
+by status/active date range) at no extra network cost, and removes a query parameter the app would
+otherwise have to keep in sync with the backend's view definitions.
+
+**Trade-off accepted:** the canonical payload is larger per item than the mobile view. That is
+deliberate and currently immaterial — the dataset is small, the connector is not yet on any user
+journey, and no caching/sync layer exists to size against. If payload size later matters (large
+vessel collections over poor coastal connectivity), revisiting `view=mobile` — or a server-side
+field selector — should be reconsidered **together** with the deferred offline-caching design,
+not in isolation.
+
+**Shape differences that matter (verified against the running backend):**
+
+| Mobile view | Canonical view |
+|---|---|
+| `pln` (flat) | `identifiers.externalMark` / `identifiers.registrationNumber` (nested) |
+| `cfr` (flat) | `identifiers.cfr` (nested) |
+| `displayName` (flat) | `namePln` |
+| — | `uvi`, `mmsi`, `ircs`, `typeCode`, `registrationCountryCode`, `status`, `activeFrom`, `activeTo` |
+
+⚠️ **The two shapes are not interchangeable.** Decoding a `view=mobile` response with the current
+canonical `VesselDTO` **fails silently**, not loudly: `identifiers` is absent, so every identifier
+(`cfr`, `externalMark`, …) decodes as `nil` and `displayName` degrades to the bare vessel name,
+while `id`/`name` still decode successfully. If `view=mobile` is ever reintroduced, `VesselDTO`,
+`VesselOption.init(dto:)` and both JSON fixtures must change with it.
+
+**What changed in the code:** `makeReferenceDataRequest`/`makeReferenceDataItemRequest` build URLs
+with no `queryItems`; `VesselDTO` gained `namePln`, a nested `VesselIdentifiersDTO`, `typeCode`,
+`registrationCountryCode`, `status`, `activeFrom` and `activeTo`; `VesselOption` carries all of
+them (flattening `identifiers`) and derives `displayName` from `namePln` → `"NAME EXTERNAL_MARK"` →
+`NAME`; both test fixtures were replaced with real canonical payloads captured from the running
+backend. The HTTP-status/`URLError` → `APIError` mapping in §6, the configuration mechanism (§3)
+and the token seam (§5) were **not** affected.
+
+## Addendum (2026-10): second dataset — `species`
+
+Extends §2 ("A generic envelope, one concrete dataset") to a second dataset, confirming the
+generic-envelope design held without any networking-shape change — exactly as predicted:
+`ReferenceDataset` gained a `.species` case, `ReferenceDataFetching` gained
+`fetchSpecies()`/`fetchSpecies(id:)`, and `RemoteReferenceDataClient` reused its existing generic
+`fetch<Item>`/`fetchItem<Item>` paths unchanged. See `docs/api/reference-data-api.md` for the full
+wire shape, verified live against the local backend (216 items).
+
+**`SpeciesOption` has no top-level API name, unlike `VesselOption`.** The API models a species'
+display text only via `commonNames`/`localNames` arrays (`{ id, countryCode, name }` entries — see
+`SpeciesNameDTO`), not a flat field. `SpeciesOption.init(dto:)` derives a single `name` of the form
+`"Common name (FAOCODE)"`, preferring the first `GBR` common name, then falling back to the first
+entry of any country, then `scientificName`, then `id` — preserving the `"Common name (CODE)"` form
+the app's existing stubbed species list and UI tests already assume.
+
+**Deliberate, accepted break from `VesselOption`'s precedent: no backwards-compatibility seam.**
+`VesselOption` is not currently persisted anywhere in the app. `SpeciesOption`, by contrast, is
+already persisted inside `CatchRecordDraftStore`'s JSON-encoded `CatchRecordDraftPayload` (see
+ADR-0014) via its synthesised `Codable` conformance. Widening `SpeciesOption` with new
+non-optional-with-default fields (e.g. `isActive: Bool`) means **Swift's synthesised `Decodable`
+does not consult a property's default value for a missing key** — verified empirically (a missing
+key throws `DecodingError.keyNotFound` even when the property declares `= true`), not merely
+assumed. The team's explicit decision for this change was: **this is the species shape going
+forward, with no migration path for previously-persisted drafts** — an unsent draft saved by an
+older build of the app will fail to decode on this version and silently resume as a blank journey
+(see `DraftActionViewModel.resumeDraft()`'s `try? await draftStore.loadDraft(...)`, which already
+treats "no payload" and "failed to decode a payload" identically). This was assessed as acceptable
+pre-release (no production users yet) and is recorded here rather than silently shipped. If
+`SpeciesOption`'s wire/persisted shape must change again after real users carry persisted drafts,
+revisit this decision — a hand-written `init(from:)` with `decodeIfPresent` defaults (the pattern
+rejected here) is the fallback if backwards compatibility is ever required.
+
+**Fixtures added, mirroring the vessel pattern:** `species-response.json` (envelope, 3 items
+including one minimal `{"id": ...}` item) and `species-item-response.json` (bare item) alongside
+the existing `vessels-response.json`/`vessel-item-response.json`. `SpeciesOptionMappingTests`
+mirrors `VesselOptionMappingTests`; `ReferenceDataClientTests`/`ReferenceDataEndpointTests`/
+`StubReferenceDataClientTests` each gained a parallel species-dataset test group.
+
+**Still connector-only.** As with vessels, this addendum does **not** wire `fetchSpecies()` into
+`StubSpeciesSearchProvider`, `FavouriteSpeciesProviding`, or any view model — the app's
+species-selection UI continues to use its existing stubbed FAO species list. A future change
+decides the caching/offline story (216 items is larger than the 2-vessel fixture; a real screen
+consuming this will need to decide whether to fetch-and-cache eagerly or lazily) before wiring a
+view model to it.
+
+## Addendum (2026-10): third dataset — `ports`
+
+Extends §2 and the species addendum to a third dataset, again confirming the generic-envelope
+design held without any networking-shape change: `ReferenceDataset` gained a `.ports` case,
+`ReferenceDataFetching` gained `fetchPorts()`/`fetchPort(id:)`, and `RemoteReferenceDataClient`
+reused its existing generic `fetch<Item>`/`fetchItem<Item>` paths unchanged. See
+`docs/api/reference-data-api.md` for the full wire shape, verified live against the local backend
+(624 items, `collectionId` `00000000-0000-4000-8000-000000000030`, `version`
+`"ports-from-excel-1"`).
+
+**`ports` predates this connector — unlike `species`, it reuses and extends an existing ADR-0004
+domain type.** `PortOption` already existed (ADR-0004) for the bundled-GeoJSON port search and
+favourites providers, with only `id`, `name` and an optional `coordinate`. Rather than introduce a
+parallel `PortOption`-like type for the API-sourced shape, `PortDTO.init(dto:)` maps into the
+**same** `PortOption`, which gained three further fields sourced only from the API: `code`,
+`countryCode` and `isActive`.
+
+**Deliberate alignment with `VesselOption`'s precedent, not `SpeciesOption`'s: a backwards-compatibility
+seam is required here.** `PortOption` is already persisted inside `CatchRecordDraftStore`'s
+JSON-encoded `CatchRecordDraftPayload` (ADR-0014), predating this connector by some margin — so,
+unlike the species addendum's accepted break, previously-persisted drafts **must** continue to
+decode. The three new fields are therefore modelled as **`Optional` types with no non-optional
+default** (`code: String?`, `countryCode: String?`, `isActive: Bool?`), never as non-optional
+properties with a `= false`/`= true` default — the species addendum already established
+empirically that Swift's synthesised `Decodable` does not consult a property's default value for a
+missing key, so a non-optional default would have broken exactly the drafts this decision protects.
+A persisted payload predating these fields decodes with all three simply `nil`.
+
+**`coordinate` reuses `PortCoordinate` directly — the shapes already matched field-for-field.**
+`PortDTO.coordinate: PortCoordinate?` decodes the API's `{ "latitude", "longitude" }` object
+straight into the pre-existing ADR-0004 type with no translation step. A small number of the 624
+ports (e.g. `"Fowey"`) have a `null` coordinate on the live backend; `PortOption.coordinate` was
+already optional for exactly this reason (hand-built/demo ports with no known location), so no
+further change was needed to tolerate it.
+
+**`isActive` is left `nil`-tolerant, not defaulted true, despite every sampled item being
+`active: true`.** The 624-item sample observed during verification contained no inactive ports, but
+`active` is still modelled as an `Optional` (mirroring `SpeciesOption`'s `active` precedent in
+spirit, but via optionality here rather than a default) so a future inactive port — or a response
+omitting the field — maps to `isActive == nil` rather than silently asserting a wrong default.
+Call sites that care about active/inactive should treat `nil` as "unknown, API didn't say" and
+decide their own fallback; the connector itself does not interpret the flag.
+
+**Fixtures added, mirroring the vessel/species pattern:** `ports-response.json` (envelope, 3 items:
+one full item with an `unknownExtraField` to confirm decoder tolerance, one with a `null`
+coordinate matching the real "Fowey" case, and one minimal `{"id", "name"}`-only item) and
+`port-item-response.json` (bare item), alongside the existing vessel/species fixtures.
+`PortOptionMappingTests` mirrors `VesselOptionMappingTests`/`SpeciesOptionMappingTests` and adds a
+dedicated backwards-compatibility test asserting that pre-existing persisted JSON lacking `code`/
+`countryCode`/`isActive` keys still decodes successfully with those fields `nil`.
+`ReferenceDataClientTests`/`ReferenceDataEndpointTests`/`StubReferenceDataClientTests` each gained a
+parallel ports-dataset test group.
+
+**Still connector-only.** As with vessels and species, this addendum does **not** wire
+`fetchPorts()` into `PortSearchProviding`, `BundledPortSearchProvider`, `FavouritePortsProviding`,
+or any view model — the app's port-selection UI continues to use the bundled GeoJSON port list. A
+future change decides the caching/offline story (624 items is substantially larger than the
+species/vessel fixtures) before wiring a view model to it, and at that point should also decide
+whether/how `PortSearchProviding` itself is replaced or wrapped by the reference-data connector.
+
+## Addendum (2026-10): manifest endpoint, simplified error model, correlation id
+
+This addendum closes out a review of the connector against the backend's authoritative
+`docs/api-reference.md`, scoped by an explicit decision on what to pick up now versus park:
+**picked up** — the manifest endpoint, the API's standard error envelope, and request
+correlation; **parked, deliberately, not omitted** — local persistence/caching, retry/backoff,
+query parameters (including pagination and the ports radius search), and `view=mobile`. Each
+parked item is recorded in its own subsection below so it reads as a decision, not a gap.
+
+### Manifest
+
+`GET {baseURL}/api/v1/reference-data/manifest` is now modelled: `ReferenceDataFetching` gained
+`fetchManifest() async throws -> ReferenceDataManifest`, implemented by both
+`RemoteReferenceDataClient` and `StubReferenceDataClient`. The manifest is a **third, distinct**
+response shape — a single bare object with no collection/item split:
+
+```json
+{
+  "manifestId": "…",
+  "version": "…",
+  "datasets": [
+    {
+      "dataset": "ports",
+      "collectionId": "00000000-0000-4000-8000-000000000030",
+      "version": "ports-from-excel-1",
+      "schemaVersion": "1.0",
+      "format": "json",
+      "itemCount": 624,
+      "lastModified": "…",
+      "url": "…"
+    }
+  ]
+}
+```
+
+`ReferenceDataManifestEntry.dataset`/`.format` are kept as plain `String`, not `ReferenceDataset`,
+so entries for datasets the app doesn't model yet (`gears`, `map-land`, `map-statistical-areas`,
+`map-ports`) decode harmlessly instead of failing the whole manifest. The manifest route is **not**
+a `ReferenceDataset` case — it isn't a dataset and has no single-item route, so it gets its own
+request builder, `makeReferenceDataManifestRequest`, rather than reusing
+`makeReferenceDataRequest`.
+
+**Intended purpose, not yet realised:** the manifest's per-dataset `version`/`itemCount`/
+`lastModified` is the intended cheap way to detect "has a dataset changed?" without downloading
+every collection — the prerequisite for any future sync strategy. **Nothing consumes it yet.**
+Like `fetchVessels()`/`fetchSpecies()`/`fetchPorts()` before it, `fetchManifest()` is
+connector-only: not wired into `AppEnvironment`, any view model, or any persistence.
+
+### `URLCache` position (and why the manifest bypasses it)
+
+`makeReferenceDataManifestRequest` sets `request.cachePolicy = .reloadIgnoringLocalCacheData`; no
+other request builder sets a cache policy, so every other route uses
+`URLSessionConfiguration.default`'s `.useProtocolCachePolicy`. This was a deliberate, not
+accidental, decision once surfaced:
+
+- The API sends `Cache-Control: public, max-age=3600` on every response. With the default policy,
+  `URLCache.shared` will — entirely inside the URL Loading System, with no code in this connector
+  aware of it — serve a cached vessels/species/ports response for up to an hour without a network
+  round-trip, including transparent `If-None-Match`/`304` revalidation when the cache entry is
+  stale (see Apple's [`URLCache`](https://developer.apple.com/documentation/foundation/urlcache)
+  and [TN3151](https://developer.apple.com/documentation/technotes/tn3151-choosing-the-right-networking-api)).
+  For the three dataset routes this is a free bandwidth win and is left as the platform default.
+- The manifest's entire purpose is to answer "has anything changed?" — serving it from an
+  hour-stale cache would silently defeat that, so it alone forces a real network round trip on
+  every call.
+- Because this is an incidental consequence of leaving `URLSessionConfiguration.default`
+  unmodified rather than a feature we built, there was a live risk it would never be written down.
+  It's recorded here specifically so a future reader doesn't mistake the dataset routes for being
+  uncached.
+
+**Correctness fix, not a new feature:** `throwIfError(for:)`'s status mapping previously let `300
+..<400` fall through to a `default:` branch, turning a stray `304` into an
+`APIError.response(status: 304, details: nil)` — a success mis-reported as a failure. In practice
+this was always latent rather than live, precisely because of the `URLCache` behaviour just
+described: `URLSession` resolves `If-None-Match` revalidation internally and hands the caller a
+`200`, so a raw `304` never reached this code path. Fixed anyway, because "latent" is not the same
+as "impossible" (e.g. a future caller supplying its own `URLSession` with a non-default cache
+policy).
+
+### Standard error envelope, parsed — and the error model collapsed
+
+The API's non-2xx responses carry `{ "error": { "code", "message", "traceId", "dataset",
+"retryable" } }`. Previously the connector mapped only the HTTP status and discarded this body
+entirely. It is now decoded into `APIErrorDetails` (`Decodable, Equatable, Sendable`) —
+**deliberately omitting `message` and `details`**: server-authored free text must never become
+user-facing copy (GOV.UK content patterns, `figma-design.instructions.md` §6) and `details` can
+echo request input back, which is not a shape we want flowing into logs or UI.
+
+Decoding the envelope made the original nine-case `APIError` worth simplifying rather than just
+extending. The backend already gives every failure a stable, machine-readable `code` and an
+explicit `retryable` flag, so separate `.unauthorized`/`.forbidden`/`.notFound`/`.transport`/
+`.server` cases were carrying no information `status` + `details?.code` don't already carry — five
+near-identical cases that would each need an identical diagnostics payload bolted on. The enum
+**collapsed from nine cases to five**:
+
+```swift
+enum APIError: Error, Sendable, Equatable {
+    case invalidConfiguration
+    case offline
+    case timedOut
+    case decoding(String)
+    case response(status: Int, details: APIErrorDetails?)
+}
+```
+
+with intent-revealing helpers (`isUnauthorized`, `isForbidden`, `isNotFound`,
+`isServiceUnavailable`, `isRetryable`, `errorCode`, `traceId`) so call sites still read naturally
+and don't pattern-match raw status integers. `isRetryable` prefers the server's own `retryable`
+flag when present, falling back to the known-transient cases (`.offline`, `.timedOut`, any `5xx`)
+otherwise — distinguishing e.g. a `503 reference_data_unavailable` from a `503
+authentication_service_unavailable`, which were previously indistinguishable.
+
+This was accepted as a source-breaking change to `APIError` on the basis that it was free: there
+were (and remain) zero production call sites, so every affected use was test-only churn. A
+malformed or absent error body decodes to `details: nil` rather than throwing or masking the real
+HTTP-status failure — `decodeErrorDetails` is `try?`-based by construction, never allowed to turn
+a real failure into a silently-swallowed one.
+
+### Correlation id (`x-cdp-request-id`)
+
+Every request built by `makeGETRequest` now carries a fresh `UUID().uuidString` on
+`x-cdp-request-id`. The backend echoes this value back as the error envelope's `traceId`,
+directly serving the DEFRA mobile requirement to let a user share diagnostics for support — a
+failure can now be correlated end-to-end from the app's log line, through
+`APIErrorDetails.traceId`, to the backend's own logs for that request. The id is generated by the
+caller and passed in as a parameter (defaulting to a fresh `UUID` per call) rather than generated
+inside the request builder itself, so it stays a pure function and is directly assertable in
+tests.
+
+`NetworkLogger`/`NetworkLogEntry` gained optional `errorCode`/`traceId` fields, populated only on
+failure from the decoded `APIErrorDetails`. Both remain non-sensitive (a machine-readable failure
+code and a correlation GUID, never request/response content), so the "never log headers, the
+token, or response bodies" guarantee from §7 is unchanged — these two fields are structurally
+incapable of carrying either.
+
+### Fetch-all, no query parameters (confirmed existing behaviour, made explicit)
+
+Every request builder in `ReferenceDataEndpoint.swift` already sent zero query parameters; this is
+now called out explicitly as a load-bearing invariant, not an incidental fact, because of how the
+backend's pagination engages. The backend treats a request as a "fetch everything" request only
+when **no** query key other than `view` is present; the moment any other parameter is added
+(`query`, `code`, `ids`, …), pagination silently engages at the backend's `defaultLimit` — which is
+exactly how omitting `view` and every other parameter gets the app all 624 ports in one response
+instead of a paginated slice. A regression test
+(`test_everyCollectionRequest_sendsNoQueryParameters`) asserts `URLComponents(url:).query == nil`
+for the vessels/item/manifest routes, so this invariant breaks loudly if it's ever accidentally
+violated by a future change.
+
+### Parked (deliberately, not omitted): persistence, retry/backoff, query parameters, `view=mobile`
+
+The following were identified during the same review and explicitly **not** picked up in this
+change, by team decision rather than oversight:
+
+- **Local persistence/caching of fetched reference data.** Still out of scope, as it has been
+  since the original ADR — the manifest above is the intended *basis* for a future
+  change-detection/sync design, not that design itself.
+- **Retry/backoff.** `isRetryable` now exists on `APIError` specifically so this is a model change,
+  not a new model, when it is eventually implemented; no retry loop exists yet.
+- **Query parameters for the reference-data service on mobile.** The app fetches each dataset in
+  full and will continue to; no filtering/search/pagination query parameters (`query`, `code`,
+  `countryCode`, `ids`, `offset`/`limit`, `sort`, `includeInactive`) are planned, including the
+  ports radius search (`latitude`/`longitude`/`radiusKm`). The "Fetch-all, no query parameters"
+  section above is the resulting invariant.
+- **`view=mobile`.** The app is **not** using it, for any dataset — the existing canonical-view
+  correction note stands unchanged. `Accept-Language` (relevant to the mobile view's species
+  `displayName` resolution) remains unsent for the same reason.
+- **GeoJSON map layers (`/map/land`, `/map/statistical-areas`, `/map/ports`) and
+  `/health/ready`.** Unimplemented and not reconsidered in this pass; the app's
+  bundled/precomputed offline map data (`scripts/generate-offline-map-data.sh`) remains the map
+  data source.
+
+## References
+
+- Apple, *NSAllowsLocalNetworking / `NSExceptionDomains`* —
+  https://developer.apple.com/documentation/bundleresources/information-property-list/nsapptransportsecurity/nsallowslocalnetworking
+- Apple, *TN3151: Choosing the right networking API* —
+  https://developer.apple.com/documentation/technotes/tn3151-choosing-the-right-networking-api
+- Apple, *TN3179: Understanding local network privacy* —
+  https://developer.apple.com/documentation/technotes/tn3179-understanding-local-network-privacy
+- DEFRA, *Mobile application standards* —
+  https://defra.github.io/software-development-standards/standards/mobile_app_standards/
+- ADR-0004 (port selection API-shaped stub seam — the async provider protocols this ADR gives its
+  first real implementation to).
+- ADR-0009 (offline biometric local re-entry; `Core/Security/KeychainStoring.swift`, the future
+  home of the real bearer token once OAuth/OIDC lands).
+- ADR-0014 (catch record draft persistence — the app's existing offline-first persistence,
+  distinct from the reference-data caching explicitly deferred here).
+- ADR-0016 (coverage strategy — this connector's coverage targets follow the same ≥95%
+  core-logic / 100% error-handling bars).
+- `docs/api/reference-data-api.md` (developer-facing wire-shape reference for `vessels`,
+  `species` and `ports`, kept in sync with this ADR's addenda).
+- `.github/instructions/ci-cd.instructions.md` (frozen build-time/Option-B configuration decision
+  and the three-environment split this ADR does not yet implement).
+- `.github/instructions/security.instructions.md` (encryption in transit, Keychain, secrets).

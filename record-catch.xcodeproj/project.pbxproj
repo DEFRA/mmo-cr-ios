@@ -27,6 +27,8 @@
 		DA6ABEDD2FFE87DC00B7A0AB /* record-catch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "record-catch.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		DA6ABEEC2FFE87DD00B7A0AB /* record-catchTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "record-catchTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		DA6ABEF62FFE87DD00B7A0AB /* record-catchUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "record-catchUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		DA707AF530668B4600D0B97C /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
+		DA707AF630668B4600D0B97C /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -107,6 +109,8 @@
 			membershipExceptions = (
 				Features/CatchRecord/README.md,
 				Features/Common/README.md,
+				"Resources/Info-Debug.plist",
+				"Resources/Info-Release.plist",
 			);
 			target = DA6ABEDC2FFE87DC00B7A0AB /* record-catch */;
 		};
@@ -166,6 +170,7 @@
 				DA6ABEEF2FFE87DD00B7A0AB /* record-catchTests */,
 				DA6ABEF92FFE87DD00B7A0AB /* record-catchUITests */,
 				DA6ABEDE2FFE87DC00B7A0AB /* Products */,
+				DA707AF430668B4600D0B97C /* Config */,
 			);
 			sourceTree = "<group>";
 		};
@@ -177,6 +182,15 @@
 				DA6ABEF62FFE87DD00B7A0AB /* record-catchUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		DA707AF430668B4600D0B97C /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				DA707AF530668B4600D0B97C /* Debug.xcconfig */,
+				DA707AF630668B4600D0B97C /* Release.xcconfig */,
+			);
+			path = Config;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -477,6 +491,7 @@
 		};
 		DA6ABF012FFE87DD00B7A0AB /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = DA707AF530668B4600D0B97C /* Debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -486,6 +501,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "record-catch/Resources/Info-Debug.plist";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "We use Face ID to let you sign back in to your catch records quickly and securely on this device.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -513,6 +529,7 @@
 		};
 		DA6ABF022FFE87DD00B7A0AB /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = DA707AF630668B4600D0B97C /* Release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -522,6 +539,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "record-catch/Resources/Info-Release.plist";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "We use Face ID to let you sign back in to your catch records quickly and securely on this device.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

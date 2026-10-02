@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	Debug-only Info.plist additions (see ADR-0018). GENERATE_INFOPLIST_FILE stays YES, so this
+	file is merged with the plist Xcode generates from the target's INFOPLIST_KEY_* build
+	settings (Face ID usage description, scene manifest, orientations, export compliance, etc.) —
+	it does not replace that generated content. Only add Debug-specific keys here.
+	-->
+	<key>APIBaseURL</key>
+	<string>$(API_BASE_URL)</string>
+
+	<!-- Scoped ATS exception for the local-development HTTP backend only (never
+	     NSAllowsArbitraryLoads — see ADR-0018 §4 and security.instructions.md). To test on a
+	     physical device over the LAN, add the Mac's LAN IP as a further NSExceptionDomains entry
+	     here (Debug only) — see docs/api/reference-data-api.md. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>localhost</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+			</dict>
+		</dict>
+	</dict>
+
+	<!-- Required to connect to the local-network development backend (see Apple TN3179). -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Record catch connects to a development server running on your local network so the app can load test reference data.</string>
+</dict>
+</plist>

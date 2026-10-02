@@ -1,0 +1,14 @@
+//
+//  Debug.xcconfig
+//  record-catch
+//
+//  Build-time configuration for the Debug build configuration (see ADR-0018 and
+//  .github/instructions/ci-cd.instructions.md's frozen "Option B" build-time configuration
+//  decision). Do NOT put secrets/tokens in this file — it is committed to source control. The
+//  reference-data API bearer token is supplied at runtime via the DEBUG-only
+//  REFERENCE_DATA_API_TOKEN environment variable (see ADR-0018 §5), never here.
+//
+
+// The Mac's `localhost` reference-data API backend, for local development only. The `$()`
+// escapes are required so xcconfig doesn't treat `//` as a line comment.
+API_BASE_URL = http:$()/$()/localhost:3002

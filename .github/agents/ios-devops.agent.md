@@ -86,7 +86,7 @@ Do not run a second, separate validation round — the plan is checked against t
 - **GitHub Environments & approvals** — **six** gated Environments `dev` (ungated), `test`,
   `test-external`, `prod`, `prod-external` and `prod-appstore`, each (except `dev`) gated by required
   reviewers (self-approval prevented where supported); secrets scoped per stage; each Environment holds
-  exactly one backend URL as the variable `MMO_API_BASE_URL`.
+  its stage config as `CR_APP_CFG_*` variables (allow-listed in `Config/app-config.schema.json`).
 - **Versioning** — Marketing version and build number sourced from `Config/Base.xcconfig`; release tag (`v<marketing_version>-BUILD_<current_project_version>`) published by *iOS CI* on every non-Dependabot merge to `main` or a manual run with `publish_release_tag: true`; CI never starts a release; *iOS Release* runs only by manual dispatch on a tag, with the version taken only from the code; external promotions use `N.1`; `GitCommitSHA` embedded as `Info.plist` traceability metadata (never the build number).
 - **Configuration & identity (frozen)** — three bundle IDs (`mmo.catchrecordingdev.ios` /
   `mmo.catchrecordingtest.ios` / `mmo.catchrecording.ios`) as three App Store Connect apps serving five

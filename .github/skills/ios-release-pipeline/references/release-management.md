@@ -52,7 +52,7 @@ governing standards.
 ```
 
 > **Compile once, configure at promotion** (ADR-0015). Internal and external builds of an app share the same
-> compiled program; only `MMOAPIBaseURL` and the build number differ. The App Store receives the exact `N.1`
+> compiled program; only `MMOCRAppConfig` and the build number differ. The App Store receives the exact `N.1`
 > upload the sanity testers used. Promotion runs in its own workflow because a GitHub run is cancelled after
 > 35 days including approval waits.
 
@@ -76,7 +76,7 @@ future need is an ADR + governance discussion, not an ad hoc branch.
 **Six** Environments — **`dev`** (ungated), **`test`** (A), **`test-external`** (B), **`prod`** (C),
 **`prod-external`** (D) and **`prod-appstore`** (E) — each gated (except `dev`) by a **manual reviewer
 approval** before its job runs (prevent self-approval where supported). Each scopes its release secrets to
-the Environment and holds exactly one backend URL (`MMO_API_BASE_URL` variable). Restrict deployments to
+the Environment and holds its stage config as `CR_APP_CFG_*` variables. Restrict deployments to
 `main` and `v*` tags.
 
 ## Traceability

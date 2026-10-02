@@ -95,8 +95,9 @@ This is a **small team practising trunk-based development**. The model is delibe
 
 **Frozen decision** ([ADR-0014](../../docs/adr/0014-build-time-app-identity-configuration.md),
 [ADR-0015](../../docs/adr/0015-compile-once-configure-at-promotion.md)): the app ships as **three App Store
-Connect apps** serving **five backends**. The app holds **exactly one backend URL** (`MMOAPIBaseURL` in
-`Info.plist`) and has **no runtime environment selector** and no runtime lookup.
+Connect apps** serving **five backends**. The app holds **one stage configuration** (the `MMOCRAppConfig`
+dictionary in `Info.plist`, including `API_BASE_URL`) and has **no runtime environment selector** and no runtime
+lookup.
 
 | App | Internal TestFlight | External TestFlight | App Store |
 |---|---|---|---|
@@ -105,13 +106,15 @@ Connect apps** serving **five backends**. The app holds **exactly one backend UR
 | Prod (`mmo.catchrecording.ios`) | Ext-Test (UAT) | Prod (sanity) | Prod |
 
 - **Identity at build time.** Bundle ID and display name come from `Config/<App>.xcconfig` via the app's
-  scheme/configuration. The **backend URL is never in git**: it is a **GitHub Environment variable**
-  (`MMO_API_BASE_URL`, one per Environment) injected by Fastlane as a command-line build setting.
+  scheme/configuration. **Stage values are never in git**: each is a **GitHub Environment variable**
+  `CR_APP_CFG_<KEY>` (e.g. `CR_APP_CFG_API_BASE_URL`), allow-listed in `Config/app-config.schema.json`,
+  validated by Fastlane and written into `MMOCRAppConfig` after archiving. Variables only — never secrets.
+  Set them on Environments only, never at repository or organisation level.
 - **Compile once, configure at promotion.** Each app is compiled **once** per release (build `N`, internal
-  TestFlight). Promotion to external TestFlight re-uses that **same archive**: Fastlane swaps `MMOAPIBaseURL`
-  to the external stage's URL, sets the build to `N.1`, re-signs and uploads. **No compiler runs.** The
-  promotion job must prove it: identical Mach-O UUID, `codesign --verify --deep --strict`, and the internal
-  backend's host absent from the external package.
+  TestFlight). Promotion to external TestFlight re-uses that **same archive**: Fastlane replaces
+  `MMOCRAppConfig` with the external stage's values, sets the build to `N.1`, re-signs and uploads. **No compiler
+  runs.** The promotion job must prove it: identical Mach-O UUID, `codesign --verify --deep --strict`, the
+  packaged config equal to the validated values, and every internal-only host absent from the external package.
 - **Build once from external to App Store.** The Prod App Store submission is the **same `N.1` upload** the
   sanity testers used.
 - **Vocabulary:** say **"no recompile" / "same compiled code"** for internal → external, and reserve
@@ -167,7 +170,8 @@ approval waits** (a single approval may wait at most 30 days); testing between s
 
 Define **six** governed GitHub Environments. A GitHub Environment approval gates the **start of a job**, so
 each distinct manual approval is its own job / environment. Each Environment (except `prod-appstore`) holds
-exactly **one** backend URL as the variable `MMO_API_BASE_URL`, so the Environment determines the backend.
+its stage configuration as `CR_APP_CFG_*` variables (at least `CR_APP_CFG_API_BASE_URL`), so the Environment
+determines the backend.
 
 | Environment | Workflow · job | Backend URL | Approval |
 |-------------|----------------|-------------|----------|
@@ -279,8 +283,9 @@ step**; if adopted, run it against the signed IPA before the production gate.
 - Typical secrets: `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_CONTENT` (App Store Connect API key),
   `APPLE_TEAM_ID`, `MATCH_PASSWORD`, `MATCH_DEPLOY_KEY`, and `ARCHIVE_ENCRYPTION_KEY` (shared by a build
   Environment and its promotion Environment); plus `SONAR_TOKEN`.
-- **Backend URLs are Environment variables, not secrets** (`MMO_API_BASE_URL`, one per Environment) — not
-  sensitive, auditable, and never committed to git.
+- **Stage configuration is Environment variables, not secrets** (`CR_APP_CFG_*`, allow-listed in
+  `Config/app-config.schema.json`) — not sensitive, auditable, and never committed to git. Anything packaged in
+  the app can be extracted, so a secret must never become app configuration.
 - Non-sensitive build configuration (bundle ID, display name, versions) belongs in **`.xcconfig`** files
   committed to the repo. Document every config key in the config file and the README.
 - **Never print secrets to logs.** Do not echo signing identities, profiles, API keys or keychain

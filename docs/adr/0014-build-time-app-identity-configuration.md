@@ -30,25 +30,44 @@ Backend URLs must **not** be committed to git; they are supplied per stage by Gi
   so a leftover literal silently wins.
 - Test targets keep their own identifiers; they are never distributed.
 
-### 2. One backend URL, injected at build time, never in git
+### 2. Stage configuration from GitHub Environment variables, never in git (amended 2026-10)
 
-- A partial `Info.plist` adds one custom key: `MMOAPIBaseURL = $(MMO_API_BASE_URL)`. Xcode merges it with the
-  generated plist.
-- In CI, `MMO_API_BASE_URL` is a **GitHub Environment variable** (not a secret — it is not sensitive and must be
-  auditable). The workflow maps it into the job environment; Fastlane validates it (present, `https://`) and
-  passes it to Xcode as a command-line build setting (`xcargs`). Command-line settings avoid the xcconfig
-  gotcha where `//` in `https://` starts a comment.
-- Locally, developers use an optional, git-ignored `Config/Local.xcconfig` pulled in with `#include?`. Inside an
-  xcconfig a URL must be written as `https:/$()/host` because of the same `//` rule.
+The original single key (`MMOAPIBaseURL` from `MMO_API_BASE_URL`) is replaced by a generic mechanism, so new
+stage values need no workflow change.
+
+- **Variables only.** Any GitHub Environment *variable* named `CR_APP_CFG_<KEY>` is a candidate app value; the
+  workflow passes all variables to Fastlane as `CR_APP_CFG_VARS: ${{ toJSON(vars) }}`. GitHub *secrets* are never
+  mapped: everything in the package can be extracted (OWASP MASWE-0004).
+- **Committed allow-list.** `Config/app-config.schema.json` declares each `<KEY>` with `type` (`url`, `string`,
+  `bool`), `required`, `log` and a description. A CI check rejects secret-like names (`SECRET`, `PASSWORD`,
+  `TOKEN`, `PRIVATE`, `CREDENTIAL`) and `url` keys marked `tracking: true`: tracking domains must be compiled into
+  the privacy manifest, not configured per stage (MASWE-0074).
+- **Validation in Fastlane.** Required keys must be present; `url` values must be `https://` with a host and no
+  user/password; `string` values one line, at most 512 characters; `bool` values `true`/`false`. Undeclared
+  `CR_APP_CFG_*` variables are warned about and ignored, so an older tag still releases after new variables are
+  added. Only `log: true` keys are printed.
+- **One `Info.plist` dictionary, `MMOCRAppConfig`,** written after archiving (`plutil -replace MMOCRAppConfig
+  -json`) at build (`N`) and again at promotion (`N.1`) — one code path, typed values, no escaping issues. The
+  name avoids Apple-reserved prefixes.
+- **Per Environment only.** `CR_APP_CFG_*` must never be set at repository or organisation level: GitHub
+  precedence would silently apply such a value to every stage.
+- **Flags are fixed at packaging.** The App Store package is exactly what Apple reviews; this mechanism must never
+  be used for runtime or remote feature switching (App Review Guideline 2.3.1).
+- **Local development:** a partial `Info.plist` template maps `MMOCRAppConfig` entries to `$(CR_APP_CFG_<KEY>)`,
+  supplied by an optional, git-ignored `Config/Local.xcconfig` (`#include?`); URLs there are written
+  `https:/$()/host` because `//` starts an xcconfig comment. Xcode ignores user-defined settings when *generating*
+  `Info.plist`, so the template file is required, and it must not be a member of the target.
 
 ### 3. App behaviour (owned by the iOS Developer)
 
-- Read `MMOAPIBaseURL` once at startup; if missing or not `https://`, show a clear configuration error and log
-  it — never fall back to another backend.
-- Log on every launch: backend URL, bundle ID, version, build, commit SHA (URL is non-sensitive and logged as
-  public).
-- Partition local data (store + Keychain service) by backend URL so data from one backend can never be sent to
+- Read `MMOCRAppConfig` once at startup through one `AppConfiguration` type; if a required key is missing or
+  invalid, show a clear configuration error and log it — never fall back to another backend.
+- Log on every launch the `log: true` values (non-sensitive, logged as public), plus bundle ID, version, build
+  and commit SHA.
+- Partition local data (store + Keychain service) by `API_BASE_URL` so data from one backend can never be sent to
   another.
+- Treat configuration as untrusted for security decisions: a modified package can change it, so the backend
+  enforces authorisation (server-side App Attest remains optional, ADR-0015).
 
 ### 4. Fastlane has one identity table
 

@@ -42,8 +42,8 @@ jobs:
 
       - name: Compile sign & upload build to internal TestFlight
         env:
-          # The one backend URL for this stage — a `dev` Environment variable, never committed (ADR-0014).
-          MMO_API_BASE_URL: ${{ vars.MMO_API_BASE_URL }}
+          # Fastlane keeps only the CR_APP_CFG_* keys allow-listed in Config/app-config.schema.json
+          CR_APP_CFG_VARS: ${{ toJSON(vars) }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
@@ -105,10 +105,10 @@ jobs:
           MATCH_DEPLOY_KEY: ${{ secrets.MATCH_DEPLOY_KEY }}
         run: bash .github/workflows/scripts/setup-match-ssh-key.sh
 
-      - name: Re-package with the external backend & upload to external TestFlight
+      - name: Re-package with the external config & upload to external TestFlight
         env:
-          # The external backend URL — a `dev_external` Environment variable.
-          MMO_API_BASE_URL: ${{ vars.MMO_API_BASE_URL }}
+          # The `dev_external` Environment's CR_APP_CFG_* variables.
+          CR_APP_CFG_VARS: ${{ toJSON(vars) }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}

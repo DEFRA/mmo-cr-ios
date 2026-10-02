@@ -37,15 +37,16 @@ a signing key to manage), and ships the Ext-Test URL inside the public App Store
 
 ## Decision
 
-1. **Build** (`ios-release.yml`, per app): compile once with the stage's single `MMO_API_BASE_URL` (ADR-0014),
+1. **Build** (`ios-release.yml`, per app): compile once, write the stage's `MMOCRAppConfig` (ADR-0014 §2),
    build number `N`, upload to **internal** TestFlight. Keep the `.xcarchive` as an **encrypted** workflow
    artifact (90-day retention, matching the TestFlight build lifetime). Record the executable's Mach-O UUID.
-2. **Promote** (`ios-promote.yml`, manual dispatch, gated): take that same archive, set `MMOAPIBaseURL` to the
-   external stage's URL and `CFBundleVersion` to `N.1`, export and re-sign, upload, assign to the **external**
-   group. **No compiler runs.**
+2. **Promote** (`ios-promote.yml`, manual dispatch, gated): take that same archive, replace `MMOCRAppConfig` with
+   the external stage's values and set `CFBundleVersion` to `N.1`, export and re-sign, upload, assign to the
+   **external** group. **No compiler runs.**
 3. **App Store** (Prod only): submit the **same `N.1` upload** the sanity testers used — true build-once.
 
-Each GitHub Environment holds exactly one URL, so the Environment a job runs in determines the backend:
+Each GitHub Environment holds one configuration set (`CR_APP_CFG_*` variables), so the Environment a job runs in
+determines the backend:
 `dev` → Dev · `test` → Test · `test-external` → Perf-Test · `prod` → Ext-Test · `prod-external` → Prod.
 
 ### Terminology (use consistently)
@@ -57,12 +58,14 @@ Each GitHub Environment holds exactly one URL, so the Environment a job runs in 
 
 ### Promotion safeguards (the job fails if any check fails)
 
-1. Archive bundle ID and build number match the requested app and tag.
+1. Archive bundle ID and build number match the requested app and tag, and the packaged `MMOCRAppConfig` equals
+   the validated values exactly.
 2. The executable's Mach-O UUID equals the UUID recorded at build time — proof of identical compiled code
    (re-signing rewrites the embedded signature, so a file hash is not a valid comparison).
 3. `codesign --verify --deep --strict` passes on the exported app.
-4. The internal backend's host name appears nowhere in the external package — so the public App Store package
-   provably contains no Ext-Test URL.
+4. No internal-only host name appears anywhere in the external package: every host from the archive's `url`
+   values that the external configuration does not also use — so the public App Store package provably contains no
+   Ext-Test URL.
 5. Idempotent re-run: if `N.1` is already uploaded, skip the upload and continue to distribution.
 
 ### Why promotion is a separate workflow

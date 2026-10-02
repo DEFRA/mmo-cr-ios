@@ -79,6 +79,10 @@ jobs:
           ruby-version: "3.3"
           bundler-cache: true
 
+      # Fastfile wiring, release logic and the app config schema guard (no secret-like or tracking keys).
+      - name: Release tooling tests
+        run: bundle exec ruby -e 'Dir.glob("fastlane/test/*_test.rb").sort.each { |f| require File.expand_path(f) }'
+
       - name: Build (Fastlane)
         run: bundle exec fastlane build
 

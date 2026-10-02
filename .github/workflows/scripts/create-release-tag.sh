@@ -28,4 +28,11 @@ echo "Creating and pushing release tag: ${TAG_NAME}"
 git config user.name "github-actions[bot]"
 git config user.email "github-actions[bot]@users.noreply.github.com"
 git tag "${TAG_NAME}"
-git push origin "${TAG_NAME}"
+if ! git push origin "${TAG_NAME}"; then
+  # GITHUB_TOKEN can't push a tag whose .github/workflows differs from every branch tip (no `workflows` permission).
+  BRANCH_TIP="$(git ls-remote origin "${GITHUB_REF}" | cut -f1)"
+  if [[ -n "${BRANCH_TIP}" && "${BRANCH_TIP}" != "$(git rev-parse HEAD)" ]]; then
+    echo "::error::'${GITHUB_REF_NAME}' moved on to ${BRANCH_TIP} during this run and its workflow files now differ from the commit being tagged. Re-run iOS CI on the latest commit." >&2
+  fi
+  exit 1
+fi

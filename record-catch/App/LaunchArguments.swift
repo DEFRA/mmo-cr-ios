@@ -42,6 +42,10 @@ struct LaunchArguments {
         case catchRecordCheckYourAnswers = "-uiTestCatchRecordCheckYourAnswers"
         case catchRecordSubmissionConfirmation = "-uiTestCatchRecordSubmissionConfirmation"
         case catchRecordSubmissionSuccess = "-uiTestCatchRecordSubmissionSuccess"
+
+        // Connectivity (ADR-0019): forces the offline banner on deterministically, without
+        // relying on Airplane Mode or simulator network conditioning in CI.
+        case offline = "-uiTestOffline"
     }
 
     /// The live process's launch arguments, read once per `LaunchArguments` value.

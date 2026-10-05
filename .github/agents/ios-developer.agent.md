@@ -59,7 +59,7 @@ work, or delegate to the **iOS Planner** for **Complex** work — then obtain ap
 ## Engineering standards
 
 - **Swift/SwiftUI:** Follow [swift-swiftui instructions](../instructions/swift-swiftui.instructions.md).
-  SwiftUI-first, iOS 16+, SPM only, Swift Concurrency, small composable views, logic in view
+  SwiftUI-first, iOS 18+, SPM only, Swift Concurrency, small composable views, logic in view
   models/services, value types by default.
 - **Offline-first:** Design every feature to work without connectivity and sync when back online. Never
   assume a live connection. Handle conflict resolution deliberately.
@@ -184,7 +184,7 @@ does **not** perform or hand off that work. If a request needs release/pipeline 
 the user engage the DevOps engineer separately.
 
 - **DO NOT** introduce CocoaPods/Carthage, commit secrets or certificates, or lower the deployment
-  target below iOS 16 without explicit agreement.
+  target below iOS 18 without explicit agreement.
 - **DO NOT** silently deviate from a DEFRA standard — flag it and recommend raising a governance exception.
 - **DO NOT** add features, abstractions or refactors that were not requested.
 - **DO NOT** author a **Complex** plan yourself — delegate that to the **iOS Planner**; for **Standard**

@@ -35,7 +35,9 @@
 		DA5E24CB3000E8B500353ABD /* Exceptions for "record-catch" folder in "record-catchTests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Core/Networking/ConnectivityMonitoring.swift,
 				Features/Common/Components/Disclosure/ExpandableHelpSection.swift,
+				Features/Common/Components/OfflineBanner.swift,
 				Features/Common/Components/Form/PrimaryButton.swift,
 				Features/Common/Components/Form/RadioOption.swift,
 				Features/Common/Components/Form/SearchDropdownField.swift,

@@ -48,6 +48,13 @@ struct RecordCatchApp: App {
     @State private var sessionCoordinator = RootSessionCoordinator.make()
     @Environment(\.scenePhase) private var scenePhase
 
+    // Connectivity monitoring (ADR-0019): a single app-wide signal behind the
+    // `ConnectivityMonitoring` seam, injected via `\.connectivityMonitor` (not
+    // `.environment(_:)`) because the real and `-uiTestOffline` stub are different concrete
+    // types. Built once here so a future offline-mutation sync engine can observe the same
+    // instance instead of standing up a second `NWPathMonitor`.
+    @State private var connectivityMonitor = Self.makeConnectivityMonitor()
+
     var body: some Scene {
         WindowGroup {
             rootView
@@ -55,6 +62,7 @@ struct RecordCatchApp: App {
                 .environment(languageStore)
                 .environment(tabRouter)
                 .environment(\.locale, languageStore.language.locale)
+                .environment(\.connectivityMonitor, connectivityMonitor)
                 // The design system (`AppColors`) mirrors the GOV.UK Design System, which is
                 // light-only: every colour (backgrounds, borders, text) is a fixed literal
                 // rather than a Dark Mode-adaptive one. Without forcing `.light` here, controls
@@ -85,6 +93,20 @@ struct RecordCatchApp: App {
             return .notifications
         }
         return .home
+    }
+
+    /// Builds the app-wide `ConnectivityMonitoring` instance. Substitutes a fixed-offline
+    /// `StubConnectivityMonitor` under the `-uiTestOffline` seam (see `LaunchArguments`) so
+    /// XCUITest can assert the banner deterministically, without depending on Airplane Mode or
+    /// simulator network conditioning. Otherwise returns a live `NetworkConnectivityMonitor`,
+    /// already `start()`-ed so observation begins as early as possible.
+    private static func makeConnectivityMonitor() -> any ConnectivityMonitoring {
+        guard !LaunchArguments.current.contains(.offline) else {
+            return StubConnectivityMonitor(isOnline: false)
+        }
+        let monitor = NetworkConnectivityMonitor()
+        monitor.start()
+        return monitor
     }
 
     /// The real app root: sign-in / app-lock / home, per `sessionCoordinator.phase`. Wrapped in

@@ -131,7 +131,7 @@ only when the user asks for one. At the end of implementation, if no review has 
 
 ## 5. Tech stack (current decisions)
 
-- **Language/UI:** Swift + SwiftUI (SwiftUI-first). Minimum deployment target **iOS 16**.
+- **Language/UI:** Swift + SwiftUI (SwiftUI-first). Minimum deployment target **iOS 18**.
 - **Architecture:** Not yet fixed. If the repo already contains boilerplate, read it and follow the
   established pattern. If not, **ask the developer** which pattern to adopt (e.g. MVVM + Swift
   Concurrency) before scaffolding. Record the choice as an ADR.

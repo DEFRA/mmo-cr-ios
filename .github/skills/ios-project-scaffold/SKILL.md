@@ -19,7 +19,7 @@ feature module that matches existing conventions.
 1. **Read** the repo. If a project/architecture already exists, follow it — do **not** restructure.
 2. **Clarify** with the developer if no pattern exists:
    - Architecture pattern (recommend **MVVM + Swift Concurrency**).
-   - Persistence choice for offline (e.g. **SwiftData** for iOS 17+ paths, or Core Data for iOS 16).
+   - Persistence choice for offline (e.g. **SwiftData**, available unconditionally at this app's iOS 18+ floor).
    - Bundle identifier scheme and environments (dev/staging/prod).
    Record decisions as ADRs in `docs/adr/`.
 

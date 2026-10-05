@@ -1,0 +1,2 @@
+// Copy to Config/Local.xcconfig (git-ignored). Write URLs as https:/$()/host because "//" starts a comment.
+CR_APP_CFG_API_BASE_URL = https:/$()/dev-api.example.gov.uk

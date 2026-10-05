@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Partial template merged with the generated Info.plist; the release pipeline replaces MMOCRAppConfig (ADR-0014). -->
+	<key>MMOCRAppConfig</key>
+	<dict>
+		<key>API_BASE_URL</key>
+		<string>$(CR_APP_CFG_API_BASE_URL)</string>
+	</dict>
+</dict>
+</plist>

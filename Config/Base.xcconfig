@@ -1,0 +1,2 @@
+// Shared app target settings (ADR-0014). Local values are optional and never committed.
+#include? "Local.xcconfig"

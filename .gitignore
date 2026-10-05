@@ -73,6 +73,9 @@ fastlane/test_output
 ._*
 *.bak
 
+# Local app configuration (copy from Config/Local.xcconfig.example)
+Config/Local.xcconfig
+
 # Build output
 #
 # Fastlane redirects Xcode DerivedData into the repo root (see `derived_data_path`

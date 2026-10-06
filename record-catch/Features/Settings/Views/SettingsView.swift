@@ -4,8 +4,10 @@
 //
 //  Phase 2 bilingual Settings screen (see docs/design-specs/settings.md): analytics-
 //  consent toggle (UI-only/stubbed — no analytics SDK), an account/menu link list, and
-//  the "Gear used" row. "Sign out" and every link destination are deliberately inert
-//  seams in this phase (see SettingsViewModel) — no navigation, auth or networking here.
+//  the "Gear used" row. "Sign out" shows a confirmation dialog before dismissing —
+//  confirming remains an inert seam (see SettingsViewModel) since no session/auth
+//  exists yet. Every other link destination is also a deliberately inert seam — no
+//  navigation, auth or networking here.
 //
 
 import SwiftUI
@@ -29,6 +31,26 @@ struct SettingsView: View {
         ViewTemplate(title: languageStore.localized("settings.title")) {
             content
                 .environment(\.locale, languageStore.language.locale)
+        }
+        .confirmationDialog(
+            languageStore.localized("settings.signOut.confirm.title"),
+            isPresented: Binding(
+                get: { viewModel.showSignOutConfirmation },
+                set: { if !$0 { viewModel.cancelSignOutConfirmation() } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button(languageStore.localized("settings.signOut.confirm.confirm"), role: .destructive) {
+                viewModel.confirmSignOut()
+            }
+            .accessibilityIdentifier("Settings.signOutConfirm.confirm")
+
+            Button(languageStore.localized("settings.signOut.confirm.cancel"), role: .cancel) {
+                viewModel.cancelSignOutConfirmation()
+            }
+            .accessibilityIdentifier("Settings.signOutConfirm.cancel")
+        } message: {
+            Text(languageStore.localized("settings.signOut.confirm.message"))
         }
     }
 

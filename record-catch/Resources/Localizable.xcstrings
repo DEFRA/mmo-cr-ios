@@ -5019,6 +5019,78 @@
         }
       }
     },
+    "settings.signOut.confirm.cancel": {
+      "comment": "Cancel button on the sign-out confirmation dialog.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Canslo"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        }
+      }
+    },
+    "settings.signOut.confirm.confirm": {
+      "comment": "Destructive confirm button on the sign-out confirmation dialog.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Allgofnodi"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign out"
+          }
+        }
+      }
+    },
+    "settings.signOut.confirm.message": {
+      "comment": "Body message of the sign-out confirmation dialog.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Gallwch fewngofnodi eto unrhyw bryd."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can sign back in at any time."
+          }
+        }
+      }
+    },
+    "settings.signOut.confirm.title": {
+      "comment": "Title of the confirmation dialog shown after tapping the inert 'Sign out' link (see SettingsViewModel.signOutTapped()). UI-only — no auth/session exists yet.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Allgofnodi?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign out?"
+          }
+        }
+      }
+    },
     "settings.title": {
       "comment": "Page title for the minimal Phase 1 Settings tab shell, rendered as the heading by ViewTemplate. Full Settings content is added in a later phase.",
       "extractionState": "manual",

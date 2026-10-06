@@ -165,6 +165,13 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		DA5D26E43074E70900F4CB0F /* scripts 2 */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = "scripts 2";
+			sourceTree = "<group>";
+		};
 		DA6ABED42FFE87DC00B7A0AB = {
 			isa = PBXGroup;
 			children = (
@@ -173,6 +180,7 @@
 				DA6ABEF92FFE87DD00B7A0AB /* record-catchUITests */,
 				DA6ABEDE2FFE87DC00B7A0AB /* Products */,
 				DA707AF430668B4600D0B97C /* Config */,
+				DA5D26E43074E70900F4CB0F /* scripts 2 */,
 			);
 			sourceTree = "<group>";
 		};

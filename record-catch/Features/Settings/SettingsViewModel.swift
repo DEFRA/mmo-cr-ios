@@ -29,6 +29,11 @@ final class SettingsViewModel {
     /// The user's last-known "Gear used" value, or `nil` if none has been recorded yet.
     private(set) var gearUsed: String?
 
+    /// Whether the "Sign out" confirmation dialog is presented. Tapping the link never
+    /// signs out directly — it asks for confirmation first, matching the destructive
+    /// confirmation pattern used elsewhere (e.g. `RemoveSpeciesViewModel`).
+    private(set) var showSignOutConfirmation = false
+
     init(
         router: SettingsRouter? = nil,
         preferenceStore: AnalyticsPreferenceStoring = UserDefaultsAnalyticsPreferenceStore(),
@@ -61,11 +66,25 @@ final class SettingsViewModel {
     // no-op seam so the view has something concrete to call, and so wiring the real
     // destination later is a one-line change in exactly one place.
 
-    /// Reached via the "Sign out" link. **Inert** — no session exists yet, so there is
-    /// nothing to sign out of, and this must not falsely imply an action occurred.
+    /// Reached via the "Sign out" link. Presents a confirmation dialog before anything
+    /// happens — the dialog's own confirm action (`confirmSignOut()`) remains **inert**,
+    /// since no session exists yet, so this must not falsely imply an action occurred.
     /// - TODO: Wire real sign-out once authentication (ADR pending) exists.
     func signOutTapped() {
-        // Intentionally empty: no session exists to sign out of yet (see TODO above).
+        showSignOutConfirmation = true
+    }
+
+    /// Dismisses the sign-out confirmation dialog without making any change.
+    func cancelSignOutConfirmation() {
+        showSignOutConfirmation = false
+    }
+
+    /// Confirms "Sign out" from the dialog. **Inert** — no session exists yet, so there is
+    /// nothing to sign out of; only dismisses the dialog.
+    /// - TODO: Wire real sign-out once authentication (ADR pending) exists.
+    func confirmSignOut() {
+        showSignOutConfirmation = false
+        // Intentionally no further action: no session exists to sign out of yet (see TODO above).
     }
 
     /// Reached via the Gear used row's "Change" link.

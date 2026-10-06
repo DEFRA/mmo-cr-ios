@@ -58,7 +58,14 @@ final class ValidationStringCatalogIntegrityTests: XCTestCase {
         "catchRecord.addPort.validation.enter",
         "catchRecord.addGear.validation.enter",
         "catchRecord.manualEntry.validation.enter",
-        "catchRecord.manualEntry.validation.select"
+        "catchRecord.manualEntry.validation.select",
+
+        // Phase 1 business-rule remediation (BR-CAT-006/AC02, BR-SUB-008/AC10/AC11)
+        "catchRecord.tripDate.adjustedForAgeLimit.tag",
+        "catchRecord.tripDate.adjustedForAgeLimit.message",
+        "catchRecord.submissionSaved.heading",
+        "catchRecord.submissionSaved.body",
+        "catchRecord.submissionSaved.viewRecords"
     ]
 
     func test_everyValidationKey_resolvesInEnglish() {

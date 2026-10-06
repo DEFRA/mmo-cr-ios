@@ -2,6 +2,7 @@ import SwiftUI
 import XCTest
 @testable import record_catch
 
+@MainActor
 final class SubmissionsTableTests: XCTestCase {
 
     // MARK: - Header rendering
@@ -42,5 +43,37 @@ final class SubmissionsTableTests: XCTestCase {
     func testEveryStatus_hasDistinctText() {
         let values = SubmissionStatus.allCases.map { $0.rawValue }
         XCTAssertEqual(Set(values).count, SubmissionStatus.allCases.count)
+    }
+
+    // MARK: - Status tag localisation (BR-SUB-010/AC12 — previously hard-coded English rawValue)
+
+    func testStatusKey_everyStatus_resolvesToADistinctLocalizedValue_inEnglish() {
+        let store = AppLanguageStore(defaults: makeDefaults())
+        var seenValues = Set<String>()
+        for status in SubmissionStatus.allCases {
+            let value = store.localized(status.statusKey)
+            XCTAssertNotEqual(value, status.statusKey, "Missing English translation for \(status)")
+            seenValues.insert(value)
+        }
+        XCTAssertEqual(seenValues.count, SubmissionStatus.allCases.count)
+    }
+
+    func testStatusKey_everyStatus_resolvesToADistinctLocalizedValue_inWelsh() {
+        let store = AppLanguageStore(defaults: makeDefaults())
+        store.toggle() // Welsh
+        var seenValues = Set<String>()
+        for status in SubmissionStatus.allCases {
+            let value = store.localized(status.statusKey)
+            XCTAssertNotEqual(value, status.statusKey, "Missing Welsh translation for \(status)")
+            seenValues.insert(value)
+        }
+        XCTAssertEqual(seenValues.count, SubmissionStatus.allCases.count)
+    }
+
+    private func makeDefaults() -> UserDefaults {
+        let suite = "test.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defaults.removePersistentDomain(forName: suite)
+        return defaults
     }
 }

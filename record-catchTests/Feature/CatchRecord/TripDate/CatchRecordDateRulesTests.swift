@@ -36,4 +36,47 @@ final class CatchRecordDateRulesTests: XCTestCase {
         let date = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1))!
         XCTAssertTrue(CatchRecordDateRules.isTodayOrInThePast(date, now: now, calendar: calendar))
     }
+
+    // MARK: - earliestSelectableTripDate (BR-CAT-006/AC02 — rolling 365-day limit)
+
+    func test_maximumTripAgeInDays_is365() {
+        XCTAssertEqual(CatchRecordDateRules.maximumTripAgeInDays, 365)
+    }
+
+    /// Once "today" has moved far enough past the service's launch floor, the rolling 365-day
+    /// window becomes the binding constraint rather than the fixed launch date.
+    func test_earliestSelectableTripDate_whenRollingWindowIsLaterThanLaunchFloor_usesRollingWindow() {
+        let calendar = Calendar(identifier: .gregorian)
+        // 24 July 2025 + 365 days + a further 100 days, so "365 days before now" is unambiguously
+        // after the launch floor.
+        let now = calendar.date(byAdding: .day, value: 465, to: CatchRecordDateRules.earliestTripDate)!
+
+        let earliest = CatchRecordDateRules.earliestSelectableTripDate(now: now, calendar: calendar)
+
+        let expected = calendar.date(byAdding: .day, value: -365, to: calendar.startOfDay(for: now))!
+        XCTAssertEqual(earliest, expected)
+        XCTAssertGreaterThan(earliest, calendar.startOfDay(for: CatchRecordDateRules.earliestTripDate))
+    }
+
+    /// While "today" is still close to the service's launch, the rolling window would reach
+    /// further back than the launch floor — the launch floor must still win (the two bounds
+    /// combine via "the later of the two").
+    func test_earliestSelectableTripDate_whenRollingWindowIsEarlierThanLaunchFloor_usesLaunchFloor() {
+        let calendar = Calendar(identifier: .gregorian)
+        let now = calendar.date(byAdding: .day, value: 10, to: CatchRecordDateRules.earliestTripDate)!
+
+        let earliest = CatchRecordDateRules.earliestSelectableTripDate(now: now, calendar: calendar)
+
+        XCTAssertEqual(earliest, calendar.startOfDay(for: CatchRecordDateRules.earliestTripDate))
+    }
+
+    /// Boundary: exactly 365 days ago is still selectable (the limit is "no more than 365 days").
+    func test_earliestSelectableTripDate_exactly365DaysBack_isSelectable() {
+        let calendar = Calendar(identifier: .gregorian)
+        let now = calendar.date(byAdding: .day, value: 500, to: CatchRecordDateRules.earliestTripDate)!
+        let earliest = CatchRecordDateRules.earliestSelectableTripDate(now: now, calendar: calendar)
+
+        let exactly365DaysBack = calendar.date(byAdding: .day, value: -365, to: calendar.startOfDay(for: now))!
+        XCTAssertEqual(earliest, exactly365DaysBack)
+    }
 }

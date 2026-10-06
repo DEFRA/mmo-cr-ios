@@ -8,6 +8,7 @@ import SwiftUI
 struct SubmissionConfirmationView: View {
 
     @Environment(AppLanguageStore.self) private var languageStore
+    @Environment(\.connectivityMonitor) private var connectivityMonitor
     @State private var viewModel: SubmissionConfirmationViewModel
 
     init(
@@ -78,7 +79,9 @@ struct SubmissionConfirmationView: View {
                 title: languageStore.localized("catchRecord.submissionConfirmation.accept"),
                 isDisabled: viewModel.isSubmitting
             ) {
-                Task { await viewModel.submit() }
+                // `nil` (no monitor configured, e.g. an unconfigured preview) is treated as
+                // online, matching `OfflineBanner`'s convention.
+                Task { await viewModel.submit(isOnline: connectivityMonitor?.isOnline ?? true) }
             }
             .accessibilityIdentifier("\(identifierPrefix).accept")
         }

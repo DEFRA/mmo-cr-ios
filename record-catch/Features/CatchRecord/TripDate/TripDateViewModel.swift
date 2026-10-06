@@ -39,6 +39,15 @@ final class TripDateViewModel {
     /// mid-visit simply keeps the bound it started with).
     let selectableRange: ClosedRange<Date>
 
+    /// Set when a resumed draft's previously-captured departure date fell before today's computed
+    /// `selectableRange` (e.g. the service's rolling 365-day limit — see `CatchRecordDateRules`,
+    /// BR-CAT-006/AC02 — has since moved past it) and was therefore clamped forward into range.
+    /// Drives an informational (non-blocking) notice on the view: the native `DatePicker`'s `range`
+    /// already makes every *selectable* value valid by construction, so there is nothing left to
+    /// validate on submit — but a silently-adjusted resumed value still needs to be surfaced to the
+    /// user per AC02's "displays an appropriate validation message".
+    let dateWasAdjustedForAgeLimit: Bool
+
     private let router: CatchRecordRouter
     private let favouritePorts: FavouritePortsProviding
     /// Shared journey draft; the parsed date is written into it on submit (see `CatchRecordDraft`).
@@ -84,8 +93,10 @@ final class TripDateViewModel {
         if let existing {
             let day = calendar.startOfDay(for: existing)
             self.selectedDate = min(max(day, range.lowerBound), range.upperBound)
+            self.dateWasAdjustedForAgeLimit = phase == .departure && day < range.lowerBound
         } else {
             self.selectedDate = today
+            self.dateWasAdjustedForAgeLimit = false
         }
     }
 
@@ -107,7 +118,7 @@ final class TripDateViewModel {
     ) -> ClosedRange<Date> {
         switch phase {
         case .departure:
-            let earliest = calendar.startOfDay(for: CatchRecordDateRules.earliestTripDate)
+            let earliest = CatchRecordDateRules.earliestSelectableTripDate(now: today, calendar: calendar)
             return min(earliest, today)...today
         case .return:
             let lower = departureDate.map { calendar.startOfDay(for: $0) } ?? Date.distantPast

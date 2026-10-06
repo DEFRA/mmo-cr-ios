@@ -3093,6 +3093,60 @@
         }
       }
     },
+    "catchRecord.submissionSaved.body": {
+      "comment": "Body copy explaining the record is saved on-device and not yet sent. Deliberately does not promise automatic background submission on reconnect — that capability does not exist yet (see ADR-0019 'Follow-up'); the user is told to open the app again to submit once back online.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Nid oes cysylltiad rhyngrwyd, felly nid yw eich cofnod wedi'i gyflwyno eto. Mae wedi'i gadw ar y ddyfais hon — agorwch yr ap a'i gyflwyno eto unwaith y byddwch yn ôl ar-lein."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There's no internet connection, so your record has not been submitted yet. It's saved on this device — open the app and submit it again once you're back online."
+          }
+        }
+      }
+    },
+    "catchRecord.submissionSaved.heading": {
+      "comment": "H1 for the screen shown when 'Accept and submit trip details' is confirmed while the device is offline: the record is kept locally, not submitted (BR-SUB-008/AC10/AC11).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Mae eich cofnod dalfa wedi'i gadw"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your catch record has been saved"
+          }
+        }
+      }
+    },
+    "catchRecord.submissionSaved.viewRecords": {
+      "comment": "Primary button on the saved-not-sent screen, returning to Home (mirrors catchRecord.submissionSuccess.viewRecords).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Gweld eich cofnodion dalfa"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View your catch records"
+          }
+        }
+      }
+    },
     "catchRecord.submissionSuccess.bullet.email": {
       "comment": "Second bullet — confirmation email timing.",
       "extractionState": "manual",
@@ -3233,6 +3287,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "What happens next"
+          }
+        }
+      }
+    },
+    "catchRecord.tripDate.adjustedForAgeLimit.message": {
+      "comment": "Body message for the same notice. %@ substitutes the earliest selectable date, long-formatted (see CatchRecordDateRules.longDateString).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Rydym wedi diweddaru'r dyddiad a nodwyd gennych oherwydd mai dim ond dyddiadau mordaith o %@ ymlaen y mae'r gwasanaeth yn eu derbyn. Gwiriwch ei fod yn dal yn gywir."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "We've updated the date you entered because the service only accepts trip dates from %@ onwards. Check it's still correct."
+          }
+        }
+      }
+    },
+    "catchRecord.tripDate.adjustedForAgeLimit.tag": {
+      "comment": "Tag for the informational notice shown on the departure-date screen when a resumed draft's previously-captured date has been moved forward because the service's rolling 365-day limit has since moved past it (BR-CAT-006/AC02). Matches the WarningBox 'Important' tag pattern used elsewhere (e.g. home.warning.tag).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Pwysig"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Important"
           }
         }
       }
@@ -4403,6 +4493,78 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vessel"
+          }
+        }
+      }
+    },
+    "home.table.status.amended": {
+      "comment": "Localised text for the 'Amended' status tag in the Home records table. Matches home.help.amended.heading without the trailing colon.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Wedi'i ddiwygio"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Amended"
+          }
+        }
+      }
+    },
+    "home.table.status.late": {
+      "comment": "Localised text for the 'Late' status tag in the Home records table. Matches home.help.late.heading without the trailing colon.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Hwyr"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Late"
+          }
+        }
+      }
+    },
+    "home.table.status.submitted": {
+      "comment": "Localised text for the 'Submitted' status tag in the Home records table (see SubmissionStatus). Matches home.help.submitted.heading without the trailing colon.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Wedi'i gyflwyno"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Submitted"
+          }
+        }
+      }
+    },
+    "home.table.status.unsent": {
+      "comment": "Localised text for the 'Unsent' status tag in the Home records table. Matches home.help.unsent.heading without the trailing colon.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Heb ei anfon"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unsent"
           }
         }
       }

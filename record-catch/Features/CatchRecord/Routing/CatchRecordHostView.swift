@@ -11,6 +11,7 @@ import SwiftData
 struct CatchRecordHostView: View {
 
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var router: CatchRecordRouter
     /// Shared, journey-scoped favourite ports store so a port added on the Add-port screen is
@@ -37,6 +38,20 @@ struct CatchRecordHostView: View {
 
     private var draftStore: CatchRecordDraftStoring {
         injectedDraftStore ?? SwiftDataCatchRecordDraftStore(modelContext: modelContext)
+    }
+
+    /// Debounced autosave for in-progress, not-yet-routed edits (see `DraftAutosaver`,
+    /// BR-SUB-008/AC14). Created once, lazily, the first time it is needed — `modelContext` (via
+    /// `draftStore`) is not available until the view resolves its environment, i.e. not yet at
+    /// `init` — and held in `@State` so the same instance (and its debounce timer) persists across
+    /// view updates for the lifetime of this journey.
+    @State private var autosaver: DraftAutosaver?
+
+    private func autosaverInstance() -> DraftAutosaver {
+        if let autosaver { return autosaver }
+        let created = DraftAutosaver(store: draftStore)
+        autosaver = created
+        return created
     }
 
     /// - Parameters:
@@ -100,6 +115,23 @@ struct CatchRecordHostView: View {
             }
             Task { try? await draftStore.save(draft) }
         }
+        // Debounced autosave of in-progress edits on the *current* screen — i.e. before the user
+        // reaches the next route boundary above (see `DraftAutosaver`, BR-SUB-008/AC14). Reading
+        // `draft.payload` (rather than each individual property) makes the `@Observable` draft's
+        // entire persisted surface the dependency, so this fires on every field change without
+        // per-property wiring. Skips until `draft.vessel` is captured, matching the route-change
+        // save's guard above, so an abandoned empty journey never creates a row.
+        .onChange(of: draft.payload) { _, _ in
+            guard draft.vessel != nil else { return }
+            autosaverInstance().schedule(draft)
+        }
+        // Flushes any pending debounced save immediately when the app leaves the foreground, so an
+        // edit mid-debounce is not lost if the process is suspended or terminated before the
+        // debounce interval elapses (BR-SUB-008/AC15 — "no saved data is lost").
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase != .active, draft.vessel != nil else { return }
+            autosaverInstance().flush(draft)
+        }
     }
 
     /// Dispatches to the four journey-section helpers below, each covering a contiguous run of
@@ -115,7 +147,8 @@ struct CatchRecordHostView: View {
             portAndGearDestination(for: route)
         case .catchLocation, .catchLocationManualEntry, .recordSpeciesWeights, .addSpecies, .removeSpecies:
             speciesDestination(for: route)
-        case .landingStorage, .landingStorageSpecies, .checkYourAnswers, .submissionConfirmation, .submissionSuccess:
+        case .landingStorage, .landingStorageSpecies, .checkYourAnswers, .submissionConfirmation,
+             .submissionSuccess, .submissionSaved:
             landingAndSubmissionDestination(for: route)
         }
     }
@@ -143,7 +176,7 @@ struct CatchRecordHostView: View {
                 favouritePorts: favouritePorts,
                 draft: draft
             )
-        case .tripDate(let phase, let vessel, let referenceNumber, let departureDate):
+        case let .tripDate(phase, vessel, referenceNumber, departureDate):
             TripDateView(
                 phase: phase,
                 vessel: vessel,
@@ -304,6 +337,8 @@ struct CatchRecordHostView: View {
             )
         case .submissionSuccess(let referenceNumber):
             SubmissionSuccessView(referenceNumber: referenceNumber, router: router)
+        case .submissionSaved(let referenceNumber):
+            SubmissionSavedView(referenceNumber: referenceNumber, router: router)
         default:
             fatalError("landingAndSubmissionDestination received an unhandled route: \(route)")
         }

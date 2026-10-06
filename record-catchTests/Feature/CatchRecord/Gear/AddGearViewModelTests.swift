@@ -46,13 +46,36 @@ final class AddGearViewModelTests: XCTestCase {
 
         await sut.submit()
 
-        XCTAssertEqual(sut.errorKey, "catchRecord.addGear.validation.none")
+        XCTAssertEqual(sut.validationMessage, ValidationMessage("catchRecord.addGear.validation.enter"))
         XCTAssertTrue(router.path.isEmpty)
     }
 
-    func test_errorKey_beforeSubmit_isNil() {
+    func test_submit_withQueryTyped_butNothingSelected_showsSelectFromListMessage() async {
+        let router = CatchRecordRouter()
+        let sut = makeSUT(router: router)
+        await sut.loadGears()
+        sut.query = "Sein"
+
+        await sut.submit()
+
+        XCTAssertEqual(sut.validationMessage, ValidationMessage("catchRecord.addGear.validation.none"))
+        XCTAssertTrue(router.path.isEmpty)
+    }
+
+    func test_submit_calledTwiceWhileBlank_incrementsSubmitAttempt_andKeepsDidAttemptSubmitTrue() async {
         let sut = makeSUT(router: CatchRecordRouter())
-        XCTAssertNil(sut.errorKey)
+        await sut.loadGears()
+
+        await sut.submit()
+        XCTAssertEqual(sut.submitAttempt, 1)
+        await sut.submit()
+        XCTAssertEqual(sut.submitAttempt, 2)
+        XCTAssertTrue(sut.didAttemptSubmit)
+    }
+
+    func test_validationMessage_beforeSubmit_isNil() {
+        let sut = makeSUT(router: CatchRecordRouter())
+        XCTAssertNil(sut.validationMessage)
     }
 
     func test_submit_withSelection_havingRequiredMeasurements_routesToMeasurements() async {

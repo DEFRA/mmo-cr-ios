@@ -52,7 +52,13 @@ final class ValidationStringCatalogIntegrityTests: XCTestCase {
         "catchRecord.landingStorageSpecies.weight.validation.enter",
 
         // Error summary (Task 9)
-        "catchRecord.errorSummary.title"
+        "catchRecord.errorSummary.title",
+
+        // Type-ahead search fields: blank vs typed-but-unselected (GOV.UK "Be specific")
+        "catchRecord.addPort.validation.enter",
+        "catchRecord.addGear.validation.enter",
+        "catchRecord.manualEntry.validation.enter",
+        "catchRecord.manualEntry.validation.select"
     ]
 
     func test_everyValidationKey_resolvesInEnglish() {

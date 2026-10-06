@@ -375,6 +375,24 @@
         }
       }
     },
+    "catchRecord.addGear.validation.enter": {
+      "comment": "Add-gear: search field left completely blank on Save and continue.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Rhowch y gêr rydych am ei ychwanegu"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter the gear you want to add"
+          }
+        }
+      }
+    },
     "catchRecord.addGear.validation.none": {
       "comment": "Add-gear inline validation error.",
       "extractionState": "manual",
@@ -497,6 +515,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "%d results"
+          }
+        }
+      }
+    },
+    "catchRecord.addPort.validation.enter": {
+      "comment": "Add-port: search field left completely blank on Save and continue.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Rhowch y porthladd rydych am ei ychwanegu"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter the port you want to add"
           }
         }
       }
@@ -1847,6 +1883,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "%d results"
+          }
+        }
+      }
+    },
+    "catchRecord.manualEntry.validation.enter": {
+      "comment": "Manual statistical sub area entry: search field left completely blank.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Rhowch yr is-ardal ystadegol"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter the statistical sub area"
+          }
+        }
+      }
+    },
+    "catchRecord.manualEntry.validation.select": {
+      "comment": "Manual statistical sub area entry: typed, but nothing picked from the results list.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Dewiswch is-ardal ystadegol o'r rhestr"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select a statistical sub area from the list"
           }
         }
       }

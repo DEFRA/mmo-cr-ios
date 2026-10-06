@@ -278,6 +278,36 @@ final class CatchRecordUITests: XCTestCase {
         XCTAssertTrue(element(app, "CatchRecord.addGear.heading").waitForExistence(timeout: 5))
     }
 
+    // MARK: - Add port / Add gear — blank-submit validation (WCAG 2.2 SC 3.3.1)
+
+    @MainActor
+    func test_addPort_submitWithBlankSearch_showsInlineError_andDoesNotRoute() {
+        let app = launch("-uiTestCatchRecordAddPort")
+
+        XCTAssertTrue(element(app, "CatchRecord.addPort.heading").waitForExistence(timeout: 5))
+        app.buttons["CatchRecord.addPort.saveContinue"].tap()
+
+        // Previously this was silent: the inline error was gated behind a non-empty query, so a
+        // completely blank submit showed nothing at all.
+        XCTAssertTrue(element(app, "CatchRecord.addPort.error").waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Enter the port you want to add"].exists)
+        XCTAssertTrue(element(app, "CatchRecord.addPort.heading").exists)
+    }
+
+    @MainActor
+    func test_addPort_submitWithTypedButUnselectedSearch_showsSelectFromListError() {
+        let app = launch("-uiTestCatchRecordAddPort")
+
+        let field = app.textFields.firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.typeText("Newl")
+        app.buttons["CatchRecord.addPort.saveContinue"].tap()
+
+        XCTAssertTrue(element(app, "CatchRecord.addPort.error").waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Select a port from the list"].exists)
+    }
+
     @MainActor
     func test_portJourney_withSeededFavourites_startsAtSelectDeparture_andAddAnotherReturnsToSearch() {
         let app = launch("-uiTestCatchRecordSelectPort")
@@ -480,9 +510,13 @@ final class CatchRecordUITests: XCTestCase {
 
         app.buttons[GearID.saveContinue].tap()
 
-        // Required variable measurement is empty → stays on the gear screen.
+        // Required variable measurement is empty → stays on the gear screen, and the inline
+        // "Enter a whole number" error is now shown (previously it never appeared: the view
+        // hard-coded `didAttemptSubmit: false` for this field, so no error rendered even though
+        // the routing guard below correctly blocked navigation).
         XCTAssertTrue(element(app, GearID.heading).exists)
         XCTAssertFalse(element(app, GearID.catchLocationHeading).exists)
+        XCTAssertTrue(app.staticTexts["Enter a whole number"].waitForExistence(timeout: 5))
     }
 
     @MainActor

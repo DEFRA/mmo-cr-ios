@@ -59,7 +59,10 @@ struct AddPortView: View {
                 query: Binding(get: { viewModel.query }, set: { viewModel.query = $0 }),
                 selectedOption: Binding(get: { viewModel.selectedName }, set: { viewModel.selectedName = $0 }),
                 didAttemptSubmit: viewModel.didAttemptSubmit,
-                errorMessage: languageStore.localized("catchRecord.addPort.validation.none"),
+                submitAttempt: viewModel.submitAttempt,
+                errorMessage: viewModel.validationMessage.map(languageStore.localized) ?? "",
+                errorPrefix: languageStore.localized("a11y.errorPrefix"),
+                errorAccessibilityIdentifier: "CatchRecord.addPort.error",
                 resultsAnnouncement: { count in
                     count == 0
                         ? languageStore.localized("catchRecord.addPort.search.noResults")

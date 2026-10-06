@@ -23,6 +23,7 @@ private struct SearchDropdownFieldHost: View {
             selectedOption: $selectedOption,
             didAttemptSubmit: didAttemptSubmit,
             errorMessage: "Select a species from the list",
+            announcesError: false,
             errorAccessibilityIdentifier: "Test.error"
         )
     }
@@ -37,6 +38,12 @@ final class SearchDropdownFieldRenderingTests: XCTestCase {
 
     func test_render_withInvalidQuery_showsError() {
         ViewRenderingHarness.render(SearchDropdownFieldHost(query: "xyz", didAttemptSubmit: true))
+    }
+
+    /// Regression: a blank field submitted with no entry must still render its error row. This
+    /// previously rendered nothing, because the error was gated behind `!query.isEmpty`.
+    func test_render_blankAfterSubmit_showsError() {
+        ViewRenderingHarness.render(SearchDropdownFieldHost(query: "", didAttemptSubmit: true))
     }
 
     func test_render_withValidSelection() {

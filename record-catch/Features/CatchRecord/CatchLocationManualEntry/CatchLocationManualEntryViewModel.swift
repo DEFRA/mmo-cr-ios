@@ -23,7 +23,14 @@ final class CatchLocationManualEntryViewModel {
     var query: String = ""
     /// The subrectangle code selected from the results list (nil until one is chosen).
     var selectedCode: String?
-    private(set) var didAttemptSubmit = false
+    /// Number of "Save and continue" attempts. A monotonic counter rather than a `Bool` so the
+    /// shared `SearchDropdownField` can re-announce its error to VoiceOver on every attempt — the
+    /// `false → true` edge of a flag fires only once, leaving a VoiceOver user with silence on a
+    /// second blank submit.
+    private(set) var submitAttempt = 0
+    /// Whether a submit has been attempted, derived from `submitAttempt` so every existing call
+    /// site and test keeps working unchanged.
+    var didAttemptSubmit: Bool { submitAttempt > 0 }
 
     /// Subrectangle codes available to the search field, loaded from the search provider.
     private(set) var codes: [String] = []
@@ -55,11 +62,11 @@ final class CatchLocationManualEntryViewModel {
         self.selectedCode = draft.gearCatchIndex(forGearID: gear.id).flatMap { draft.gearCatches[$0].statisticalArea }
     }
 
-    /// Current inline error, once a submit has been attempted. Reuses `CatchLocationValidation` —
-    /// the rule ("an area must be chosen") is identical to the map screen.
-    var errorKey: String? {
+    /// Current validation message, once a submit has been attempted. Uses this screen's own
+    /// two-rule validator rather than the map screen's single-rule `CatchLocationValidation`.
+    var validationMessage: ValidationMessage? {
         guard didAttemptSubmit else { return nil }
-        return CatchLocationValidation.errorKey(for: selectedCode)
+        return CatchLocationManualEntryValidation.message(query: query, selectedCode: selectedCode)
     }
 
     /// Loads the searchable code list up front so the field can filter locally. Failures leave the
@@ -73,8 +80,8 @@ final class CatchLocationManualEntryViewModel {
     /// own `GearCatch` entry (see ADR-0011) rather than a single trip-level field, since the
     /// subrectangle is captured per gear.
     func submit() {
-        didAttemptSubmit = true
-        guard CatchLocationValidation.errorKey(for: selectedCode) == nil else { return }
+        submitAttempt += 1
+        guard CatchLocationManualEntryValidation.message(query: query, selectedCode: selectedCode) == nil else { return }
         if let index = draft.gearCatchIndex(forGearID: gear.id) {
             draft.gearCatches[index].statisticalArea = selectedCode
         }

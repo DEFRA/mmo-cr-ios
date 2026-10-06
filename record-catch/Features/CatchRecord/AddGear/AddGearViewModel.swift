@@ -22,7 +22,14 @@ final class AddGearViewModel {
     var query: String = ""
     /// The gear name selected from the results list (nil until one is chosen).
     var selectedName: String?
-    private(set) var didAttemptSubmit = false
+    /// Number of "Save and continue" attempts. A monotonic counter rather than a `Bool` so the
+    /// shared `SearchDropdownField` can re-announce its error to VoiceOver on every attempt — the
+    /// `false → true` edge of a flag fires only once, leaving a VoiceOver user with silence on a
+    /// second blank submit.
+    private(set) var submitAttempt = 0
+    /// Whether a submit has been attempted, derived from `submitAttempt` so every existing call
+    /// site and test keeps working unchanged.
+    var didAttemptSubmit: Bool { submitAttempt > 0 }
     /// Set while a zero-measurement gear is being saved straight to favourites.
     private(set) var isSaving = false
     /// Set when saving a zero-measurement gear to favourites fails, so the view can surface a
@@ -59,10 +66,10 @@ final class AddGearViewModel {
         return gears.first { $0.name == selectedName }
     }
 
-    /// Current inline error, once a submit has been attempted.
-    var errorKey: String? {
+    /// Current validation message, once a submit has been attempted.
+    var validationMessage: ValidationMessage? {
         guard didAttemptSubmit else { return nil }
-        return AddGearValidation.errorKey(for: selectedGear)
+        return AddGearValidation.message(query: query, selectedGear: selectedGear)
     }
 
     /// Loads the searchable gear list up front so the field can filter locally.
@@ -74,9 +81,10 @@ final class AddGearViewModel {
     /// required measurements at all, saves it straight to favourites and returns to the select
     /// screen (see ADR-0012).
     func submit() async {
-        didAttemptSubmit = true
+        submitAttempt += 1
         saveFailed = false
-        guard let gear = selectedGear else { return }
+        guard AddGearValidation.message(query: query, selectedGear: selectedGear) == nil,
+              let gear = selectedGear else { return }
 
         guard gear.requiredMeasurements.isEmpty else {
             router.push(.gearMeasurements(gear: gear, vessel: vessel, referenceNumber: referenceNumber))

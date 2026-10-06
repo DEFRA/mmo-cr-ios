@@ -8,10 +8,28 @@ struct SearchDropdownField: View {
     @Binding var query: String
     @Binding var selectedOption: String?
     var didAttemptSubmit: Bool = false
+    /// Number of "Save and continue" attempts. A monotonic counter, separate from
+    /// `didAttemptSubmit`, so the error can be re-announced to VoiceOver on every attempt — the
+    /// `false → true` edge of a `Bool` fires only once, leaving a VoiceOver user with silence on a
+    /// second blank submit even though the visual error is still showing. Defaults to `0` so call
+    /// sites that don't track attempts (none currently) keep working unchanged.
+    var submitAttempt: Int = 0
     /// Error message shown when the query has no valid selection from the list. No default: every
     /// call site must supply its own localised, context-specific copy (see the GOV.UK guidance on
     /// specific error messages) rather than silently falling back to un-localised English port copy.
     var errorMessage: String
+    /// Visually-hidden prefix spoken before the error message, mirroring GOV.UK's
+    /// `govuk-visually-hidden` "Error:" prefix so VoiceOver announces "Error: <message>" exactly as
+    /// every other error row in this app does. Defaults to English rather than reading
+    /// `AppLanguageStore` from the environment because this file is also compiled into the
+    /// `record-catchTests` target (see the note on the inline error row below); call sites pass
+    /// `languageStore.localized("a11y.errorPrefix")`.
+    var errorPrefix: String = "Error:"
+    /// Whether the field announces its own error to assistive technology when it first appears, and
+    /// again on every subsequent submit attempt (WCAG 2.2 SC 4.1.3 Status Messages). Set `false` on
+    /// screens that already render an `ErrorSummary` — that component moves VoiceOver focus itself,
+    /// and two simultaneous announcements talk over each other.
+    var announcesError: Bool = true
     /// Localised "results" announcement builder for VoiceOver (WCAG 2.2 SC 4.1.3). Given a count,
     /// returns the phrase to announce (e.g. "5 results" / "No results"). Announcements are made
     /// without moving focus so the user is informed of changes to the results list.
@@ -45,7 +63,10 @@ struct SearchDropdownField: View {
         query: Binding<String>,
         selectedOption: Binding<String?>,
         didAttemptSubmit: Bool = false,
+        submitAttempt: Int = 0,
         errorMessage: String,
+        errorPrefix: String = "Error:",
+        announcesError: Bool = true,
         errorAccessibilityIdentifier: String? = nil,
         resultsAnnouncement: @escaping (Int) -> String = { $0 == 0 ? "No results" : "\($0) results" }
     ) {
@@ -56,7 +77,10 @@ struct SearchDropdownField: View {
         _query = query
         _selectedOption = selectedOption
         self.didAttemptSubmit = didAttemptSubmit
+        self.submitAttempt = submitAttempt
         self.errorMessage = errorMessage
+        self.errorPrefix = errorPrefix
+        self.announcesError = announcesError
         self.errorAccessibilityIdentifier = errorAccessibilityIdentifier
         self.resultsAnnouncement = resultsAnnouncement
     }
@@ -78,7 +102,12 @@ struct SearchDropdownField: View {
     }
 
     private var shouldShowError: Bool {
-        (didAttemptSubmit || hasBlurred) && !query.isEmpty && !hasValidSelection
+        Self.shouldShowError(
+            didAttemptSubmit: didAttemptSubmit,
+            hasBlurred: hasBlurred,
+            query: query,
+            hasValidSelection: hasValidSelection
+        )
     }
 
     private var showResults: Bool {
@@ -171,6 +200,9 @@ struct SearchDropdownField: View {
                         .foregroundStyle(AppColors.errorRed)
                 }
                 .accessibilityElement(children: .combine)
+                // GOV.UK's visually-hidden "Error:" prefix, so VoiceOver reads
+                // "Error: Enter the port you want to add" — matching every other error in the app.
+                .accessibilityLabel("\(errorPrefix) \(errorMessage)")
                 .modifier(SearchDropdownFieldErrorIdentifier(identifier: errorAccessibilityIdentifier))
             }
         }
@@ -188,6 +220,15 @@ struct SearchDropdownField: View {
         .onChange(of: filteredOptions.count) { _, _ in
             guard showResults else { return }
             scrollResultsIntoView()
+        }
+        // Announce the error on every submit attempt (not just the first) so a VoiceOver user who
+        // presses "Save and continue" a second time while still blank is told again, rather than
+        // meeting silence on an apparently unchanged screen (WCAG 2.2 SC 4.1.3 Status Messages).
+        // Suppressed on screens that render an `ErrorSummary`, which moves focus itself — see
+        // `announcesError`.
+        .onChange(of: submitAttempt) { _, _ in
+            guard shouldShowError, announcesError else { return }
+            Self.announce("\(errorPrefix) \(errorMessage)")
         }
     }
 
@@ -242,6 +283,31 @@ struct SearchDropdownField: View {
         }
 
         return options.contains(selectedOption) && selectedOption == query
+    }
+
+    /// Whether the inline validation error should be shown.
+    ///
+    /// Two triggers, deliberately gated differently:
+    ///
+    /// - **Submit** (`didAttemptSubmit`) always errors when there is no valid selection, *including
+    ///   when the field was left blank*. Omitting required information is an input error under
+    ///   WCAG 2.2 SC 3.3.1, and GOV.UK requires an error message whenever a validation error
+    ///   occurs — re-displaying an unchanged screen is a conformance failure.
+    /// - **Blur** (`hasBlurred`) only errors a field the user actually typed into but did not pick
+    ///   from the list. Merely focusing and leaving an untouched empty field must not accuse the
+    ///   user of an error they have not yet had the chance to make.
+    ///
+    /// Pure and static so the gating is unit-testable without a hosted view, mirroring
+    /// `TextInputField.shouldShowRequiredError`.
+    static func shouldShowError(
+        didAttemptSubmit: Bool,
+        hasBlurred: Bool,
+        query: String,
+        hasValidSelection: Bool
+    ) -> Bool {
+        guard !hasValidSelection else { return false }
+        if didAttemptSubmit { return true }
+        return hasBlurred && !query.isEmpty
     }
 
     /// Stable, unambiguous accessibility identifier for a results-list row, keyed by the option's

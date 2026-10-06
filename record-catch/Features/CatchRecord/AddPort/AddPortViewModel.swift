@@ -19,7 +19,14 @@ final class AddPortViewModel {
     var query: String = ""
     /// The port name selected from the results list (nil until one is chosen).
     var selectedName: String?
-    private(set) var didAttemptSubmit = false
+    /// Number of "Save and continue" attempts. A monotonic counter rather than a `Bool` so the
+    /// shared `SearchDropdownField` can re-announce its error to VoiceOver on every attempt — the
+    /// `false → true` edge of a flag fires only once, leaving a VoiceOver user with silence on a
+    /// second blank submit.
+    private(set) var submitAttempt = 0
+    /// Whether a submit has been attempted, derived from `submitAttempt` so every existing call
+    /// site and test keeps working unchanged.
+    var didAttemptSubmit: Bool { submitAttempt > 0 }
     private(set) var isSaving = false
     /// Set when saving to favourites fails, so the view can surface a recoverable error.
     private(set) var saveFailed = false
@@ -59,10 +66,10 @@ final class AddPortViewModel {
         return ports.first { $0.name == selectedName } ?? PortOption(name: selectedName)
     }
 
-    /// Current inline error, once a submit has been attempted.
-    var errorKey: String? {
+    /// Current validation message, once a submit has been attempted.
+    var validationMessage: ValidationMessage? {
         guard didAttemptSubmit else { return nil }
-        return AddPortValidation.errorKey(for: selectedPort)
+        return AddPortValidation.message(query: query, selectedPort: selectedPort)
     }
 
     /// The route to push after a successful save. Pure and independent of async work, so it is
@@ -91,9 +98,10 @@ final class AddPortViewModel {
 
     /// Validates, adds the selected port to favourites, and routes to the correct select screen.
     func submit() async {
-        didAttemptSubmit = true
+        submitAttempt += 1
         saveFailed = false
-        guard let port = selectedPort else { return }
+        guard AddPortValidation.message(query: query, selectedPort: selectedPort) == nil,
+              let port = selectedPort else { return }
         isSaving = true
         defer { isSaving = false }
         do {

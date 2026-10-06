@@ -73,7 +73,12 @@ struct AddSpeciesView: View {
                 query: Binding(get: { viewModel.query }, set: { viewModel.query = $0 }),
                 selectedOption: Binding(get: { viewModel.selectedName }, set: { viewModel.selectedName = $0 }),
                 didAttemptSubmit: viewModel.didAttemptSubmit,
+                submitAttempt: viewModel.submitAttempt,
                 errorMessage: viewModel.validationMessage.map(languageStore.localized) ?? "",
+                errorPrefix: languageStore.localized("a11y.errorPrefix"),
+                // This screen already renders an `ErrorSummary`, which takes VoiceOver focus on
+                // appearance — a second inline announcement would talk over it.
+                announcesError: false,
                 errorAccessibilityIdentifier: "\(identifierPrefix).error",
                 resultsAnnouncement: { count in
                     count == 0

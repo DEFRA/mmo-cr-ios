@@ -69,6 +69,8 @@ struct TripDateView: View {
                     set: { viewModel.selectedDate = $0 }
                 ),
                 range: viewModel.selectableRange,
+                onlyDateAvailableFormat: languageStore.localized("catchRecord.tripDate.onlyDateAvailable"),
+                dateFormattingLocale: languageStore.language.locale,
                 accessibilityIdentifierPrefix: identifierPrefix
             )
 

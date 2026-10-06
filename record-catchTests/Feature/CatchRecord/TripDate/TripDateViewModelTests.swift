@@ -108,6 +108,26 @@ final class TripDateViewModelTests: XCTestCase {
         XCTAssertEqual(sut.selectableRange.upperBound, today)
     }
 
+    /// The common "same-day trip" case: a user accepts the departure screen's default of today
+    /// unchanged, so the return screen's range collapses to a single legal day (today...today).
+    /// `TripDatePicker` relies on this never inverting and on `selectedDate` landing exactly on
+    /// that single day — see its degenerate-range handling, which replaces the interactive wheel
+    /// (unstable in UIKit with zero scrollable rows) with a static confirmation.
+    func test_selectableRange_return_whenDepartureDateIsToday_collapsesToSingleDay() {
+        let today = date(2026, 4, 3)
+        let sut = TripDateViewModel(
+            phase: .return,
+            vessel: vessel,
+            referenceNumber: referenceNumber,
+            departureDate: today,
+            router: CatchRecordRouter(),
+            now: { today }
+        )
+        XCTAssertEqual(sut.selectableRange.lowerBound, sut.selectableRange.upperBound)
+        XCTAssertEqual(sut.selectableRange, today...today)
+        XCTAssertEqual(sut.selectedDate, today)
+    }
+
     // MARK: - Submit: departure success
 
     func test_submit_departure_pushesReturnCarryingDepartureDate() {

@@ -40,6 +40,7 @@ final class CatchRecordUITests: XCTestCase {
         static let returnHeading = "CatchRecord.tripDate.return.heading"
         static let returnContinue = "CatchRecord.tripDate.return.saveContinue"
         static let returnPicker = "CatchRecord.tripDate.return.picker"
+        static let returnOnlyDateAvailable = "CatchRecord.tripDate.return.onlyDateAvailable"
 
         static let warningBox = "Home.warningBox"
     }
@@ -215,9 +216,14 @@ final class CatchRecordUITests: XCTestCase {
         XCTAssertTrue(element(app, ID.departurePicker).exists)
         app.buttons[ID.departureContinue].tap()
 
-        // Return date screen.
+        // Return date screen. Departure was accepted unchanged (defaults to today), so the only
+        // legal return date is also today — the range collapses to a single day and the screen
+        // shows the static "only date available" confirmation instead of the interactive wheel
+        // (see `TripDatePicker`: a `.wheel` `DatePicker` with a single-day range is an unstable
+        // UIKit configuration that can hang/crash on-device the moment it's touched).
         XCTAssertTrue(element(app, ID.returnHeading).waitForExistence(timeout: 5))
-        XCTAssertTrue(element(app, ID.returnPicker).exists)
+        XCTAssertTrue(element(app, ID.returnOnlyDateAvailable).exists)
+        XCTAssertFalse(element(app, ID.returnPicker).exists)
         app.buttons[ID.returnContinue].tap()
 
         // With no favourites yet, enters the port sub-journey at the Add-port screen.

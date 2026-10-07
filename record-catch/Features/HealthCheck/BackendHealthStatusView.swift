@@ -14,8 +14,8 @@ struct BackendHealthStatusView: View {
 
     @State private var viewModel: BackendHealthStatusViewModel
 
-    init(viewModel: BackendHealthStatusViewModel = BackendHealthStatusViewModel()) {
-        _viewModel = State(initialValue: viewModel)
+    init(viewModel: BackendHealthStatusViewModel? = nil) {
+        _viewModel = State(initialValue: viewModel ?? BackendHealthStatusViewModel())
     }
 
     var body: some View {

@@ -1,0 +1,5 @@
+// Local-only, git-ignored (see Local.xcconfig.example). Write URLs as https:/$()/host because "//" starts a comment.
+CR_APP_CFG_API_BASE_URL = https:/$()/mmo-cr-catch-recording-service.api.dev.cdp-int.defra.cloud
+ 
+// Temporary local-build-only backend connectivity check on Sign-in — see Features/HealthCheck.
+SWIFT_ACTIVE_COMPILATION_CONDITIONS = $(inherited) BACKEND_HEALTH_CHECK

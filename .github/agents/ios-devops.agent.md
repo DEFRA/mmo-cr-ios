@@ -75,11 +75,12 @@ Do not run a second, separate validation round — the plan is checked against t
 
 - **CI pipelines** — PR validation (SwiftLint, build, unit/UI tests + coverage), the SonarCloud scan, and
   branch-protection-friendly checks.
-- **Release pipelines** — a manually dispatched `ios-release.yml` (Fastlane, run on a release tag) that **compiles each of the three
-  apps once** (dev/test/prod bundle IDs) from the **same tagged commit** to internal TestFlight, and a
-  manually dispatched `ios-promote.yml` that promotes to external TestFlight by **re-packaging the same
-  archive with the external backend URL (build `N.1`) — no recompile** — then submits that same `N.1`
-  upload to the App Store (ADR-0015).
+- **Release pipelines** — a single manually dispatched `ios-release.yml` (Fastlane, run on a release tag, **one run
+  per app** via an `app` input) that **compiles each of the three apps once** (dev/test/prod bundle IDs) from the
+  **same tagged commit** to internal TestFlight and, **in the same run**, promotes to external TestFlight by
+  **re-packaging the same archive with the external backend URL (build `N.1`) — no recompile** — then (Prod run)
+  submits that same `N.1` upload to the App Store (ADR-0015). There is **no** separate promotion workflow; GitHub's
+  35-day run / 30-day approval limits are accepted.
 - **Fastlane** — `Fastfile` lanes, `Appfile`, `Matchfile`/signing config, `Gemfile` pinning.
 - **Signing & secrets** — App Store Connect API key auth, temporary keychains, Match vs manual `.p12` vs
   Xcode Cloud managed signing (decided in your plan + an ADR), Environment-scoped encrypted secrets.

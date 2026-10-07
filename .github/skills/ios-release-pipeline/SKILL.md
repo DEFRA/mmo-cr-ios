@@ -42,8 +42,7 @@ This is a single-app iOS repo (app sources under `record-catch/`, tests under `r
 .github/
   workflows/
     ios-ci.yml         # PR + main: SwiftLint, build, test+coverage, SonarCloud
-    ios-release.yml    # manual dispatch on a release tag: compile each app once → internal TestFlight; keep encrypted archive
-    ios-promote.yml    # manual dispatch: re-package archive → external TestFlight; App Store submit
+    ios-release.yml    # manual dispatch on a release tag, one run per app: compile once → internal TestFlight → promote N.1 → (Prod) App Store
     codeql.yml         # SEPARATE CodeQL advanced-setup SAST workflow (Swift)
   dependabot.yml       # SEPARATE Dependabot config (github-actions, swift/SPM, bundler)
 fastlane/
@@ -78,19 +77,22 @@ Add `sonar-project.properties` (DEFRA organisation + project key). Convert Xcode
 Sonar-readable report and run the scan in `ios-ci.yml`. The SonarCloud quality gate is the coverage/quality
 source of truth; wire it as a required check on `main`.
 
-### 4. Release and promotion workflows
-- **`ios-release.yml`** — manual `workflow_dispatch` only, run on a `v*` release tag (no version inputs; the tag
-  must match the code). Build jobs `dev-build` (`dev`, no gate), `test-build`
-  (`test`, A), `prod-build` (`prod`, C): each compiles its app **once** from the tagged commit with its
-  Environment's `CR_APP_CFG_*` config, uploads build `N` to **internal** TestFlight, records the Mach-O UUID and
-  keeps the `.xcarchive` as an **encrypted** artifact (90 days).
-- **`ios-promote.yml`** — `workflow_dispatch` (`app`, `release_tag`, `target`). Jobs
-  `test-promote-external` (`test-external`, B), `prod-promote-external` (`prod-external`, D) download the
-  archive from the release run, replace `MMOCRAppConfig` with their Environment's config, set build `N.1`, re-sign,
-  prove it (UUID match, `codesign` verify, internal host absent), upload and assign to **external** groups.
-  `prod-appstore-submit` (`prod-appstore`, E) submits the **same `N.1` upload**.
-- Promotion is separate because a workflow run is cancelled after 35 days including approval waits.
-- Never cancel an in-flight release or promotion (`concurrency` with `cancel-in-progress: false`).
+### 4. Release workflow
+- **`ios-release.yml`** — manual `workflow_dispatch` only, run on a `v*` release tag with an `app` input
+  (`dev`/`test`/`prod`; no version inputs; the tag must match the code). One run per app:
+  - `dev`: `dev-build` (`dev`, no gate) compiles once, uploads `N` and assigns it to Dev's internal and external
+    groups (Dev backend).
+  - `test`: `test-build` (`test`, A) → `test-promote-external` (`test-external`, B).
+  - `prod` (started after release-testing sign-off): `prod-build` (`prod`, C) → `prod-promote-external`
+    (`prod-external`, D) → `prod-appstore-submit` (`prod-appstore`, E).
+- Build jobs compile **once** with their Environment's `CR_APP_CFG_*` config, upload build `N` to **internal**
+  TestFlight, record the Mach-O UUID and keep the `.xcarchive` as an **encrypted** artifact of the run.
+- Promotion jobs download that archive **from the same run**, replace `MMOCRAppConfig` with their Environment's
+  config, set build `N.1`, re-sign, prove it (UUID match, `codesign` verify, internal host absent), upload and assign
+  to **external** groups. `prod-appstore-submit` submits the **same `N.1` upload**.
+- No separate promotion workflow: a run is cancelled after 35 days including approval waits (30 per approval), and
+  these limits are accepted. Include the app in the `concurrency` group.
+- Never cancel an in-flight release (`concurrency` with `cancel-in-progress: false`).
 
 ### 5. Fastlane
 - **`Appfile`** — app identifier(s) + App Store Connect Team ID (no secrets).

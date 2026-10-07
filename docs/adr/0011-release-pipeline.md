@@ -132,6 +132,8 @@ certificate and key into an empty store, adding the Test and Prod profiles, and 
   replaced by build jobs in `ios-release.yml` plus a manually dispatched, gated `ios-promote.yml` (GitHub's
   35-day run / 30-day approval limits). External promotion becomes *compile once, configure at promotion*
   (re-package with the external backend URL, build `N.1`, upload) instead of a metadata-only assignment.
+  **Amended 2026-10:** `ios-promote.yml` is dropped; each app has its own `ios-release.yml` run holding its build and
+  promotions, within the accepted 35-day / 30-day limits (ADR-0015, Amendments).
 - **2026-09 — release tagging and trigger** (supersedes decision 2's triggers and 3a's overrides):
   - *iOS CI* publishes the tag on every merge to `main` **except Dependabot merges** (detected from the commit's
     PR), and on a manual run with `publish_release_tag: true` (default `false`); always after build and tests

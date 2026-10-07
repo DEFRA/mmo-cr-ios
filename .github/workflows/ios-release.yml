@@ -70,7 +70,7 @@ jobs:
         if: ${{ always() }}
         run: bash .github/workflows/scripts/cleanup-signing-assets.sh
 
-  # Demo of the ADR-0015 promotion path on the Dev app. Test/Prod promotions will run from ios-promote.yml.
+  # Dev proof of concept of the ADR-0015 promotion; Test/Prod promote the same way within their own runs.
   dev-promote-external:
     name: Dev → external TestFlight
     needs: dev-build

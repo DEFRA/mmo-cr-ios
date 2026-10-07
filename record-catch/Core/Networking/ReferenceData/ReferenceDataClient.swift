@@ -15,14 +15,16 @@
 //  item object. `fetch<Item>` and `fetchItem<Item>` below model each shape separately rather than
 //  forcing the bare item through the envelope decoder. `fetchManifest()` is a third, distinct
 //  shape again — a single bare manifest object with no collection/item split (see ADR-0018
-//  addendum "Manifest").
+//  addendum "Manifest"). `checkHealth()` is a fourth shape: it discards the response body
+//  entirely and only cares about the HTTP status, since `/health`'s body is undocumented (see
+//  `makeReferenceDataHealthRequest`'s doc comment in `ReferenceDataEndpoint.swift`).
 //
 
 import Foundation
 
-/// Fetches reference-data collections/items. Vessels, species, ports and the manifest are
-/// exposed today; a future dataset adds new methods here following the same
-/// `fetch<Item>`/`fetchItem<Item>` shape internally.
+/// Fetches reference-data collections/items. Vessels, species, ports, the manifest and the
+/// service's `/health` liveness probe are exposed today; a future dataset adds new methods here
+/// following the same `fetch<Item>`/`fetchItem<Item>` shape internally.
 nonisolated protocol ReferenceDataFetching: Sendable {
     func fetchVessels() async throws -> [VesselOption]
     func fetchVessel(id: String) async throws -> VesselOption
@@ -31,6 +33,10 @@ nonisolated protocol ReferenceDataFetching: Sendable {
     func fetchPorts() async throws -> [PortOption]
     func fetchPort(id: String) async throws -> PortOption
     func fetchManifest() async throws -> ReferenceDataManifest
+    /// Pings `GET {baseURL}/health`. Succeeds (returns) on any 2xx response and throws `APIError`
+    /// otherwise — see `makeReferenceDataHealthRequest`'s doc comment for why no response body is
+    /// decoded or modelled.
+    func checkHealth() async throws
 }
 
 /// Production implementation: builds a request via `makeReferenceDataRequest`/
@@ -95,6 +101,12 @@ nonisolated struct RemoteReferenceDataClient: ReferenceDataFetching {
         return try await send(request, fallbackPath: "manifest") { data in
             try self.decoder.decode(ReferenceDataManifest.self, from: data)
         }
+    }
+
+    func checkHealth() async throws {
+        let token = await resolvedToken()
+        let request = makeReferenceDataHealthRequest(baseURL: configuration.baseURL, bearerToken: token)
+        _ = try await send(request, fallbackPath: "health") { _ in () }
     }
 
     /// Fetches and decodes an envelope for `dataset`'s collection route, mapping every failure
@@ -282,5 +294,9 @@ nonisolated struct StubReferenceDataClient: ReferenceDataFetching {
         if let error { throw error }
         if let manifest { return manifest }
         throw APIError.response(status: 503, details: nil)
+    }
+
+    func checkHealth() async throws {
+        if let error { throw error }
     }
 }

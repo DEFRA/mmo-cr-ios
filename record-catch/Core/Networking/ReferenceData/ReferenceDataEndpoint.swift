@@ -13,6 +13,12 @@
 //  the ADR-0018 addendum "Fetch-all, no query parameters") — sending one later without also
 //  sending `offset`/`limit` would silently truncate results to the backend's default page size.
 //
+//  `makeReferenceDataHealthRequest` builds `GET {baseURL}/health`, the one route in this file that
+//  is **not** under `/api/v1/reference-data` — it's the service root's plain liveness probe, added
+//  alongside the dataset/manifest routes for the connector's own use (e.g. a future startup/sync
+//  readiness check), distinct from the `/health/ready` readiness route ADR-0018 explicitly parked
+//  as unimplemented.
+//
 
 import Foundation
 
@@ -124,6 +130,37 @@ nonisolated func makeReferenceDataManifestRequest(
     var request = makeGETRequest(url: url, bearerToken: bearerToken, requestId: requestId)
     request.cachePolicy = .reloadIgnoringLocalCacheData
     return request
+}
+
+/// Builds the `URLRequest` for `GET {baseURL}/health` — the backend's plain liveness probe.
+/// Deliberately **not** prefixed with `/api/v1/reference-data` (it isn't a reference-data route at
+/// all, just the service root's health check) and, like every other route in this file, sends
+/// **no** query parameters. The response body shape is not modelled here: `RemoteReferenceDataClient.
+/// checkHealth()` only cares whether the request succeeds (2xx) or fails, matching the connector's
+/// existing status-code-driven `APIError` mapping rather than assuming an undocumented schema.
+///
+/// - Parameters:
+///   - baseURL: The app's configured API base URL (see `APIConfiguration`).
+///   - bearerToken: When non-`nil`, attached as `Authorization: Bearer <token>`. When `nil`, the
+///     request carries **no** `Authorization` header at all (never an empty/placeholder one) —
+///     see ADR-0018 §5. A health probe may not require auth at all, but the request is built
+///     identically to every other route here for consistency.
+///   - requestId: As above.
+/// - Returns: A fully-formed `GET` request with an `Accept: application/json` header.
+nonisolated func makeReferenceDataHealthRequest(
+    baseURL: URL,
+    bearerToken: String?,
+    requestId: String = UUID().uuidString
+) -> URLRequest {
+    var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)
+    components?.path += "/health"
+
+    // `URLComponents` only fails to produce a URL for a malformed base URL, which
+    // `APIConfiguration` has already validated by construction; force-unwrapping here would still
+    // be a production `!`, so fall back to the base URL itself rather than crash.
+    let url = components?.url ?? baseURL
+
+    return makeGETRequest(url: url, bearerToken: bearerToken, requestId: requestId)
 }
 
 /// Shared `GET` request assembly for every reference-data route above.

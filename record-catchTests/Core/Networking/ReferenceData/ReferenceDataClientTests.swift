@@ -615,6 +615,67 @@ final class ReferenceDataClientTests: XCTestCase {
         }
     }
 
+    // MARK: checkHealth
+
+    func test_checkHealth_succeeds_on200() async throws {
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: Data())
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        try await sut.checkHealth()
+    }
+
+    func test_checkHealth_requestsHealthURL_atServiceRoot() async throws {
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: Data())
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        try await sut.checkHealth()
+
+        XCTAssertEqual(
+            httpClient.receivedRequests.first?.url?.absoluteString,
+            "http://localhost:3002/health"
+        )
+    }
+
+    func test_checkHealth_throwsServiceUnavailable_on503() async {
+        let httpClient = StubHTTPClient.statusOnly(503)
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try! makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        do {
+            try await sut.checkHealth()
+            XCTFail("Expected a 503 response")
+        } catch let error as APIError {
+            XCTAssertTrue(error.isServiceUnavailable)
+        } catch {
+            XCTFail("Expected APIError, got \(error)")
+        }
+    }
+
+    func test_checkHealth_ignoresResponseBody_whenBodyIsNotJSON() async throws {
+        // The route's body shape is undocumented and deliberately not decoded (see
+        // `makeReferenceDataHealthRequest`'s doc comment) — a plain-text or empty 2xx body must
+        // still succeed.
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: Data("OK".utf8))
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        try await sut.checkHealth()
+    }
+
     // MARK: Correlation header (x-cdp-request-id)
 
     func test_everyRequest_sendsCorrelationHeader() async throws {

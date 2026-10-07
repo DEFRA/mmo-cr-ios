@@ -259,4 +259,25 @@ final class StubReferenceDataClientTests: XCTestCase {
             XCTFail("Expected APIError, got \(error)")
         }
     }
+
+    // MARK: checkHealth
+
+    func test_checkHealth_succeeds_byDefault() async throws {
+        let sut = StubReferenceDataClient()
+
+        try await sut.checkHealth()
+    }
+
+    func test_checkHealth_throwsConfiguredError() async {
+        let sut = StubReferenceDataClient(error: .response(status: 503, details: nil))
+
+        do {
+            try await sut.checkHealth()
+            XCTFail("Expected an error")
+        } catch let error as APIError {
+            XCTAssertEqual(error, .response(status: 503, details: nil))
+        } catch {
+            XCTFail("Expected APIError, got \(error)")
+        }
+    }
 }

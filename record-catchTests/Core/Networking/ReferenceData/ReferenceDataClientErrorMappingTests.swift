@@ -191,6 +191,44 @@ final class ReferenceDataClientErrorMappingTests: XCTestCase {
         await assertMapsURLError(code, to: .response(status: code.rawValue, details: nil))
     }
 
+    // MARK: Error mapping (checkHealth)
+
+    func test_checkHealth_throwsOffline_onNotConnectedToInternet() async {
+        let httpClient = StubHTTPClient.failure(URLError(.notConnectedToInternet))
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try! makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        do {
+            try await sut.checkHealth()
+            XCTFail("Expected .offline")
+        } catch let error as APIError {
+            XCTAssertEqual(error, .offline)
+        } catch {
+            XCTFail("Expected APIError, got \(error)")
+        }
+    }
+
+    func test_checkHealth_throwsUnauthorized_on401() async {
+        let httpClient = StubHTTPClient.statusOnly(401)
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try! makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        do {
+            try await sut.checkHealth()
+            XCTFail("Expected a 401 response")
+        } catch let error as APIError {
+            XCTAssertTrue(error.isUnauthorized)
+        } catch {
+            XCTFail("Expected APIError, got \(error)")
+        }
+    }
+
     // MARK: Security — never logs the token or headers
 
     func test_fetchVessels_proceedsWithoutToken_whenTokenProviderThrows() async throws {
@@ -205,6 +243,25 @@ final class ReferenceDataClientErrorMappingTests: XCTestCase {
 
         XCTAssertEqual(vessels.count, 2)
         XCTAssertNil(httpClient.receivedRequests.first?.value(forHTTPHeaderField: "Authorization"))
+    }
+
+    func test_checkHealth_neverLogsTokenOrAuthorizationHeader() async throws {
+        let sink = RecordingNetworkLogSink()
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: Data())
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: "super-secret-token"),
+            logger: NetworkLogger(sink: sink)
+        )
+
+        try await sut.checkHealth()
+
+        XCTAssertFalse(sink.messages.isEmpty)
+        for message in sink.messages {
+            XCTAssertFalse(message.contains("super-secret-token"))
+            XCTAssertFalse(message.contains("Authorization"))
+        }
     }
 
     func test_fetchVessels_neverLogsTokenOrAuthorizationHeader() async throws {

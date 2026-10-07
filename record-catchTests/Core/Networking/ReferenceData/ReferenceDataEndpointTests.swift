@@ -182,6 +182,56 @@ final class ReferenceDataEndpointTests: XCTestCase {
         )
     }
 
+    // MARK: Health route
+
+    func test_makeHealthRequest_buildsExpectedURLAndMethod() {
+        let request = makeReferenceDataHealthRequest(baseURL: baseURL, bearerToken: nil)
+
+        XCTAssertEqual(request.url?.absoluteString, "http://localhost:3002/health")
+        XCTAssertEqual(request.httpMethod, "GET")
+    }
+
+    func test_makeHealthRequest_setsAcceptHeader() {
+        let request = makeReferenceDataHealthRequest(baseURL: baseURL, bearerToken: nil)
+
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Accept"), "application/json")
+    }
+
+    func test_makeHealthRequest_setsAuthorizationHeader_whenTokenProvided() {
+        let request = makeReferenceDataHealthRequest(baseURL: baseURL, bearerToken: "secret-token")
+
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer secret-token")
+    }
+
+    func test_makeHealthRequest_omitsAuthorizationHeaderEntirely_whenNoToken() {
+        let request = makeReferenceDataHealthRequest(baseURL: baseURL, bearerToken: nil)
+
+        XCTAssertNil(request.value(forHTTPHeaderField: "Authorization"))
+        XCTAssertFalse(request.allHTTPHeaderFields?.keys.contains("Authorization") ?? false)
+    }
+
+    func test_makeHealthRequest_hasNoQueryParameters() {
+        let request = makeReferenceDataHealthRequest(baseURL: baseURL, bearerToken: nil)
+
+        XCTAssertNil(request.url?.query)
+    }
+
+    func test_makeHealthRequest_sendsProvidedCorrelationHeader() {
+        let request = makeReferenceDataHealthRequest(
+            baseURL: baseURL,
+            bearerToken: nil,
+            requestId: "fixed-request-id"
+        )
+
+        XCTAssertEqual(request.value(forHTTPHeaderField: "x-cdp-request-id"), "fixed-request-id")
+    }
+
+    func test_makeHealthRequest_defaultsToANonEmptyCorrelationHeader_whenNotProvided() {
+        let request = makeReferenceDataHealthRequest(baseURL: baseURL, bearerToken: nil)
+
+        XCTAssertFalse(request.value(forHTTPHeaderField: "x-cdp-request-id")?.isEmpty ?? true)
+    }
+
     // MARK: Manifest route
 
     func test_makeManifestRequest_buildsExpectedURLAndMethod() {

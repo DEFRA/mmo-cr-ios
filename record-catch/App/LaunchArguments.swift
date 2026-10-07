@@ -21,6 +21,10 @@ struct LaunchArguments {
 
         // Tab / feature hosting
         case home = "-uiTestHome"
+        /// Seeds Home with 6 stubbed records (pageSize 4, so 2 pages) to UI-test the pagination
+        /// control's Previous/Next/page-number interactions, which `-uiTestHome`'s 3-record,
+        /// single-page fixture can't exercise.
+        case homePaged = "-uiTestHomePaged"
         case settings = "-uiTestSettings"
         case manageAccount = "-uiTestManageAccount"
         case notifications = "-uiTestNotifications"

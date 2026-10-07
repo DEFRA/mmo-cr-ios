@@ -20,32 +20,17 @@ struct HomeView: View {
     /// the horizontal-scroll reflow legible at accessibility text sizes.
     private static let tableReflowMinWidth: CGFloat = 560
 
-    /// The number of rows shown per pagination page.
-    private static let pageSize = 4
-
-    /// The 1-based page currently shown. Injectable so previews can demonstrate the multi-page
-    /// pagination (Previous/Next arrows); there is no in-app paging interaction yet, so this stays
-    /// fixed for a given screen instance.
-    private let currentPage: Int
-
-    /// Loads the merged local-drafts + server-records list (see ADR-0015). Injectable so previews
-    /// and UI tests can seed a deterministic `RecordsProviding` without a real `ModelContainer`.
+    /// Loads the merged local-drafts + server-records list (see ADR-0015) and owns pagination over
+    /// it (see `HomeViewModel`). Injectable so previews and UI tests can seed a deterministic
+    /// `RecordsProviding` without a real `ModelContainer`.
     @State private var viewModel: HomeViewModel
 
     init(
         currentPage: Int = 1,
         recordsProvider: RecordsProviding? = nil
     ) {
-        self.currentPage = currentPage
         let provider = recordsProvider ?? MergingRecordsRepository(draftStore: InMemoryCatchRecordDraftStore())
-        _viewModel = State(wrappedValue: HomeViewModel(recordsProvider: provider))
-    }
-
-    /// Derived from the live `viewModel.rows` count, so the "showing X to Y of Z" text and the
-    /// page-number strip update whenever a draft is added, saved further or deleted (see
-    /// `HomeViewModel.load()`) instead of being fixed at view construction.
-    private var paginationState: PaginationState {
-        PaginationState(currentPage: currentPage, itemCount: viewModel.rows.count, pageSize: Self.pageSize)
+        _viewModel = State(wrappedValue: HomeViewModel(recordsProvider: provider, initialPage: currentPage))
     }
 
     var body: some View {
@@ -133,8 +118,31 @@ struct HomeView: View {
             recordsErrorBanner
         case .loaded:
             tripsTable
-            PaginationControls(state: paginationState)
+            PaginationControls(
+                state: viewModel.paginationState,
+                onSelectPage: { page in
+                    viewModel.goToPage(page)
+                    announcePageChange()
+                },
+                onPrevious: {
+                    viewModel.goToPrevious()
+                    announcePageChange()
+                },
+                onNext: {
+                    viewModel.goToNext()
+                    announcePageChange()
+                }
+            )
         }
+    }
+
+    /// Posts a VoiceOver announcement of the new "Showing X to Y of Z" range whenever the visible
+    /// page changes. Required because changing `currentPage` swaps the table's content in place
+    /// without moving focus, so VoiceOver would otherwise never notice the page changed (WCAG 2.2
+    /// AA — status changes must be perceivable; see the accessibility instructions).
+    private func announcePageChange() {
+        let text = viewModel.paginationState.showingText(format: languageStore.localized("home.pagination.showing"))
+        AccessibilityNotification.Announcement(text).post()
     }
 
     private var recordsErrorBanner: some View {
@@ -240,7 +248,7 @@ struct HomeView: View {
     @ViewBuilder
     private var tripsTable: some View {
         let table = SubmissionsTable(
-            rows: viewModel.rows,
+            rows: viewModel.pagedRows,
             headerEndDate: languageStore.localized("home.table.header.endDate"),
             headerVessel: languageStore.localized("home.table.header.vessel"),
             headerStatus: languageStore.localized("home.table.header.status"),

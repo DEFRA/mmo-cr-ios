@@ -35,6 +35,11 @@ struct CatchRecordHostView: View {
     /// to a computed property since `modelContext` is not available until the view resolves its
     /// environment (i.e. not yet at `init`).
     private let injectedDraftStore: CatchRecordDraftStoring?
+    /// Injectable override for `HomeView`'s records source. Defaults to `nil`, in which case the
+    /// production `MergingRecordsRepository(draftStore:)` is used (local Unsent drafts merged with
+    /// stubbed server records — see ADR-0015). UI tests use this to seed a deterministic row count
+    /// (e.g. `-uiTestHomePaged`'s 6 rows) without depending on `draftStore` state.
+    private let injectedRecordsProvider: RecordsProviding?
 
     private var draftStore: CatchRecordDraftStoring {
         injectedDraftStore ?? SwiftDataCatchRecordDraftStore(modelContext: modelContext)
@@ -64,13 +69,17 @@ struct CatchRecordHostView: View {
     ///   - draft: injectable journey draft; UI tests can seed it to jump into a mid-journey state.
     ///   - draftStore: injectable on-device draft persistence; UI tests/previews can supply an
     ///     `InMemoryCatchRecordDraftStore` instead of a real `ModelContainer`.
+    ///   - recordsProvider: injectable override for `HomeView`'s records source; UI tests use this
+    ///     to seed a deterministic row count (e.g. for pagination) without depending on
+    ///     `draftStore` state.
     init(
         initialRoute: CatchRecordRoute? = nil,
         favouritePorts: FavouritePortsProviding = StubFavouritePortsProvider(),
         favouriteGears: FavouriteGearProviding = StubFavouriteGearProvider(),
         favouriteSpecies: FavouriteSpeciesProviding = StubFavouriteSpeciesProvider(),
         draft: CatchRecordDraft? = nil,
-        draftStore: CatchRecordDraftStoring? = nil
+        draftStore: CatchRecordDraftStoring? = nil,
+        recordsProvider: RecordsProviding? = nil
     ) {
         let router = CatchRecordRouter()
         if let initialRoute {
@@ -82,11 +91,12 @@ struct CatchRecordHostView: View {
         _favouriteSpecies = State(wrappedValue: favouriteSpecies)
         _draft = State(wrappedValue: draft ?? CatchRecordDraft())
         injectedDraftStore = draftStore
+        injectedRecordsProvider = recordsProvider
     }
 
     var body: some View {
         NavigationStack(path: Binding(get: { router.path }, set: { router.setPath($0) })) {
-            HomeView(recordsProvider: MergingRecordsRepository(draftStore: draftStore))
+            HomeView(recordsProvider: injectedRecordsProvider ?? MergingRecordsRepository(draftStore: draftStore))
                 .navigationDestination(for: CatchRecordRoute.self) { route in
                     // Single DRY call site (see ADR-0006 §3): hides the root tab bar for every
                     // pushed journey screen, current and future, without touching each of the

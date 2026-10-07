@@ -567,6 +567,7 @@
 		};
 		DA6ABF042FFE87DD00B7A0AB /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C0F1A0012FFE87DD00B7A0AB /* Base.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
@@ -588,6 +589,7 @@
 		};
 		DA6ABF052FFE87DD00B7A0AB /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C0F1A0012FFE87DD00B7A0AB /* Base.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;

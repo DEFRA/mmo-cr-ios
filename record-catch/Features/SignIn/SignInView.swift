@@ -44,6 +44,12 @@ struct SignInView: View {
         // runtime strings is handled per-part via `LocalizedText` / `ErrorLabel`
         // carrying a language identifier (WCAG 3.1.2).
         .environment(\.locale, languageStore.language.locale)
+        #if BACKEND_HEALTH_CHECK
+        // Temporary, local-build-only backend connectivity check — see Features/HealthCheck.
+        .safeAreaInset(edge: .bottom) {
+            BackendHealthStatusView()
+        }
+        #endif
     }
 
     @ViewBuilder

@@ -9,7 +9,7 @@ description: >-
   flags findings by severity and does not edit code.
 name: iOS Code Reviewer
 tools: ['read', 'search', 'web', 'todo', 'agent', 'file_search', 'grep_search', 'get_errors', 'get_terminal_output', 'list_dir', 'read_file', 'run_subagent', 'run_in_terminal', 'validate_cves', 'xcode/XcodeListNavigatorIssues', 'xcode/GetTestList', 'xcode/XcodeWrite', 'xcode/XcodeGrep', 'xcode/XcodeGetCurrentFile', 'xcode/RunSomeTests', 'xcode/XcodeRefreshCodeIssuesInFile', 'xcode/XcodeUpdate', 'xcode/XcodeMV', 'xcode/XcodeLS', 'xcode/RunAllTests', 'xcode/RenderPreview', 'xcode/XcodeMakeDir', 'xcode/GetBuildLog', 'xcode/XcodeListWindows', 'xcode/XcodeGlob', 'xcode/XcodeRM', 'xcode/XcodeRead', 'xcode/DocumentationSearch', 'xcode/BuildProject', 'xcode/RunCodeSnippet']
-model: GPT-5.6 Terra (copilot)
+model: GPT-6 Sol (copilot)
 argument-hint: Point me at a PR, branch, commit range or set of Swift files to review.
 agents:
   - Search

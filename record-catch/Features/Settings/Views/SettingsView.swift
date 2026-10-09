@@ -15,6 +15,7 @@ import SwiftUI
 struct SettingsView: View {
 
     @Environment(AppLanguageStore.self) private var languageStore
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var viewModel: SettingsViewModel
 
     /// - Parameters:
@@ -79,18 +80,39 @@ struct SettingsView: View {
                 .foregroundStyle(AppColors.textPrimary)
                 .accessibilityAddTraits(.isHeader)
 
-            ParagraphText(text: languageStore.localized("settings.analytics.body"), isHint: true)
+            analyticsBodyAndToggle
 
             LinkButton(title: languageStore.localized("settings.analytics.link")) {
                 self.viewModel.openHowWeUseYourData()
             }
+        }
+    }
 
-            SettingsToggleRow(
-                accessibilityIdentifier: "Settings.analyticsToggle",
-                accessibilityLabel: languageStore.localized("settings.analytics.toggle.label"),
-                accessibilityHint: languageStore.localized("settings.analytics.toggle.hint"),
-                isOn: $viewModel.analyticsEnabled
-            )
+    /// The "We use this to improve…" text and its switch, side by side (switch to the right of the
+    /// text) — see docs/design-specs/settings.md. Falls back to stacked (text above switch) at
+    /// accessibility Dynamic Type sizes so the text never gets crushed into a narrow column next to
+    /// a fixed-width switch (WCAG 2.2 AA).
+    @ViewBuilder
+    private var analyticsBodyAndToggle: some View {
+        @Bindable var viewModel = viewModel
+        let toggle = SettingsToggleRow(
+            accessibilityIdentifier: "Settings.analyticsToggle",
+            accessibilityLabel: languageStore.localized("settings.analytics.toggle.label"),
+            accessibilityHint: languageStore.localized("settings.analytics.toggle.hint"),
+            isOn: $viewModel.analyticsEnabled
+        )
+
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: AppSpacing.medium) {
+                ParagraphText(text: languageStore.localized("settings.analytics.body"), isHint: true)
+                toggle
+            }
+        } else {
+            HStack(alignment: .top, spacing: AppSpacing.medium) {
+                ParagraphText(text: languageStore.localized("settings.analytics.body"), isHint: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                toggle
+            }
         }
     }
 
@@ -99,7 +121,8 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 0) {
             SettingsLinkRow(
                 title: languageStore.localized("settings.link.myAccount"),
-                accessibilityIdentifier: "Settings.link.myAccount"
+                accessibilityIdentifier: "Settings.link.myAccount",
+                number: 1
             ) {
                 viewModel.myAccountTapped()
             }
@@ -108,7 +131,8 @@ struct SettingsView: View {
 
             SettingsLinkRow(
                 title: languageStore.localized("settings.link.privacyNotice"),
-                accessibilityIdentifier: "Settings.link.privacyNotice"
+                accessibilityIdentifier: "Settings.link.privacyNotice",
+                number: 2
             ) {
                 viewModel.privacyNoticeTapped()
             }
@@ -117,7 +141,8 @@ struct SettingsView: View {
 
             SettingsLinkRow(
                 title: languageStore.localized("settings.link.supportInformation"),
-                accessibilityIdentifier: "Settings.link.supportInformation"
+                accessibilityIdentifier: "Settings.link.supportInformation",
+                number: 3
             ) {
                 viewModel.supportInformationTapped()
             }
@@ -126,7 +151,8 @@ struct SettingsView: View {
 
             SettingsLinkRow(
                 title: languageStore.localized("settings.link.signOut"),
-                accessibilityIdentifier: "Settings.link.signOut"
+                accessibilityIdentifier: "Settings.link.signOut",
+                number: 4
             ) {
                 viewModel.signOutTapped()
             }

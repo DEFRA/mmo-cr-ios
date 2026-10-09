@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// "Add species to vessel <VESSEL>" — type-to-search a species and save it to favourites.
+/// "Which species did you catch with <gear>?" — type-to-search a species and save it to favourites.
 ///
 /// Shown when the user has no favourite species yet, and reached via "Add a species"/"Add another
 /// species". On save the chosen species is added to favourites and the journey returns to the
@@ -63,11 +63,11 @@ struct AddSpeciesView: View {
                 identifierPrefix: "\(identifierPrefix).errorSummary"
             )
 
-            ParagraphText(text: languageStore.localized("catchRecord.species.add.empty"))
-            ParagraphText(text: languageStore.localized("catchRecord.species.add.body"))
+            ParagraphText(text: languageStore.localized("catchRecord.species.record.body"), isHint: true)
 
             SearchDropdownField(
                 label: heading,
+                showsLabel: false,
                 placeholder: languageStore.localized("catchRecord.species.add.search.placeholder"),
                 options: viewModel.speciesNames,
                 query: Binding(get: { viewModel.query }, set: { viewModel.query = $0 }),
@@ -90,16 +90,6 @@ struct AddSpeciesView: View {
             // `SearchDropdownField` overrides each result row's own explicit identifier — see
             // `AddPortView`'s equivalent comment for the root-cause detail.
 
-            LinkButton(title: languageStore.localized("catchRecord.species.add.mistakenLink")) {
-                // Reference content link — no navigation target in this phase.
-            }
-            .accessibilityIdentifier("\(identifierPrefix).mistakenLink")
-
-            LinkButton(title: languageStore.localized("catchRecord.species.add.contactLink")) {
-                // Help link — no navigation target in this phase.
-            }
-            .accessibilityIdentifier("\(identifierPrefix).contactLink")
-
             if viewModel.saveFailed {
                 errorBanner
             }
@@ -117,7 +107,7 @@ struct AddSpeciesView: View {
     private var heading: String {
         String(
             format: languageStore.localized("catchRecord.species.add.heading"),
-            viewModel.vessel
+            viewModel.gear.descriptionWithMeasurements(localize: languageStore.localized)
         )
     }
 

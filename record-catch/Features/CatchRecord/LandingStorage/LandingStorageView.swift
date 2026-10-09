@@ -36,8 +36,6 @@ struct LandingStorageView: View {
                 .accessibilityAddTraits(.isHeader)
                 .accessibilityIdentifier("\(identifierPrefix).heading")
 
-            ParagraphText(text: languageStore.localized("catchRecord.landingStorage.hint"), isHint: true)
-
             RadioGroup(
                 options: [
                     RadioGroupOption(

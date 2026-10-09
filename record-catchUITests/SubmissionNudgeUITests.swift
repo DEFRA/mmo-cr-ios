@@ -2,10 +2,10 @@
 //  SubmissionNudgeUITests.swift
 //  record-catchUITests
 //
-//  Journey tests for the late-submission nudge screen shown when a trip ended more than 24 hours
-//  ago (records must be submitted within 24 hours). Seeded straight to the screen via the
-//  `-uiTestCatchRecordSubmissionNudge` launch seam (see `UITestRootView`), so the late date does
-//  not have to be computed by hand.
+//  Journey tests for the late-submission nudge screen shown directly before "Check your catch
+//  record" when a trip ended more than 24 hours ago (records must be submitted within 24 hours).
+//  Seeded straight to the screen via the `-uiTestCatchRecordSubmissionNudge` launch seam (see
+//  `UITestRootView`), so the late date does not have to be computed by hand.
 //
 
 import XCTest
@@ -18,8 +18,8 @@ final class SubmissionNudgeUITests: XCTestCase {
         static let saveContinue = "CatchRecord.submissionNudge.saveContinue"
         static let checkDateLink = "CatchRecord.submissionNudge.checkDateLink"
 
-        static let addPortHeading = "CatchRecord.addPort.heading"
-        static let homeWarningBox = "Home.warningBox"
+        static let checkYourAnswersHeading = "CatchRecord.checkYourAnswers.heading"
+        static let returnDateHeading = "CatchRecord.tripDate.return.heading"
     }
 
     override func setUpWithError() throws {
@@ -47,26 +47,27 @@ final class SubmissionNudgeUITests: XCTestCase {
     }
 
     @MainActor
-    func test_submissionNudge_saveAndContinue_entersPortSubJourney() {
+    func test_submissionNudge_saveAndContinue_goesToCheckYourCatchRecord() {
         let app = launch()
 
         XCTAssertTrue(element(app, ID.heading).waitForExistence(timeout: 5))
         app.buttons[ID.saveContinue].tap()
 
-        // Acknowledging the nudge continues into the port sub-journey (no favourite ports seeded →
-        // the Add-port screen).
-        XCTAssertTrue(element(app, ID.addPortHeading).waitForExistence(timeout: 5))
+        // "Save and continue" goes straight to "Check your catch record" — the nudge no longer
+        // interposes the port sub-journey (see ADR-0003 amendment, plan Q10).
+        XCTAssertTrue(element(app, ID.checkYourAnswersHeading).waitForExistence(timeout: 5))
     }
 
     @MainActor
-    func test_submissionNudge_checkTripEndDateLink_popsBack() {
+    func test_submissionNudge_checkTripEndDateLink_opensReturnDateScreen() {
         let app = launch()
 
         XCTAssertTrue(element(app, ID.heading).waitForExistence(timeout: 5))
         element(app, ID.checkDateLink).tap()
 
-        // Pops back off the nudge screen (the seam pushes only this screen, so it returns to Home).
-        XCTAssertTrue(element(app, ID.homeWarningBox).waitForExistence(timeout: 5))
+        // Opens the return-date screen in "Change" mode so the date can be corrected — submitting
+        // there re-runs the late-submission check (see `TripDateViewModel.submit()`).
+        XCTAssertTrue(element(app, ID.returnDateHeading).waitForExistence(timeout: 5))
         XCTAssertFalse(element(app, ID.heading).exists)
     }
 }

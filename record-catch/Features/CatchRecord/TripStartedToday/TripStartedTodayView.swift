@@ -40,9 +40,6 @@ struct TripStartedTodayView: View {
             TitleText(text: languageStore.localized("catchRecord.tripToday.heading"))
                 .accessibilityAddTraits(.isHeader)
 
-            ParagraphText(text: languageStore.localized("catchRecord.tripToday.hint.yes"), isHint: true)
-            ParagraphText(text: languageStore.localized("catchRecord.tripToday.hint.no"), isHint: true)
-
             RadioGroup(
                 options: [
                     RadioGroupOption(

@@ -129,9 +129,12 @@ final class TripDateViewModel {
     /// Persists the selected date and routes onward. The picker's `range` makes every entered
     /// date valid by construction, so there is nothing left to validate before routing.
     ///
-    /// When reached via "Change" from Check your answers (`draft.returnToCheckYourAnswers`), only
-    /// this one date is being corrected, so the journey returns straight there instead of
-    /// continuing into the other date/late-submission-nudge/port screens (see ADR-0013).
+    /// When reached via "Change" from Check your catch record (`draft.returnToCheckYourAnswers`),
+    /// only this one date is being corrected, so the journey returns straight there instead of
+    /// continuing into the other date/port screens (see ADR-0013) — except on the **return**
+    /// date, which is the one value the late-submission nudge depends on, so that edit re-runs
+    /// the nudge check (`CatchRecordRouting.checkYourAnswersOrNudgeRoute`) rather than assuming
+    /// the answer from before the edit still holds.
     func submit() {
         let date = calendar.startOfDay(for: selectedDate)
         switch phase {
@@ -143,7 +146,17 @@ final class TripDateViewModel {
 
         if draft.returnToCheckYourAnswers {
             draft.returnToCheckYourAnswers = false
-            router.push(.checkYourAnswers(referenceNumber: referenceNumber))
+            switch phase {
+            case .departure:
+                router.push(.checkYourAnswers(referenceNumber: referenceNumber))
+            case .return:
+                router.push(CatchRecordRouting.checkYourAnswersOrNudgeRoute(
+                    tripEndDate: date,
+                    vessel: vessel,
+                    referenceNumber: referenceNumber,
+                    now: now()
+                ))
+            }
             return
         }
 
@@ -151,17 +164,12 @@ final class TripDateViewModel {
         case .departure:
             router.push(.tripDate(phase: .return, vessel: vessel, referenceNumber: referenceNumber, departureDate: date))
         case .return:
-            // Records must be submitted within 24 hours of a trip ending. When the trip ended more
-            // than 24 hours ago, interpose the late-submission nudge before the port sub-journey so
-            // the user can double-check the trip end date (see `SubmissionNudge`).
+            // The late-submission nudge is shown directly before "Check your catch record" only
+            // (see `CatchRecordRouting.checkYourAnswersOrNudgeRoute`), not here — so the forward
+            // journey always continues straight into the port sub-journey regardless of how late
+            // the trip end date is.
             draft.advance(to: .tripDates)
-            let currentTime = now()
-            if SubmissionNudge.isNeeded(tripEndDate: date, now: currentTime) {
-                let daysLate = SubmissionNudge.daysLate(tripEndDate: date, now: currentTime)
-                router.push(.submissionNudge(daysLate: daysLate, vessel: vessel, referenceNumber: referenceNumber))
-            } else {
-                Task { await enterPortSubJourney() }
-            }
+            Task { await enterPortSubJourney() }
         }
     }
 

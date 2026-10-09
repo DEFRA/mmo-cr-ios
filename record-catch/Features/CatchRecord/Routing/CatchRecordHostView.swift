@@ -202,7 +202,7 @@ struct CatchRecordHostView: View {
                 vessel: vessel,
                 referenceNumber: referenceNumber,
                 router: router,
-                favouritePorts: favouritePorts
+                draft: draft
             )
         default:
             fatalError("vesselAndTripDestination received an unhandled route: \(route)")

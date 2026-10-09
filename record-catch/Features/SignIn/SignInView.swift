@@ -166,7 +166,8 @@ struct SignInView: View {
     private var troubleSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.medium) {
             LocalizedText("signIn.trouble.heading")
-                .font(AppTypography.footerHeading)
+                .font(AppTypography.troubleHeading)
+                .lineSpacing(6)
                 .foregroundStyle(AppColors.textPrimary)
                 .accessibilityAddTraits(.isHeader)
                 .accessibilityIdentifier("SignIn.troubleHeading")

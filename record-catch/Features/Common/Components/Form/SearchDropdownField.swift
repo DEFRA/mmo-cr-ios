@@ -2,6 +2,11 @@ import SwiftUI
 
 struct SearchDropdownField: View {
     let label: String
+    /// Whether `label` is rendered on screen above the field. `false` keeps the label available to
+    /// VoiceOver/Voice Control (via `.accessibilityLabel` on the field below) while omitting the
+    /// visible `Text` — used on screens where the heading above the field already states the same
+    /// question (see `AddSpeciesView`, whose design has no separate on-screen field label).
+    var showsLabel: Bool = true
     let placeholder: String
     let minimumCharacters: Int
     let options: [String]
@@ -57,6 +62,7 @@ struct SearchDropdownField: View {
 
     init(
         label: String,
+        showsLabel: Bool = true,
         placeholder: String = "Type to search",
         minimumCharacters: Int = 2,
         options: [String],
@@ -71,6 +77,7 @@ struct SearchDropdownField: View {
         resultsAnnouncement: @escaping (Int) -> String = { $0 == 0 ? "No results" : "\($0) results" }
     ) {
         self.label = label
+        self.showsLabel = showsLabel
         self.placeholder = placeholder
         self.minimumCharacters = minimumCharacters
         self.options = options
@@ -116,9 +123,11 @@ struct SearchDropdownField: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.small) {
-            Text(label)
-                .font(AppTypography.body)
-                .foregroundStyle(AppColors.textPrimary)
+            if showsLabel {
+                Text(label)
+                    .font(AppTypography.body)
+                    .foregroundStyle(AppColors.textPrimary)
+            }
 
             TextField(placeholder + " (minimum \(minimumCharacters) characters)", text: $query)
                 .font(AppTypography.bodySmall)
@@ -131,6 +140,12 @@ struct SearchDropdownField: View {
                     Rectangle()
                         .stroke(shouldShowError ? AppColors.errorRed : AppColors.borderStrong, lineWidth: 1)
                 )
+                // Keeps the field's accessible name as `label` only when `showsLabel` is `false` and
+                // no on-screen `Text` is present to imply it by proximity. When the label *is* shown
+                // on screen (the default), leave the field's own accessibility label unset so it
+                // keeps exposing its current value — several UI tests (and VoiceOver, which already
+                // reads the preceding `Text(label)`) rely on that default behaviour.
+                .applyingAccessibilityLabel(showsLabel ? nil : label)
                 .focused($isFocused)
                 .onChange(of: query) { _, newValue in
                     if selectedOption != newValue {
@@ -315,6 +330,21 @@ struct SearchDropdownField: View {
     /// identifier modifier above for why).
     static func resultIdentifier(for option: String) -> String {
         "SearchDropdownField.result.\(option)"
+    }
+}
+
+/// Applies `.accessibilityLabel` only when one is supplied — mirrors
+/// `SearchDropdownFieldErrorIdentifier` below for the same reason: leaving the field's default
+/// accessibility label (derived from its value) untouched unless a screen explicitly hides the
+/// on-screen label and needs one substituted.
+private extension View {
+    @ViewBuilder
+    func applyingAccessibilityLabel(_ label: String?) -> some View {
+        if let label {
+            self.accessibilityLabel(label)
+        } else {
+            self
+        }
     }
 }
 

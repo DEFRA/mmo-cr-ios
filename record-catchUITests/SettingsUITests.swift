@@ -13,7 +13,7 @@ import XCTest
 final class SettingsUITests: XCTestCase {
 
     private enum ID {
-        static let title = "Settings"
+        static let title = "Your settings"
         static let analyticsToggle = "Settings.analyticsToggle"
         static let linkMyAccount = "Settings.link.myAccount"
         static let linkPrivacyNotice = "Settings.link.privacyNotice"

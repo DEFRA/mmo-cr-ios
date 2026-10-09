@@ -8,7 +8,8 @@ import Foundation
 struct AddSpeciesRequest {
     /// The gear these species were caught with, threaded onward.
     let gear: GearOption
-    /// Selected vessel name, shown in the header ("Add species to vessel <VESSEL>").
+    /// Selected vessel name, threaded onward for routing (no longer shown in the header — see
+    /// `AddSpeciesView.heading`, which now reads "Which species did you catch with <gear>?").
     let vessel: String
     /// Display-only placeholder reference number shown at the top of the screen.
     let referenceNumber: String
@@ -32,7 +33,7 @@ final class AddSpeciesViewModel {
 
     /// The gear these species were caught with, threaded onward.
     var gear: GearOption { request.gear }
-    /// Selected vessel name, shown in the header ("Add species to vessel <VESSEL>").
+    /// Selected vessel name, threaded onward for routing.
     var vessel: String { request.vessel }
     /// Display-only placeholder reference number shown at the top of the screen.
     var referenceNumber: String { request.referenceNumber }

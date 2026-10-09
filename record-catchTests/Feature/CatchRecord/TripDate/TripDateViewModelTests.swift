@@ -213,12 +213,16 @@ final class TripDateViewModelTests: XCTestCase {
         )
     }
 
-    // MARK: - Submit: return date late-submission nudge
+    // MARK: - Submit: return date — late submission no longer interposed here (see ADR-0003
+    // amendment: the nudge now shows directly before "Check your catch record" only, via
+    // `CatchRecordRouting.checkYourAnswersOrNudgeRoute`)
 
-    func test_submit_return_whenTripEndedMoreThan24HoursAgo_pushesSubmissionNudge() {
+    func test_submit_return_whenTripEndedMoreThan24HoursAgo_stillContinuesToPortSubJourney_doesNotPushNudgeSynchronously() {
         let router = CatchRecordRouter()
         let returnDate = date(2026, 3, 31)
-        // "now" is many days later, so the nudge is required.
+        // "now" is many days later — the trip is late — but the forward path always continues
+        // into the port sub-journey regardless; the nudge is only shown directly before "Check
+        // your catch record" (see `CatchRecordRouting.checkYourAnswersOrNudgeRoute`).
         let now = date(2026, 4, 3, hour: 12)
         let sut = TripDateViewModel(
             phase: .return,
@@ -226,16 +230,14 @@ final class TripDateViewModelTests: XCTestCase {
             referenceNumber: referenceNumber,
             departureDate: date(2026, 3, 30),
             router: router,
+            favouritePorts: StubFavouritePortsProvider(),
             now: { now }
         )
         sut.selectedDate = returnDate
 
         sut.submit()
 
-        XCTAssertEqual(
-            router.path,
-            [.submissionNudge(daysLate: 3, vessel: vessel, referenceNumber: referenceNumber)]
-        )
+        XCTAssertFalse(router.path.contains(.submissionNudge(daysLate: 3, vessel: vessel, referenceNumber: referenceNumber)))
     }
 
     func test_submit_return_whenWithin24Hours_doesNotPushNudge() {
@@ -322,13 +324,38 @@ final class TripDateViewModelTests: XCTestCase {
         XCTAssertFalse(draft.returnToCheckYourAnswers)
     }
 
-    func test_submit_return_whenResumingAtCheckYourAnswers_pushesCheckYourAnswers_insteadOfNudgeOrPorts() {
+    func test_submit_return_whenResumingAtCheckYourAnswers_andStillWithin24Hours_pushesCheckYourAnswers() {
         let router = CatchRecordRouter()
         let draft = CatchRecordDraft()
         draft.returnToCheckYourAnswers = true
         let returnDate = date(2026, 3, 31)
-        // "now" is far past the entered return date, so a nudge would otherwise be interposed —
-        // resuming at Check your answers must still take priority.
+        let sut = TripDateViewModel(
+            phase: .return,
+            vessel: vessel,
+            referenceNumber: referenceNumber,
+            departureDate: date(2026, 3, 30),
+            router: router,
+            draft: draft,
+            now: { returnDate.addingTimeInterval(60 * 60) }
+        )
+        sut.selectedDate = returnDate
+
+        sut.submit()
+
+        XCTAssertEqual(router.path, [.checkYourAnswers(referenceNumber: referenceNumber)])
+        XCTAssertFalse(draft.returnToCheckYourAnswers)
+    }
+
+    /// The return date is the one value the late-submission nudge depends on, so — unlike every
+    /// other "Change" edit, which returns straight to "Check your catch record" — correcting the
+    /// return date from there re-runs the nudge check (see
+    /// `CatchRecordRouting.checkYourAnswersOrNudgeRoute`, plan Q10). A still-late correction shows
+    /// the nudge again rather than silently returning as if nothing were wrong.
+    func test_submit_return_whenResumingAtCheckYourAnswers_andStillLate_pushesSubmissionNudge_insteadOfCheckYourAnswers() {
+        let router = CatchRecordRouter()
+        let draft = CatchRecordDraft()
+        draft.returnToCheckYourAnswers = true
+        let returnDate = date(2026, 3, 31)
         let now = date(2026, 4, 3, hour: 12)
         let sut = TripDateViewModel(
             phase: .return,
@@ -343,7 +370,7 @@ final class TripDateViewModelTests: XCTestCase {
 
         sut.submit()
 
-        XCTAssertEqual(router.path, [.checkYourAnswers(referenceNumber: referenceNumber)])
+        XCTAssertEqual(router.path, [.submissionNudge(daysLate: 3, vessel: vessel, referenceNumber: referenceNumber)])
         XCTAssertFalse(draft.returnToCheckYourAnswers)
     }
 

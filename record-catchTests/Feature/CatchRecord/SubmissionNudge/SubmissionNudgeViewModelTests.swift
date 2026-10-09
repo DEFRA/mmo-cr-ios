@@ -21,55 +21,47 @@ final class SubmissionNudgeViewModelTests: XCTestCase {
 
     // MARK: - checkTripEndDate
 
-    func test_checkTripEndDate_popsBack() {
+    func test_checkTripEndDate_opensReturnDateScreenInChangeMode() {
         let router = CatchRecordRouter()
-        router.push(.tripDate(phase: .return, vessel: vessel, referenceNumber: referenceNumber, departureDate: nil))
+        let draft = CatchRecordDraft()
         router.push(.submissionNudge(daysLate: 3, vessel: vessel, referenceNumber: referenceNumber))
-        let sut = SubmissionNudgeViewModel(daysLate: 3, vessel: vessel, referenceNumber: referenceNumber, router: router)
+        let sut = SubmissionNudgeViewModel(daysLate: 3, vessel: vessel, referenceNumber: referenceNumber, router: router, draft: draft)
 
         sut.checkTripEndDate()
 
         XCTAssertEqual(
             router.path,
-            [.tripDate(phase: .return, vessel: vessel, referenceNumber: referenceNumber, departureDate: nil)]
+            [
+                .submissionNudge(daysLate: 3, vessel: vessel, referenceNumber: referenceNumber),
+                .tripDate(phase: .return, vessel: vessel, referenceNumber: referenceNumber, departureDate: nil)
+            ]
         )
+        XCTAssertTrue(draft.returnToCheckYourAnswers)
     }
 
-    // MARK: - continue → port sub-journey
-
-    func test_enterPortSubJourney_withNoFavourites_pushesAddPort() async {
+    func test_checkTripEndDate_threadsCapturedDepartureDate() {
         let router = CatchRecordRouter()
-        let sut = SubmissionNudgeViewModel(
-            daysLate: 3,
-            vessel: vessel,
-            referenceNumber: referenceNumber,
-            router: router,
-            favouritePorts: StubFavouritePortsProvider()
-        )
+        let draft = CatchRecordDraft()
+        let departureDate = Date(timeIntervalSince1970: 1_000_000)
+        draft.departureDate = departureDate
+        let sut = SubmissionNudgeViewModel(daysLate: 3, vessel: vessel, referenceNumber: referenceNumber, router: router, draft: draft)
 
-        await sut.enterPortSubJourney()
+        sut.checkTripEndDate()
 
         XCTAssertEqual(
             router.path,
-            [.addPort(vessel: vessel, referenceNumber: referenceNumber, returnPhase: nil)]
+            [.tripDate(phase: .return, vessel: vessel, referenceNumber: referenceNumber, departureDate: departureDate)]
         )
     }
 
-    func test_enterPortSubJourney_withFavourites_pushesSelectDeparture() async {
+    // MARK: - submit → Check your catch record
+
+    func test_submit_pushesCheckYourAnswers() {
         let router = CatchRecordRouter()
-        let sut = SubmissionNudgeViewModel(
-            daysLate: 3,
-            vessel: vessel,
-            referenceNumber: referenceNumber,
-            router: router,
-            favouritePorts: StubFavouritePortsProvider(initialFavourites: [PortOption(name: "Hastings")])
-        )
+        let sut = SubmissionNudgeViewModel(daysLate: 3, vessel: vessel, referenceNumber: referenceNumber, router: router)
 
-        await sut.enterPortSubJourney()
+        sut.submit()
 
-        XCTAssertEqual(
-            router.path,
-            [.selectPort(phase: .departure, vessel: vessel, referenceNumber: referenceNumber)]
-        )
+        XCTAssertEqual(router.path, [.checkYourAnswers(referenceNumber: referenceNumber)])
     }
 }

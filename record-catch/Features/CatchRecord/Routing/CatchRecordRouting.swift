@@ -99,4 +99,36 @@ enum CatchRecordRouting {
         }
         return .catchLocation(gear: orderedGears[nextIndex], vessel: vessel, referenceNumber: referenceNumber)
     }
+
+    /// Resolves the route to show when the journey reaches the end of the landing-storage
+    /// sub-journey (or resumes a draft already past it) — "Check your catch record", or the
+    /// late-submission nudge first when the trip ended more than 24 hours ago (see
+    /// `SubmissionNudge`).
+    ///
+    /// Centralising this one decision (rather than inlining `SubmissionNudge.isNeeded` at every
+    /// call site) means the nudge appears in exactly one place in the journey — directly before
+    /// "Check your catch record" — regardless of which forward path reaches it (the
+    /// landing-storage "No" answer, the species-not-landed screen, or resuming a saved draft at
+    /// that checkpoint). A `nil` `tripEndDate` (not yet captured) never shows the nudge.
+    ///
+    /// Deliberately **not** used when returning to Check your catch record via a "Change" link
+    /// (`returnToCheckYourAnswers`) — re-showing the nudge on every unrelated edit would be
+    /// disruptive. The one exception, changing the return date itself, is handled by
+    /// `TripDateViewModel` calling this same function directly, since that edit is the one that
+    /// can change whether the nudge is needed.
+    static func checkYourAnswersOrNudgeRoute(
+        tripEndDate: Date?,
+        vessel: String,
+        referenceNumber: String,
+        now: Date = Date()
+    ) -> CatchRecordRoute {
+        guard let tripEndDate, SubmissionNudge.isNeeded(tripEndDate: tripEndDate, now: now) else {
+            return .checkYourAnswers(referenceNumber: referenceNumber)
+        }
+        return .submissionNudge(
+            daysLate: SubmissionNudge.daysLate(tripEndDate: tripEndDate, now: now),
+            vessel: vessel,
+            referenceNumber: referenceNumber
+        )
+    }
 }

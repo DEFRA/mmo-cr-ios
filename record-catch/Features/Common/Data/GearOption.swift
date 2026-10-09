@@ -65,6 +65,28 @@ nonisolated struct GearOption: Identifiable, Hashable, Sendable, Codable {
             variableMeasurements: measurements
         )
     }
+
+    /// This gear's name followed by its captured required (per-favourite) measurements in
+    /// parentheses, e.g. "Seine nets (mesh size 100mm)" — used to build headings such as "Where was
+    /// the majority of your catch caught using Seine nets (mesh size 100mm)?" (see
+    /// docs/design-specs/create-catch-record.md).
+    ///
+    /// Measurements with no captured value yet, or with no `shortDescriptionKey`, are skipped;
+    /// several are joined with ", ". Returns the gear name alone when no measurement can be
+    /// described — e.g. before any required measurement has been captured, or for a gear
+    /// (`HMD`/`MIS`) that defines none at all.
+    ///
+    /// - Parameter localize: resolves a String Catalog key to its localised format string (see
+    ///   `AppLanguageStore.localized(_:)`). Taken as a closure rather than an `AppLanguageStore`
+    ///   dependency so this pure data model stays environment-agnostic and unit-testable.
+    func descriptionWithMeasurements(localize: (String) -> String) -> String {
+        let parts = requiredMeasurements.compactMap { measurement -> String? in
+            guard let value = measurement.value, let key = measurement.shortDescriptionKey else { return nil }
+            return String(format: localize(key), value)
+        }
+        guard !parts.isEmpty else { return name }
+        return "\(name) (\(parts.joined(separator: ", ")))"
+    }
 }
 
 /// A single measurement for a gear (required or variable).
@@ -88,6 +110,22 @@ nonisolated struct GearMeasurement: Identifiable, Hashable, Sendable, Codable {
     /// Returns a copy of this measurement with the given value.
     func withValue(_ value: Int?) -> GearMeasurement {
         GearMeasurement(id: id, labelKey: labelKey, value: value)
+    }
+
+    /// String Catalog key for this measurement's short, parenthetical description (e.g. "mesh size
+    /// %dmm"), used to build a gear's full description — see
+    /// `GearOption.descriptionWithMeasurements(localize:)`. `nil` for measurements with no defined
+    /// short form (currently all per-trip "variable" measurements, whose labels are full sentences
+    /// unsuited to a parenthetical).
+    var shortDescriptionKey: String? {
+        switch id {
+        case "meshSize": return "catchRecord.gear.measurementShort.meshSize"
+        case "numberOfBeams": return "catchRecord.gear.measurementShort.numberOfBeams"
+        case "numberOfTrawlNets": return "catchRecord.gear.measurementShort.numberOfTrawlNets"
+        case "numberOfDredges": return "catchRecord.gear.measurementShort.numberOfDredges"
+        case "numberOfBeamsOrTrawls": return "catchRecord.gear.measurementShort.numberOfBeamsOrTrawls"
+        default: return nil
+        }
     }
 }
 

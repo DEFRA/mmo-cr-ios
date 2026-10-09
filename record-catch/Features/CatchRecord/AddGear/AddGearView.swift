@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// "Add gear to vessel <VESSEL>" — type-to-search a gear used by this vessel.
+/// "What gear did you use?" — type-to-search a gear used by this vessel.
 ///
 /// Shown when the user has no favourite gears yet, and reached via the select screen's "Add another
 /// gear" button. On save the journey continues to the measurements screen for the chosen gear — or,
@@ -51,10 +51,6 @@ struct AddGearView: View {
                 .accessibilityAddTraits(.isHeader)
                 .accessibilityIdentifier("CatchRecord.addGear.heading")
 
-            ParagraphText(text: languageStore.localized("catchRecord.addGear.body"))
-
-            ParagraphText(text: languageStore.localized("catchRecord.addGear.example"), isHint: true)
-
             SearchDropdownField(
                 label: heading,
                 placeholder: languageStore.localized("catchRecord.addGear.search.placeholder"),
@@ -91,10 +87,7 @@ struct AddGearView: View {
     }
 
     private var heading: String {
-        String(
-            format: languageStore.localized("catchRecord.addGear.heading"),
-            viewModel.vessel
-        )
+        languageStore.localized("catchRecord.addGear.heading")
     }
 
     private var errorBanner: some View {

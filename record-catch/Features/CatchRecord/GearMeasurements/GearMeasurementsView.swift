@@ -51,8 +51,6 @@ struct GearMeasurementsView: View {
                 .accessibilityAddTraits(.isHeader)
                 .accessibilityIdentifier("CatchRecord.gearMeasurements.heading")
 
-            ParagraphText(text: languageStore.localized("catchRecord.gear.measurement.hint"))
-
             ForEach(viewModel.gear.requiredMeasurements) { measurement in
                 TextInputField(
                     label: languageStore.localized(measurement.labelKey),

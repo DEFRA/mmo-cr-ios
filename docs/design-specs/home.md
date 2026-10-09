@@ -1,5 +1,11 @@
 # Design Spec — Home / "Your trips" (UI only)
 
+**Last read:** 2 October 2026. **Source:** a user-supplied screenshot of the updated Figma design —
+the Figma API token had expired, so the design was not fetched via the `fetch-figma-design` skill
+for this update. Diffed against the previously-recorded spec below; changes are a copy-only pass
+(titles, phone hours, a status-help footnote) — no layout, data, routing or navigation changes. See
+the **Deviation register** near the end of this document for open items raised against this read.
+
 Feature: bilingual Home / trips-overview screen for the DEFRA / MMO Catch Recording iOS app.
 Scope: no real auth or Keychain-backed auth yet. Server records (Submitted/Amended/Late) remain a
 fixed **stub** (`StubServerRecordsProvider` — see ADR-0015), pending the real backend; pagination
@@ -23,8 +29,10 @@ supplies them as parameters. Content, top to bottom:
 2. **Page title** — "Your trips" rendered by `ViewTemplate` via `TitleText` (`pageTitle`, bold,
    `textPrimary`/black) with the `.isHeader` trait. (Shared change: `ViewTemplate` now renders every
    screen's title as a bold black heading rather than the previous gov-blue caption.)
-3. **Three intro paragraphs** — `home.intro.viewSubmitted`, `home.intro.selectDate`
-   ("Select an end date…"), `home.intro.webOnly`.
+3. **One intro paragraph** — `home.intro.webOnly` ("To edit trips or manage your account
+   settings, use the web service."). The two "View trips you've already submitted."/"Select an end
+   date…" paragraphs (`home.intro.viewSubmitted`/`home.intro.selectDate`) were removed: they are
+   absent from the current design and had zero Swift usages.
 3. **Trips table** — `SubmissionsTable` with a header row (Trip end date | Vessel | Status |
    Created by) and a first-class Created-by column. Column headers carry
    `.accessibilityAddTraits(.isHeader)`. Existing divider / border / status-tag styling and the
@@ -36,7 +44,7 @@ supplies them as parameters. Content, top to bottom:
    rather than being omitted.
 4. **`PaginationControls`** + pure `PaginationState` — renders "← Previous · Showing 1 to 4 of 4 ·
    [1] · Next →". Stubbed single page (so Previous/Next are hidden per the GDS pattern).
-5. **`ExpandableHelpSection`** (generic `content:` form) — "How to record a catch"
+5. **`ExpandableHelpSection`** (generic `content:` form) — "Help with catch recording"
    (`home.howToRecord.title`, `Home.howToRecord`), collapsed by default. Four sub-sections, each a
    bold sub-heading (`.isHeader` trait) plus paragraph(s), copy routed through `home.howToRecord.*`:
    - *What you need to do* — 2 paragraphs.
@@ -46,8 +54,11 @@ supplies them as parameters. Content, top to bottom:
      mobile app" offline note — see content flag below).
    - *Get help with your record* — phone number + opening hours, call-cost notice, out-of-hours
      automated-line notice.
-6. **`ExpandableHelpSection`** (`items:` form) — "Understanding catch record statuses"
-   (`Home.statusHelp`) (Unsent / Submitted / Amended / Late), copy routed through `home.help.*`.
+6. **`ExpandableHelpSection`** (generic `content:` form) — "Catch record statuses"
+   (`Home.statusHelp`) (Unsent / Submitted / Amended / Late), copy routed through `home.help.*`,
+   followed by a plain-text footnote (`home.help.footnote.body`/`home.help.footnote.link`,
+   `Home.statusHelp.footnote`) — see the deviation register below for why it is plain text rather
+   than a link.
 7. **`PrimaryButton`** "Create a new catch record" (`Home.createRecordButton`), inert.
 
 ### `ExpandableHelpSection` generalised (direct edit, backward-compatible)
@@ -55,10 +66,11 @@ supplies them as parameters. Content, top to bottom:
 `ExpandableHelpSection` is now generic over its content (`ExpandableHelpSection<Content: View>`),
 taking either:
 - the original `items: [HelpItem]` heading+paragraph pairs (unchanged behaviour; used by
-  `TripFormDemoView`, `TripsOverviewDemoView` and Home's status-help section), or
-- an arbitrary `@ViewBuilder content:` closure, used by the new "How to record a catch" section,
-  which doesn't fit the flat heading+paragraph shape (it has paragraphs *and* a bullet list under
-  some sub-headings).
+  `TripFormDemoView`, `TripsOverviewDemoView` and the component demo/#Preview), or
+- an arbitrary `@ViewBuilder content:` closure, used by both of Home's disclosure sections: "Help
+  with catch recording" (multiple sub-headings, paragraphs and a bullet list — doesn't fit the flat
+  heading+paragraph shape) and "Catch record statuses" (a `HelpItemsList` plus the trailing
+  footnote, so the footnote renders inside the same disclosure below the four status items).
 
 Both forms share the same disclosure chevron/title button, expand/collapse state, and left-hand
 rule styling. An optional `accessibilityIdentifier:` parameter was added so each disclosure's
@@ -191,9 +203,7 @@ dropping data.
 | `home.title` | Your trips | Eich teithiau _(needs_review)_ |
 | `home.warning.tag` | Important | Pwysig |
 | `home.warning.message` | The Catch Records service will be available from 1 October 2026. | Bydd y gwasanaeth Cofnodion Dalfa ar gael o 1 Hydref 2026. _(needs_review)_ |
-| `home.intro.viewSubmitted` | View trips you've already submitted. | Gweld teithiau rydych chi eisoes wedi'u cyflwyno. _(needs_review)_ |
-| `home.intro.selectDate` | Select an end date to see the details you recorded. | Dewiswch ddyddiad gorffen i weld y manylion a gofnodwyd gennych. _(needs_review)_ |
-| `home.intro.webOnly` | Note: You can only add new trips and view your account settings on the web service, not in this app. | Sylwer: Dim ond ar y gwasanaeth gwe y gallwch ychwanegu teithiau newydd a gweld gosodiadau eich cyfrif, nid yn yr ap hwn. _(needs_review)_ |
+| `home.intro.webOnly` | To edit trips or manage your account settings, use the web service. | I olygu teithiau neu reoli gosodiadau eich cyfrif, defnyddiwch y gwasanaeth gwe. _(needs_review — resync; previous Welsh translated a superseded English string)_ |
 | `home.table.header.endDate` | Trip end date | Dyddiad gorffen y daith _(needs_review)_ |
 | `home.table.header.vessel` | Vessel | Llong _(needs_review)_ |
 | `home.table.header.status` | Status | Statws _(needs_review)_ |
@@ -206,7 +216,7 @@ dropping data.
 | `home.pagination.a11y.previous` | Previous page | Tudalen flaenorol _(needs_review)_ |
 | `home.pagination.a11y.next` | Next page | Tudalen nesaf _(needs_review)_ |
 | `home.table.viewSubmission` | View submission for %@ | Gweld y cyflwyniad ar gyfer %@ _(needs_review)_ |
-| `home.help.title` | Understanding catch record statuses | Deall statysau cofnodion dalfa _(needs_review)_ |
+| `home.help.title` | Catch record statuses | Statysau cofnodion dalfa _(needs_review)_ |
 | `home.help.unsent.heading` | Unsent: | Heb ei anfon: _(needs_review)_ |
 | `home.help.unsent.description` | Saved on your device and not yet submitted. | Wedi'i gadw ar eich dyfais ac heb ei gyflwyno eto. _(needs_review)_ |
 | `home.help.submitted.heading` | Submitted: | Cyflwynwyd: _(needs_review)_ |
@@ -214,9 +224,11 @@ dropping data.
 | `home.help.amended.heading` | Amended: | Diwygiwyd: _(needs_review)_ |
 | `home.help.amended.description` | This record was changed after it was submitted. | Newidiwyd y cofnod hwn ar ôl iddo gael ei gyflwyno. _(needs_review)_ |
 | `home.help.late.heading` | Late: | Hwyr: _(needs_review)_ |
-| `home.help.late.description` | This record was received by the MMO after the required reporting timeframe. | Derbyniwyd y cofnod hwn gan yr MMO ar ôl yr amserlen adrodd ofynnol. _(needs_review)_ |
+| `home.help.late.description` | This record was received by the MMO after the required deadline. | Derbyniwyd y cofnod hwn gan y Sefydliad Rheoli Morol ar ôl y dyddiad cau gofynnol. _(needs_review)_ |
+| `home.help.footnote.link` | Check the How to record a catch tab | Gwiriwch y tab Sut i gofnodi dalfa _(needs_review)_ |
+| `home.help.footnote.body` | %@ to make sure you are recording your catches at the correct time. | %@ i wneud yn siŵr eich bod yn cofnodi eich dalfeydd ar yr adeg gywir. _(needs_review)_ |
 | `home.createRecord.button` | Create a new catch record | Creu cofnod dalfa newydd _(needs_review)_ |
-| `home.howToRecord.title` | How to record a catch | Sut i gofnodi dalfa _(needs_review)_ |
+| `home.howToRecord.title` | Help with catch recording | Help gyda chofnodi dalfa _(needs_review)_ |
 | `home.howToRecord.whatYouNeedToDo.heading` | What you need to do | Beth sydd angen i chi ei wneud _(needs_review)_ |
 | `home.howToRecord.whatYouNeedToDo.body1` | You must record all catches unless an exemption applies. | Rhaid i chi gofnodi pob dalfa oni bai bod eithriad yn berthnasol. _(needs_review)_ |
 | `home.howToRecord.whatYouNeedToDo.body2` | We'll ask whether you caught any species subject to catch limits (quota). | Byddwn yn gofyn a wnaethoch ddal unrhyw rywogaethau sy'n ddarostyngedig i derfynau dalfa (cwota). _(needs_review)_ |
@@ -230,7 +242,7 @@ dropping data.
 | `home.howToRecord.icesAreas.body1` | If you fish in or cross ICES areas 4c, 7d or 7e, you must create a separate catch record each time you cross a boundary. | Os ydych chi'n pysgota yn ardaloedd ICES 4c, 7d neu 7e neu'n eu croesi, rhaid i chi greu cofnod dalfa ar wahân bob tro y byddwch yn croesi ffin. _(needs_review)_ |
 | `home.howToRecord.icesAreas.body2` | If you need to record catches without an internet connection, use the mobile app. | Os oes angen i chi gofnodi dalfeydd heb gysylltiad rhyngrwyd, defnyddiwch yr ap symudol. _(needs_review)_ — **content flag**: reads oddly on a screen that *is* the mobile app; see note above. |
 | `home.howToRecord.getHelp.heading` | Get help with your record | Cael help gyda'ch cofnod _(needs_review)_ |
-| `home.howToRecord.getHelp.phone` | Call 0300 020 3788, Monday to Friday, 9am to 5pm. | Ffoniwch 0300 020 3788, dydd Llun i ddydd Gwener, 9am i 5pm. _(needs_review)_ |
+| `home.howToRecord.getHelp.phone` | Call 0300 020 3788, Monday to Friday, 8am to 6pm. | Ffoniwch 0300 020 3788, dydd Llun i ddydd Gwener, 8am i 6pm. _(needs_review)_ |
 | `home.howToRecord.getHelp.callCost` | Calls to 03 numbers cost the same as calls to 01 or 02 numbers. | Mae galwadau i rifau 03 yn costio'r un fath â galwadau i rifau 01 neu 02. _(needs_review)_ |
 | `home.howToRecord.getHelp.outOfHours` | Outside these hours, leave a catch record on our automated line. | Y tu allan i'r oriau hyn, gadewch gofnod dalfa ar ein llinell awtomataidd. _(needs_review)_ |
 
@@ -248,12 +260,37 @@ Welsh strings needing confirmation by a Welsh speaker are tracked via the String
 | `Home.pagination.showing` | Showing-range text |
 | `Home.createRecordButton` | Primary "Create a new catch record" button |
 | `Home.table.row.<n>.date` | Table date-cell link for row `n` |
-| `Home.howToRecord` | "How to record a catch" disclosure button |
-| `Home.statusHelp` | "Understanding catch record statuses" disclosure button |
+| `Home.howToRecord` | "Help with catch recording" disclosure button |
+| `Home.statusHelp` | "Catch record statuses" disclosure button |
+| `Home.statusHelp.footnote` | Status-help footnote text (plain text, not a link — see deviation register) |
 
 Table date-cell links are addressed in tests via their stable accessibility **identifier**
 (`Home.table.row.<n>.date`); the user-facing accessibility **label** ("View submission for &lt;date&gt;")
 is localised via `home.table.viewSubmission` so it is pronounced correctly under the Welsh locale.
+
+## Deviation register
+
+Recorded per the design authority rule in `copilot-instructions.md` — the design is the visual/
+content authority, but every deviation is logged here for governance
+(`delivery.architecture@defra.gov.uk`) rather than silently reconciled.
+
+1. **Status-help footnote rendered as plain text, not a link.** The design's "Catch record
+   statuses" section links the footnote text ("Check the How to record a catch tab") to somewhere
+   in the app. The destination is unresolved (see item 2), so the footnote is shipped as plain
+   `ParagraphText` rather than a tappable link — a link styled control that does nothing on tap
+   would announce itself as a link to VoiceOver and fail WCAG 2.2 AA. This is a deliberate,
+   approved placeholder pending product/design clarifying the destination.
+2. **"How to record a catch tab" does not exist, and contradicts the section's own rename.** The
+   design's footnote link text refers to a "How to record a catch tab" — but the app's tab bar is
+   Home / Notifications / Settings; there is no such tab. Separately, this same design simultaneously
+   renames Home's own "How to record a catch" disclosure section to **"Help with catch recording"**
+   (`home.howToRecord.title`). So the footnote points at the *old* name of a section that isn't a
+   tab anyway — a content contradiction that should be raised with the designer rather than
+   guessed at.
+3. **Welsh copy is an unreviewed draft.** All Welsh values added or changed in this pass (titles,
+   phone hours, the Late description, the resynced `home.intro.webOnly`, and the two new footnote
+   keys) are marked `needs_review` in the String Catalog pending sign-off by a Welsh language
+   reviewer — never shipped as `translated` without that review.
 
 ## Hosting note
 

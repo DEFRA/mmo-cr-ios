@@ -109,6 +109,26 @@ nonisolated struct StubRecordsProvider: RecordsProviding {
     }
 }
 
+/// A `RecordsProviding` test double whose `rows` can be mutated between `records()` calls, used by
+/// `HomeViewModelTests` to simulate the list shrinking (e.g. a draft deleted) while the view model
+/// is paged past the new end — unlike `StubRecordsProvider`, which fixes its rows at construction.
+/// Lives here, in-module, for the same reason as `StubRecordsProvider` above: an async protocol
+/// witness declared in a *different module* than the protocol has been observed to trip a Swift
+/// concurrency inference mismatch on this toolchain.
+@MainActor
+final class MutableStubRecordsProvider: RecordsProviding {
+    var rows: [SubmissionRow]
+
+    init(rows: [SubmissionRow]) {
+        self.rows = rows
+    }
+
+    @MainActor
+    func records() async throws -> [SubmissionRow] {
+        rows
+    }
+}
+
 /// The production `RecordsProviding`: local Unsent drafts (always available, offline-first) merged
 /// with stubbed server records, newest first. `@unchecked Sendable` because it is confined to the
 /// main actor (`@MainActor`) even though one of its stored properties (`CatchRecordDraftStoring`,

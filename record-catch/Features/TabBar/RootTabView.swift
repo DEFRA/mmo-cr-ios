@@ -16,22 +16,30 @@ struct RootTabView: View {
     @Environment(AppLanguageStore.self) private var languageStore
     @Environment(AppTabRouter.self) private var tabRouter
     @State private var settingsRouter: SettingsRouter
+    /// Injectable override for the Home tab's records source, forwarded to `CatchRecordHostView`.
+    /// UI tests use this to seed a deterministic row count (e.g. `-uiTestHomePaged`'s 6 rows) when
+    /// booting straight to the root `TabView` via `UITestRootView`.
+    private let homeRecordsProvider: RecordsProviding?
 
-    /// - Parameter initialSettingsRoute: optional route to seed the Settings tab's stack with at
-    ///   launch, used by UI tests to jump straight to "Manage your account"
-    ///   (`-uiTestManageAccount`), mirroring `CatchRecordHostView(initialRoute:)`.
-    init(initialSettingsRoute: SettingsRoute? = nil) {
+    /// - Parameters:
+    ///   - initialSettingsRoute: optional route to seed the Settings tab's stack with at launch,
+    ///     used by UI tests to jump straight to "Manage your account" (`-uiTestManageAccount`),
+    ///     mirroring `CatchRecordHostView(initialRoute:)`.
+    ///   - homeRecordsProvider: optional override forwarded to the Home tab's
+    ///     `CatchRecordHostView`; see above.
+    init(initialSettingsRoute: SettingsRoute? = nil, homeRecordsProvider: RecordsProviding? = nil) {
         let router = SettingsRouter()
         if let initialSettingsRoute {
             router.push(initialSettingsRoute)
         }
         _settingsRouter = State(wrappedValue: router)
+        self.homeRecordsProvider = homeRecordsProvider
     }
 
     var body: some View {
         @Bindable var tabRouter = tabRouter
         TabView(selection: $tabRouter.selection) {
-            CatchRecordHostView()
+            CatchRecordHostView(recordsProvider: homeRecordsProvider)
                 .tabItem {
                     Label(languageStore.localized("tabBar.home"), systemImage: tabRouter.selection == .home ? "house.fill" : "house")
                         .accessibilityIdentifier("TabBar.home")

@@ -118,12 +118,12 @@ struct HelpItemsList: View {
 
 #Preview {
     ExpandableHelpSection(
-        title: "Understanding catch record statuses",
+        title: "Catch record statuses",
         items: [
             HelpItem(heading: "Unsent:", description: "Saved on your device and not yet submitted."),
             HelpItem(heading: "Submitted:", description: "Received by the MMO."),
             HelpItem(heading: "Amended:", description: "This record was changed after it was submitted."),
-            HelpItem(heading: "Late:", description: "This record was received by the MMO after the required reporting timeframe.")
+            HelpItem(heading: "Late:", description: "This record was received by the MMO after the required deadline.")
         ]
     )
     .padding()

@@ -25,7 +25,7 @@ final class TabBarUITests: XCTestCase {
     private enum TabLabel {
         static let home = "Home"
         static let notifications = "Notifications"
-        static let settings = "Settings"
+        static let settings = "Your settings"
     }
 
     override func setUpWithError() throws {

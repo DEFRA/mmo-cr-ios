@@ -94,12 +94,20 @@ struct SelectGearView: View {
                 ForEach(gear.variableMeasurements) { measurement in
                     TextInputField(
                         label: languageStore.localized(measurement.labelKey),
+                        // The view model is the single source of truth for this field's error copy
+                        // (`variableErrorKey`), so the field's own generic required-field fallback
+                        // ("Enter <label>") must not compete with it.
+                        isRequired: false,
                         keyboardType: .numberPad,
                         text: Binding(
                             get: { viewModel.variableEntries["\(gearID).\(measurement.id)"] ?? "" },
                             set: { viewModel.variableEntries["\(gearID).\(measurement.id)"] = $0 }
                         ),
-                        didAttemptSubmit: false,
+                        // Was hard-coded `false`, which meant a blank measurement under a ticked
+                        // gear never surfaced an error on "Save and continue" — the only way one
+                        // appeared was the blur fallback, so a user who never focused the box saw
+                        // nothing happen at all.
+                        didAttemptSubmit: viewModel.didAttemptSubmit,
                         errorMessage: viewModel
                             .variableErrorKey(gearID: gearID, measurementID: measurement.id)
                             .map { languageStore.localized($0) }

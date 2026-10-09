@@ -1,0 +1,12 @@
+{
+  "id": "49e319b2-9e65-45aa-a80e-0cf4b20bfe79",
+  "code": "GBAOT",
+  "name": "Abbotsbury",
+  "countryCode": "GBR",
+  "coordinate": {
+    "latitude": 50.6666984558105,
+    "longitude": -2.59999990463257
+  },
+  "active": true,
+  "unknownExtraField": "should be ignored"
+}

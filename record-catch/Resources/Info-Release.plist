@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	Release-only Info.plist additions (see ADR-0018). GENERATE_INFOPLIST_FILE stays YES, so this
+	file is merged with the plist Xcode generates from the target's INFOPLIST_KEY_* build
+	settings. Deliberately no NSAppTransportSecurity key (Release requires HTTPS everywhere via
+	the platform default), no NSLocalNetworkUsageDescription and no token key.
+	-->
+	<key>APIBaseURL</key>
+	<string>$(API_BASE_URL)</string>
+</dict>
+</plist>

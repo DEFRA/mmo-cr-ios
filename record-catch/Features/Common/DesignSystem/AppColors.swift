@@ -33,4 +33,15 @@ enum AppColors {
     static let statusUnsentText = Color(red: 0.36, green: 0.24, blue: 0.0)
     static let statusLateBackground = Color(red: 0.96, green: 0.86, blue: 0.86)
     static let statusLateText = Color(red: 0.49, green: 0.0, blue: 0.0)
+
+    // MARK: - Connectivity
+    //
+    // The offline banner (see ADR-0019) follows the Figma design's solid red tag rather than the
+    // app's existing light-background/dark-text status-tag convention (`statusLateBackground` et
+    // al) and the Feb 2026 GOV.UK Design System Tag refresh (which also moved to lighter
+    // backgrounds). This is a recorded DEFRA-governance deviation — see
+    // docs/design-specs/offline-banner.md — not an oversight. White-on-`errorRed` measures
+    // 4.85:1, which passes WCAG 2.2 AA 1.4.3 for normal text, so accessibility is unaffected.
+    static let statusOfflineBackground = errorRed
+    static let statusOfflineText = Color.white
 }

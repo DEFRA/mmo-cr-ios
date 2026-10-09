@@ -77,12 +77,39 @@ final class SettingsViewModelTests: XCTestCase {
     // Every seam below is a deliberate no-op in this phase (see SettingsViewModel). These
     // tests assert calling them has no observable side effect on unrelated state.
 
-    func test_signOutTapped_hasNoSideEffects() {
+    func test_signOutTapped_presentsConfirmationDialog_withNoOtherSideEffects() {
         let store = InMemoryAnalyticsPreferenceStore(initialValue: true)
         let sut = SettingsViewModel(preferenceStore: store, gearUsed: "Seine nets")
 
         sut.signOutTapped()
 
+        XCTAssertTrue(sut.showSignOutConfirmation)
+        XCTAssertTrue(sut.analyticsEnabled)
+        XCTAssertEqual(sut.gearUsed, "Seine nets")
+    }
+
+    func test_cancelSignOutConfirmation_dismissesDialog_hasNoOtherSideEffects() {
+        let store = InMemoryAnalyticsPreferenceStore(initialValue: true)
+        let sut = SettingsViewModel(preferenceStore: store, gearUsed: "Seine nets")
+        sut.signOutTapped()
+
+        sut.cancelSignOutConfirmation()
+
+        XCTAssertFalse(sut.showSignOutConfirmation)
+        XCTAssertTrue(sut.analyticsEnabled)
+        XCTAssertEqual(sut.gearUsed, "Seine nets")
+    }
+
+    func test_confirmSignOut_dismissesDialog_remainsInert() {
+        let store = InMemoryAnalyticsPreferenceStore(initialValue: true)
+        let sut = SettingsViewModel(preferenceStore: store, gearUsed: "Seine nets")
+        sut.signOutTapped()
+
+        sut.confirmSignOut()
+
+        // Inert: still no session/auth exists, so confirming has no side effect beyond
+        // dismissing the dialog — analytics preference and gear used are unaffected.
+        XCTAssertFalse(sut.showSignOutConfirmation)
         XCTAssertTrue(sut.analyticsEnabled)
         XCTAssertEqual(sut.gearUsed, "Seine nets")
     }

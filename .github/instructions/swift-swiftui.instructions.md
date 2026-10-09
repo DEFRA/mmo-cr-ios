@@ -22,7 +22,7 @@ SwiftUI guidance.
 - **Errors:** Use typed `Error` enums and `throws`; never swallow errors silently (see logging).
 - **Docs:** Write a `///` summary for public/non-obvious declarations.
 - **Formatting:** Use `swift-format` or SwiftLint if configured; do not fight the formatter.
-- **Minimum target:** iOS 16. Guard newer APIs with `if #available`.
+- **Minimum target:** iOS 18. Guard newer APIs with `if #available`.
 
 ## SwiftUI architecture
 

@@ -11,6 +11,7 @@ import SwiftData
 struct CatchRecordHostView: View {
 
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var router: CatchRecordRouter
     /// Shared, journey-scoped favourite ports store so a port added on the Add-port screen is
@@ -34,9 +35,28 @@ struct CatchRecordHostView: View {
     /// to a computed property since `modelContext` is not available until the view resolves its
     /// environment (i.e. not yet at `init`).
     private let injectedDraftStore: CatchRecordDraftStoring?
+    /// Injectable override for `HomeView`'s records source. Defaults to `nil`, in which case the
+    /// production `MergingRecordsRepository(draftStore:)` is used (local Unsent drafts merged with
+    /// stubbed server records — see ADR-0015). UI tests use this to seed a deterministic row count
+    /// (e.g. `-uiTestHomePaged`'s 6 rows) without depending on `draftStore` state.
+    private let injectedRecordsProvider: RecordsProviding?
 
     private var draftStore: CatchRecordDraftStoring {
         injectedDraftStore ?? SwiftDataCatchRecordDraftStore(modelContext: modelContext)
+    }
+
+    /// Debounced autosave for in-progress, not-yet-routed edits (see `DraftAutosaver`,
+    /// BR-SUB-008/AC14). Created once, lazily, the first time it is needed — `modelContext` (via
+    /// `draftStore`) is not available until the view resolves its environment, i.e. not yet at
+    /// `init` — and held in `@State` so the same instance (and its debounce timer) persists across
+    /// view updates for the lifetime of this journey.
+    @State private var autosaver: DraftAutosaver?
+
+    private func autosaverInstance() -> DraftAutosaver {
+        if let autosaver { return autosaver }
+        let created = DraftAutosaver(store: draftStore)
+        autosaver = created
+        return created
     }
 
     /// - Parameters:
@@ -49,13 +69,17 @@ struct CatchRecordHostView: View {
     ///   - draft: injectable journey draft; UI tests can seed it to jump into a mid-journey state.
     ///   - draftStore: injectable on-device draft persistence; UI tests/previews can supply an
     ///     `InMemoryCatchRecordDraftStore` instead of a real `ModelContainer`.
+    ///   - recordsProvider: injectable override for `HomeView`'s records source; UI tests use this
+    ///     to seed a deterministic row count (e.g. for pagination) without depending on
+    ///     `draftStore` state.
     init(
         initialRoute: CatchRecordRoute? = nil,
         favouritePorts: FavouritePortsProviding = StubFavouritePortsProvider(),
         favouriteGears: FavouriteGearProviding = StubFavouriteGearProvider(),
         favouriteSpecies: FavouriteSpeciesProviding = StubFavouriteSpeciesProvider(),
         draft: CatchRecordDraft? = nil,
-        draftStore: CatchRecordDraftStoring? = nil
+        draftStore: CatchRecordDraftStoring? = nil,
+        recordsProvider: RecordsProviding? = nil
     ) {
         let router = CatchRecordRouter()
         if let initialRoute {
@@ -67,11 +91,12 @@ struct CatchRecordHostView: View {
         _favouriteSpecies = State(wrappedValue: favouriteSpecies)
         _draft = State(wrappedValue: draft ?? CatchRecordDraft())
         injectedDraftStore = draftStore
+        injectedRecordsProvider = recordsProvider
     }
 
     var body: some View {
         NavigationStack(path: Binding(get: { router.path }, set: { router.setPath($0) })) {
-            HomeView(recordsProvider: MergingRecordsRepository(draftStore: draftStore))
+            HomeView(recordsProvider: injectedRecordsProvider ?? MergingRecordsRepository(draftStore: draftStore))
                 .navigationDestination(for: CatchRecordRoute.self) { route in
                     // Single DRY call site (see ADR-0006 §3): hides the root tab bar for every
                     // pushed journey screen, current and future, without touching each of the
@@ -100,6 +125,23 @@ struct CatchRecordHostView: View {
             }
             Task { try? await draftStore.save(draft) }
         }
+        // Debounced autosave of in-progress edits on the *current* screen — i.e. before the user
+        // reaches the next route boundary above (see `DraftAutosaver`, BR-SUB-008/AC14). Reading
+        // `draft.payload` (rather than each individual property) makes the `@Observable` draft's
+        // entire persisted surface the dependency, so this fires on every field change without
+        // per-property wiring. Skips until `draft.vessel` is captured, matching the route-change
+        // save's guard above, so an abandoned empty journey never creates a row.
+        .onChange(of: draft.payload) { _, _ in
+            guard draft.vessel != nil else { return }
+            autosaverInstance().schedule(draft)
+        }
+        // Flushes any pending debounced save immediately when the app leaves the foreground, so an
+        // edit mid-debounce is not lost if the process is suspended or terminated before the
+        // debounce interval elapses (BR-SUB-008/AC15 — "no saved data is lost").
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase != .active, draft.vessel != nil else { return }
+            autosaverInstance().flush(draft)
+        }
     }
 
     /// Dispatches to the four journey-section helpers below, each covering a contiguous run of
@@ -115,7 +157,8 @@ struct CatchRecordHostView: View {
             portAndGearDestination(for: route)
         case .catchLocation, .catchLocationManualEntry, .recordSpeciesWeights, .addSpecies, .removeSpecies:
             speciesDestination(for: route)
-        case .landingStorage, .landingStorageSpecies, .checkYourAnswers, .submissionConfirmation, .submissionSuccess:
+        case .landingStorage, .landingStorageSpecies, .checkYourAnswers, .submissionConfirmation,
+             .submissionSuccess, .submissionSaved:
             landingAndSubmissionDestination(for: route)
         }
     }
@@ -159,7 +202,7 @@ struct CatchRecordHostView: View {
                 vessel: vessel,
                 referenceNumber: referenceNumber,
                 router: router,
-                favouritePorts: favouritePorts
+                draft: draft
             )
         default:
             fatalError("vesselAndTripDestination received an unhandled route: \(route)")
@@ -304,6 +347,8 @@ struct CatchRecordHostView: View {
             )
         case .submissionSuccess(let referenceNumber):
             SubmissionSuccessView(referenceNumber: referenceNumber, router: router)
+        case .submissionSaved(let referenceNumber):
+            SubmissionSavedView(referenceNumber: referenceNumber, router: router)
         default:
             fatalError("landingAndSubmissionDestination received an unhandled route: \(route)")
         }

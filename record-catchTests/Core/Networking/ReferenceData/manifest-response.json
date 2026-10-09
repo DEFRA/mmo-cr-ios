@@ -1,0 +1,66 @@
+{
+  "manifestId": "00000000-0000-4000-8000-000000000001",
+  "version": "2026-01-01T00:00:00Z",
+  "datasets": [
+    {
+      "dataset": "vessels",
+      "collectionId": "00000000-0000-4000-8000-000000000010",
+      "version": "local-seed-1",
+      "schemaVersion": "1.0",
+      "format": "json",
+      "itemCount": 3,
+      "lastModified": "2026-01-01T00:00:00Z",
+      "url": "/api/v1/reference-data/vessels"
+    },
+    {
+      "dataset": "species",
+      "collectionId": "00000000-0000-4000-8000-000000000040",
+      "version": "local-seed-1",
+      "schemaVersion": "1.0",
+      "format": "json",
+      "itemCount": 3,
+      "lastModified": "2026-01-01T00:00:00Z",
+      "url": "/api/v1/reference-data/species"
+    },
+    {
+      "dataset": "ports",
+      "collectionId": "00000000-0000-4000-8000-000000000030",
+      "version": "ports-from-excel-1",
+      "schemaVersion": "1.0",
+      "format": "json",
+      "itemCount": 624,
+      "lastModified": "2026-01-01T00:00:00Z",
+      "url": "/api/v1/reference-data/ports"
+    },
+    {
+      "dataset": "gears",
+      "collectionId": "00000000-0000-4000-8000-000000000020",
+      "version": "local-seed-1",
+      "schemaVersion": "1.0",
+      "format": "json",
+      "itemCount": 5,
+      "lastModified": "2026-01-01T00:00:00Z",
+      "url": "/api/v1/reference-data/gears"
+    },
+    {
+      "dataset": "map-land",
+      "collectionId": "00000000-0000-4000-8000-000000000050",
+      "version": "local-seed-1",
+      "schemaVersion": "1.0",
+      "format": "geojson",
+      "itemCount": 1,
+      "lastModified": "2026-01-01T00:00:00Z",
+      "url": "/api/v1/reference-data/map/land"
+    },
+    {
+      "dataset": "map-statistical-areas",
+      "collectionId": "00000000-0000-4000-8000-000000000060",
+      "version": "local-seed-1",
+      "schemaVersion": "1.0",
+      "format": "geojson",
+      "itemCount": 2,
+      "lastModified": "2026-01-01T00:00:00Z",
+      "url": "/api/v1/reference-data/map/statistical-areas"
+    }
+  ]
+}

@@ -20,32 +20,17 @@ struct HomeView: View {
     /// the horizontal-scroll reflow legible at accessibility text sizes.
     private static let tableReflowMinWidth: CGFloat = 560
 
-    /// The number of rows shown per pagination page.
-    private static let pageSize = 4
-
-    /// The 1-based page currently shown. Injectable so previews can demonstrate the multi-page
-    /// pagination (Previous/Next arrows); there is no in-app paging interaction yet, so this stays
-    /// fixed for a given screen instance.
-    private let currentPage: Int
-
-    /// Loads the merged local-drafts + server-records list (see ADR-0015). Injectable so previews
-    /// and UI tests can seed a deterministic `RecordsProviding` without a real `ModelContainer`.
+    /// Loads the merged local-drafts + server-records list (see ADR-0015) and owns pagination over
+    /// it (see `HomeViewModel`). Injectable so previews and UI tests can seed a deterministic
+    /// `RecordsProviding` without a real `ModelContainer`.
     @State private var viewModel: HomeViewModel
 
     init(
         currentPage: Int = 1,
         recordsProvider: RecordsProviding? = nil
     ) {
-        self.currentPage = currentPage
         let provider = recordsProvider ?? MergingRecordsRepository(draftStore: InMemoryCatchRecordDraftStore())
-        _viewModel = State(wrappedValue: HomeViewModel(recordsProvider: provider))
-    }
-
-    /// Derived from the live `viewModel.rows` count, so the "showing X to Y of Z" text and the
-    /// page-number strip update whenever a draft is added, saved further or deleted (see
-    /// `HomeViewModel.load()`) instead of being fixed at view construction.
-    private var paginationState: PaginationState {
-        PaginationState(currentPage: currentPage, itemCount: viewModel.rows.count, pageSize: Self.pageSize)
+        _viewModel = State(wrappedValue: HomeViewModel(recordsProvider: provider, initialPage: currentPage))
     }
 
     var body: some View {
@@ -69,11 +54,12 @@ struct HomeView: View {
     @ViewBuilder
     private var content: some View {
         VStack(alignment: .leading, spacing: AppSpacing.large) {
-            VStack(alignment: .leading, spacing: AppSpacing.medium) {
-                ParagraphText(text: languageStore.localized("home.intro.viewSubmitted"))
-                ParagraphText(text: languageStore.localized("home.intro.selectDate"))
-                ParagraphText(text: languageStore.localized("home.intro.webOnly"))
+            
+            PrimaryButton(title: languageStore.localized("home.createRecord.button")) {
+                router.startNew()
             }
+            .accessibilityIdentifier("Home.createRecordButton")
+            ParagraphText(text: languageStore.localized("home.intro.webOnly"))
 
             recordsListSection
 
@@ -81,31 +67,31 @@ struct HomeView: View {
 
             ExpandableHelpSection(
                 title: languageStore.localized("home.help.title"),
-                accessibilityIdentifier: "Home.statusHelp",
-                items: [
-                    HelpItem(
-                        heading: languageStore.localized("home.help.unsent.heading"),
-                        description: languageStore.localized("home.help.unsent.description")
-                    ),
-                    HelpItem(
-                        heading: languageStore.localized("home.help.submitted.heading"),
-                        description: languageStore.localized("home.help.submitted.description")
-                    ),
-                    HelpItem(
-                        heading: languageStore.localized("home.help.amended.heading"),
-                        description: languageStore.localized("home.help.amended.description")
-                    ),
-                    HelpItem(
-                        heading: languageStore.localized("home.help.late.heading"),
-                        description: languageStore.localized("home.help.late.description")
-                    )
-                ]
-            )
-
-            PrimaryButton(title: languageStore.localized("home.createRecord.button")) {
-                router.startNew()
+                accessibilityIdentifier: "Home.statusHelp"
+            ) {
+                VStack(alignment: .leading, spacing: AppSpacing.medium) {
+                    HelpItemsList(items: [
+                        HelpItem(
+                            heading: languageStore.localized("home.help.unsent.heading"),
+                            description: languageStore.localized("home.help.unsent.description")
+                        ),
+                        HelpItem(
+                            heading: languageStore.localized("home.help.submitted.heading"),
+                            description: languageStore.localized("home.help.submitted.description")
+                        ),
+                        HelpItem(
+                            heading: languageStore.localized("home.help.amended.heading"),
+                            description: languageStore.localized("home.help.amended.description")
+                        ),
+                        HelpItem(
+                            heading: languageStore.localized("home.help.late.heading"),
+                            description: languageStore.localized("home.help.late.description")
+                        )
+                    ])
+                    statusHelpFootnote
+                }
             }
-            .accessibilityIdentifier("Home.createRecordButton")
+
         }
     }
 
@@ -132,8 +118,31 @@ struct HomeView: View {
             recordsErrorBanner
         case .loaded:
             tripsTable
-            PaginationControls(state: paginationState)
+            PaginationControls(
+                state: viewModel.paginationState,
+                onSelectPage: { page in
+                    viewModel.goToPage(page)
+                    announcePageChange()
+                },
+                onPrevious: {
+                    viewModel.goToPrevious()
+                    announcePageChange()
+                },
+                onNext: {
+                    viewModel.goToNext()
+                    announcePageChange()
+                }
+            )
         }
+    }
+
+    /// Posts a VoiceOver announcement of the new "Showing X to Y of Z" range whenever the visible
+    /// page changes. Required because changing `currentPage` swaps the table's content in place
+    /// without moving focus, so VoiceOver would otherwise never notice the page changed (WCAG 2.2
+    /// AA — status changes must be perceivable; see the accessibility instructions).
+    private func announcePageChange() {
+        let text = viewModel.paginationState.showingText(format: languageStore.localized("home.pagination.showing"))
+        AccessibilityNotification.Announcement(text).post()
     }
 
     private var recordsErrorBanner: some View {
@@ -159,7 +168,7 @@ struct HomeView: View {
         .accessibilityIdentifier("Home.records.error")
     }
 
-    /// "How to record a catch" — a richer disclosure section (multiple
+    /// "Help with catch recording" — a richer disclosure section (multiple
     /// sub-headings, paragraphs and a bullet list) explaining what/when to
     /// record and how to get help. Uses the generic `content:` initializer of
     /// `ExpandableHelpSection` since its shape doesn't fit the flat
@@ -203,6 +212,19 @@ struct HomeView: View {
             .accessibilityAddTraits(.isHeader)
     }
 
+    // Deviation (docs/design-specs/home.md): the design links "Check the How to record a
+    // catch tab" — destination unresolved (no such tab exists). Rendered as plain text until
+    // the target is confirmed, to avoid shipping a non-functional link.
+    private var statusHelpFootnote: some View {
+        ParagraphText(
+            text: String(
+                format: languageStore.localized("home.help.footnote.body"),
+                languageStore.localized("home.help.footnote.link")
+            )
+        )
+        .accessibilityIdentifier("Home.statusHelp.footnote")
+    }
+
     /// Renders a simple bullet list, matching the established "•" + text row
     /// pattern used by `SubmissionConfirmationView`/`SubmissionSuccessView`.
     private func howToRecordBulletList(_ items: [String]) -> some View {
@@ -226,7 +248,7 @@ struct HomeView: View {
     @ViewBuilder
     private var tripsTable: some View {
         let table = SubmissionsTable(
-            rows: viewModel.rows,
+            rows: viewModel.pagedRows,
             headerEndDate: languageStore.localized("home.table.header.endDate"),
             headerVessel: languageStore.localized("home.table.header.vessel"),
             headerStatus: languageStore.localized("home.table.header.status"),

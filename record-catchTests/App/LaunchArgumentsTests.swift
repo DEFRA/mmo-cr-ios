@@ -30,4 +30,16 @@ final class LaunchArgumentsTests: XCTestCase {
         XCTAssertFalse(LaunchArguments(raw: []).isUITesting)
         XCTAssertFalse(LaunchArguments(raw: ["-someOtherFlag"]).isUITesting)
     }
+
+    // MARK: - offline (ADR-0019)
+
+    func test_contains_isTrue_whenOfflineFlagPresent() {
+        let sut = LaunchArguments(raw: ["-uiTestOffline"])
+        XCTAssertTrue(sut.contains(.offline))
+    }
+
+    func test_contains_isFalse_whenOfflineFlagAbsent() {
+        let sut = LaunchArguments(raw: ["-uiTestHome"])
+        XCTAssertFalse(sut.contains(.offline))
+    }
 }

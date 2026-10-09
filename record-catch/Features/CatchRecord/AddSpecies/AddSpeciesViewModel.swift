@@ -8,7 +8,8 @@ import Foundation
 struct AddSpeciesRequest {
     /// The gear these species were caught with, threaded onward.
     let gear: GearOption
-    /// Selected vessel name, shown in the header ("Add species to vessel <VESSEL>").
+    /// Selected vessel name, threaded onward for routing (no longer shown in the header — see
+    /// `AddSpeciesView.heading`, which now reads "Which species did you catch with <gear>?").
     let vessel: String
     /// Display-only placeholder reference number shown at the top of the screen.
     let referenceNumber: String
@@ -32,7 +33,7 @@ final class AddSpeciesViewModel {
 
     /// The gear these species were caught with, threaded onward.
     var gear: GearOption { request.gear }
-    /// Selected vessel name, shown in the header ("Add species to vessel <VESSEL>").
+    /// Selected vessel name, threaded onward for routing.
     var vessel: String { request.vessel }
     /// Display-only placeholder reference number shown at the top of the screen.
     var referenceNumber: String { request.referenceNumber }
@@ -45,7 +46,14 @@ final class AddSpeciesViewModel {
     var query: String = ""
     /// The species name selected from the results list (nil until one is chosen).
     var selectedName: String?
-    private(set) var didAttemptSubmit = false
+    /// Number of "Save and continue" attempts. A monotonic counter rather than a `Bool` so the
+    /// shared `SearchDropdownField` can re-announce its error to VoiceOver on every attempt — the
+    /// `false → true` edge of a flag fires only once, leaving a VoiceOver user with silence on a
+    /// second blank submit.
+    private(set) var submitAttempt = 0
+    /// Whether a submit has been attempted, derived from `submitAttempt` so every existing call
+    /// site and test keeps working unchanged.
+    var didAttemptSubmit: Bool { submitAttempt > 0 }
     private(set) var isSaving = false
     /// Set when saving to favourites fails, so the view can surface a recoverable error.
     private(set) var saveFailed = false
@@ -102,7 +110,7 @@ final class AddSpeciesViewModel {
 
     /// Validates the selection, then adds it to favourites and routes back to the recorded screen.
     func submit() async {
-        didAttemptSubmit = true
+        submitAttempt += 1
         saveFailed = false
         guard let species = selectedSpecies,
               AddSpeciesValidation.message(query: query, selectedSpecies: species, context: context) == nil else {

@@ -58,6 +58,22 @@ final class CatchLocationManualEntryUITests: XCTestCase {
         XCTAssertTrue(element(app, ID.saveContinue).exists)
     }
 
+    @MainActor
+    func test_manualEntry_submitWithBlankSearch_showsInlineError_andDoesNotRoute() {
+        let app = launch()
+
+        XCTAssertTrue(element(app, ID.heading).waitForExistence(timeout: 5))
+        element(app, ID.saveContinue).tap()
+
+        // Previously this was silent: the inline error was gated behind a non-empty query, so a
+        // completely blank submit showed nothing at all.
+        XCTAssertTrue(
+            element(app, "CatchRecord.catchLocationManualEntry.error").waitForExistence(timeout: 5)
+        )
+        XCTAssertTrue(app.staticTexts["Enter the statistical sub area"].exists)
+        XCTAssertTrue(element(app, ID.heading).exists)
+    }
+
     /// Scenario 2 / FR3–FR4 — typing two or more characters returns matching statistical
     /// sub-area codes in a dropdown list.
     @MainActor
@@ -111,8 +127,7 @@ final class CatchLocationManualEntryUITests: XCTestCase {
 
         XCTAssertTrue(element(app, ID.heading).waitForExistence(timeout: 5))
 
-        // "Save and continue" with no area chosen (arbitrary free text is never a valid area — the
-        // same rule as the map screen). Must not proceed into the species sub-journey.
+        // "Save and continue" with no area chosen. Must not proceed into the species sub-journey.
         app.buttons[ID.saveContinue].tap()
 
         XCTAssertTrue(element(app, ID.heading).exists)
@@ -132,13 +147,14 @@ final class CatchLocationManualEntryUITests: XCTestCase {
 
         app.buttons[ID.saveContinue].tap()
 
-        // NOTE: the app currently shows the shared "Select a statistical subrectangle" message
-        // (`catchRecord.catchLocation.validation.none`) rather than the ticket's "Enter a valid
-        // statistical sub area code." — recorded as a copy gap. The test asserts an error is
-        // shown and the screen is retained. (Not to be confused with
+        // Previously the app showed the shared "Select a statistical subrectangle" message
+        // (`catchRecord.catchLocation.validation.none`, the *map* screen's copy) — a recorded
+        // copy gap. This screen now has its own two-rule validator
+        // (`CatchLocationManualEntryValidation`), so a typed-but-unmatched code correctly shows
+        // "Select a statistical sub area from the list" instead. (Not to be confused with
         // `catchRecord.catchLocation.hint.select`, "Select the area where most of your catch was
         // caught.", which is the field's *hint* text, always visible, not the validation error.)
-        let error = app.staticTexts["Select a statistical subrectangle"]
+        let error = app.staticTexts["Select a statistical sub area from the list"]
         XCTAssertTrue(error.waitForExistence(timeout: 5), "An invalid code should surface an inline validation error")
         XCTAssertTrue(element(app, ID.heading).exists, "The user should remain on the manual-entry screen")
         XCTAssertFalse(element(app, "CatchRecord.addSpecies.heading").exists)

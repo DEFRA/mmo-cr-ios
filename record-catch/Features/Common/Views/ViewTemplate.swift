@@ -29,6 +29,10 @@ struct ViewTemplate<Content: View>: View {
     var body: some View {
         VStack(spacing: 0) {
             ViewHeader()
+            // Pinned below the header, outside the `ScrollView`, so the offline indicator stays
+            // visible while the user scrolls the page content (see ADR-0019). Renders nothing at
+            // all while the device is online.
+            OfflineBanner()
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: AppSpacing.large) {

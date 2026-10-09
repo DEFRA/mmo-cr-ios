@@ -34,9 +34,9 @@ final class CatchLocationManualEntryViewModelTests: XCTestCase {
 
     // MARK: - Validation
 
-    func test_errorKey_beforeSubmit_isNil() {
+    func test_validationMessage_beforeSubmit_isNil() {
         let sut = makeSUT(router: CatchRecordRouter())
-        XCTAssertNil(sut.errorKey)
+        XCTAssertNil(sut.validationMessage)
     }
 
     func test_submit_withNoSelection_setsError_andDoesNotRoute() {
@@ -45,8 +45,29 @@ final class CatchLocationManualEntryViewModelTests: XCTestCase {
 
         sut.submit()
 
-        XCTAssertEqual(sut.errorKey, "catchRecord.catchLocation.validation.none")
+        XCTAssertEqual(sut.validationMessage, ValidationMessage("catchRecord.manualEntry.validation.enter"))
         XCTAssertTrue(router.path.isEmpty)
+    }
+
+    func test_submit_withQueryTyped_butNothingSelected_showsSelectFromListMessage() {
+        let router = CatchRecordRouter()
+        let sut = makeSUT(router: router)
+        sut.query = "38E9"
+
+        sut.submit()
+
+        XCTAssertEqual(sut.validationMessage, ValidationMessage("catchRecord.manualEntry.validation.select"))
+        XCTAssertTrue(router.path.isEmpty)
+    }
+
+    func test_submit_calledTwice_whileBlank_incrementsSubmitAttempt_andKeepsDidAttemptSubmitTrue() {
+        let sut = makeSUT(router: CatchRecordRouter())
+
+        sut.submit()
+        XCTAssertEqual(sut.submitAttempt, 1)
+        sut.submit()
+        XCTAssertEqual(sut.submitAttempt, 2)
+        XCTAssertTrue(sut.didAttemptSubmit)
     }
 
     // MARK: - Submit success
@@ -71,7 +92,7 @@ final class CatchLocationManualEntryViewModelTests: XCTestCase {
         // so the assertion is deterministic. With no favourite species, entry goes to Add-species.
         await sut.enterSpeciesSubJourney()
 
-        XCTAssertNil(sut.errorKey)
+        XCTAssertNil(sut.validationMessage)
         XCTAssertEqual(
             router.path,
             [

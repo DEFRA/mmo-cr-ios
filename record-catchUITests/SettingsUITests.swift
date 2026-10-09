@@ -4,7 +4,8 @@
 //
 //  Journey tests for the Phase 2 Settings screen (see docs/design-specs/settings.md),
 //  hosted via the `-uiTestSettings` launch argument. Covers the analytics-consent
-//  toggle, the account/menu link list, and the "Gear used" row's empty state.
+//  toggle, the account/menu link list, the "Gear used" row's empty state, and the
+//  "Sign out" confirmation dialog (UI-only — no auth/session exists yet).
 //
 
 import XCTest
@@ -12,7 +13,7 @@ import XCTest
 final class SettingsUITests: XCTestCase {
 
     private enum ID {
-        static let title = "Settings"
+        static let title = "Your settings"
         static let analyticsToggle = "Settings.analyticsToggle"
         static let linkMyAccount = "Settings.link.myAccount"
         static let linkPrivacyNotice = "Settings.link.privacyNotice"
@@ -96,15 +97,38 @@ final class SettingsUITests: XCTestCase {
     }
 
     @MainActor
-    func test_signOut_reachable_butDoesNotNavigateOrCrash() {
+    func test_signOut_showsConfirmationDialog_withTitleMessageAndCancelOption() {
         let app = launch()
 
         let signOut = element(app, ID.linkSignOut)
         XCTAssertTrue(signOut.waitForExistence(timeout: 5))
         signOut.tap()
 
-        // Inert seam: tapping "Sign out" has no destination yet — the Settings screen
+        // The dialog's own "Cancel" is not asserted via tap here: on this presentation
+        // style (a compact popover on this device/OS), a dedicated Cancel row is not
+        // guaranteed to be in the accessibility tree — tap-outside-to-dismiss is the
+        // platform—provided alternative, and `SettingsViewModel.cancelSignOutConfirmation()`
+        // already has full unit-test coverage for that path (see `SettingsViewModelTests`,
+        // mirroring the same choice for `RemoveSpeciesUITests`' confirmation dialog).
+        XCTAssertTrue(app.staticTexts["Sign out?"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["You can sign back in at any time."].exists)
+    }
+
+    @MainActor
+    func test_signOut_confirm_dismissesDialog_butDoesNotNavigateOrCrash() {
+        let app = launch()
+
+        let signOut = element(app, ID.linkSignOut)
+        XCTAssertTrue(signOut.waitForExistence(timeout: 5))
+        signOut.tap()
+
+        let confirm = element(app, "Settings.signOutConfirm.confirm")
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5))
+        confirm.tap()
+
+        // Inert seam: confirming "Sign out" has no destination yet — the Settings screen
         // (and its title) should still be showing, with no navigation/crash.
         XCTAssertTrue(app.staticTexts[ID.title].exists, "Sign out is inert — Settings should still be showing")
+        XCTAssertFalse(app.staticTexts["Sign out?"].exists)
     }
 }

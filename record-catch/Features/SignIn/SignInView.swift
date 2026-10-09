@@ -1,7 +1,8 @@
 //  SignInView.swift
 //  record-catch
 //
-//  UI-only bilingual Sign In screen, rendered inside the shared ViewTemplate.
+//  UI-only bilingual Sign In screen. Deliberately does NOT use the shared `ViewTemplate` — see
+//  the comment at the top of `body` below (also means no offline banner here, see ADR-0019).
 //
 
 import SwiftUI
@@ -165,7 +166,8 @@ struct SignInView: View {
     private var troubleSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.medium) {
             LocalizedText("signIn.trouble.heading")
-                .font(AppTypography.footerHeading)
+                .font(AppTypography.troubleHeading)
+                .lineSpacing(6)
                 .foregroundStyle(AppColors.textPrimary)
                 .accessibilityAddTraits(.isHeader)
                 .accessibilityIdentifier("SignIn.troubleHeading")

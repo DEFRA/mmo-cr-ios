@@ -186,7 +186,7 @@ struct CatchRecordHostView: View {
                 favouritePorts: favouritePorts,
                 draft: draft
             )
-        case let .tripDate(phase, vessel, referenceNumber, departureDate):
+        case .tripDate(let phase, let vessel, let referenceNumber, let departureDate):
             TripDateView(
                 phase: phase,
                 vessel: vessel,

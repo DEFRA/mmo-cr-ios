@@ -1,9 +1,12 @@
 import XCTest
+import SwiftUI
 @testable import record_catch
 
 /// Unit tests for the pure/testable logic behind the Settings components — the empty-state
 /// value mapping (`SettingsValueRow.displayValue`) and the `UserDefaults`-backed analytics
-/// preference store.
+/// preference store — plus rendering tests for `SettingsValueRow`'s SwiftUI `body` (see
+/// `ViewRenderingHarness`).
+@MainActor
 final class SettingsComponentsTests: XCTestCase {
 
     // MARK: - SettingsValueRow.displayValue
@@ -73,5 +76,33 @@ final class SettingsComponentsTests: XCTestCase {
         let sut = InMemoryAnalyticsPreferenceStore(initialValue: true)
         sut.setAnalyticsEnabled(false)
         XCTAssertFalse(sut.isAnalyticsEnabled())
+    }
+
+    // MARK: - SettingsValueRow rendering
+
+    func test_render_populated() {
+        ViewRenderingHarness.render(
+            SettingsValueRow(
+                label: "Gear used",
+                value: "Seine nets",
+                emptyStateValue: "Not yet recorded",
+                changeTitle: "Change",
+                changeAccessibilityIdentifier: "Settings.gearUsed.change",
+                onChange: {}
+            )
+        )
+    }
+
+    func test_render_emptyState() {
+        ViewRenderingHarness.render(
+            SettingsValueRow(
+                label: "Gear used",
+                value: nil,
+                emptyStateValue: "Not yet recorded",
+                changeTitle: "Change",
+                changeAccessibilityIdentifier: "Settings.gearUsed.change",
+                onChange: {}
+            )
+        )
     }
 }

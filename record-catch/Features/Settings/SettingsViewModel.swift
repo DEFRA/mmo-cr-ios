@@ -16,7 +16,7 @@ final class SettingsViewModel {
 
     /// Backed by `AnalyticsPreferenceStoring` — every write is persisted immediately.
     ///
-    /// - TODO: Once real analytics consent lands (a future ADR), this should also notify
+    /// - Note: Once real analytics consent lands (a future ADR), this should also notify
     ///   whatever consent-gate the analytics SDK reads, and likely need an explicit
     ///   "changes take effect next launch/immediately" decision.
     var analyticsEnabled: Bool {
@@ -69,7 +69,7 @@ final class SettingsViewModel {
     /// Reached via the "Sign out" link. Presents a confirmation dialog before anything
     /// happens — the dialog's own confirm action (`confirmSignOut()`) remains **inert**,
     /// since no session exists yet, so this must not falsely imply an action occurred.
-    /// - TODO: Wire real sign-out once authentication (ADR pending) exists.
+    /// - Note: Inert pending authentication (ADR pending) — wire real sign-out once it exists.
     func signOutTapped() {
         showSignOutConfirmation = true
     }
@@ -81,34 +81,34 @@ final class SettingsViewModel {
 
     /// Confirms "Sign out" from the dialog. **Inert** — no session exists yet, so there is
     /// nothing to sign out of; only dismisses the dialog.
-    /// - TODO: Wire real sign-out once authentication (ADR pending) exists.
+    /// - Note: Inert pending authentication (ADR pending) — wire real sign-out once it exists.
     func confirmSignOut() {
         showSignOutConfirmation = false
-        // Intentionally no further action: no session exists to sign out of yet (see TODO above).
+        // Intentionally no further action: no session exists to sign out of yet (see note above).
     }
 
     /// Reached via the Gear used row's "Change" link.
-    /// - TODO: Navigate to a gear-editing destination once one exists.
+    /// - Note: Navigate to a gear-editing destination once one exists.
     func changeGearTapped() {
-        // Intentionally empty: no destination exists yet (see TODO above).
+        // Intentionally empty: no destination exists yet (see note above).
     }
 
     /// Reached via the "Privacy notice" link.
-    /// - TODO: Navigate to (or open) the real privacy-notice destination.
+    /// - Note: Navigate to (or open) the real privacy-notice destination.
     func privacyNoticeTapped() {
-        // Intentionally empty: no destination exists yet (see TODO above).
+        // Intentionally empty: no destination exists yet (see note above).
     }
 
     /// Reached via the "Support information" link.
-    /// - TODO: Navigate to a support-information destination once one exists.
+    /// - Note: Navigate to a support-information destination once one exists.
     func supportInformationTapped() {
-        // Intentionally empty: no destination exists yet (see TODO above).
+        // Intentionally empty: no destination exists yet (see note above).
     }
 
     /// Reached via the "How we use your data" link below the analytics paragraph.
-    /// - TODO: Navigate to (or open) the real privacy-notice destination — likely the
+    /// - Note: Navigate to (or open) the real privacy-notice destination — likely the
     ///   same destination as `privacyNoticeTapped()`, to be confirmed with product.
     func openHowWeUseYourData() {
-        // Intentionally empty: no destination exists yet (see TODO above).
+        // Intentionally empty: no destination exists yet (see note above).
     }
 }

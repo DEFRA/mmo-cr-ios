@@ -52,27 +52,68 @@ nonisolated struct SpeciesOption: Identifiable, Hashable, Sendable, Codable {
     init(
         id: String,
         name: String,
-        faoCode: String? = nil,
-        scientificName: String? = nil,
-        commonNames: [SpeciesName] = [],
-        localNames: [SpeciesName] = [],
-        isActive: Bool = true,
-        weightAboveMinimumKg: String = "",
-        weightBelowMinimumKg: String? = nil,
-        weightLegallyDiscardedKg: String? = nil,
-        weightPrecision: WeightPrecision = .oneDecimalPlace
+        details: ReferenceDetails = ReferenceDetails(),
+        weights: Weights = Weights()
     ) {
         self.id = id
         self.name = name
-        self.faoCode = faoCode
-        self.scientificName = scientificName
-        self.commonNames = commonNames
-        self.localNames = localNames
-        self.isActive = isActive
-        self.weightAboveMinimumKg = weightAboveMinimumKg
-        self.weightBelowMinimumKg = weightBelowMinimumKg
-        self.weightLegallyDiscardedKg = weightLegallyDiscardedKg
-        self.weightPrecision = weightPrecision
+        self.faoCode = details.faoCode
+        self.scientificName = details.scientificName
+        self.commonNames = details.commonNames
+        self.localNames = details.localNames
+        self.isActive = details.isActive
+        self.weightAboveMinimumKg = weights.aboveMinimumKg
+        self.weightBelowMinimumKg = weights.belowMinimumKg
+        self.weightLegallyDiscardedKg = weights.legallyDiscardedKg
+        self.weightPrecision = weights.precision
+    }
+
+    /// Groups the reference-data fields the API's canonical species view supplies (see
+    /// `init(dto:)`), so `SpeciesOption.init` takes one parameter for them rather than five —
+    /// keeping it within SonarCloud's S107 parameter-count limit (see
+    /// swift-swiftui.instructions.md). Not itself a stored property of `SpeciesOption`, so the
+    /// `Codable` wire/persisted shape is unaffected.
+    struct ReferenceDetails {
+        var faoCode: String?
+        var scientificName: String?
+        var commonNames: [SpeciesName]
+        var localNames: [SpeciesName]
+        var isActive: Bool
+
+        init(
+            faoCode: String? = nil,
+            scientificName: String? = nil,
+            commonNames: [SpeciesName] = [],
+            localNames: [SpeciesName] = [],
+            isActive: Bool = true
+        ) {
+            self.faoCode = faoCode
+            self.scientificName = scientificName
+            self.commonNames = commonNames
+            self.localNames = localNames
+            self.isActive = isActive
+        }
+    }
+
+    /// Groups the three user-entered live-weight fields plus their precision, for the same
+    /// S107-avoidance reason as `ReferenceDetails` above.
+    struct Weights {
+        var aboveMinimumKg: String
+        var belowMinimumKg: String?
+        var legallyDiscardedKg: String?
+        var precision: WeightPrecision
+
+        init(
+            aboveMinimumKg: String = "",
+            belowMinimumKg: String? = nil,
+            legallyDiscardedKg: String? = nil,
+            precision: WeightPrecision = .oneDecimalPlace
+        ) {
+            self.aboveMinimumKg = aboveMinimumKg
+            self.belowMinimumKg = belowMinimumKg
+            self.legallyDiscardedKg = legallyDiscardedKg
+            self.precision = precision
+        }
     }
 
     /// Convenience for the current stub, where the name is also the stable identifier.
@@ -94,11 +135,13 @@ nonisolated struct SpeciesOption: Identifiable, Hashable, Sendable, Codable {
                 scientificName: dto.scientificName,
                 commonNames: commonNames
             ),
-            faoCode: dto.faoCode,
-            scientificName: dto.scientificName,
-            commonNames: commonNames,
-            localNames: localNames,
-            isActive: dto.active ?? true
+            details: ReferenceDetails(
+                faoCode: dto.faoCode,
+                scientificName: dto.scientificName,
+                commonNames: commonNames,
+                localNames: localNames,
+                isActive: dto.active ?? true
+            )
         )
     }
 
@@ -128,15 +171,19 @@ nonisolated struct SpeciesOption: Identifiable, Hashable, Sendable, Codable {
         SpeciesOption(
             id: id,
             name: name,
-            faoCode: faoCode,
-            scientificName: scientificName,
-            commonNames: commonNames,
-            localNames: localNames,
-            isActive: isActive,
-            weightAboveMinimumKg: above,
-            weightBelowMinimumKg: below,
-            weightLegallyDiscardedKg: discarded,
-            weightPrecision: weightPrecision
+            details: ReferenceDetails(
+                faoCode: faoCode,
+                scientificName: scientificName,
+                commonNames: commonNames,
+                localNames: localNames,
+                isActive: isActive
+            ),
+            weights: Weights(
+                aboveMinimumKg: above,
+                belowMinimumKg: below,
+                legallyDiscardedKg: discarded,
+                precision: weightPrecision
+            )
         )
     }
 }

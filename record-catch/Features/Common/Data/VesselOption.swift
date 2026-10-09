@@ -64,44 +64,43 @@ nonisolated struct VesselOption: Identifiable, Hashable, Sendable, Codable {
         }
     }
 
-    /// Convenience for hand-built/test values.
+    /// Convenience for hand-built/test values. Only the fields exercised by hand-built call sites
+    /// are exposed here (see swift-swiftui.instructions.md on preferring fewer parameters); every
+    /// other field is reachable only via `init(dto:)`, which the real API response always
+    /// populates.
     init(
         id: String,
         name: String,
         displayName: String? = nil,
-        cfr: String? = nil,
-        uvi: String? = nil,
-        mmsi: String? = nil,
-        ircs: String? = nil,
-        externalMark: String? = nil,
-        registrationNumber: String? = nil,
-        typeCode: String? = nil,
-        registrationCountryCode: String? = nil,
-        lengthOverallMetres: Double? = nil,
-        status: String? = nil,
-        activeFrom: String? = nil,
-        activeTo: String? = nil
+        externalMark: String? = nil
     ) {
         self.id = id
         self.name = name
-        self.cfr = cfr
-        self.uvi = uvi
-        self.mmsi = mmsi
-        self.ircs = ircs
+        self.cfr = nil
+        self.uvi = nil
+        self.mmsi = nil
+        self.ircs = nil
         self.externalMark = externalMark
-        self.registrationNumber = registrationNumber
-        self.typeCode = typeCode
-        self.registrationCountryCode = registrationCountryCode
-        self.lengthOverallMetres = lengthOverallMetres
-        self.status = status
-        self.activeFrom = activeFrom
-        self.activeTo = activeTo
-        if let displayName, !displayName.isEmpty {
-            self.displayName = displayName
+        self.registrationNumber = nil
+        self.typeCode = nil
+        self.registrationCountryCode = nil
+        self.lengthOverallMetres = nil
+        self.status = nil
+        self.activeFrom = nil
+        self.activeTo = nil
+        self.displayName = Self.derivedDisplayName(name: name, preferred: displayName, externalMark: externalMark)
+    }
+
+    /// Shared display-name derivation rule used by both initializers: the API's own `namePln`/the
+    /// caller-supplied `displayName` wins when non-empty, then `"NAME EXTERNAL_MARK"` when an
+    /// `externalMark` is present, falling back to `name` alone.
+    private static func derivedDisplayName(name: String, preferred: String?, externalMark: String?) -> String {
+        if let preferred, !preferred.isEmpty {
+            return preferred
         } else if let externalMark, !externalMark.isEmpty {
-            self.displayName = [name, externalMark].joined(separator: " ")
+            return [name, externalMark].joined(separator: " ")
         } else {
-            self.displayName = name
+            return name
         }
     }
 }

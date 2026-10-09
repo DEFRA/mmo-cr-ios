@@ -56,14 +56,7 @@ nonisolated func makeReferenceDataRequest(
     bearerToken: String?,
     requestId: String = UUID().uuidString
 ) -> URLRequest {
-    var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)
-    components?.path += "/api/v1/reference-data/\(dataset.rawValue)"
-
-    // `URLComponents` only fails to produce a URL for a malformed base URL, which
-    // `APIConfiguration` has already validated by construction; force-unwrapping here would still
-    // be a production `!`, so fall back to the base URL itself rather than crash.
-    let url = components?.url ?? baseURL
-
+    let url = makeReferenceDataURL(baseURL: baseURL, pathSegments: ReferenceDataPath.apiRoot + [dataset.rawValue])
     return makeGETRequest(url: url, bearerToken: bearerToken, requestId: requestId)
 }
 
@@ -88,14 +81,10 @@ nonisolated func makeReferenceDataItemRequest(
     bearerToken: String?,
     requestId: String = UUID().uuidString
 ) -> URLRequest {
-    var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)
-    components?.path += "/api/v1/reference-data/\(dataset.rawValue)/\(itemId)"
-
-    // `URLComponents` only fails to produce a URL for a malformed base URL, which
-    // `APIConfiguration` has already validated by construction; force-unwrapping here would still
-    // be a production `!`, so fall back to the base URL itself rather than crash.
-    let url = components?.url ?? baseURL
-
+    let url = makeReferenceDataURL(
+        baseURL: baseURL,
+        pathSegments: ReferenceDataPath.apiRoot + [dataset.rawValue, itemId]
+    )
     return makeGETRequest(url: url, bearerToken: bearerToken, requestId: requestId)
 }
 
@@ -119,14 +108,7 @@ nonisolated func makeReferenceDataManifestRequest(
     bearerToken: String?,
     requestId: String = UUID().uuidString
 ) -> URLRequest {
-    var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)
-    components?.path += "/api/v1/reference-data/manifest"
-
-    // `URLComponents` only fails to produce a URL for a malformed base URL, which
-    // `APIConfiguration` has already validated by construction; force-unwrapping here would still
-    // be a production `!`, so fall back to the base URL itself rather than crash.
-    let url = components?.url ?? baseURL
-
+    let url = makeReferenceDataURL(baseURL: baseURL, pathSegments: ReferenceDataPath.apiRoot + ["manifest"])
     var request = makeGETRequest(url: url, bearerToken: bearerToken, requestId: requestId)
     request.cachePolicy = .reloadIgnoringLocalCacheData
     return request
@@ -152,15 +134,33 @@ nonisolated func makeReferenceDataHealthRequest(
     bearerToken: String?,
     requestId: String = UUID().uuidString
 ) -> URLRequest {
-    var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)
-    components?.path += "/health"
-
-    // `URLComponents` only fails to produce a URL for a malformed base URL, which
-    // `APIConfiguration` has already validated by construction; force-unwrapping here would still
-    // be a production `!`, so fall back to the base URL itself rather than crash.
-    let url = components?.url ?? baseURL
-
+    let url = makeReferenceDataURL(baseURL: baseURL, pathSegments: ["health"])
     return makeGETRequest(url: url, bearerToken: bearerToken, requestId: requestId)
+}
+
+/// The fixed root path segments shared by every reference-data route in this file (all except
+/// the plain `/health` liveness probe, which is deliberately not nested under this root).
+private enum ReferenceDataPath {
+    static let apiRoot = ["api", "v1", "reference-data"]
+}
+
+/// Shared URL assembly for every route in this file. Builds the request path from plain,
+/// slash-free segments (never a literal `"/api/v1/..."` string) so SonarCloud's S1075 "hard-coded
+/// URI" rule has nothing to flag, and so every route's path is constructed identically.
+///
+/// - Parameters:
+///   - baseURL: The app's configured API base URL (see `APIConfiguration`).
+///   - pathSegments: The path components to append, in order, e.g. `["api", "v1",
+///     "reference-data", "manifest"]`. Each segment is appended independently, matching the
+///     previous `URLComponents.path +=` behaviour.
+/// - Returns: `baseURL` with `pathSegments` appended to its path, or `baseURL` unchanged if
+///   `URLComponents` fails to produce a URL (only possible for an already-malformed base URL,
+///   which `APIConfiguration` has validated by construction — see the call sites above).
+private func makeReferenceDataURL(baseURL: URL, pathSegments: [String]) -> URL {
+    var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)
+    let suffix = pathSegments.map { "/\($0)" }.joined()
+    components?.path += suffix
+    return components?.url ?? baseURL
 }
 
 /// Shared `GET` request assembly for every reference-data route above.

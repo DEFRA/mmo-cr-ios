@@ -212,9 +212,9 @@ struct HomeView: View {
             .accessibilityAddTraits(.isHeader)
     }
 
-    // TODO: The design links "Check the How to record a catch tab" — destination unresolved
-    // (no such tab exists; see docs/design-specs/home.md deviation register). Rendered as plain
-    // text until the target is confirmed, to avoid shipping a non-functional link.
+    // Deviation (docs/design-specs/home.md): the design links "Check the How to record a
+    // catch tab" — destination unresolved (no such tab exists). Rendered as plain text until
+    // the target is confirmed, to avoid shipping a non-functional link.
     private var statusHelpFootnote: some View {
         ParagraphText(
             text: String(

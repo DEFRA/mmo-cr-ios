@@ -228,41 +228,25 @@ nonisolated struct RemoteReferenceDataClient: ReferenceDataFetching {
 /// Fixture-backed double for future call sites/tests, following the same "real + stub pair"
 /// pattern as the existing `PortSearchProviding`/`FavouritePortsProviding` stubs (ADR-0004).
 nonisolated struct StubReferenceDataClient: ReferenceDataFetching {
-    var vessels: [VesselOption]
+    var vessels: [VesselOption] = []
     var vessel: VesselOption?
-    var species: [SpeciesOption]
+    var species: [SpeciesOption] = []
     var speciesItem: SpeciesOption?
-    var ports: [PortOption]
+    var ports: [PortOption] = []
     var portItem: PortOption?
     var manifest: ReferenceDataManifest?
     var error: APIError?
 
-    init(
-        vessels: [VesselOption] = [],
-        vessel: VesselOption? = nil,
-        species: [SpeciesOption] = [],
-        speciesItem: SpeciesOption? = nil,
-        ports: [PortOption] = [],
-        portItem: PortOption? = nil,
-        manifest: ReferenceDataManifest? = nil,
-        error: APIError? = nil
-    ) {
-        self.vessels = vessels
-        self.vessel = vessel
-        self.species = species
-        self.speciesItem = speciesItem
-        self.ports = ports
-        self.portItem = portItem
-        self.manifest = manifest
-        self.error = error
-    }
+    // Relies on Swift's synthesised memberwise initializer (every stored property above has a
+    // default) rather than a hand-written `init` repeating all 8 parameters, which SonarCloud
+    // flags as S107 "too many parameters" — see swift-swiftui.instructions.md.
 
     func fetchVessels() async throws -> [VesselOption] {
         if let error { throw error }
         return vessels
     }
 
-    func fetchVessel(id: String) async throws -> VesselOption {
+    func fetchVessel(id _: String) async throws -> VesselOption {
         if let error { throw error }
         if let vessel { return vessel }
         throw APIError.response(status: 404, details: nil)
@@ -273,7 +257,7 @@ nonisolated struct StubReferenceDataClient: ReferenceDataFetching {
         return species
     }
 
-    func fetchSpecies(id: String) async throws -> SpeciesOption {
+    func fetchSpecies(id _: String) async throws -> SpeciesOption {
         if let error { throw error }
         if let speciesItem { return speciesItem }
         throw APIError.response(status: 404, details: nil)
@@ -284,7 +268,7 @@ nonisolated struct StubReferenceDataClient: ReferenceDataFetching {
         return ports
     }
 
-    func fetchPort(id: String) async throws -> PortOption {
+    func fetchPort(id _: String) async throws -> PortOption {
         if let error { throw error }
         if let portItem { return portItem }
         throw APIError.response(status: 404, details: nil)

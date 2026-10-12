@@ -4,8 +4,8 @@
 //
 //  Journey tests for the Phase 2 Settings screen (see docs/design-specs/settings.md),
 //  hosted via the `-uiTestSettings` launch argument. Covers the analytics-consent
-//  toggle, the account/menu link list, and the "Sign out" confirmation dialog
-//  (UI-only — no auth/session exists yet).
+//  toggle, the account/menu link list, the "Gear used" row's empty state, and the
+//  "Sign out" confirmation dialog (UI-only — no auth/session exists yet).
 //
 
 import XCTest
@@ -19,6 +19,7 @@ final class SettingsUITests: XCTestCase {
         static let linkPrivacyNotice = "Settings.link.privacyNotice"
         static let linkSupportInformation = "Settings.link.supportInformation"
         static let linkSignOut = "Settings.link.signOut"
+        static let gearUsedChange = "Settings.gearUsed.change"
     }
 
     override func setUpWithError() throws {
@@ -82,6 +83,18 @@ final class SettingsUITests: XCTestCase {
 
         XCTAssertTrue(element(app, ID.linkSignOut).exists)
         XCTAssertTrue(app.staticTexts["Sign out"].exists)
+    }
+
+    @MainActor
+    func test_gearUsedRow_showsEmptyStateAndChangeLink() {
+        let app = launch()
+
+        XCTAssertTrue(app.staticTexts["Gear used"].waitForExistence(timeout: 5))
+        // Empty state (deviation #5 — never the Figma mock's literal placeholder "Cell").
+        XCTAssertTrue(app.staticTexts["Not yet recorded"].exists)
+        XCTAssertFalse(app.staticTexts["Cell"].exists)
+
+        XCTAssertTrue(element(app, ID.gearUsedChange).exists)
     }
 
     @MainActor

@@ -351,6 +351,30 @@ implementation, once OAuth/OIDC authentication lands, will read the token from
 **Never commit a real token** — not in `.xcconfig`, `Info.plist`, the shared scheme, or source. If
 one ever leaks, follow DEFRA's credential exposure process immediately.
 
+## Pointing Debug at a local backend instead (manual override)
+
+Debug builds point at the CDP **dev** environment by default (see Configuration above); no local
+backend is needed for normal development. If you do need to run against a local backend instead
+(e.g. the CDP dev environment is unavailable, or you're iterating on a local mock), edit
+`Config/Debug.xcconfig`'s `API_BASE_URL` for your own session and **do not commit that edit** (see
+ADR-0018's 2026-10 addendum, "No local-backend override is provided").
+
+### Testing on a physical device (LAN IP)
+
+The Debug ATS exception, if you add one back for `localhost`, only covers `localhost` itself — it
+does not cover a physical device reaching your Mac over the LAN. To test on a physical device
+against your Mac's local backend:
+
+1. Find your Mac's LAN IP address (e.g. `System Settings ▸ Wi-Fi ▸ Details…`, or `ipconfig getifaddr en0`).
+2. Add that IP as a further `NSExceptionDomains` entry in `record-catch/Resources/Info-Debug.plist`
+   (**Debug only** — never in `Info-Release.plist`), alongside a local `NSAllowsInsecureHTTPLoads`
+   exception for that domain if your local backend only serves HTTP.
+3. Point `API_BASE_URL` at that IP for the device build (e.g. temporarily edit
+   `record-catch/Config/Debug.xcconfig`, or override the build setting for that run) — remember not
+   to commit this either.
+4. The app may also need to request local-network access (`NSLocalNetworkUsageDescription`, Debug
+   only) — you will see the standard local-network permission prompt on first launch.
+
 ## Developer smoke check
 
 `record-catch/Core/Networking/ReferenceData/ReferenceDataDevSmokeCheck.swift` provides a

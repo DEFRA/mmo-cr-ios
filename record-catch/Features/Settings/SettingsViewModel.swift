@@ -3,9 +3,10 @@ import Foundation
 /// View model for the Settings screen (see docs/design-specs/settings.md).
 ///
 /// UI-only for this phase: the analytics toggle is backed by a local preference only (no
-/// analytics SDK, no networking). "My account" pushes the real "Manage your account" screen
-/// via `SettingsRouter` (see docs/adr/0007-settings-tab-navigation.md); every other
-/// link/action below remains an inert seam with no destination or side effect wired up yet.
+/// analytics SDK, no networking), "Gear used" reflects a locally-known value with an
+/// authored empty state. "My account" pushes the real "Manage your account" screen via
+/// `SettingsRouter` (see docs/adr/0007-settings-tab-navigation.md); every other link/action
+/// below remains an inert seam with no destination or side effect wired up yet.
 @MainActor
 @Observable
 final class SettingsViewModel {
@@ -24,6 +25,9 @@ final class SettingsViewModel {
             preferenceStore.setAnalyticsEnabled(analyticsEnabled)
         }
     }
+
+    /// The user's last-known "Gear used" value, or `nil` if none has been recorded yet.
+    private(set) var gearUsed: String?
 
     /// Whether the "Sign out" confirmation dialog is presented. Tapping the link never
     /// signs out directly — it asks for confirmation first, matching the destructive
@@ -60,11 +64,13 @@ final class SettingsViewModel {
 
     init(
         router: SettingsRouter? = nil,
-        preferenceStore: AnalyticsPreferenceStoring = UserDefaultsAnalyticsPreferenceStore()
+        preferenceStore: AnalyticsPreferenceStoring = UserDefaultsAnalyticsPreferenceStore(),
+        gearUsed: String? = nil
     ) {
         self.router = router ?? SettingsRouter()
         self.preferenceStore = preferenceStore
         self.analyticsEnabled = preferenceStore.isAnalyticsEnabled()
+        self.gearUsed = gearUsed
         #if DEBUG || ENABLE_DEBUG_REFERENCE_DATA_TOOL
         self.debugReferenceDataClient = Self.makeDefaultDebugReferenceDataClient()
         #endif
@@ -76,11 +82,13 @@ final class SettingsViewModel {
     init(
         router: SettingsRouter? = nil,
         preferenceStore: AnalyticsPreferenceStoring = UserDefaultsAnalyticsPreferenceStore(),
+        gearUsed: String? = nil,
         debugReferenceDataClient: ReferenceDataFetching
     ) {
         self.router = router ?? SettingsRouter()
         self.preferenceStore = preferenceStore
         self.analyticsEnabled = preferenceStore.isAnalyticsEnabled()
+        self.gearUsed = gearUsed
         self.debugReferenceDataClient = debugReferenceDataClient
     }
 
@@ -146,6 +154,13 @@ final class SettingsViewModel {
     }
     #endif
 
+    /// The text to render for "Gear used" — `gearUsed` when recorded, or `emptyState`
+    /// otherwise (never the Figma mock's literal placeholder "Cell" — see
+    /// docs/design-specs/settings.md deviation #5).
+    func gearUsedDisplayValue(emptyState: String) -> String {
+        SettingsValueRow.displayValue(gearUsed, emptyStateValue: emptyState)
+    }
+
     /// Reached via the "My account" link. Pushes the "Manage your account" screen (see
     /// `SettingsRoute.manageAccount` / docs/adr/0007-settings-tab-navigation.md). The only
     /// non-inert navigation seam on this screen — every other seam below remains a no-op.
@@ -179,6 +194,12 @@ final class SettingsViewModel {
     func confirmSignOut() {
         showSignOutConfirmation = false
         // Intentionally no further action: no session exists to sign out of yet (see note above).
+    }
+
+    /// Reached via the Gear used row's "Change" link.
+    /// - Note: Navigate to a gear-editing destination once one exists.
+    func changeGearTapped() {
+        // Intentionally empty: no destination exists yet (see note above).
     }
 
     /// Reached via the "Privacy notice" link.

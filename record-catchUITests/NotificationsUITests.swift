@@ -17,6 +17,7 @@ final class NotificationsUITests: XCTestCase {
     private func launch() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += ["-uiTestResetLanguage", "-uiTestNotifications"]
+        app.forwardReferenceDataAPIToken()
         app.launch()
         return app
     }

@@ -34,6 +34,7 @@ final class LandingStorageUITests: XCTestCase {
     private func launch() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += ["-uiTestResetLanguage", "-uiTestCatchRecordLandingStorage"]
+        app.forwardReferenceDataAPIToken()
         app.launch()
         return app
     }

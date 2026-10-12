@@ -35,6 +35,7 @@ final class RecordSpeciesWeightsUITests: XCTestCase {
     private func launch() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += ["-uiTestResetLanguage", "-uiTestCatchRecordSpeciesWeights"]
+        app.forwardReferenceDataAPIToken()
         app.launch()
         return app
     }

@@ -35,6 +35,7 @@ final class TabBarUITests: XCTestCase {
     private func launch() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += ["-uiTestResetLanguage", "-uiTestTabBar"]
+        app.forwardReferenceDataAPIToken()
         app.launch()
         return app
     }

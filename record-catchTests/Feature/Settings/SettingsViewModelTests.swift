@@ -46,32 +46,6 @@ final class SettingsViewModelTests: XCTestCase {
         XCTAssertEqual(store.setCallCount, 0)
     }
 
-    func test_gearUsed_nilByDefault_mapsToEmptyStateCopy() {
-        let sut = SettingsViewModel(preferenceStore: InMemoryAnalyticsPreferenceStore())
-
-        XCTAssertNil(sut.gearUsed)
-        XCTAssertEqual(sut.gearUsedDisplayValue(emptyState: "Not yet recorded"), "Not yet recorded")
-    }
-
-    func test_gearUsed_whenProvided_isReturnedAsIs() {
-        let sut = SettingsViewModel(
-            preferenceStore: InMemoryAnalyticsPreferenceStore(),
-            gearUsed: "Seine nets"
-        )
-
-        XCTAssertEqual(sut.gearUsed, "Seine nets")
-        XCTAssertEqual(sut.gearUsedDisplayValue(emptyState: "Not yet recorded"), "Seine nets")
-    }
-
-    func test_gearUsed_whenEmptyString_mapsToEmptyStateCopy() {
-        let sut = SettingsViewModel(
-            preferenceStore: InMemoryAnalyticsPreferenceStore(),
-            gearUsed: ""
-        )
-
-        XCTAssertEqual(sut.gearUsedDisplayValue(emptyState: "Not yet recorded"), "Not yet recorded")
-    }
-
     // MARK: - Inert seams
     //
     // Every seam below is a deliberate no-op in this phase (see SettingsViewModel). These
@@ -79,47 +53,36 @@ final class SettingsViewModelTests: XCTestCase {
 
     func test_signOutTapped_presentsConfirmationDialog_withNoOtherSideEffects() {
         let store = InMemoryAnalyticsPreferenceStore(initialValue: true)
-        let sut = SettingsViewModel(preferenceStore: store, gearUsed: "Seine nets")
+        let sut = SettingsViewModel(preferenceStore: store)
 
         sut.signOutTapped()
 
         XCTAssertTrue(sut.showSignOutConfirmation)
         XCTAssertTrue(sut.analyticsEnabled)
-        XCTAssertEqual(sut.gearUsed, "Seine nets")
     }
 
     func test_cancelSignOutConfirmation_dismissesDialog_hasNoOtherSideEffects() {
         let store = InMemoryAnalyticsPreferenceStore(initialValue: true)
-        let sut = SettingsViewModel(preferenceStore: store, gearUsed: "Seine nets")
+        let sut = SettingsViewModel(preferenceStore: store)
         sut.signOutTapped()
 
         sut.cancelSignOutConfirmation()
 
         XCTAssertFalse(sut.showSignOutConfirmation)
         XCTAssertTrue(sut.analyticsEnabled)
-        XCTAssertEqual(sut.gearUsed, "Seine nets")
     }
 
     func test_confirmSignOut_dismissesDialog_remainsInert() {
         let store = InMemoryAnalyticsPreferenceStore(initialValue: true)
-        let sut = SettingsViewModel(preferenceStore: store, gearUsed: "Seine nets")
+        let sut = SettingsViewModel(preferenceStore: store)
         sut.signOutTapped()
 
         sut.confirmSignOut()
 
         // Inert: still no session/auth exists, so confirming has no side effect beyond
-        // dismissing the dialog — analytics preference and gear used are unaffected.
+        // dismissing the dialog — analytics preference is unaffected.
         XCTAssertFalse(sut.showSignOutConfirmation)
         XCTAssertTrue(sut.analyticsEnabled)
-        XCTAssertEqual(sut.gearUsed, "Seine nets")
-    }
-
-    func test_changeGearTapped_hasNoSideEffects() {
-        let sut = SettingsViewModel(preferenceStore: InMemoryAnalyticsPreferenceStore(), gearUsed: "Seine nets")
-
-        sut.changeGearTapped()
-
-        XCTAssertEqual(sut.gearUsed, "Seine nets")
     }
 
     func test_myAccountTapped_pushesManageAccountRoute() {

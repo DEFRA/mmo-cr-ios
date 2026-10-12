@@ -4947,60 +4947,6 @@
         }
       }
     },
-    "settings.gearUsed.change": {
-      "comment": "Trailing 'Change' link/action on the Gear used row.",
-      "extractionState": "manual",
-      "localizations": {
-        "cy": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Newid"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Change"
-          }
-        }
-      }
-    },
-    "settings.gearUsed.label": {
-      "comment": "Label for the Gear used row on the Settings screen.",
-      "extractionState": "manual",
-      "localizations": {
-        "cy": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Offer a ddefnyddiwyd"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gear used"
-          }
-        }
-      }
-    },
-    "settings.gearUsed.value.empty": {
-      "comment": "Authored empty-state copy for the Gear used row's value when no gear has been recorded yet. The Figma mock showed the literal, un-overridden component default 'Cell' here (deviation #5) — this is real, authored copy, not that placeholder.",
-      "extractionState": "manual",
-      "localizations": {
-        "cy": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Heb ei gofnodi eto"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not yet recorded"
-          }
-        }
-      }
-    },
     "settings.link.myAccount": {
       "comment": "Settings menu link — item 1.",
       "extractionState": "manual",

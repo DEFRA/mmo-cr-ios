@@ -334,4 +334,71 @@ final class ReferenceDataEndpointTests: XCTestCase {
             XCTAssertNil(request.url?.query, "\(dataset) item request must carry no query string")
         }
     }
+
+    // MARK: Path-prefixed base URL (CDP dev environment)
+
+    // The CDP dev environment's base URL carries a gateway path prefix, e.g.
+    // `https://mmo-cr-catch-recording-service.api.dev.cdp-int.defra.cloud/reference-data-service`
+    // (see Config/Debug.xcconfig). Every route must append after that prefix rather than replacing
+    // it, for every dataset and every route in this file — not just the plain `http://localhost:3002`
+    // base URL the rest of this file uses.
+    private let prefixedBaseURL = URL(
+        string: "https://mmo-cr-catch-recording-service.api.dev.cdp-int.defra.cloud/reference-data-service"
+    )!
+
+    func test_makeRequest_preservesBasePathPrefix_forEveryDataset() {
+        for dataset: ReferenceDataset in [.vessels, .species, .ports] {
+            let request = makeReferenceDataRequest(baseURL: prefixedBaseURL, dataset: dataset, bearerToken: nil)
+            XCTAssertEqual(
+                request.url?.absoluteString,
+                "https://mmo-cr-catch-recording-service.api.dev.cdp-int.defra.cloud"
+                    + "/reference-data-service/api/v1/reference-data/\(dataset.rawValue)"
+            )
+        }
+    }
+
+    func test_makeItemRequest_preservesBasePathPrefix() {
+        let request = makeReferenceDataItemRequest(
+            baseURL: prefixedBaseURL,
+            dataset: .species,
+            itemId: "item-1",
+            bearerToken: nil
+        )
+
+        XCTAssertEqual(
+            request.url?.absoluteString,
+            "https://mmo-cr-catch-recording-service.api.dev.cdp-int.defra.cloud"
+                + "/reference-data-service/api/v1/reference-data/species/item-1"
+        )
+    }
+
+    func test_makeManifestRequest_preservesBasePathPrefix() {
+        let request = makeReferenceDataManifestRequest(baseURL: prefixedBaseURL, bearerToken: nil)
+
+        XCTAssertEqual(
+            request.url?.absoluteString,
+            "https://mmo-cr-catch-recording-service.api.dev.cdp-int.defra.cloud"
+                + "/reference-data-service/api/v1/reference-data/manifest"
+        )
+    }
+
+    func test_makeHealthRequest_preservesBasePathPrefix() {
+        let request = makeReferenceDataHealthRequest(baseURL: prefixedBaseURL, bearerToken: nil)
+
+        XCTAssertEqual(
+            request.url?.absoluteString,
+            "https://mmo-cr-catch-recording-service.api.dev.cdp-int.defra.cloud/reference-data-service/health"
+        )
+    }
+
+    func test_makeRequest_setsAuthorizationHeader_withPathPrefixedBaseURL() {
+        // The bearer token is attached identically regardless of base-URL path prefix.
+        let request = makeReferenceDataRequest(
+            baseURL: prefixedBaseURL,
+            dataset: .species,
+            bearerToken: "read-token"
+        )
+
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer read-token")
+    }
 }

@@ -35,6 +35,7 @@ final class AppLockUITests: XCTestCase {
     private func launch(_ argument: String) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += ["-uiTestResetLanguage", argument]
+        app.forwardReferenceDataAPIToken()
         app.launch()
         return app
     }

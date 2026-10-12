@@ -3,11 +3,11 @@
 //  record-catch
 //
 //  Phase 2 bilingual Settings screen (see docs/design-specs/settings.md): analytics-
-//  consent toggle (UI-only/stubbed — no analytics SDK), an account/menu link list, and
-//  the "Gear used" row. "Sign out" shows a confirmation dialog before dismissing —
-//  confirming remains an inert seam (see SettingsViewModel) since no session/auth
-//  exists yet. Every other link destination is also a deliberately inert seam — no
-//  navigation, auth or networking here.
+//  consent toggle (UI-only/stubbed — no analytics SDK) and an account/menu link list.
+//  "Sign out" shows a confirmation dialog before dismissing — confirming remains an
+//  inert seam (see SettingsViewModel) since no session/auth exists yet. Every other
+//  link destination is also a deliberately inert seam — no navigation, auth or
+//  networking here.
 //
 
 import SwiftUI
@@ -23,7 +23,7 @@ struct SettingsView: View {
     ///     `SettingsRouter` for previews/tests that don't care about navigation; `RootTabView`
     ///     always supplies the tab's real, shared instance so "My account" pushes onto the
     ///     visible `NavigationStack`.
-    ///   - viewModel: injectable view model, used by previews/tests to seed preferences/gear used.
+    ///   - viewModel: injectable view model, used by previews/tests to seed preferences.
     init(router: SettingsRouter? = nil, viewModel: SettingsViewModel? = nil) {
         _viewModel = State(initialValue: viewModel ?? SettingsViewModel(router: router))
     }
@@ -156,18 +156,6 @@ struct SettingsView: View {
             ) {
                 viewModel.signOutTapped()
             }
-
-            Divider().overlay(AppColors.divider)
-
-            SettingsValueRow(
-                label: languageStore.localized("settings.gearUsed.label"),
-                value: viewModel.gearUsed,
-                emptyStateValue: languageStore.localized("settings.gearUsed.value.empty"),
-                changeTitle: languageStore.localized("settings.gearUsed.change"),
-                changeAccessibilityIdentifier: "Settings.gearUsed.change"
-            ) {
-                viewModel.changeGearTapped()
-            }
         }
     }
 }
@@ -184,16 +172,6 @@ struct SettingsView: View {
             store.language = .welsh
             return store
         }())
-}
-
-#Preview("Gear used recorded") {
-    SettingsView(
-        viewModel: SettingsViewModel(
-            preferenceStore: InMemoryAnalyticsPreferenceStore(),
-            gearUsed: "Seine nets"
-        )
-    )
-    .environment(AppLanguageStore.preview)
 }
 
 #Preview("Max Dynamic Type") {

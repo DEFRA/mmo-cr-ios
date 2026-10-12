@@ -28,9 +28,6 @@
 		DA6ABEEC2FFE87DD00B7A0AB /* record-catchTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "record-catchTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		DA6ABEF62FFE87DD00B7A0AB /* record-catchUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "record-catchUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		C0F1A0012FFE87DD00B7A0AB /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
-		C0F1A0022FFE87DD00B7A0AB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		C0F1A0032FFE87DD00B7A0AB /* Local.xcconfig.example */ = {isa = PBXFileReference; lastKnownFileType = text; path = Local.xcconfig.example; sourceTree = "<group>"; };
-		C0F1A0052FFE87DD00B7A0AB /* Info-Debug.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Info-Debug.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -190,9 +187,6 @@
 			isa = PBXGroup;
 			children = (
 				C0F1A0012FFE87DD00B7A0AB /* Base.xcconfig */,
-				C0F1A0022FFE87DD00B7A0AB /* Info.plist */,
-				C0F1A0052FFE87DD00B7A0AB /* Info-Debug.plist */,
-				C0F1A0032FFE87DD00B7A0AB /* Local.xcconfig.example */,
 			);
 			path = Config;
 			sourceTree = "<group>";
@@ -207,6 +201,7 @@
 				DA6ABED92FFE87DC00B7A0AB /* Sources */,
 				DA6ABEDA2FFE87DC00B7A0AB /* Frameworks */,
 				DA6ABEDB2FFE87DC00B7A0AB /* Resources */,
+				C0F1A0062FFE87DD00B7A0AB /* Inject app config (Debug) */,
 			);
 			buildRules = (
 			);
@@ -335,6 +330,30 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		C0F1A0062FFE87DD00B7A0AB /* Inject app config (Debug) */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/Config/app-config.schema.json",
+				"$(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)",
+			);
+			name = "Inject app config (Debug)";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${SRCROOT}/scripts/inject-app-config.sh\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		DA6ABED92FFE87DC00B7A0AB /* Sources */ = {
@@ -505,7 +524,6 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "Config/Info-Debug.plist";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "We use Face ID to let you sign back in to your catch records quickly and securely on this device.";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Record catch connects to a development server running on your local network so the app can load test reference data.";
@@ -544,7 +562,6 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Config/Info.plist;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "We use Face ID to let you sign back in to your catch records quickly and securely on this device.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

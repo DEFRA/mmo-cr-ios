@@ -584,10 +584,12 @@ writes a flat `APIBaseURL` key.
 - **§3 superseded.** The base URL is `MMOCRAppConfig.API_BASE_URL`, written by the pipeline from the GitHub
   Environment variable `CR_APP_CFG_API_BASE_URL`. `Config/Debug.xcconfig` and `Config/Release.xcconfig` are
   removed; both configurations use `Config/Base.xcconfig`, and local values come from the git-ignored
-  `Config/Local.xcconfig` (see `Config/Local.xcconfig.example`, which defaults to `http://localhost:3002`).
-- **§4 relocated, unchanged in substance.** The Debug-only, `localhost`-scoped ATS exception now lives in
-  `Config/Info-Debug.plist`; Release uses `Config/Info.plist` with no ATS key. The `record-catch/Resources/Info-*.plist`
-  files are removed. `NSLocalNetworkUsageDescription` is set on the Debug configuration only, as §4 intended.
+  `Config/Local.xcconfig` (e.g. `CR_APP_CFG_API_BASE_URL = http:/$()/localhost:3002`).
+- **§4 kept, now generated.** No `Info.plist` file is committed (the `record-catch/Resources/Info-*.plist` files are
+  removed). The Debug-only build phase *Inject app config (Debug)* adds the ATS exception for `localhost` and for
+  the host of any local `http://` URL, so device testing against this Mac's LAN IP needs no file edit. Release
+  builds never get an ATS key. `NSLocalNetworkUsageDescription` is set on the Debug configuration only, as §4
+  intended.
 - **App follow-up (iOS Developer):** `APIConfiguration` reads `MMOCRAppConfig` → `API_BASE_URL` instead of
   `APIBaseURL`, keeping the DEBUG-only `http` allowance; the tests that inject `APIBaseURL` move to the same key.
   Until then `APIConfiguration` reports `invalidConfiguration` at run time; unit tests are unaffected because they

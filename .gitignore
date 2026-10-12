@@ -73,7 +73,7 @@ fastlane/test_output
 ._*
 *.bak
 
-# Local app configuration (copy from Config/Local.xcconfig.example)
+# Local app configuration values (ADR-0020); see the README
 Config/Local.xcconfig
 
 # Build output

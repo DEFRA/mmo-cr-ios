@@ -320,7 +320,7 @@ trade-off to `SpeciesOption`'s "no migration path" decision, and why it was nece
 
 | Info.plist key | Source | Local Debug value | Pipeline builds |
 |---|---|---|---|
-| `MMOCRAppConfig` → `API_BASE_URL` | `CR_APP_CFG_API_BASE_URL` in the git-ignored `Config/Local.xcconfig` (templates `Config/Info.plist`, `Config/Info-Debug.plist`) | `http://localhost:3002` (from `Config/Local.xcconfig.example`) | Written by the release pipeline from the GitHub Environment variable `CR_APP_CFG_API_BASE_URL` (ADR-0020) |
+| `MMOCRAppConfig` → `API_BASE_URL` | `CR_APP_CFG_API_BASE_URL` in your git-ignored `Config/Local.xcconfig`, written by the Debug build phase `scripts/inject-app-config.sh` | e.g. `http://localhost:3002` | Written by the release pipeline from the GitHub Environment variable `CR_APP_CFG_API_BASE_URL` (ADR-0020) |
 
 `APIConfiguration` throws `APIError.invalidConfiguration` if the base URL is missing/blank/malformed,
 or (outside a `DEBUG` build) not `https`. Until `APIConfiguration` moves from the old `APIBaseURL` key to
@@ -345,15 +345,14 @@ implementation, once OAuth/OIDC authentication lands, will read the token from
 
 ## Testing on a physical device (LAN IP)
 
-The Debug ATS exception only covers `localhost`. To test on a physical device against your Mac's
-backend over the LAN:
+The Debug ATS exception covers `localhost` and the host of your local `http://` URL. To test on a physical
+device against your Mac's backend over the LAN:
 
 1. Find your Mac's LAN IP address (e.g. `System Settings ▸ Wi-Fi ▸ Details…`, or `ipconfig getifaddr en0`).
-2. Add that IP as a further `NSExceptionDomains` entry in `Config/Info-Debug.plist`, locally only
-   (**Debug only** — never in `Config/Info.plist`, and don't commit it: CI allows only `localhost`).
-3. Point `CR_APP_CFG_API_BASE_URL` at that IP in your git-ignored `Config/Local.xcconfig`
-   (e.g. `http:/$()/192.168.1.20:3002`).
-4. The app also requests local-network access (`NSLocalNetworkUsageDescription`, Debug only) — you
+2. Point `CR_APP_CFG_API_BASE_URL` at that IP in your git-ignored `Config/Local.xcconfig`
+   (e.g. `http:/$()/192.168.1.20:3002`). The Debug build phase adds the ATS exception for that host
+   automatically (**Debug only** — Release builds never get one); no file needs editing.
+3. The app also requests local-network access (`NSLocalNetworkUsageDescription`, Debug only) — you
    will see the standard local-network permission prompt on first launch.
 
 ## Developer smoke check

@@ -54,18 +54,26 @@ stage values need no workflow change.
   precedence would silently apply such a value to every stage.
 - **Flags are fixed at packaging.** The App Store package is exactly what Apple reviews; this mechanism must never
   be used for runtime or remote feature switching (App Review Guideline 2.3.1).
-- **Local development:** partial `Info.plist` templates in `Config/` map `MMOCRAppConfig` entries to
-  `$(CR_APP_CFG_<KEY>)`, supplied by an optional, git-ignored `Config/Local.xcconfig` (`#include?` from
-  `Config/Base.xcconfig`); URLs there are written `https:/$()/host` because `//` starts an xcconfig comment.
-  Xcode ignores user-defined settings when *generating* `Info.plist`, so the template file is required, and it must
-  not be a member of the target.
-- **Templates and xcconfigs (amended 2026-10, on merging ADR-0018).** Exactly two templates, both in `Config/`:
-  `Info.plist` for Release (no ATS exceptions) and `Info-Debug.plist` for Debug, which adds the
-  `localhost`-scoped ATS exception from ADR-0018 §4. Both declare exactly the schema keys. Committed xcconfigs are
-  identity files only (`Base`, later `Dev`/`Test`/`Prod`) and never set a stage value; there are no per-build-type
-  value xcconfigs. Debug-only settings such as `NSLocalNetworkUsageDescription` are set on Debug configurations
-  only. Plain `http://` is allowed only for `localhost` in Debug builds; the pipeline accepts `https://` only.
-  `fastlane/test/project_config_test.rb` enforces all of this in CI.
+- **The schema is the only maintained file (amended 2026-10).** Xcode generates `Info.plist` entirely
+  (`GENERATE_INFOPLIST_FILE = YES`, no `INFOPLIST_FILE`); no `Info.plist` file is committed. Adding a key means a
+  schema entry (plus the app code that reads it) and a `CR_APP_CFG_<KEY>` variable on each Environment — nothing
+  else.
+- **Local development (Debug builds only).** The app target's last build phase, *Inject app config (Debug)*, runs
+  `scripts/inject-app-config.sh` on every build. For each schema key it writes `MMOCRAppConfig.<KEY>` into the
+  built `Info.plist` from the build setting `CR_APP_CFG_<KEY>`, set in the optional, git-ignored
+  `Config/Local.xcconfig` (`#include?` from `Config/Base.xcconfig`) or on the `xcodebuild` command line. A key
+  with no value is written empty and Xcode shows a warning; the app then reports its configuration error. In an
+  xcconfig, URLs are written `https:/$()/host` because `//` starts a comment. The same phase adds the Debug-only
+  ATS exception from ADR-0018 §4: plain `http` to `localhost` and to the host of any local `http://` URL (for
+  example this Mac's LAN IP when testing on a device).
+- **Release builds are untouched by it.** The script exits immediately for non-Debug configurations and for
+  archives (`ACTION=install`), so the release workflow is unchanged: Fastlane writes `MMOCRAppConfig` into the
+  archive after compiling (`plutil -replace` inserts the key), and Release packages never carry an ATS exception.
+  The pipeline accepts `https://` only.
+- **Committed xcconfigs** are identity files only (`Base`, later `Dev`/`Test`/`Prod`) and never set a stage value;
+  there are no per-build-type value xcconfigs. Debug-only settings such as `NSLocalNetworkUsageDescription` are set
+  on Debug configurations only. `fastlane/test/project_config_test.rb` enforces all of this, and iOS CI checks the
+  built Debug app.
 
 ### 3. App behaviour (owned by the iOS Developer)
 
@@ -92,5 +100,6 @@ needs them explicitly); `Appfile` drops its hard-coded identifier.
   `awk` anchor on the Dev bundle-ID literal breaks the moment the literal is removed.
 - Test and Prod App IDs must be registered, their App Store Connect records created, and Match profiles added for
   all three identities before those apps can be released.
-- **Ownership:** `Config/*`, schemes, the partial `Info.plist` and the app-side items in §3 are iOS Developer work;
-  Fastlane, workflows, scripts and signing are DevOps work.
+- **Ownership:** `Config/app-config.schema.json`, `Config/*.xcconfig`, schemes and the app-side items in §3 are
+  iOS Developer work; Fastlane, workflows, scripts (including `scripts/inject-app-config.sh`) and signing are DevOps
+  work.

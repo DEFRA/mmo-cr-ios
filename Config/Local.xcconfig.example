@@ -1,3 +1,0 @@
-// Copy to Config/Local.xcconfig (git-ignored). Write URLs as http:/$()/host because "//" starts a comment.
-// Plain http works only for localhost in Debug builds (Config/Info-Debug.plist); every other URL must be https.
-CR_APP_CFG_API_BASE_URL = http:/$()/localhost:3002

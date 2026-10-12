@@ -39,8 +39,10 @@ stage values need no workflow change.
 - **Variables only.** Any GitHub Environment *variable* named `CR_APP_CFG_<KEY>` is a candidate app value; the
   workflow passes all variables to Fastlane as `CR_APP_CFG_VARS: ${{ toJSON(vars) }}`. GitHub *secrets* are never
   mapped: everything in the package can be extracted (OWASP MASWE-0004).
-- **Committed allow-list.** `Config/app-config.schema.json` declares each `<KEY>` with `type` (`url`, `string`,
-  `bool`), `required`, `log` and a description. A CI check rejects secret-like names (`SECRET`, `PASSWORD`,
+- **Committed allow-list.** `Config/app-config.schema.json` declares each `<KEY>` with the app-specific `type`
+  (`url`, `string`, `bool`), `required`, `log` and a description. These are not JSON Schema types: `url` is a
+  validated string, `string` is plain text, and `bool` accepts `true`/`false`; other common JSON types (`number`,
+  `object`, `array`, `null`) are not supported. A CI check rejects secret-like names (`SECRET`, `PASSWORD`,
   `TOKEN`, `PRIVATE`, `CREDENTIAL`) and `url` keys marked `tracking: true`: tracking domains must be compiled into
   the privacy manifest, not configured per stage (MASWE-0074).
 - **Validation in Fastlane.** Required keys must be present; `url` values must be `https://` with a host and no

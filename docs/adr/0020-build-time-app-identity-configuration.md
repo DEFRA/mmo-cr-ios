@@ -72,8 +72,7 @@ stage values need no workflow change.
   The pipeline accepts `https://` only.
 - **Committed xcconfigs** are identity files only (`Base`, later `Dev`/`Test`/`Prod`) and never set a stage value;
   there are no per-build-type value xcconfigs. Debug-only settings such as `NSLocalNetworkUsageDescription` are set
-  on Debug configurations only. `fastlane/test/project_config_test.rb` enforces all of this, and iOS CI checks the
-  built Debug app.
+  on Debug configurations only. `fastlane/test/project_config_test.rb` enforces all of this in CI.
 
 ### 3. App behaviour (owned by the iOS Developer)
 

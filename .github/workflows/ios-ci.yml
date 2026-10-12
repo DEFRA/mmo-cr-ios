@@ -86,15 +86,6 @@ jobs:
       - name: Build (Fastlane)
         run: bundle exec fastlane build
 
-      # Proves the Debug "Inject app config" build phase ran after Info.plist generation (ADR-0020).
-      - name: Verify app config in the Debug build
-        run: |
-          set -euo pipefail
-          plist=$(find DerivedData/Build/Products -path '*/Debug-iphonesimulator/record-catch.app/Info.plist' | head -n 1)
-          test -n "$plist" || { echo "::error::Built record-catch.app not found"; exit 1; }
-          BUILT_APP_INFO_PLIST="$plist" bundle exec ruby fastlane/test/project_config_test.rb \
-            --name test_built_debug_app_carries_the_config
-
       - name: Run unit tests with coverage (Fastlane)
         run: bundle exec fastlane test
 

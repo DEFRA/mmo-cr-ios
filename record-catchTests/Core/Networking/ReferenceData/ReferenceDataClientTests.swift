@@ -57,7 +57,7 @@ final class ReferenceDataClientTests: XCTestCase {
 
     private func makeConfiguration() throws -> APIConfiguration {
         try APIConfiguration(
-            bundle: FakeInfoDictionary(values: ["APIBaseURL": baseURL.absoluteString]),
+            bundle: FakeInfoDictionary(values: ["MMOCRAppConfig": ["API_BASE_URL": baseURL.absoluteString]]),
             allowsInsecureHTTP: true
         )
     }

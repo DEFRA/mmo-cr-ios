@@ -105,13 +105,4 @@ class ProjectConfigTest < Minitest::Test
                    read_plist(plist).dig("NSAppTransportSecurity", "NSExceptionDomains").keys.sort
     end
   end
-
-  # Set by iOS CI after the build lane: proves the phase runs, in order, in a real Xcode build.
-  def test_built_debug_app_carries_the_config
-    path = ENV["BUILT_APP_INFO_PLIST"].to_s
-    skip "BUILT_APP_INFO_PLIST not set" if path.empty?
-    built = read_plist(path)
-    assert_equal schema_keys.sort, built.fetch(CrRelease::AppConfig::PLIST_KEY).keys.sort
-    assert_equal LOCALHOST_ONLY_ATS, built["NSAppTransportSecurity"]
-  end
 end

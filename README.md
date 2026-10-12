@@ -19,6 +19,7 @@ Info.plist dictionary from GitHub Environment variables.
 |---|---|
 | `Config/Base.xcconfig` | Shared settings for every build configuration; includes the optional `Config/Local.xcconfig` |
 | `Config/Local.xcconfig` | **Yours, git-ignored, optional.** Local values for the keys in the schema, e.g. `CR_APP_CFG_API_BASE_URL = http:/$()/localhost:3002` |
+| `Config/Local.xcconfig.example` | Illustrative starting point for `Config/Local.xcconfig`; not checked against the schema and not required |
 | `Config/app-config.schema.json` | The only maintained configuration file: allow-list of `MMOCRAppConfig` keys |
 | `scripts/inject-app-config.sh` | Debug-only build phase: writes `MMOCRAppConfig` from your local values and allows plain `http` to `localhost` (and to the host of any local `http://` URL) |
 
@@ -29,7 +30,7 @@ build.
 
 ### Running against a local reference-data backend
 
-1. Create `Config/Local.xcconfig` (git-ignored) containing `CR_APP_CFG_API_BASE_URL = http:/$()/localhost:3002`.
+1. Copy `Config/Local.xcconfig.example` to `Config/Local.xcconfig` (git-ignored) and edit as needed.
    In an xcconfig `//` starts a comment, hence `$()`. Xcode warns about any schema key you have not set.
 2. Start your local reference-data backend.
 3. If it requires a bearer token, set `REFERENCE_DATA_API_TOKEN` in the `record-catch` scheme's Run

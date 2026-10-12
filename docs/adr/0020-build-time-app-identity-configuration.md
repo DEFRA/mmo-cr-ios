@@ -61,7 +61,8 @@ stage values need no workflow change.
 - **Local development (Debug builds only).** The app target's last build phase, *Inject app config (Debug)*, runs
   `scripts/inject-app-config.sh` on every build. For each schema key it writes `MMOCRAppConfig.<KEY>` into the
   built `Info.plist` from the build setting `CR_APP_CFG_<KEY>`, set in the optional, git-ignored
-  `Config/Local.xcconfig` (`#include?` from `Config/Base.xcconfig`) or on the `xcodebuild` command line. A key
+  `Config/Local.xcconfig` (`#include?` from `Config/Base.xcconfig`, optionally started from the committed,
+  illustrative `Config/Local.xcconfig.example`) or on the `xcodebuild` command line. A key
   with no value is written empty and Xcode shows a warning; the app then reports its configuration error. In an
   xcconfig, URLs are written `https:/$()/host` because `//` starts a comment. The same phase adds the Debug-only
   ATS exception from ADR-0018 §4: plain `http` to `localhost` and to the host of any local `http://` URL (for

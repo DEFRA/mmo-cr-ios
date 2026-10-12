@@ -1,5 +1,11 @@
 # Design Spec — Settings ("Your settings") + bottom TabBar
 
+> **Implementation note (2026-10-12):** The **"Gear used" row** (label, value, empty state and
+> "Change" link) documented below was **removed from the shipped `SettingsView`** per product
+> request — it is no longer rendered on the Settings screen. This spec is left as the historical
+> record of the original Figma read; do not use the "Gear used" row content as current behaviour.
+> `SettingsValueRow` (the generic component) remains in use elsewhere (`ManageAccountView`).
+
 > Captured during the **"Read" stage** so the design is read from Figma **once**. This spec is the
 > source of truth for planning and implementation. Obey the
 > [figma-design instructions](../../.github/instructions/figma-design.instructions.md): Figma is read

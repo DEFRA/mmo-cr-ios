@@ -574,6 +574,57 @@ change, by team decision rather than oversight:
   bundled/precomputed offline map data (`scripts/generate-offline-map-data.sh`) remains the map
   data source.
 
+## Addendum (2026-10): Debug points at the CDP dev environment, not `localhost`
+
+`Config/Debug.xcconfig`'s `API_BASE_URL` now points at the CDP **dev** environment's
+reference-data API gateway rather than a locally-running backend:
+
+```
+API_BASE_URL = https://mmo-cr-catch-recording-service.api.dev.cdp-int.defra.cloud/reference-data-service
+```
+
+This base URL carries a gateway **path prefix** (`/reference-data-service`). No code change was
+needed: every route in `ReferenceDataEndpoint.swift` is built by appending path segments onto
+`baseURL` (`URLComponents.path +=`), never by replacing the base URL's path, so the prefix is
+preserved automatically for every dataset and every route (`vessels`/`species`/`ports` collection
+and item routes, `manifest`, `health`). `ReferenceDataEndpointTests.swift` gained a dedicated suite
+asserting this for a path-prefixed base URL, since the existing tests only covered the
+no-path-prefix `http://localhost:3002` case.
+
+Consequences:
+
+- **The Debug `localhost` ATS exception is removed.** `https://...cdp-int.defra.cloud` is HTTPS,
+  so `Info-Debug.plist` no longer carries an `NSAppTransportSecurity`/`NSExceptionDomains`
+  override — Debug is HTTPS-only, matching Release. Decision #4 above (the Debug-only, narrowly
+  scoped `localhost` exception) is superseded for the base URL; it would only be reinstated if a
+  developer needs to point Debug at a local backend again, as its own deliberate, re-reviewed
+  change.
+- **No local-backend override is provided.** The team decided against a git-ignored
+  `Config/Local.xcconfig` `#include?` escape hatch, to keep a single, unambiguous Debug target. A
+  developer who needs a local backend edits `Config/Debug.xcconfig` directly for their own
+  session and must not commit that edit.
+- **Token handling is unchanged in code** (`EnvironmentTokenProvider`, DEBUG-only,
+  `REFERENCE_DATA_API_TOKEN`), but the *source* of that variable now matters more, because the
+  shared `record-catch` Xcode scheme is committed to source control:
+  - Local Xcode runs: set the variable on a personal, **non-shared** duplicate of the scheme
+    (`xcuserdata/`, already git-ignored), never on the shared scheme.
+  - BrowserStack App Automate (XCUITest): BrowserStack's `setEnvVariables` build-API parameter
+    only reaches the XCUITest **runner** process, not the application under test. Every UI test's
+    `launch()` call site now relays the variable into `XCUIApplication.launchEnvironment` via a
+    small shared helper, `XCUIApplication.forwardReferenceDataAPIToken()`
+    (`record-catchUITests/XCUIApplication+ReferenceDataToken.swift`), so BrowserStack-driven UI
+    test runs authenticate correctly. The token itself is supplied to the BrowserStack build API
+    from a CI secret, never committed.
+  - This remains a stopgap pending real OAuth/OIDC authentication (decision #5); it does not
+    change the plan to migrate to `Core/Security/KeychainStoring.swift`.
+- **The CDP dev environment's `/health` route is assumed to exist at
+  `.../reference-data-service/health`**, by the same prefix-preservation logic as every other
+  route. This has not been independently verified against the gateway at the time of writing;
+  confirm before relying on `ReferenceDataDevSmokeCheck`/readiness tooling against this
+  environment.
+- Production (`Config/Release.xcconfig`) is unaffected — it still points at its placeholder HTTPS
+  endpoint pending a real production API, per decision #3.
+
 ## References
 
 - Apple, *NSAllowsLocalNetworking / `NSExceptionDomains`* —

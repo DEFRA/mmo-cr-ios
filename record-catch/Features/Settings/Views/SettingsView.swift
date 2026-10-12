@@ -53,6 +53,21 @@ struct SettingsView: View {
         } message: {
             Text(languageStore.localized("settings.signOut.confirm.message"))
         }
+        #if DEBUG || ENABLE_DEBUG_REFERENCE_DATA_TOOL
+        .alert(
+            "Species fetch result",
+            isPresented: Binding(
+                get: { viewModel.isShowingDebugSpeciesResultAlert },
+                set: { viewModel.isShowingDebugSpeciesResultAlert = $0 }
+            ),
+            actions: {
+                Button("OK") {}
+            },
+            message: {
+                Text(viewModel.debugSpeciesResultMessage ?? "")
+            }
+        )
+        #endif
     }
 
     @ViewBuilder
@@ -67,6 +82,10 @@ struct SettingsView: View {
 
             Divider()
                 .overlay(AppColors.divider)
+
+            #if DEBUG || ENABLE_DEBUG_REFERENCE_DATA_TOOL
+            debugSpeciesFetchSection
+            #endif
         }
     }
 
@@ -170,6 +189,58 @@ struct SettingsView: View {
             }
         }
     }
+
+    #if DEBUG || ENABLE_DEBUG_REFERENCE_DATA_TOOL
+    // MARK: - TEMPORARY DEBUG-ONLY: species reference-data smoke check
+    //
+    // ⚠️ Deliberately loud/ugly styling (hazard-stripe border, warning triangle, red/black) so it
+    // is unmistakable this must be removed before release — see SettingsViewModel's matching
+    // `#if DEBUG` block. Gated on `#if DEBUG`: physically cannot compile into a Release/App Store
+    // build (security.instructions.md "no debug backdoors in release builds"), but still needs
+    // deleting once the manual reference-data connectivity check (ADR-0018) is no longer needed.
+    @ViewBuilder
+    private var debugSpeciesFetchSection: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.small) {
+            Text("⚠️ DEBUG BUILD ONLY — REMOVE BEFORE RELEASE")
+                .font(AppTypography.warningBox)
+                .foregroundStyle(AppColors.errorRed)
+                .accessibilityAddTraits(.isHeader)
+
+            Button {
+                Task { await viewModel.debugFetchSpeciesTapped() }
+            } label: {
+                HStack(spacing: AppSpacing.small) {
+                    if viewModel.isFetchingDebugSpecies {
+                        ProgressView()
+                            .tint(.white)
+                    }
+                    Text("Fetch species (reference-data API)")
+                        .font(AppTypography.button)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(minHeight: AppControlSize.buttonHeight)
+                .foregroundStyle(Color.white)
+                .background(AppColors.errorRed)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 4)
+                        .strokeBorder(Color.black, style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
+                )
+            }
+            .buttonStyle(.plain)
+            .disabled(viewModel.isFetchingDebugSpecies)
+            .accessibilityIdentifier("Settings.debug.fetchSpecies")
+            .accessibilityLabel("Debug only: fetch species from the reference data API")
+            .accessibilityHint(
+                "Temporary developer tool. Calls the live species reference data API and shows the result in an alert."
+            )
+        }
+        .padding(AppSpacing.medium)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .strokeBorder(AppColors.errorRed, lineWidth: 2)
+        )
+    }
+    #endif
 }
 
 #Preview("English") {

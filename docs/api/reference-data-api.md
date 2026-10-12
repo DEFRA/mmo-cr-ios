@@ -1,8 +1,8 @@
 # Reference data API (vessels, species, ports)
 
 See ADR-0018 for the full design rationale (including its dated addenda covering the `species`
-and `ports` datasets). This document is the quick developer reference for running the app against
-a local reference-data backend.
+and `ports` datasets, and the 2026-10 addendum covering the CDP dev base URL). This document is
+the quick developer reference for running the app against the reference-data API.
 
 ## Endpoints
 
@@ -225,8 +225,9 @@ transcript, watch out for exactly this: an empty/unset path variable silently pr
 ## Species dataset
 
 The `species` dataset (`ReferenceDataset.species`) follows the exact same two routes/response
-shapes above — only the item shape differs. Verified against the local backend at
-`http://localhost:3002` (216 items in the canonical view):
+shapes above — only the item shape differs. Originally verified against a local backend
+(216 items in the canonical view; the app now talks to the CDP dev environment by default,
+see Configuration below):
 
 ```json
 {
@@ -320,21 +321,26 @@ trade-off to `SpeciesOption`'s "no migration path" decision, and why it was nece
 
 | Info.plist key | Source | Debug value | Release value |
 |---|---|---|---|
-| `APIBaseURL` | `API_BASE_URL` in `record-catch/Config/{Debug,Release}.xcconfig` | `http://localhost:3002` | placeholder HTTPS endpoint |
+| `APIBaseURL` | `API_BASE_URL` in `record-catch/Config/{Debug,Release}.xcconfig` | CDP **dev**: `https://mmo-cr-catch-recording-service.api.dev.cdp-int.defra.cloud/reference-data-service` | placeholder HTTPS endpoint |
 
 `APIConfiguration` throws `APIError.invalidConfiguration` if `APIBaseURL` is missing/blank/malformed,
 or (outside a `DEBUG` build) not `https`.
 
-## Authentication token (local development only)
+## Authentication token (CDP dev — DEBUG builds only)
 
-The app has no real authentication yet (see ADR-0018 §5). To authenticate against a local backend
-that requires a bearer token, set the `REFERENCE_DATA_API_TOKEN` environment variable for the
-`record-catch` scheme's Run action before building/running:
+The app has no real authentication yet (see ADR-0018 §5). The CDP dev reference-data API requires
+a bearer token. Set the `REFERENCE_DATA_API_TOKEN` environment variable before building/running:
 
-1. In Xcode: **Product ▸ Scheme ▸ Edit Scheme… ▸ Run ▸ Arguments ▸ Environment Variables**.
-2. Set `REFERENCE_DATA_API_TOKEN` to your local backend's token (the scheme already declares the
-   key with an empty value so it's discoverable — just fill in the value; **never commit a real
-   value**).
+1. **Local Xcode runs:** use your own **personal, non-shared** Xcode scheme — never the shared,
+   committed `record-catch` scheme. Duplicate it (**Product ▸ Scheme ▸ Manage Schemes… ▸**
+   duplicate `record-catch` **▸ untick Shared**), then set the variable under
+   **Edit Scheme… ▸ Run ▸ Arguments ▸ Environment Variables**.
+2. **BrowserStack App Automate (XCUITest):** pass the token via the build API's
+   `setEnvVariables` parameter, sourced from a CI secret (never committed). BrowserStack only
+   forwards `setEnvVariables` to the XCUITest *runner* process, not the application under test, so
+   every UI test's `launch()` call relays it explicitly via
+   `XCUIApplication.forwardReferenceDataAPIToken()`
+   (`record-catchUITests/XCUIApplication+ReferenceDataToken.swift`).
 
 If unset (or blank), requests are sent **without** an `Authorization` header, and the API's `401`
 response surfaces as `APIError.unauthorized` — a clear failure rather than a silent one. This is a
@@ -342,18 +348,32 @@ response surfaces as `APIError.unauthorized` — a clear failure rather than a s
 implementation, once OAuth/OIDC authentication lands, will read the token from
 `Core/Security/KeychainStoring.swift` instead.
 
-## Testing on a physical device (LAN IP)
+**Never commit a real token** — not in `.xcconfig`, `Info.plist`, the shared scheme, or source. If
+one ever leaks, follow DEFRA's credential exposure process immediately.
 
-The Debug ATS exception only covers `localhost`. To test on a physical device against your Mac's
-backend over the LAN:
+## Pointing Debug at a local backend instead (manual override)
+
+Debug builds point at the CDP **dev** environment by default (see Configuration above); no local
+backend is needed for normal development. If you do need to run against a local backend instead
+(e.g. the CDP dev environment is unavailable, or you're iterating on a local mock), edit
+`Config/Debug.xcconfig`'s `API_BASE_URL` for your own session and **do not commit that edit** (see
+ADR-0018's 2026-10 addendum, "No local-backend override is provided").
+
+### Testing on a physical device (LAN IP)
+
+The Debug ATS exception, if you add one back for `localhost`, only covers `localhost` itself — it
+does not cover a physical device reaching your Mac over the LAN. To test on a physical device
+against your Mac's local backend:
 
 1. Find your Mac's LAN IP address (e.g. `System Settings ▸ Wi-Fi ▸ Details…`, or `ipconfig getifaddr en0`).
 2. Add that IP as a further `NSExceptionDomains` entry in `record-catch/Resources/Info-Debug.plist`
-   (**Debug only** — never in `Info-Release.plist`).
+   (**Debug only** — never in `Info-Release.plist`), alongside a local `NSAllowsInsecureHTTPLoads`
+   exception for that domain if your local backend only serves HTTP.
 3. Point `API_BASE_URL` at that IP for the device build (e.g. temporarily edit
-   `record-catch/Config/Debug.xcconfig`, or override the build setting for that run).
-4. The app also requests local-network access (`NSLocalNetworkUsageDescription`, Debug only) — you
-   will see the standard local-network permission prompt on first launch.
+   `record-catch/Config/Debug.xcconfig`, or override the build setting for that run) — remember not
+   to commit this either.
+4. The app may also need to request local-network access (`NSLocalNetworkUsageDescription`, Debug
+   only) — you will see the standard local-network permission prompt on first launch.
 
 ## Developer smoke check
 

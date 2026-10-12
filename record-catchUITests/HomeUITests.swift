@@ -28,6 +28,7 @@ final class HomeUITests: XCTestCase {
     private func launchHome() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += ["-uiTestHome"]
+        app.forwardReferenceDataAPIToken()
         app.launch()
         return app
     }
@@ -73,6 +74,7 @@ final class HomeUITests: XCTestCase {
         // (`UITestRootView.seedPagedRows`) to reproduce that exact scenario.
         let app = XCUIApplication()
         app.launchArguments += ["-uiTestHomePaged"]
+        app.forwardReferenceDataAPIToken()
         app.launch()
 
         XCTAssertTrue(element(app, ID.paginationPage1).waitForExistence(timeout: 5))

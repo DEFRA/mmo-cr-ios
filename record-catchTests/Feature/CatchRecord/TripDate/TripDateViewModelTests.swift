@@ -111,8 +111,9 @@ final class TripDateViewModelTests: XCTestCase {
     /// The common "same-day trip" case: a user accepts the departure screen's default of today
     /// unchanged, so the return screen's range collapses to a single legal day (today...today).
     /// `TripDatePicker` relies on this never inverting and on `selectedDate` landing exactly on
-    /// that single day — see its degenerate-range handling, which replaces the interactive wheel
-    /// (unstable in UIKit with zero scrollable rows) with a static confirmation.
+    /// that single day — see its degenerate-range handling, which switches the picker to
+    /// `.compact` style (instead of the unstable-in-UIKit `.wheel` with zero scrollable rows)
+    /// rather than substituting a bespoke fallback state.
     func test_selectableRange_return_whenDepartureDateIsToday_collapsesToSingleDay() {
         let today = date(2026, 4, 3)
         let sut = TripDateViewModel(

@@ -16,10 +16,15 @@ nonisolated protocol AuthTokenProviding: Sendable {
     func bearerToken() async throws -> String?
 }
 
-#if DEBUG
+#if DEBUG || ENABLE_DEBUG_REFERENCE_DATA_TOOL
 /// DEBUG-only token source: reads `REFERENCE_DATA_API_TOKEN` from the process environment.
 /// **No default value is ever committed** — returns `nil` when unset or blank, which surfaces as
 /// `APIError.unauthorized` from the real API rather than a silent failure (see ADR-0018 §5).
+///
+/// Also compiled under the TEMPORARY `ENABLE_DEBUG_REFERENCE_DATA_TOOL` flag (see
+/// Config/Release.xcconfig) so `SettingsViewModel`'s "DEBUG BUILD ONLY" species-fetch tool can
+/// resolve a token in an Archive/TestFlight build too — remove this condition back to plain
+/// `#if DEBUG` when that temporary tool is removed.
 nonisolated struct EnvironmentTokenProvider: AuthTokenProviding {
     private let environment: [String: String]
 

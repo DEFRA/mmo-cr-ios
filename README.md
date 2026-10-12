@@ -17,22 +17,28 @@ decision):
 
 | File | Purpose |
 |---|---|
-| `record-catch/Config/Debug.xcconfig` | `API_BASE_URL` for Debug builds (defaults to `http://localhost:3002`, a locally-running reference-data backend) |
+| `record-catch/Config/Debug.xcconfig` | `API_BASE_URL` for Debug builds — the CDP **dev** environment's reference-data API (`https://mmo-cr-catch-recording-service.api.dev.cdp-int.defra.cloud/reference-data-service`) |
 | `record-catch/Config/Release.xcconfig` | `API_BASE_URL` for Release builds (placeholder HTTPS endpoint pending a real production API) |
-| `record-catch/Resources/Info-Debug.plist` | Debug-only Info.plist additions: `APIBaseURL`, a scoped `localhost` ATS exception, and `NSLocalNetworkUsageDescription` |
+| `record-catch/Resources/Info-Debug.plist` | Debug-only Info.plist additions: `APIBaseURL` only — no ATS exception (Debug is HTTPS-only; see ADR-0018's 2026-10 CDP dev addendum) |
 | `record-catch/Resources/Info-Release.plist` | Release-only Info.plist additions: `APIBaseURL` only — no ATS exception, no local-network key |
 
 Both plist files rely on `GENERATE_INFOPLIST_FILE = YES` staying enabled, so the target's existing
 `INFOPLIST_KEY_*` build settings (Face ID usage description, scene manifest, orientations, export
 compliance) continue to merge into the generated Info.plist alongside these additions.
 
-### Running against a local reference-data backend
+### Running against the CDP dev reference-data API
 
-1. Start your local reference-data backend (default: `http://localhost:3002`).
-2. If it requires a bearer token, set `REFERENCE_DATA_API_TOKEN` in the `record-catch` scheme's Run
-   environment variables (Xcode: **Product ▸ Scheme ▸ Edit Scheme… ▸ Run ▸ Arguments**). The scheme
-   already declares the key with an empty value; fill it in locally and never commit a real value.
+1. Debug builds point at the CDP **dev** environment by default — no local backend needed.
+2. The API requires a bearer token. Set `REFERENCE_DATA_API_TOKEN` as a Run environment variable
+   on your own **personal, non-shared** Xcode scheme (Xcode: **Product ▸ Scheme ▸ Manage
+   Schemes… ▸ duplicate `record-catch` ▸ untick Shared ▸ Edit Scheme… ▸ Run ▸ Arguments**). Never
+   set it on the shared `record-catch` scheme — that scheme is committed to source control.
 3. Build and run the Debug configuration as normal.
+4. For BrowserStack App Automate XCUITest runs, pass the token via the build API's
+   `setEnvVariables` parameter (sourced from a CI secret, never committed) — UI tests relay it to
+   the app under test via `XCUIApplication.forwardReferenceDataAPIToken()`
+   (`record-catchUITests/XCUIApplication+ReferenceDataToken.swift`), since BrowserStack's
+   `setEnvVariables` reaches only the test runner process, not the launched app.
 
 See `docs/api/reference-data-api.md` for the full endpoint/envelope reference, physical-device (LAN
 IP) testing instructions, and the developer smoke-check entry point.

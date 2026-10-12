@@ -2,13 +2,24 @@
 //  Debug.xcconfig
 //  record-catch
 //
-//  Build-time configuration for the Debug build configuration (see ADR-0018 and
-//  .github/instructions/ci-cd.instructions.md's frozen "Option B" build-time configuration
-//  decision). Do NOT put secrets/tokens in this file — it is committed to source control. The
-//  reference-data API bearer token is supplied at runtime via the DEBUG-only
+//  Build-time configuration for the Debug build configuration (see ADR-0018, its 2026-10 CDP dev
+//  addendum, and .github/instructions/ci-cd.instructions.md's frozen "Option B" build-time
+//  configuration decision). Do NOT put secrets/tokens in this file — it is committed to source
+//  control. The reference-data API bearer token is supplied at runtime via the DEBUG-only
 //  REFERENCE_DATA_API_TOKEN environment variable (see ADR-0018 §5), never here.
 //
 
-// The Mac's `localhost` reference-data API backend, for local development only. The `$()`
-// escapes are required so xcconfig doesn't treat `//` as a line comment.
-API_BASE_URL = http:$()/$()/localhost:3002
+// The CDP dev-environment reference-data API (fronted by the `reference-data-service` gateway
+// path prefix — every route the app builds, e.g. `/api/v1/reference-data/species` and `/health`,
+// is appended after this prefix, giving `.../reference-data-service/api/v1/reference-data/species`
+// etc.). HTTPS, so no ATS exception is required. No trailing slash: `ReferenceDataEndpoint`
+// appends paths with `URLComponents.path +=`, so a trailing slash would produce a doubled `//`.
+// The `$()` escapes are required so xcconfig doesn't treat `//` as a line comment.
+API_BASE_URL = https:$()/$()/mmo-cr-catch-recording-service.api.dev.cdp-int.defra.cloud/reference-data-service
+
+// ⚠️ TEMPORARY — remove this line (and the `#if DEBUG || ENABLE_DEBUG_REFERENCE_DATA_TOOL`
+// code it gates in SettingsViewModel.swift / SettingsView.swift / AuthTokenProviding.swift)
+// before release. Added alongside (not replacing) `DEBUG` so the Settings "fetch species" debug
+// tool also survives an Archive/Release build for manual TestFlight verification — see the
+// matching entry (and its own warning) in Release.xcconfig.
+SWIFT_ACTIVE_COMPILATION_CONDITIONS = $(inherited) ENABLE_DEBUG_REFERENCE_DATA_TOOL

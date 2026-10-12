@@ -1,0 +1,15 @@
+{
+  "id": "5E9E48CF-7BCE-4653-ABA9-9F54591CC814",
+  "faoCode": "QSC",
+  "scientificName": "Aequipecten opercularis",
+  "commonNames": [
+    {
+      "id": "84ac2d6c-3563-5cc9-9009-b0738509d29a",
+      "countryCode": "GBR",
+      "name": "Queen scallop"
+    }
+  ],
+  "localNames": [],
+  "active": true,
+  "unknownExtraField": "should be ignored"
+}

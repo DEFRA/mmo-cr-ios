@@ -61,6 +61,18 @@ enum SubmissionStatus: String, CaseIterable {
     case unsent = "Unsent"
     case late = "Late"
 
+    /// String Catalog key for the localised tag text (see BR-SUB-010/AC12 — the previous
+    /// hard-coded `rawValue` was never translated, despite Home's "Catch record statuses" help
+    /// section already being fully localised for these same four statuses).
+    var statusKey: String {
+        switch self {
+        case .submitted: return "home.table.status.submitted"
+        case .amended: return "home.table.status.amended"
+        case .unsent: return "home.table.status.unsent"
+        case .late: return "home.table.status.late"
+        }
+    }
+
     var backgroundColor: Color {
         switch self {
         case .submitted:
@@ -226,8 +238,10 @@ private struct SubmissionTableRow: View {
 private struct SubmissionStatusTag: View {
     let status: SubmissionStatus
 
+    @Environment(AppLanguageStore.self) private var languageStore
+
     var body: some View {
-        Text(status.rawValue)
+        Text(languageStore.localized(status.statusKey))
             .font(AppTypography.bodySmall)
             .foregroundStyle(status.textColor)
             .lineLimit(1)
@@ -252,4 +266,5 @@ private struct SubmissionStatusTag: View {
         headerCreatedBy: "Created by"
     )
     .padding()
+    .environment(AppLanguageStore.preview)
 }

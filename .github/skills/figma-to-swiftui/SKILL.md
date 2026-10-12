@@ -93,7 +93,7 @@ accessibility and security **standards in the
    above.
 
 ## Validate
-- Builds: `xcodebuild build -scheme <Scheme> -destination 'platform=iOS Simulator,name=iPhone 15'`.
+- Builds: `xcodebuild build -scheme <Scheme> -destination 'platform=iOS Simulator,name=iPhone 18 Pro'`.
 - Tests pass (`xcodebuild test …` / `fastlane test`); accessibility checks via the
   [ios-accessibility-audit skill](../ios-accessibility-audit/SKILL.md).
 - Screen visually matches the skill's rendered images (`design.md`/`assets/`) and spec; tokens and

@@ -35,19 +35,25 @@ final class LandingStorageSpeciesViewModel {
     private let router: CatchRecordRouter
     private let favouriteSpecies: FavouriteSpeciesProviding
     /// Shared journey draft; the ticked species-not-landed list is written into it on submit (see
-    /// `CatchRecordDraft`).
+    /// `CatchRecordDraft`). Also supplies `vessel`/`returnDate` for the "Check your catch record"
+    /// vs. late-submission-nudge routing decision (see `completionRoute`).
     private let draft: CatchRecordDraft
+    /// Injected so the late-submission check (`completionRoute`) is deterministic in tests rather
+    /// than depending on the wall clock — mirrors `TripDateViewModel`.
+    private let now: () -> Date
 
     init(
         referenceNumber: String,
         router: CatchRecordRouter,
         favouriteSpecies: FavouriteSpeciesProviding = StubFavouriteSpeciesProvider(),
-        draft: CatchRecordDraft = CatchRecordDraft()
+        draft: CatchRecordDraft = CatchRecordDraft(),
+        now: @escaping () -> Date = Date.init
     ) {
         self.referenceNumber = referenceNumber
         self.router = router
         self.favouriteSpecies = favouriteSpecies
         self.draft = draft
+        self.now = now
     }
 
     /// Loads favourite species and seeds the field with **this screen's own** previously-captured
@@ -83,8 +89,18 @@ final class LandingStorageSpeciesViewModel {
         }
     }
 
-    /// The route to push after saving. Pure, so it is directly unit-testable.
-    var completionRoute: CatchRecordRoute { .checkYourAnswers(referenceNumber: referenceNumber) }
+    /// The route to push after saving. Pure (given the current draft/clock state), so it is
+    /// directly unit-testable — "Check your catch record", or the late-submission nudge first,
+    /// when the trip ended more than 24 hours ago (see
+    /// `CatchRecordRouting.checkYourAnswersOrNudgeRoute`).
+    var completionRoute: CatchRecordRoute {
+        CatchRecordRouting.checkYourAnswersOrNudgeRoute(
+            tripEndDate: draft.returnDate,
+            vessel: draft.vessel ?? "",
+            referenceNumber: referenceNumber,
+            now: now()
+        )
+    }
 
     /// Every weight-field error for the ticked species, once a submit has been attempted, keyed by
     /// species id.

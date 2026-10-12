@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// "Add port to vessel <VESSEL>" — type-to-search a port and save it to favourites.
+/// "Enter the port or closest port you set off from" — type-to-search a port and save it to
+/// favourites.
 ///
 /// Shown when the user has no favourite ports yet, and reached via a select screen's "Add another
 /// port" button. On save the chosen port is added to favourites and the journey returns to the
@@ -50,8 +51,6 @@ struct AddPortView: View {
                 .accessibilityAddTraits(.isHeader)
                 .accessibilityIdentifier("CatchRecord.addPort.heading")
 
-            ParagraphText(text: languageStore.localized("catchRecord.addPort.body"))
-
             SearchDropdownField(
                 label: heading,
                 placeholder: languageStore.localized("catchRecord.addPort.search.placeholder"),
@@ -59,7 +58,10 @@ struct AddPortView: View {
                 query: Binding(get: { viewModel.query }, set: { viewModel.query = $0 }),
                 selectedOption: Binding(get: { viewModel.selectedName }, set: { viewModel.selectedName = $0 }),
                 didAttemptSubmit: viewModel.didAttemptSubmit,
-                errorMessage: languageStore.localized("catchRecord.addPort.validation.none"),
+                submitAttempt: viewModel.submitAttempt,
+                errorMessage: viewModel.validationMessage.map(languageStore.localized) ?? "",
+                errorPrefix: languageStore.localized("a11y.errorPrefix"),
+                errorAccessibilityIdentifier: "CatchRecord.addPort.error",
                 resultsAnnouncement: { count in
                     count == 0
                         ? languageStore.localized("catchRecord.addPort.search.noResults")
@@ -87,10 +89,7 @@ struct AddPortView: View {
     }
 
     private var heading: String {
-        String(
-            format: languageStore.localized("catchRecord.addPort.heading"),
-            viewModel.vessel
-        )
+        languageStore.localized("catchRecord.addPort.heading")
     }
 
     private var errorBanner: some View {

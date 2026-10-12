@@ -89,4 +89,36 @@ final class SearchDropdownFieldTests: XCTestCase {
 
         XCTAssertEqual(field.resultsAnnouncement(2), "2 results")
     }
+
+    // MARK: - Error gating (WCAG 2.2 SC 3.3.1 — a blank required field is an input error)
+
+    func test_shouldShowError_whenBlankAndSubmitted_isTrue() {
+        XCTAssertTrue(SearchDropdownField.shouldShowError(
+            didAttemptSubmit: true, hasBlurred: false, query: "", hasValidSelection: false))
+    }
+
+    func test_shouldShowError_whenBlankAndOnlyBlurred_isFalse() {
+        XCTAssertFalse(SearchDropdownField.shouldShowError(
+            didAttemptSubmit: false, hasBlurred: true, query: "", hasValidSelection: false))
+    }
+
+    func test_shouldShowError_whenTypedButUnselectedAndSubmitted_isTrue() {
+        XCTAssertTrue(SearchDropdownField.shouldShowError(
+            didAttemptSubmit: true, hasBlurred: false, query: "Aber", hasValidSelection: false))
+    }
+
+    func test_shouldShowError_whenTypedButUnselectedAndBlurred_isTrue() {
+        XCTAssertTrue(SearchDropdownField.shouldShowError(
+            didAttemptSubmit: false, hasBlurred: true, query: "Aber", hasValidSelection: false))
+    }
+
+    func test_shouldShowError_withValidSelectionAfterSubmit_isFalse() {
+        XCTAssertFalse(SearchDropdownField.shouldShowError(
+            didAttemptSubmit: true, hasBlurred: true, query: "Aberdeen", hasValidSelection: true))
+    }
+
+    func test_shouldShowError_beforeAnyInteraction_isFalse() {
+        XCTAssertFalse(SearchDropdownField.shouldShowError(
+            didAttemptSubmit: false, hasBlurred: false, query: "", hasValidSelection: false))
+    }
 }

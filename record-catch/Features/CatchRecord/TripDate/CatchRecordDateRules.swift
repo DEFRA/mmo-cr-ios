@@ -16,6 +16,21 @@ enum CatchRecordDateRules {
         return Calendar(identifier: .gregorian).date(from: components)!
     }()
 
+    /// The service's rolling historical limit (BR-CAT-006/AC02): a trip start date may not be
+    /// entered more than this many days before "today".
+    static let maximumTripAgeInDays = 365
+
+    /// The earliest trip departure date currently selectable, given `now`: the later of the
+    /// service's launch floor (`earliestTripDate`) and the rolling `maximumTripAgeInDays` window.
+    ///
+    /// Both bounds apply together — the rolling window only becomes the binding constraint once
+    /// it has moved past the (provisional) launch floor.
+    static func earliestSelectableTripDate(now: Date, calendar: Calendar) -> Date {
+        let today = calendar.startOfDay(for: now)
+        let rollingFloor = calendar.date(byAdding: .day, value: -maximumTripAgeInDays, to: today) ?? .distantPast
+        return max(calendar.startOfDay(for: earliestTripDate), rollingFloor)
+    }
+
     /// Formats `date` as a long, localised date (e.g. "24 July 2025" / "24 Gorffennaf 2025") for
     /// interpolation into a validation message.
     static func longDateString(_ date: Date, locale: Locale) -> String {

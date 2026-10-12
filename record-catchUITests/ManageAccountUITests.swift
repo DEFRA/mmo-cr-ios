@@ -106,7 +106,7 @@ final class ManageAccountUITests: XCTestCase {
 
         XCTAssertTrue(app.staticTexts[ID.title].waitForExistence(timeout: 5))
         XCTAssertTrue(app.tabBars.buttons["Home"].isHittable, "Tab bar should remain visible on Manage your account")
-        XCTAssertTrue(app.tabBars.buttons["Settings"].isHittable)
+        XCTAssertTrue(app.tabBars.buttons["Your settings"].isHittable)
     }
 
     @MainActor
@@ -130,6 +130,6 @@ final class ManageAccountUITests: XCTestCase {
         XCTAssertTrue(backButton.waitForExistence(timeout: 5))
         backButton.tap()
 
-        XCTAssertTrue(app.staticTexts["Settings"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Your settings"].waitForExistence(timeout: 5))
     }
 }

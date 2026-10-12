@@ -21,6 +21,10 @@ struct LaunchArguments {
 
         // Tab / feature hosting
         case home = "-uiTestHome"
+        /// Seeds Home with 6 stubbed records (pageSize 4, so 2 pages) to UI-test the pagination
+        /// control's Previous/Next/page-number interactions, which `-uiTestHome`'s 3-record,
+        /// single-page fixture can't exercise.
+        case homePaged = "-uiTestHomePaged"
         case settings = "-uiTestSettings"
         case manageAccount = "-uiTestManageAccount"
         case notifications = "-uiTestNotifications"
@@ -42,6 +46,10 @@ struct LaunchArguments {
         case catchRecordCheckYourAnswers = "-uiTestCatchRecordCheckYourAnswers"
         case catchRecordSubmissionConfirmation = "-uiTestCatchRecordSubmissionConfirmation"
         case catchRecordSubmissionSuccess = "-uiTestCatchRecordSubmissionSuccess"
+
+        // Connectivity (ADR-0019): forces the offline banner on deterministically, without
+        // relying on Airplane Mode or simulator network conditioning in CI.
+        case offline = "-uiTestOffline"
     }
 
     /// The live process's launch arguments, read once per `LaunchArguments` value.

@@ -62,7 +62,10 @@ struct CatchLocationManualEntryView: View {
                 query: Binding(get: { viewModel.query }, set: { viewModel.query = $0 }),
                 selectedOption: Binding(get: { viewModel.selectedCode }, set: { viewModel.selectedCode = $0 }),
                 didAttemptSubmit: viewModel.didAttemptSubmit,
-                errorMessage: languageStore.localized("catchRecord.catchLocation.validation.none"),
+                submitAttempt: viewModel.submitAttempt,
+                errorMessage: viewModel.validationMessage.map(languageStore.localized) ?? "",
+                errorPrefix: languageStore.localized("a11y.errorPrefix"),
+                errorAccessibilityIdentifier: "\(identifierPrefix).error",
                 resultsAnnouncement: { count in
                     count == 0
                         ? languageStore.localized("catchRecord.manualEntry.search.noResults")

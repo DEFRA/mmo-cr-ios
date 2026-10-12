@@ -15,7 +15,10 @@ This folder contains reusable GDS-inspired SwiftUI components and shared design 
 - `Components/Form/PrimaryButton.swift`: primary action button.
 - `Components/Form/RadioOption.swift`: radio-style option row.
 - `Components/Form/TripDatePicker.swift`: native `DatePicker` wrapper used by the trip-date
-  screens, range-constrained by the caller instead of validated inline (see ADR-0017).
+  screens, range-constrained by the caller instead of validated inline (see ADR-0017). Falls back
+  to a static, accessible confirmation instead of the interactive wheel when the range collapses
+  to a single selectable day (e.g. a same-day trip's return date) — a wheel `DatePicker` with
+  nothing to scroll to is an unstable UIKit configuration that can hang/crash on-device.
 - `Components/Form/SearchDropdownField.swift`: list-only search field with dropdown results.
 - `Components/Form/TextInputField.swift`: text input that also supports secure password entry.
 

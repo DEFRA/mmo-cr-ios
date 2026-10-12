@@ -118,6 +118,7 @@ struct ManageAccountView: View {
             emptyStateValue: languageStore.localized("manageAccount.value.notProvided"),
             changeTitle: languageStore.localized("manageAccount.change"),
             changeAccessibilityIdentifier: "ManageAccount.change.\(identifierSuffix)",
+            isInlineLayout: true,
             onChange: onChange
         )
     }

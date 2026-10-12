@@ -5,14 +5,21 @@ import Foundation
 ///
 /// Requires the user to tick a single confirmation checkbox acknowledging the record is complete
 /// and accurate before "Accept and submit trip details" proceeds; declining to tick it shows an
-/// inline error and does not navigate. Once ticked, "Accept and submit trip details" calls the
-/// (stubbed) `CatchRecordSubmissionServicing` — this is where the real submission API call will
-/// happen in a future phase — and only routes on to `submissionSuccess` once it succeeds. On
-/// success the persisted local draft is deleted (fire-and-forget) so it no longer appears as an
-/// Unsent row on Home (see ADR-0014/0015) — the server becomes the record's source of truth once
-/// submitted. A transient/offline failure surfaces a recoverable inline error and does not
-/// navigate (and leaves the persisted draft untouched, so it remains resumable), matching the
-/// `saveFailed` pattern used elsewhere in this module (e.g. `GearMeasurementsViewModel`).
+/// inline error and does not navigate. Once ticked, if the device is online, "Accept and submit
+/// trip details" calls the (stubbed) `CatchRecordSubmissionServicing` — this is where the real
+/// submission API call will happen in a future phase — and only routes on to `submissionSuccess`
+/// once it succeeds. On success the persisted local draft is deleted (fire-and-forget) so it no
+/// longer appears as an Unsent row on Home (see ADR-0014/0015) — the server becomes the record's
+/// source of truth once submitted. A transient/offline *service* failure surfaces a recoverable
+/// inline error and does not navigate (and leaves the persisted draft untouched, so it remains
+/// resumable), matching the `saveFailed` pattern used elsewhere in this module (e.g.
+/// `GearMeasurementsViewModel`).
+///
+/// If the device has **no connectivity at all** (BR-SUB-008/AC10/AC11), the submission service is
+/// never called: the record must not be silently lost, but it must also not be shown as
+/// "submitted" when nothing was sent. The draft is (re)saved to be certain it is not lost, and the
+/// journey routes to `submissionSaved` instead — a truthful "saved on this device" screen, not the
+/// green submitted confirmation.
 @MainActor
 @Observable
 final class SubmissionConfirmationViewModel {
@@ -52,12 +59,23 @@ final class SubmissionConfirmationViewModel {
         return SubmissionConfirmationValidation.errorKey(for: isConfirmed)
     }
 
-    /// Validates the confirmation checkbox, submits the record via the (stubbed) submission
-    /// service, and routes on to the success screen once it succeeds.
-    func submit() async {
+    /// Validates the confirmation checkbox, then either submits the record via the (stubbed)
+    /// submission service (when `isOnline`) or routes to the saved-not-sent screen (when not).
+    ///
+    /// - Parameter isOnline: the device's connectivity at the moment "Accept and submit trip
+    ///   details" is tapped (see `ConnectivityMonitoring`). Defaults to `true` so every existing
+    ///   call site and test exercises the online path unchanged; the view passes the live signal
+    ///   explicitly, matching the "nil/unknown treated as online" convention used by `OfflineBanner`.
+    func submit(isOnline: Bool = true) async {
         didAttemptSubmit = true
         submitFailed = false
         guard isConfirmed else { return }
+
+        guard isOnline else {
+            Task { try? await draftStore.save(draft) }
+            router.push(.submissionSaved(referenceNumber: referenceNumber))
+            return
+        }
 
         isSubmitting = true
         defer { isSubmitting = false }

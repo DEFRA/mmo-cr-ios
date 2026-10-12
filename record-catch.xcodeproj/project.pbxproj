@@ -27,17 +27,21 @@
 		DA6ABEDD2FFE87DC00B7A0AB /* record-catch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "record-catch.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		DA6ABEEC2FFE87DD00B7A0AB /* record-catchTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "record-catchTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		DA6ABEF62FFE87DD00B7A0AB /* record-catchUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "record-catchUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		DA707AF530668B4600D0B97C /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
+		DA707AF630668B4600D0B97C /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
 		DA5E24CB3000E8B500353ABD /* Exceptions for "record-catch" folder in "record-catchTests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Core/Networking/ConnectivityMonitoring.swift,
 				Features/Common/Components/Disclosure/ExpandableHelpSection.swift,
 				Features/Common/Components/Form/PrimaryButton.swift,
 				Features/Common/Components/Form/RadioOption.swift,
 				Features/Common/Components/Form/SearchDropdownField.swift,
 				Features/Common/Components/Form/TextInputField.swift,
+				Features/Common/Components/OfflineBanner.swift,
 				Features/Common/Components/Table/SubmissionsTable.swift,
 				Features/Common/Components/Typography/ParagraphText.swift,
 				Features/Common/Components/Typography/TitleText.swift,
@@ -107,6 +111,8 @@
 			membershipExceptions = (
 				Features/CatchRecord/README.md,
 				Features/Common/README.md,
+				"Resources/Info-Debug.plist",
+				"Resources/Info-Release.plist",
 			);
 			target = DA6ABEDC2FFE87DC00B7A0AB /* record-catch */;
 		};
@@ -159,6 +165,13 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		DA5D26E43074E70900F4CB0F /* scripts 2 */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = "scripts 2";
+			sourceTree = "<group>";
+		};
 		DA6ABED42FFE87DC00B7A0AB = {
 			isa = PBXGroup;
 			children = (
@@ -166,6 +179,8 @@
 				DA6ABEEF2FFE87DD00B7A0AB /* record-catchTests */,
 				DA6ABEF92FFE87DD00B7A0AB /* record-catchUITests */,
 				DA6ABEDE2FFE87DC00B7A0AB /* Products */,
+				DA707AF430668B4600D0B97C /* Config */,
+				DA5D26E43074E70900F4CB0F /* scripts 2 */,
 			);
 			sourceTree = "<group>";
 		};
@@ -177,6 +192,15 @@
 				DA6ABEF62FFE87DD00B7A0AB /* record-catchUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		DA707AF430668B4600D0B97C /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				DA707AF530668B4600D0B97C /* Debug.xcconfig */,
+				DA707AF630668B4600D0B97C /* Release.xcconfig */,
+			);
+			path = Config;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -477,17 +501,20 @@
 		};
 		DA6ABF012FFE87DD00B7A0AB /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = DA707AF530668B4600D0B97C /* Debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_TEAM = XBP2KL858T;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "record-catch/Resources/Info-Debug.plist";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "We use Face ID to let you sign back in to your catch records quickly and securely on this device.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Record catch connects to a development server running on your local network so the app can load test reference data.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -513,17 +540,20 @@
 		};
 		DA6ABF022FFE87DD00B7A0AB /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = DA707AF630668B4600D0B97C /* Release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_TEAM = XBP2KL858T;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "record-catch/Resources/Info-Release.plist";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "We use Face ID to let you sign back in to your catch records quickly and securely on this device.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Record catch connects to a development server running on your local network so the app can load test reference data.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

@@ -110,4 +110,66 @@ final class SwiftDataCatchRecordDraftStoreTests: XCTestCase {
         XCTAssertEqual(summaries.first?.vessel, draft.vessel)
         XCTAssertEqual(summaries.first?.tripEndDate, draft.returnDate)
     }
+
+    // MARK: - Checkpoint (see BR-SUB-010/AC12 — distinguishing Draft from Complete Not Submitted)
+
+    func test_allUnsentDrafts_summary_carriesCheckpointFromTheDraft() async throws {
+        let store = try makeStore()
+        let draft = CatchRecordDraft()
+        draft.vessel = "ACHILLES"
+        draft.advance(to: .ports)
+        try await store.save(draft)
+
+        let summaries = try await store.allUnsentDrafts()
+
+        XCTAssertEqual(summaries.first?.checkpoint, .ports)
+        XCTAssertFalse(summaries.first?.isComplete ?? true)
+    }
+
+    func test_allUnsentDrafts_summary_whenCheckYourAnswersReached_isComplete() async throws {
+        let store = try makeStore()
+        let draft = CatchRecordDraft()
+        draft.vessel = "ACHILLES"
+        draft.advance(to: .checkYourAnswers)
+        try await store.save(draft)
+
+        let summaries = try await store.allUnsentDrafts()
+
+        XCTAssertTrue(summaries.first?.isComplete ?? false)
+    }
+
+    /// Regression guard: a row persisted before `checkpointRawValue` existed (`nil`) must still
+    /// load, falling back to the safe "still in progress" default rather than crashing or
+    /// miscategorising an old row as complete (see `CatchRecordEntity.checkpointRawValue`).
+    func test_allUnsentDrafts_entityPersistedWithoutCheckpoint_fallsBackToVesselAndIsNotComplete() async throws {
+        let container = try ModelContainer(
+            for: CatchRecordEntity.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let context = ModelContext(container)
+        let payload = CatchRecordDraftPayload(
+            vessel: "ACHILLES",
+            departureDate: nil,
+            returnDate: nil,
+            departurePort: nil,
+            returnPort: nil,
+            gearCatches: [],
+            speciesNotLanded: []
+        )
+        let entity = CatchRecordEntity(
+            localID: UUID(),
+            lastEditedAt: Date(),
+            vessel: "ACHILLES",
+            tripEndDate: nil,
+            payload: try JSONEncoder().encode(payload)
+        )
+        context.insert(entity)
+        try context.save()
+
+        let store = SwiftDataCatchRecordDraftStore(modelContext: context)
+        let summaries = try await store.allUnsentDrafts()
+
+        XCTAssertEqual(summaries.first?.checkpoint, .vessel)
+        XCTAssertFalse(summaries.first?.isComplete ?? true)
+    }
 }

@@ -91,4 +91,42 @@ final class CatchRecordDraftStoreTests: XCTestCase {
 
         XCTAssertEqual(loaded, payload)
     }
+
+    // MARK: - Checkpoint (see BR-SUB-010/AC12 — distinguishing Draft from Complete Not Submitted)
+
+    func test_allUnsentDrafts_summary_carriesCheckpointFromTheDraft() async throws {
+        let store = InMemoryCatchRecordDraftStore()
+        let draft = CatchRecordDraft()
+        draft.vessel = "ACHILLES"
+        draft.advance(to: .gear)
+        try await store.save(draft)
+
+        let summaries = try await store.allUnsentDrafts()
+
+        XCTAssertEqual(summaries.first?.checkpoint, .gear)
+    }
+
+    func test_isComplete_whenCheckpointIsBeforeCheckYourAnswers_isFalse() async throws {
+        let store = InMemoryCatchRecordDraftStore()
+        let draft = CatchRecordDraft()
+        draft.vessel = "ACHILLES"
+        draft.advance(to: .landingStorage)
+        try await store.save(draft)
+
+        let summaries = try await store.allUnsentDrafts()
+
+        XCTAssertFalse(summaries.first?.isComplete ?? true)
+    }
+
+    func test_isComplete_whenCheckpointIsCheckYourAnswers_isTrue() async throws {
+        let store = InMemoryCatchRecordDraftStore()
+        let draft = CatchRecordDraft()
+        draft.vessel = "ACHILLES"
+        draft.advance(to: .checkYourAnswers)
+        try await store.save(draft)
+
+        let summaries = try await store.allUnsentDrafts()
+
+        XCTAssertTrue(summaries.first?.isComplete ?? false)
+    }
 }

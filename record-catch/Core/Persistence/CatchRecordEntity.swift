@@ -28,6 +28,14 @@ final class CatchRecordEntity {
     var tripEndDate: Date?
     /// JSON-encoded `CatchRecordDraftPayload` — the full-fidelity, resumable snapshot of the draft.
     var payload: Data
+    /// Denormalised copy of `CatchRecordDraft.checkpoint.rawValue` (see `CatchRecordCheckpoint`),
+    /// so Home can distinguish an in-progress draft from one that has reached Check your answers
+    /// without decoding `payload` (mirrors the `vessel`/`tripEndDate` denormalisation above — see
+    /// BR-SUB-010/AC12). `nil` for any row persisted before this field existed; `UnsentDraftSummary`
+    /// falls back to `.vessel` (the safe "still in progress" default) in that case. Declared
+    /// optional so adding this attribute is a lightweight SwiftData migration — see
+    /// `SchemaMigrationPlan`/`VersionedSchema` in Apple's SwiftData docs.
+    var checkpointRawValue: Int?
 
     init(
         localID: UUID,
@@ -35,7 +43,8 @@ final class CatchRecordEntity {
         isSubmitted: Bool = false,
         vessel: String?,
         tripEndDate: Date?,
-        payload: Data
+        payload: Data,
+        checkpointRawValue: Int? = nil
     ) {
         self.localID = localID
         self.lastEditedAt = lastEditedAt
@@ -43,5 +52,6 @@ final class CatchRecordEntity {
         self.vessel = vessel
         self.tripEndDate = tripEndDate
         self.payload = payload
+        self.checkpointRawValue = checkpointRawValue
     }
 }

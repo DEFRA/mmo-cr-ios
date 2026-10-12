@@ -73,6 +73,7 @@ struct CatchLocationView: View {
 
             ParagraphText(text: languageStore.localized("catchRecord.catchLocation.hint.nearest"))
             ParagraphText(text: languageStore.localized("catchRecord.catchLocation.hint.select"))
+            ParagraphText(text: languageStore.localized("catchRecord.catchLocation.hint.other"))
 
             map
 
@@ -166,7 +167,7 @@ struct CatchLocationView: View {
     private var heading: String {
         String(
             format: languageStore.localized("catchRecord.catchLocation.heading"),
-            viewModel.gear.name
+            viewModel.gear.descriptionWithMeasurements(localize: languageStore.localized)
         )
     }
 

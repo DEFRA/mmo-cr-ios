@@ -1,0 +1,20 @@
+{
+  "id": "00000000-0000-4000-8000-000000000011",
+  "name": "ACHILLES",
+  "namePln": "ACHILLES PH1234",
+  "identifiers": {
+    "cfr": "GBR000A1234",
+    "uvi": null,
+    "mmsi": "232001234",
+    "ircs": "MABC7",
+    "externalMark": "PH1234",
+    "registrationNumber": "PH1234"
+  },
+  "typeCode": "FISHING",
+  "registrationCountryCode": "GBR",
+  "lengthOverallMetres": 8.74,
+  "status": "active",
+  "activeFrom": "2015-03-17",
+  "activeTo": null,
+  "unknownExtraField": "should be ignored"
+}

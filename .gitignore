@@ -80,7 +80,19 @@ Config/Local.xcconfig
 #
 # Fastlane redirects Xcode DerivedData into the repo root (see `derived_data_path`
 # in fastlane/Fastfile), so it must be ignored here as well as the default location.
+# Also ignore ad hoc named DerivedData dirs (e.g. `DerivedData-profile/`) created
+# when profiling or building with a custom -derivedDataPath.
 DerivedData/
+DerivedData*/
+
+# Instruments traces and profiling logs
+#
+# `.trace` bundles are large, machine/session-specific Instruments recordings
+# (and their symbol archives can embed local file-system paths) -- never commit
+# them. Capture findings as a written summary in docs/perf/ instead.
+*.trace
+*.trace.zip
+docs/perf/*.log
 
 # Bundler
 #

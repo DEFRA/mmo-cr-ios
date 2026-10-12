@@ -57,6 +57,10 @@ struct TripDateView: View {
                 .accessibilityAddTraits(.isHeader)
                 .accessibilityIdentifier("\(identifierPrefix).heading")
 
+            if viewModel.dateWasAdjustedForAgeLimit {
+                adjustedDateNotice
+            }
+
             TripDatePicker(
                 title: languageStore.localized(viewModel.titleKey),
                 hint: languageStore.localized(viewModel.hintKey),
@@ -65,6 +69,8 @@ struct TripDateView: View {
                     set: { viewModel.selectedDate = $0 }
                 ),
                 range: viewModel.selectableRange,
+                onlyDateAvailableFormat: languageStore.localized("catchRecord.tripDate.onlyDateAvailable"),
+                dateFormattingLocale: languageStore.language.locale,
                 accessibilityIdentifierPrefix: identifierPrefix
             )
 
@@ -72,6 +78,25 @@ struct TripDateView: View {
                 viewModel.submit()
             }
             .accessibilityIdentifier("\(identifierPrefix).saveContinue")
+        }
+    }
+
+    /// Informational (non-blocking) notice shown when a resumed draft's departure date has been
+    /// moved forward because it is now more than 365 days in the past (BR-CAT-006/AC02). Announced
+    /// once on appear so VoiceOver users are told about the change without it stealing focus
+    /// (WCAG 2.2 SC 4.1.3 Status Messages).
+    private var adjustedDateNotice: some View {
+        WarningBox(
+            tagKey: "catchRecord.tripDate.adjustedForAgeLimit.tag",
+            messageKey: "catchRecord.tripDate.adjustedForAgeLimit.message"
+        )
+        .accessibilityIdentifier("\(identifierPrefix).adjustedForAgeLimitNotice")
+        .task {
+            let message = WarningBox.accessibilityLabel(
+                tag: languageStore.localized("catchRecord.tripDate.adjustedForAgeLimit.tag"),
+                message: languageStore.localized("catchRecord.tripDate.adjustedForAgeLimit.message")
+            )
+            AccessibilityAnnouncer.announce(message)
         }
     }
 }

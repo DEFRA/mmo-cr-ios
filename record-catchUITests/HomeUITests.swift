@@ -66,6 +66,45 @@ final class HomeUITests: XCTestCase {
     }
 
     @MainActor
+    func test_pagination_multiplePages_nextAndPageTapsChangeVisibleRows() {
+        // Regression test for the reported bug: the pagination control claimed "Showing 1 to 4 of
+        // 6" with 2 pages, but every one of the 6 rows was rendered regardless of page, and the
+        // Previous/Next/page-number buttons did nothing. `-uiTestHomePaged` seeds exactly 6 rows
+        // (`UITestRootView.seedPagedRows`) to reproduce that exact scenario.
+        let app = XCUIApplication()
+        app.launchArguments += ["-uiTestHomePaged"]
+        app.launch()
+
+        XCTAssertTrue(element(app, ID.paginationPage1).waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Showing 1 to 4 of 6"].exists)
+
+        // Page 1: Previous hidden (nothing before it), Next visible (more rows exist), and only
+        // the first page's 4 rows are on screen — not all 6.
+        XCTAssertFalse(element(app, ID.paginationPrevious).exists)
+        let nextButton = element(app, ID.paginationNext)
+        XCTAssertTrue(nextButton.exists)
+        XCTAssertTrue(app.staticTexts["ACHILLES 1"].exists)
+        XCTAssertFalse(app.staticTexts["ACHILLES 5"].exists)
+
+        nextButton.tap()
+
+        // Page 2: the showing-range text, visible rows and Previous/Next availability all flip
+        // together — this is the assertion that would have caught the original bug (the text
+        // alone was already correct; only the rendered rows and the button wiring were not).
+        XCTAssertTrue(app.staticTexts["Showing 5 to 6 of 6"].waitForExistence(timeout: 5))
+        XCTAssertTrue(element(app, ID.paginationPrevious).exists)
+        XCTAssertFalse(element(app, ID.paginationNext).exists)
+        XCTAssertTrue(app.staticTexts["ACHILLES 5"].exists)
+        XCTAssertFalse(app.staticTexts["ACHILLES 1"].exists)
+
+        // Tapping the page-1 number returns to the first page.
+        element(app, ID.paginationPage1).tap()
+
+        XCTAssertTrue(app.staticTexts["Showing 1 to 4 of 6"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["ACHILLES 1"].exists)
+    }
+
+    @MainActor
     func test_createRecordButton_startsNewCatchRecordJourney() {
         let app = launchHome()
 

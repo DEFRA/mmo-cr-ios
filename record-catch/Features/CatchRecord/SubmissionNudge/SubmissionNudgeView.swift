@@ -2,10 +2,11 @@ import SwiftUI
 
 /// Late-submission nudge screen for the "Create a catch record" journey.
 ///
-/// Shown after a valid trip end (return) date when the trip ended more than 24 hours ago
-/// (see `SubmissionNudge`). Information-only: it reminds the user that records must be submitted
-/// within 24 hours, offers a "Check the trip end date" link to correct the date, and a
-/// "Save and continue" button to acknowledge and continue into the port sub-journey.
+/// Shown directly before "Check your catch record" when the trip ended more than 24 hours ago
+/// (see `SubmissionNudge`, `CatchRecordRouting.checkYourAnswersOrNudgeRoute`). Information-only:
+/// it reminds the user that records must be submitted within 24 hours, offers a "Check the trip
+/// end date" link to correct the date, and a "Save and continue" button to continue to "Check
+/// your catch record".
 struct SubmissionNudgeView: View {
 
     @Environment(AppLanguageStore.self) private var languageStore
@@ -16,14 +17,14 @@ struct SubmissionNudgeView: View {
         vessel: String,
         referenceNumber: String,
         router: CatchRecordRouter,
-        favouritePorts: FavouritePortsProviding
+        draft: CatchRecordDraft = CatchRecordDraft()
     ) {
         _viewModel = State(wrappedValue: SubmissionNudgeViewModel(
             daysLate: daysLate,
             vessel: vessel,
             referenceNumber: referenceNumber,
             router: router,
-            favouritePorts: favouritePorts
+            draft: draft
         ))
     }
 
@@ -87,12 +88,12 @@ struct SubmissionNudgeView: View {
 }
 
 #Preview("English") {
-    SubmissionNudgeView(daysLate: 3, vessel: "ACHILLES", referenceNumber: "A1234520260727150815", router: CatchRecordRouter(), favouritePorts: StubFavouritePortsProvider())
+    SubmissionNudgeView(daysLate: 3, vessel: "ACHILLES", referenceNumber: "A1234520260727150815", router: CatchRecordRouter())
         .environment(AppLanguageStore.preview)
 }
 
 #Preview("Welsh") {
-    SubmissionNudgeView(daysLate: 3, vessel: "ACHILLES", referenceNumber: "A1234520260727150815", router: CatchRecordRouter(), favouritePorts: StubFavouritePortsProvider())
+    SubmissionNudgeView(daysLate: 3, vessel: "ACHILLES", referenceNumber: "A1234520260727150815", router: CatchRecordRouter())
         .environment({
             let store = AppLanguageStore.preview
             store.language = .welsh
@@ -101,7 +102,7 @@ struct SubmissionNudgeView: View {
 }
 
 #Preview("Max Dynamic Type") {
-    SubmissionNudgeView(daysLate: 3, vessel: "ACHILLES", referenceNumber: "A1234520260727150815", router: CatchRecordRouter(), favouritePorts: StubFavouritePortsProvider())
+    SubmissionNudgeView(daysLate: 3, vessel: "ACHILLES", referenceNumber: "A1234520260727150815", router: CatchRecordRouter())
         .environment(AppLanguageStore.preview)
         .environment(\.dynamicTypeSize, .accessibility5)
 }

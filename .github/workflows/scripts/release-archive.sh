@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Encrypts/decrypts the compiled archive handed from the build job to the promotion job (ADR-0015).
+# Encrypts/decrypts the compiled archive handed from the build job to the promotion job (ADR-0021).
 # Public-repo artifacts are downloadable by any signed-in GitHub user, so the archive never leaves the run in clear.
 set -euo pipefail
 set +x

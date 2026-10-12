@@ -2,56 +2,62 @@ import Foundation
 
 /// View model for the late-submission nudge screen.
 ///
-/// Shown after a valid trip end (return) date when the trip ended more than 24 hours ago
-/// (see `SubmissionNudge`). It is an information-only screen: "Save and continue" proceeds into
-/// the port sub-journey (the same next step the return date screen would have taken), while the
-/// "Check the trip end date" link pops back to correct the date. UI only — no persistence or
-/// networking.
+/// Shown directly before "Check your catch record" when the trip ended more than 24 hours ago
+/// (see `SubmissionNudge`, `CatchRecordRouting.checkYourAnswersOrNudgeRoute`) — reached from the
+/// landing-storage "No" answer, the species-not-landed screen, resuming a draft already at that
+/// checkpoint, or a "Change" edit to the return date that still leaves the trip late. It is an
+/// information-only screen: "Save and continue" proceeds straight to "Check your catch record";
+/// "Check the trip end date" opens the return-date screen in "Change" mode so the date can be
+/// corrected, after which the journey returns here (or straight to "Check your catch record" if
+/// the correction resolves the lateness). UI only — no persistence or networking.
 @MainActor
 @Observable
 final class SubmissionNudgeViewModel {
 
     /// Whole days the record is being submitted after the trip end date; drives the heading.
     let daysLate: Int
-    /// Selected vessel name, threaded onward for the port screens' headers.
+    /// Selected vessel name, threaded onward to the return-date screen if the date is corrected.
     let vessel: String
     /// Display-only placeholder reference number shown at the top of the screen.
     let referenceNumber: String
 
     private let router: CatchRecordRouter
-    private let favouritePorts: FavouritePortsProviding
+    /// Shared journey draft; set when "Check the trip end date" is tapped, so the return-date
+    /// screen knows to route back here (via `CatchRecordRouting.checkYourAnswersOrNudgeRoute`)
+    /// rather than continuing into the port sub-journey (see ADR-0013's "Change always resumes"
+    /// pattern).
+    private let draft: CatchRecordDraft
 
     init(
         daysLate: Int,
         vessel: String,
         referenceNumber: String,
         router: CatchRecordRouter,
-        favouritePorts: FavouritePortsProviding = StubFavouritePortsProvider()
+        draft: CatchRecordDraft = CatchRecordDraft()
     ) {
         self.daysLate = daysLate
         self.vessel = vessel
         self.referenceNumber = referenceNumber
         self.router = router
-        self.favouritePorts = favouritePorts
+        self.draft = draft
     }
 
-    /// "Save and continue" — acknowledges the nudge and continues into the port sub-journey.
+    /// "Save and continue" — acknowledges the nudge and continues straight to "Check your catch
+    /// record".
     func submit() {
-        Task { await enterPortSubJourney() }
+        router.push(.checkYourAnswers(referenceNumber: referenceNumber))
     }
 
-    /// "Check the trip end date" — pops back to the trip end date screen to correct it.
+    /// "Check the trip end date" — opens the return-date screen in "Change" mode so the user can
+    /// correct it; submitting there re-runs the late-submission check before returning here or to
+    /// "Check your catch record" (see `TripDateViewModel.submit()`).
     func checkTripEndDate() {
-        router.pop()
-    }
-
-    /// Fetches favourites, then pushes the pure port-entry route (Add port vs Select departure).
-    func enterPortSubJourney() async {
-        let favourites = (try? await favouritePorts.favouritePorts()) ?? []
-        router.push(CatchRecordRouting.portEntryRoute(
-            hasFavourites: !favourites.isEmpty,
+        draft.returnToCheckYourAnswers = true
+        router.push(.tripDate(
+            phase: .return,
             vessel: vessel,
-            referenceNumber: referenceNumber
+            referenceNumber: referenceNumber,
+            departureDate: draft.departureDate
         ))
     }
 }

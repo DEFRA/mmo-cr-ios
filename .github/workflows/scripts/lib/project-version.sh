@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# Shared by the release scripts: one place that knows where the version lives (moves to Base.xcconfig with ADR-0014).
+# Shared by the release scripts: one place that knows where the version lives (moves to Base.xcconfig with ADR-0020).
 # shellcheck disable=SC2034 # consumed by the scripts that source this file
 PBXPROJ="record-catch.xcodeproj/project.pbxproj"
 

@@ -200,8 +200,12 @@ into `draft.gear` (single-gear support in this phase).
 
 Renders the `OfflineMapView`/`OfflineMapCoordinator` (see `Features/Map/`) so the user taps a
 statistical subzone. `CatchLocationValidation.errorKey(for:)` requires a non-nil selection before
-continuing. On success, fetches favourite species and pushes the pure
-`CatchRecordRouting.speciesEntryRoute` decision (mirrors port/gear entry).
+continuing — this still governs the *map* screen only. Its type-to-search sibling
+(`CatchLocationManualEntry/`, reached via the map's "Other" button) has its own two-rule
+`CatchLocationManualEntryValidation.message(query:selectedCode:)` instead, distinguishing a blank
+search field from one typed-but-unselected (mirrors `AddPortValidation`/`AddGearValidation`). On
+success, fetches favourite species and pushes the pure `CatchRecordRouting.speciesEntryRoute`
+decision (mirrors port/gear entry).
 
 ### 12–13. Add species / Record species weights
 

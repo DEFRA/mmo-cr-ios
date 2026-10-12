@@ -70,7 +70,7 @@ jobs:
         if: ${{ always() }}
         run: bash .github/workflows/scripts/cleanup-signing-assets.sh
 
-  # Dev proof of concept of the ADR-0015 promotion; Test/Prod promote the same way within their own runs.
+  # Dev proof of concept of the ADR-0021 promotion; Test/Prod promote the same way within their own runs.
   dev-promote-external:
     name: Dev → external TestFlight
     needs: dev-build

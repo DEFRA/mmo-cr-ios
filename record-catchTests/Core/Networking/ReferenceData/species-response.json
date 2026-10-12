@@ -1,0 +1,36 @@
+{
+  "dataset": "species",
+  "collectionId": "00000000-0000-4000-8000-000000000040",
+  "schemaVersion": "1.0",
+  "version": "species-excel-1",
+  "view": "canonical",
+  "total": 3,
+  "items": [
+    {
+      "id": "5E9E48CF-7BCE-4653-ABA9-9F54591CC814",
+      "faoCode": "QSC",
+      "scientificName": "Aequipecten opercularis",
+      "commonNames": [
+        {
+          "id": "84ac2d6c-3563-5cc9-9009-b0738509d29a",
+          "countryCode": "GBR",
+          "name": "Queen scallop"
+        }
+      ],
+      "localNames": [],
+      "active": true,
+      "unknownExtraField": "should be ignored"
+    },
+    {
+      "id": "39FF37D1-9D52-48FB-A6D4-2C6876953612",
+      "faoCode": "ALC",
+      "scientificName": "Alepocephalus bairdii",
+      "commonNames": [],
+      "localNames": [],
+      "active": true
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000099"
+    }
+  ]
+}

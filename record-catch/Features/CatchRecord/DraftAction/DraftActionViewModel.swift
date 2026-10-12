@@ -28,6 +28,9 @@ final class DraftActionViewModel {
     /// Used to resolve the correct gear-entry route (`CatchRecordRouting.gearEntryRoute`) when
     /// resuming from `.ports`.
     private let favouriteGears: FavouriteGearProviding
+    /// Injected so the late-submission check in `resumeRoute()` is deterministic in tests rather
+    /// than depending on the wall clock — mirrors `TripDateViewModel`.
+    private let now: () -> Date
 
     init(
         row: SubmissionRow,
@@ -35,7 +38,8 @@ final class DraftActionViewModel {
         draft: CatchRecordDraft = CatchRecordDraft(),
         draftStore: CatchRecordDraftStoring = InMemoryCatchRecordDraftStore(),
         favouritePorts: FavouritePortsProviding = StubFavouritePortsProvider(),
-        favouriteGears: FavouriteGearProviding = StubFavouriteGearProvider()
+        favouriteGears: FavouriteGearProviding = StubFavouriteGearProvider(),
+        now: @escaping () -> Date = Date.init
     ) {
         self.row = row
         self.router = router
@@ -43,6 +47,7 @@ final class DraftActionViewModel {
         self.draftStore = draftStore
         self.favouritePorts = favouritePorts
         self.favouriteGears = favouriteGears
+        self.now = now
     }
 
     /// Current inline error, once a submit has been attempted.
@@ -95,7 +100,12 @@ final class DraftActionViewModel {
         case .gear:
             return .landingStorage(referenceNumber: referenceNumber)
         case .landingStorage, .checkYourAnswers:
-            return .checkYourAnswers(referenceNumber: referenceNumber)
+            return CatchRecordRouting.checkYourAnswersOrNudgeRoute(
+                tripEndDate: draft.returnDate,
+                vessel: vessel,
+                referenceNumber: referenceNumber,
+                now: now()
+            )
         }
     }
 

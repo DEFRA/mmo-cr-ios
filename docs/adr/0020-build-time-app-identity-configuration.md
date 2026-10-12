@@ -1,10 +1,11 @@
-# ADR 0014 — Build-time app identity configuration (three apps, backend URL injected from CI)
+# ADR 0020 — Build-time app identity configuration (three apps, backend URL injected from CI)
 
-- Status: Accepted
+- Status: Accepted; renumbered from 0014 in 2026-10 (that number belongs to catch record draft persistence)
 - Date: 2026-09
 - Deciders: iOS engineering / DevOps
 - Context tags: ci-cd, configuration, bundle-id, xcconfig, fastlane, github-environments
-- Related: [ADR-0011](0011-release-pipeline.md) (amended), [ADR-0015](0015-compile-once-configure-at-promotion.md)
+- Related: [ADR-0011](0011-release-pipeline.md) (amended), [ADR-0021](0021-compile-once-configure-at-promotion.md),
+  [ADR-0018](0018-reference-data-api-connector-and-build-time-configuration.md) (§3 superseded by §2 below)
 
 ## Context
 
@@ -53,10 +54,18 @@ stage values need no workflow change.
   precedence would silently apply such a value to every stage.
 - **Flags are fixed at packaging.** The App Store package is exactly what Apple reviews; this mechanism must never
   be used for runtime or remote feature switching (App Review Guideline 2.3.1).
-- **Local development:** a partial `Info.plist` template maps `MMOCRAppConfig` entries to `$(CR_APP_CFG_<KEY>)`,
-  supplied by an optional, git-ignored `Config/Local.xcconfig` (`#include?`); URLs there are written
-  `https:/$()/host` because `//` starts an xcconfig comment. Xcode ignores user-defined settings when *generating*
-  `Info.plist`, so the template file is required, and it must not be a member of the target.
+- **Local development:** partial `Info.plist` templates in `Config/` map `MMOCRAppConfig` entries to
+  `$(CR_APP_CFG_<KEY>)`, supplied by an optional, git-ignored `Config/Local.xcconfig` (`#include?` from
+  `Config/Base.xcconfig`); URLs there are written `https:/$()/host` because `//` starts an xcconfig comment.
+  Xcode ignores user-defined settings when *generating* `Info.plist`, so the template file is required, and it must
+  not be a member of the target.
+- **Templates and xcconfigs (amended 2026-10, on merging ADR-0018).** Exactly two templates, both in `Config/`:
+  `Info.plist` for Release (no ATS exceptions) and `Info-Debug.plist` for Debug, which adds the
+  `localhost`-scoped ATS exception from ADR-0018 §4. Both declare exactly the schema keys. Committed xcconfigs are
+  identity files only (`Base`, later `Dev`/`Test`/`Prod`) and never set a stage value; there are no per-build-type
+  value xcconfigs. Debug-only settings such as `NSLocalNetworkUsageDescription` are set on Debug configurations
+  only. Plain `http://` is allowed only for `localhost` in Debug builds; the pipeline accepts `https://` only.
+  `fastlane/test/project_config_test.rb` enforces all of this in CI.
 
 ### 3. App behaviour (owned by the iOS Developer)
 
@@ -67,7 +76,7 @@ stage values need no workflow change.
 - Partition local data (store + Keychain service) by `API_BASE_URL` so data from one backend can never be sent to
   another.
 - Treat configuration as untrusted for security decisions: a modified package can change it, so the backend
-  enforces authorisation (server-side App Attest remains optional, ADR-0015).
+  enforces authorisation (server-side App Attest remains optional, ADR-0021).
 
 ### 4. Fastlane has one identity table
 

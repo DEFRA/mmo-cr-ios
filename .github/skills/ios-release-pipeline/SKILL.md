@@ -23,7 +23,7 @@ working framework: plan → get approval → implement → validate.
    scheme name and bundle identifier, and existing ADRs under `docs/adr/`.
 2. **Confirm the frozen model** and record/keep the ADRs (create any that are missing **before**
    finalising the pipeline):
-   - **Configuration strategy (frozen): compile once, configure at promotion** (ADR-0014/0015) — three apps,
+   - **Configuration strategy (frozen): compile once, configure at promotion** (ADR-0020/0021) — three apps,
      identity via `.xcconfig`; each app holds one stage configuration (`MMOCRAppConfig`) built from the
      GitHub Environment's `CR_APP_CFG_*` variables;
      promotion re-packages the same archive (no recompile).
@@ -150,8 +150,8 @@ leaks, follow the DEFRA
 process.
 
 ### 10. ADRs & README
-Record the release ADRs under `docs/adr/`: **build-time app identity configuration** (ADR-0014),
-**compile once, configure at promotion** (ADR-0015), the **signing strategy**, and the **release model**
+Record the release ADRs under `docs/adr/`: **build-time app identity configuration** (ADR-0020),
+**compile once, configure at promotion** (ADR-0021), the **signing strategy**, and the **release model**
 (trunk-based, tag-driven, no release branches). Add ADRs for Xcode Cloud or cloud
 real-device testing (UK data residency) only if adopted. Update the README with the release process,
 required secrets, environments and how to cut a release.

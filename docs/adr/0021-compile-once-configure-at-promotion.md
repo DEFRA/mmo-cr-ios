@@ -1,10 +1,11 @@
-# ADR 0015 — Compile once, configure at promotion
+# ADR 0021 — Compile once, configure at promotion
 
-- Status: Accepted (subject to spike S1 — see Validation); amended 2026-10 (see Amendments)
+- Status: Accepted (subject to spike S1 — see Validation); amended 2026-10 (see Amendments); renumbered from 0015
+  in 2026-10 (that number belongs to the home merged records list)
 - Date: 2026-09
 - Deciders: iOS engineering / DevOps
 - Context tags: ci-cd, release, testflight, promotion, fastlane, security
-- Related: [ADR-0011](0011-release-pipeline.md) (amended), [ADR-0014](0014-build-time-app-identity-configuration.md)
+- Related: [ADR-0011](0011-release-pipeline.md) (amended), [ADR-0020](0020-build-time-app-identity-configuration.md)
 
 ## Context
 
@@ -38,7 +39,7 @@ a signing key to manage), and ships the Ext-Test URL inside the public App Store
 
 ## Decision
 
-1. **Build** (`ios-release.yml`, one run per app): compile once, write the stage's `MMOCRAppConfig` (ADR-0014 §2),
+1. **Build** (`ios-release.yml`, one run per app): compile once, write the stage's `MMOCRAppConfig` (ADR-0020 §2),
    build number `N`, upload to **internal** TestFlight. Keep the `.xcarchive` as an **encrypted** artifact of the
    run. Record the executable's Mach-O UUID. Dev also assigns this same build to its external groups.
 2. **Promote** (Test and Prod: a later, gated job in the **same** `ios-release.yml` run): take that same archive,

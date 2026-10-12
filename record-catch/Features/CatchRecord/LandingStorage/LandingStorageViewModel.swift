@@ -17,13 +17,23 @@ final class LandingStorageViewModel {
 
     private let router: CatchRecordRouter
     /// Shared journey draft; advanced to `.landingStorage` once this question is answered (see
-    /// `CatchRecordDraft.checkpoint`).
+    /// `CatchRecordDraft.checkpoint`). Also supplies `vessel`/`returnDate` for the "Check your
+    /// catch record" vs. late-submission-nudge routing decision (see `completionRoute`).
     private let draft: CatchRecordDraft
+    /// Injected so the late-submission check (`completionRoute`) is deterministic in tests rather
+    /// than depending on the wall clock — mirrors `TripDateViewModel`.
+    private let now: () -> Date
 
-    init(referenceNumber: String, router: CatchRecordRouter, draft: CatchRecordDraft = CatchRecordDraft()) {
+    init(
+        referenceNumber: String,
+        router: CatchRecordRouter,
+        draft: CatchRecordDraft = CatchRecordDraft(),
+        now: @escaping () -> Date = Date.init
+    ) {
         self.referenceNumber = referenceNumber
         self.router = router
         self.draft = draft
+        self.now = now
         // Pre-fills "Yes" when restarting a resumed draft that already recorded species not
         // landed (see ADR-0015 decision #1). There is no persisted "No" answer to infer from an
         // empty list, so it is left unselected rather than guessed.
@@ -38,14 +48,21 @@ final class LandingStorageViewModel {
         return LandingStorageValidation.errorKey(for: selection)
     }
 
-    /// The route to push for the current selection. Pure, so it is directly unit-testable.
-    /// "Yes" leads to the not-landing species screen; "No" ends the journey at Check your answers.
+    /// The route to push for the current selection. Pure (given the current draft/clock state),
+    /// so it is directly unit-testable. "Yes" leads to the not-landing species screen; "No" ends
+    /// the journey at "Check your catch record" — or the late-submission nudge first, when the
+    /// trip ended more than 24 hours ago (see `CatchRecordRouting.checkYourAnswersOrNudgeRoute`).
     var completionRoute: CatchRecordRoute {
         switch selection {
         case .yes:
             return .landingStorageSpecies(referenceNumber: referenceNumber)
         case .no, .none:
-            return .checkYourAnswers(referenceNumber: referenceNumber)
+            return CatchRecordRouting.checkYourAnswersOrNudgeRoute(
+                tripEndDate: draft.returnDate,
+                vessel: draft.vessel ?? "",
+                referenceNumber: referenceNumber,
+                now: now()
+            )
         }
     }
 

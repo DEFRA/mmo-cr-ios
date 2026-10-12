@@ -144,10 +144,10 @@ private func previewDraft() -> CatchRecordDraft {
         GearCatch(
             gear: gear,
             statisticalArea: "27.7.e",
-            speciesCaught: [SpeciesOption(id: "cod", name: "Atlantic cod (COD)", weightAboveMinimumKg: "250")]
+            speciesCaught: [SpeciesOption(id: "cod", name: "Atlantic cod (COD)", weights: .init(aboveMinimumKg: "250"))]
         )
     ]
-    draft.speciesNotLanded = [SpeciesOption(id: "cod", name: "Atlantic cod (COD)", weightAboveMinimumKg: "5")]
+    draft.speciesNotLanded = [SpeciesOption(id: "cod", name: "Atlantic cod (COD)", weights: .init(aboveMinimumKg: "5"))]
     return draft
 }
 

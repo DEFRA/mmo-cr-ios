@@ -10,8 +10,30 @@ nonisolated struct UnsentDraftSummary: Identifiable, Hashable, Sendable {
     let vessel: String?
     let tripEndDate: Date?
     let lastEditedAt: Date
+    /// Denormalised checkpoint for this draft (see `CatchRecordEntity.checkpointRawValue`,
+    /// BR-SUB-010/AC12). Falls back to `.vessel` for any row persisted before this field existed.
+    let checkpoint: CatchRecordCheckpoint
+
+    init(
+        localID: UUID,
+        vessel: String?,
+        tripEndDate: Date?,
+        lastEditedAt: Date,
+        checkpointRawValue: Int? = nil
+    ) {
+        self.localID = localID
+        self.vessel = vessel
+        self.tripEndDate = tripEndDate
+        self.lastEditedAt = lastEditedAt
+        self.checkpoint = checkpointRawValue.flatMap(CatchRecordCheckpoint.init(rawValue:)) ?? .vessel
+    }
 
     var id: UUID { localID }
+
+    /// Whether this draft has reached Check your answers at least once — the "Complete Not
+    /// Submitted" state distinct from still being "Draft" in progress (see BR-SUB-010/AC12). The
+    /// visible status-tag rename this backs is deferred pending a design decision (see the plan).
+    var isComplete: Bool { checkpoint >= .checkYourAnswers }
 }
 
 /// Persists the in-progress "Create a catch record" journey (`CatchRecordDraft`) on-device, so an
@@ -61,13 +83,15 @@ final class SwiftDataCatchRecordDraftStore: CatchRecordDraftStoring {
             existing.vessel = draft.vessel
             existing.tripEndDate = draft.returnDate
             existing.lastEditedAt = Date()
+            existing.checkpointRawValue = draft.checkpoint.rawValue
         } else {
             let entity = CatchRecordEntity(
                 localID: localID,
                 lastEditedAt: Date(),
                 vessel: draft.vessel,
                 tripEndDate: draft.returnDate,
-                payload: payloadData
+                payload: payloadData,
+                checkpointRawValue: draft.checkpoint.rawValue
             )
             modelContext.insert(entity)
         }
@@ -98,7 +122,13 @@ final class SwiftDataCatchRecordDraftStore: CatchRecordDraftStoring {
         )
         let entities = try modelContext.fetch(descriptor)
         return entities.map {
-            UnsentDraftSummary(localID: $0.localID, vessel: $0.vessel, tripEndDate: $0.tripEndDate, lastEditedAt: $0.lastEditedAt)
+            UnsentDraftSummary(
+                localID: $0.localID,
+                vessel: $0.vessel,
+                tripEndDate: $0.tripEndDate,
+                lastEditedAt: $0.lastEditedAt,
+                checkpointRawValue: $0.checkpointRawValue
+            )
         }
     }
 }
@@ -114,6 +144,7 @@ final class InMemoryCatchRecordDraftStore: CatchRecordDraftStoring {
         var tripEndDate: Date?
         var lastEditedAt: Date
         var isSubmitted: Bool
+        var checkpoint: CatchRecordCheckpoint
     }
 
     private nonisolated(unsafe) var records: [UUID: Record] = [:]
@@ -124,7 +155,14 @@ final class InMemoryCatchRecordDraftStore: CatchRecordDraftStoring {
     nonisolated init(seed: [UUID: CatchRecordDraftPayload] = [:]) {
         let now = Date()
         records = seed.mapValues {
-            Record(payload: $0, vessel: $0.vessel, tripEndDate: $0.returnDate, lastEditedAt: now, isSubmitted: false)
+            Record(
+                payload: $0,
+                vessel: $0.vessel,
+                tripEndDate: $0.returnDate,
+                lastEditedAt: now,
+                isSubmitted: false,
+                checkpoint: $0.checkpoint
+            )
         }
     }
 
@@ -134,7 +172,8 @@ final class InMemoryCatchRecordDraftStore: CatchRecordDraftStoring {
             vessel: draft.vessel,
             tripEndDate: draft.returnDate,
             lastEditedAt: Date(),
-            isSubmitted: records[draft.localID]?.isSubmitted ?? false
+            isSubmitted: records[draft.localID]?.isSubmitted ?? false,
+            checkpoint: draft.checkpoint
         )
     }
 
@@ -149,7 +188,15 @@ final class InMemoryCatchRecordDraftStore: CatchRecordDraftStoring {
     func allUnsentDrafts() async throws -> [UnsentDraftSummary] {
         records
             .filter { !$0.value.isSubmitted }
-            .map { UnsentDraftSummary(localID: $0.key, vessel: $0.value.vessel, tripEndDate: $0.value.tripEndDate, lastEditedAt: $0.value.lastEditedAt) }
+            .map {
+                UnsentDraftSummary(
+                    localID: $0.key,
+                    vessel: $0.value.vessel,
+                    tripEndDate: $0.value.tripEndDate,
+                    lastEditedAt: $0.value.lastEditedAt,
+                    checkpointRawValue: $0.value.checkpoint.rawValue
+                )
+            }
             .sorted { $0.lastEditedAt > $1.lastEditedAt }
     }
 }

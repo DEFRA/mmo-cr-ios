@@ -101,6 +101,11 @@ enum CatchRecordRoute: Hashable {
     /// submission API call succeeds. Carries the reference number so it can be shown in the
     /// green confirmation panel; "View your catch records" returns to Home (`popToRoot()`).
     case submissionSuccess(referenceNumber: String)
+    /// Shown instead of `submissionSuccess` when `submissionConfirmation`'s "Accept and submit
+    /// trip details" is confirmed while the device has no connectivity (BR-SUB-008/AC10/AC11): the
+    /// record stays saved on-device and is **not** submitted. Carries the reference number so it
+    /// can be shown alongside the explanatory message; "View your catch records" returns to Home.
+    case submissionSaved(referenceNumber: String)
 }
 
 /// Which species screen the Add-species screen should return to after a successful save.

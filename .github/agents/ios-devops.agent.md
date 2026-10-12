@@ -79,7 +79,7 @@ Do not run a second, separate validation round — the plan is checked against t
   per app** via an `app` input) that **compiles each of the three apps once** (dev/test/prod bundle IDs) from the
   **same tagged commit** to internal TestFlight and, **in the same run**, promotes to external TestFlight by
   **re-packaging the same archive with the external backend URL (build `N.1`) — no recompile** — then (Prod run)
-  submits that same `N.1` upload to the App Store (ADR-0015). There is **no** separate promotion workflow; GitHub's
+  submits that same `N.1` upload to the App Store (ADR-0021). There is **no** separate promotion workflow; GitHub's
   35-day run / 30-day approval limits are accepted.
 - **Fastlane** — `Fastfile` lanes, `Appfile`, `Matchfile`/signing config, `Gemfile` pinning.
 - **Signing & secrets** — App Store Connect API key auth, temporary keychains, Match vs manual `.p12` vs
@@ -92,7 +92,7 @@ Do not run a second, separate validation round — the plan is checked against t
 - **Configuration & identity (frozen)** — three bundle IDs (`mmo.catchrecordingdev.ios` /
   `mmo.catchrecordingtest.ios` / `mmo.catchrecording.ios`) as three App Store Connect apps serving five
   backends, identity via `.xcconfig`/schemes and the single backend URL injected from GitHub Environment
-  variables — never committed (ADR-0014).
+  variables — never committed (ADR-0020).
 - **Security setup** — the **CodeQL advanced-setup workflow** and the **Dependabot config** as their own
   separate files; confirming secret scanning + push protection are on; pinning Actions to full commit SHAs.
 - **Config** — `.xcconfig` (non-sensitive), `exportOptions.plist`, and pipeline docs/ADRs.
@@ -123,7 +123,7 @@ the iOS Developer.
 ## ADRs
 
 When a change **establishes or alters** the delivery architecture — the **configuration strategy**
-(compile once, configure at promotion — ADR-0014/0015), the **bundle-ID / environment model**, the signing strategy, the
+(compile once, configure at promotion — ADR-0020/0021), the **bundle-ID / environment model**, the signing strategy, the
 release model, the environment/approval topology, or first-time pipeline scaffolding — **create or update
 the relevant ADR under `docs/adr/` first**, then build against it. Also remind the team that the
 native-iOS decision itself, and any Xcode Cloud / cloud real-device (UK data residency) adoption, must be

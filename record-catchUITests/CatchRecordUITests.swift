@@ -40,6 +40,7 @@ final class CatchRecordUITests: XCTestCase {
         static let returnHeading = "CatchRecord.tripDate.return.heading"
         static let returnContinue = "CatchRecord.tripDate.return.saveContinue"
         static let returnPicker = "CatchRecord.tripDate.return.picker"
+        static let returnOnlyDateAvailable = "CatchRecord.tripDate.return.onlyDateAvailable"
 
         static let warningBox = "Home.warningBox"
     }
@@ -215,9 +216,14 @@ final class CatchRecordUITests: XCTestCase {
         XCTAssertTrue(element(app, ID.departurePicker).exists)
         app.buttons[ID.departureContinue].tap()
 
-        // Return date screen.
+        // Return date screen. Departure was accepted unchanged (defaults to today), so the only
+        // legal return date is also today — the range collapses to a single day and the screen
+        // shows the static "only date available" confirmation instead of the interactive wheel
+        // (see `TripDatePicker`: a `.wheel` `DatePicker` with a single-day range is an unstable
+        // UIKit configuration that can hang/crash on-device the moment it's touched).
         XCTAssertTrue(element(app, ID.returnHeading).waitForExistence(timeout: 5))
-        XCTAssertTrue(element(app, ID.returnPicker).exists)
+        XCTAssertTrue(element(app, ID.returnOnlyDateAvailable).exists)
+        XCTAssertFalse(element(app, ID.returnPicker).exists)
         app.buttons[ID.returnContinue].tap()
 
         // With no favourites yet, enters the port sub-journey at the Add-port screen.
@@ -276,6 +282,36 @@ final class CatchRecordUITests: XCTestCase {
 
         // With no favourite gears yet, enters the gear sub-journey at the Add-gear screen.
         XCTAssertTrue(element(app, "CatchRecord.addGear.heading").waitForExistence(timeout: 5))
+    }
+
+    // MARK: - Add port / Add gear — blank-submit validation (WCAG 2.2 SC 3.3.1)
+
+    @MainActor
+    func test_addPort_submitWithBlankSearch_showsInlineError_andDoesNotRoute() {
+        let app = launch("-uiTestCatchRecordAddPort")
+
+        XCTAssertTrue(element(app, "CatchRecord.addPort.heading").waitForExistence(timeout: 5))
+        app.buttons["CatchRecord.addPort.saveContinue"].tap()
+
+        // Previously this was silent: the inline error was gated behind a non-empty query, so a
+        // completely blank submit showed nothing at all.
+        XCTAssertTrue(element(app, "CatchRecord.addPort.error").waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Enter the port you want to add"].exists)
+        XCTAssertTrue(element(app, "CatchRecord.addPort.heading").exists)
+    }
+
+    @MainActor
+    func test_addPort_submitWithTypedButUnselectedSearch_showsSelectFromListError() {
+        let app = launch("-uiTestCatchRecordAddPort")
+
+        let field = app.textFields.firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.typeText("Newl")
+        app.buttons["CatchRecord.addPort.saveContinue"].tap()
+
+        XCTAssertTrue(element(app, "CatchRecord.addPort.error").waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Select a port from the list"].exists)
     }
 
     @MainActor
@@ -480,9 +516,13 @@ final class CatchRecordUITests: XCTestCase {
 
         app.buttons[GearID.saveContinue].tap()
 
-        // Required variable measurement is empty → stays on the gear screen.
+        // Required variable measurement is empty → stays on the gear screen, and the inline
+        // "Enter a whole number" error is now shown (previously it never appeared: the view
+        // hard-coded `didAttemptSubmit: false` for this field, so no error rendered even though
+        // the routing guard below correctly blocked navigation).
         XCTAssertTrue(element(app, GearID.heading).exists)
         XCTAssertFalse(element(app, GearID.catchLocationHeading).exists)
+        XCTAssertTrue(app.staticTexts["Enter a whole number"].waitForExistence(timeout: 5))
     }
 
     @MainActor

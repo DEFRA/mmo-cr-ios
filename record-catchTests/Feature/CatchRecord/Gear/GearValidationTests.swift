@@ -15,12 +15,29 @@ final class GearValidationTests: XCTestCase {
 
     // MARK: - AddGearValidation
 
-    func test_addGear_noSelection_returnsError() {
-        XCTAssertEqual(AddGearValidation.errorKey(for: nil), "catchRecord.addGear.validation.none")
+    func test_addGear_messageWhenQueryBlank_asksUserToEnter() {
+        XCTAssertEqual(
+            AddGearValidation.message(query: "", selectedGear: nil),
+            ValidationMessage("catchRecord.addGear.validation.enter")
+        )
     }
 
-    func test_addGear_withSelection_returnsNil() {
-        XCTAssertNil(AddGearValidation.errorKey(for: .seineNets))
+    func test_addGear_messageWhenWhitespaceOnly_treatedAsBlank() {
+        XCTAssertEqual(
+            AddGearValidation.message(query: "   ", selectedGear: nil),
+            ValidationMessage("catchRecord.addGear.validation.enter")
+        )
+    }
+
+    func test_addGear_messageWhenTypedButNothingSelected_asksUserToSelectFromList() {
+        XCTAssertEqual(
+            AddGearValidation.message(query: "Sein", selectedGear: nil),
+            ValidationMessage("catchRecord.addGear.validation.none")
+        )
+    }
+
+    func test_addGear_messageWithValidSelection_isNil() {
+        XCTAssertNil(AddGearValidation.message(query: GearOption.seineNets.name, selectedGear: .seineNets))
     }
 
     // MARK: - GearMeasurementValidation

@@ -145,6 +145,8 @@ struct UITestRootView<ProductionRoot: View>: View {
             CatchRecordHostView(initialRoute: .submissionSuccess(referenceNumber: "A1234520260727150815"))
         } else if launchArguments.contains(.home) {
             RootTabView()
+        } else if launchArguments.contains(.homePaged) {
+            RootTabView(homeRecordsProvider: StubRecordsProvider(rows: Self.seedPagedRows))
         } else if launchArguments.contains(.settings) {
             RootTabView()
         } else if launchArguments.contains(.manageAccount) {
@@ -163,6 +165,23 @@ struct UITestRootView<ProductionRoot: View>: View {
     /// Stubbed unsent record used to seed `-uiTestCatchRecordDraft`.
     private static var seedDraftRow: SubmissionRow {
         SubmissionRow(dateText: "20 Nov 2020", vesselName: "ACHILLES", status: .unsent, createdBy: "J.Smith")
+    }
+
+    /// 6 stubbed rows (2 pages at `HomeViewModel`'s default pageSize of 4) used to seed
+    /// `-uiTestHomePaged`, reproducing the reported bug's exact row count so a regression test can
+    /// assert against it directly. Each row's vessel name is suffixed with its index so a UI test
+    /// can assert the table's visible content actually changes between pages, not just the
+    /// "Showing X to Y of Z" text.
+    private static var seedPagedRows: [SubmissionRow] {
+        (1...6).map { index in
+            SubmissionRow(
+                dateText: "20 Nov 2020",
+                vesselName: "ACHILLES \(index)",
+                status: .submitted,
+                createdBy: "J.Smith",
+                sortDate: Date(timeIntervalSince1970: TimeInterval(7 - index))
+            )
+        }
     }
 
     /// Fully-populated `CatchRecordDraft` used to seed `-uiTestCatchRecordCheckYourAnswers`, so the

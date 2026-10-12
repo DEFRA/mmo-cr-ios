@@ -126,4 +126,75 @@ final class SubmissionConfirmationViewModelTests: XCTestCase {
 
         XCTAssertFalse(sut.isSubmitting)
     }
+
+    // MARK: - Offline submission (BR-SUB-008/AC10/AC11 — no silent data loss, no false "submitted")
+
+    /// A fail-if-called spy: proves the (stubbed) submission service is never invoked while
+    /// offline — the record must not be claimed as submitted when nothing was sent.
+    private struct FailIfCalledSubmissionService: CatchRecordSubmissionServicing {
+        func submit(referenceNumber: String) async throws {
+            XCTFail("the submission service must not be called while offline")
+        }
+    }
+
+    func test_submit_whenOffline_doesNotCallTheSubmissionService_andRoutesToSubmissionSaved() async {
+        let router = CatchRecordRouter()
+        let sut = SubmissionConfirmationViewModel(
+            referenceNumber: referenceNumber,
+            router: router,
+            submissionService: FailIfCalledSubmissionService()
+        )
+        sut.isConfirmed = true
+
+        await sut.submit(isOnline: false)
+
+        XCTAssertEqual(router.path, [.submissionSaved(referenceNumber: referenceNumber)])
+    }
+
+    func test_submit_whenOffline_doesNotDeleteThePersistedDraft() async throws {
+        let draftStore = InMemoryCatchRecordDraftStore()
+        let draft = CatchRecordDraft()
+        draft.vessel = "ACHILLES"
+        try await draftStore.save(draft)
+        let sut = SubmissionConfirmationViewModel(
+            referenceNumber: referenceNumber,
+            router: CatchRecordRouter(),
+            submissionService: FailIfCalledSubmissionService(),
+            draft: draft,
+            draftStore: draftStore
+        )
+        sut.isConfirmed = true
+
+        await sut.submit(isOnline: false)
+
+        let loaded = try await draftStore.loadDraft(localID: draft.localID)
+        XCTAssertNotNil(loaded, "the draft must remain resumable — nothing was submitted")
+    }
+
+    func test_submit_whenOfflineAndNotConfirmed_doesNotRoute() async {
+        let router = CatchRecordRouter()
+        let sut = SubmissionConfirmationViewModel(
+            referenceNumber: referenceNumber,
+            router: router,
+            submissionService: FailIfCalledSubmissionService()
+        )
+
+        await sut.submit(isOnline: false)
+
+        XCTAssertTrue(router.path.isEmpty)
+    }
+
+    func test_submit_isOnline_defaultsToTrue_soExistingCallersAreUnaffected() async {
+        let router = CatchRecordRouter()
+        let sut = SubmissionConfirmationViewModel(
+            referenceNumber: referenceNumber,
+            router: router,
+            submissionService: StubSuccessSubmissionService()
+        )
+        sut.isConfirmed = true
+
+        await sut.submit() // no `isOnline:` argument — must still take the online path
+
+        XCTAssertEqual(router.path, [.submissionSuccess(referenceNumber: referenceNumber)])
+    }
 }

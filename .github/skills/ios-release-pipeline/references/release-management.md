@@ -53,7 +53,7 @@ governing standards.
                     (no hotfix/release branch — the trunk is always releasable)
 ```
 
-> **Compile once, configure at promotion** (ADR-0015). Internal and external builds of an app share the same
+> **Compile once, configure at promotion** (ADR-0021). Internal and external builds of an app share the same
 > compiled program; only `MMOCRAppConfig` and the build number differ. The App Store receives the exact `N.1`
 > upload the sanity testers used. Promotion runs in the app's own `ios-release.yml` run; a GitHub run is cancelled
 > after 35 days including approval waits, which is accepted.

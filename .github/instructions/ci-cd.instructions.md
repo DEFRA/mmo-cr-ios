@@ -53,7 +53,7 @@ This is a **small team practising trunk-based development**. The model is delibe
   ship with the next bumped release. Once build and tests pass on `main`, *iOS CI* pushes the tag. A manual *iOS
   CI* run with `publish_release_tag: true` (default `false`) also publishes one. **CI only tags; it never starts a
   release.** Tag format:
-  **`vMAJOR.MINOR.PATCH-BUILD_BUILDNUMBER`** (e.g. `v2.0.0-BUILD_9`), derived from `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` in `Config/Base.xcconfig` (ADR-0014).
+  **`vMAJOR.MINOR.PATCH-BUILD_BUILDNUMBER`** (e.g. `v2.0.0-BUILD_9`), derived from `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` in `Config/Base.xcconfig` (ADR-0020).
 - **Releases have one entry point: manual `workflow_dispatch` of *iOS Release* on a release tag** ("Use workflow
   from" → the tag). There is no tag-push trigger and no version input: the release fails unless it runs on a tag
   and that tag matches the version in the code at that tag.
@@ -75,11 +75,11 @@ This is a **small team practising trunk-based development**. The model is delibe
 ## Versioning
 
 - **Single source of truth in code** ([ADR-0011](../../docs/adr/0011-release-pipeline.md) §3a, amended by
-  [ADR-0014](../../docs/adr/0014-build-time-app-identity-configuration.md)): `MARKETING_VERSION`
+  [ADR-0020](../../docs/adr/0020-build-time-app-identity-configuration.md)): `MARKETING_VERSION`
   (`CFBundleShortVersionString`) and `CURRENT_PROJECT_VERSION` (`CFBundleVersion`, build `N`) live in
   `Config/Base.xcconfig`. Developers bump them in a PR; merging to `main` publishes the tag
   `v<marketing>-BUILD_<N>`, and the release workflow validates the tag against the file.
-- **External promotion build number is `N.1`** ([ADR-0015](../../docs/adr/0015-compile-once-configure-at-promotion.md)):
+- **External promotion build number is `N.1`** ([ADR-0021](../../docs/adr/0021-compile-once-configure-at-promotion.md)):
   the promoted package of build `N` is uploaded as `N.1` (a valid `CFBundleVersion` — up to three
   period-separated integers), keeping it unique within the App Store Connect app and traceable to the tag.
 - **Do not query App Store Connect for the build number** — a network lookup adds a race between concurrent
@@ -93,8 +93,8 @@ This is a **small team practising trunk-based development**. The model is delibe
 
 ## Configuration strategy — compile once, configure at promotion (frozen)
 
-**Frozen decision** ([ADR-0014](../../docs/adr/0014-build-time-app-identity-configuration.md),
-[ADR-0015](../../docs/adr/0015-compile-once-configure-at-promotion.md)): the app ships as **three App Store
+**Frozen decision** ([ADR-0020](../../docs/adr/0020-build-time-app-identity-configuration.md),
+[ADR-0021](../../docs/adr/0021-compile-once-configure-at-promotion.md)): the app ships as **three App Store
 Connect apps** serving **five backends**. The app holds **one stage configuration** (the `MMOCRAppConfig`
 dictionary in `Info.plist`, including `API_BASE_URL`) and has **no runtime environment selector** and no runtime
 lookup.
@@ -319,7 +319,7 @@ Record at least these as ADRs under `docs/adr/`:
 
 1. GitHub Actions + Fastlane as the iOS delivery architecture (and the native-app exception).
 2. **Build-time app identity configuration** — three apps via `.xcconfig`, backend URL injected from CI
-   ([ADR-0014](../../docs/adr/0014-build-time-app-identity-configuration.md)).
+   ([ADR-0020](../../docs/adr/0020-build-time-app-identity-configuration.md)).
 3. Code-signing strategy and signing-asset custody (three bundle IDs managed by Match).
 4. **Three-application bundle-ID and five-backend environment model** (`dev` / `test` / `prod` as separate
    App Store Connect apps).
@@ -327,7 +327,7 @@ Record at least these as ADRs under `docs/adr/`:
    each app's build and promotions, six gated
    Environments.
 6. **Compile once, configure at promotion** — no recompile internal → external; build once external → App
-   Store ([ADR-0015](../../docs/adr/0015-compile-once-configure-at-promotion.md)).
+   Store ([ADR-0021](../../docs/adr/0021-compile-once-configure-at-promotion.md)).
 7. Internal & external TestFlight distribution model (per-app internal + external groups).
 8. Cloud real-device testing platform and UK data residency, if adopted.
 9. Production approval and phased-release policy.

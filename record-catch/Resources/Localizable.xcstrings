@@ -3291,24 +3291,6 @@
         }
       }
     },
-    "catchRecord.tripDate.onlyDateAvailable": {
-      "comment": "Shown instead of the wheel date picker on the trip-date screens when the selectable range is a single day (e.g. the return date screen when the departure date is today, so the only valid return date is also today) — avoids presenting an interactive wheel picker with nothing to scroll to.",
-      "extractionState": "manual",
-      "localizations": {
-        "cy": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Yr unig ddyddiad y gallwch ei ddewis yw %@."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The only date you can select is %@."
-          }
-        }
-      }
-    },
     "catchRecord.tripDate.return.hint": {
       "comment": "Hint for the trip return date screen.",
       "extractionState": "manual",

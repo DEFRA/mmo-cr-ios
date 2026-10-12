@@ -120,6 +120,119 @@ final class SettingsViewModelTests: XCTestCase {
 
         XCTAssertTrue(sut.analyticsEnabled)
     }
+
+    // MARK: - TEMPORARY DEBUG-ONLY: species reference-data smoke check
+    //
+    // Covers `SettingsViewModel`'s `#if DEBUG`-only `debugFetchSpeciesTapped()` seam (see its doc
+    // comment) — an error-handling/networking path, so this must stay at 100% coverage per
+    // testing.instructions.md for as long as the temporary feature exists.
+
+    func test_debugFetchSpeciesTapped_onSuccess_populatesResultMessageWithSpeciesNames() async throws {
+        let species = [SpeciesOption(name: "Atlantic cod (COD)"), SpeciesOption(name: "Haddock (HAD)")]
+        let client = StubReferenceDataClient(species: species)
+        let sut = SettingsViewModel(
+            preferenceStore: InMemoryAnalyticsPreferenceStore(),
+            debugReferenceDataClient: client
+        )
+
+        await sut.debugFetchSpeciesTapped()
+
+        XCTAssertFalse(sut.isFetchingDebugSpecies)
+        XCTAssertTrue(sut.isShowingDebugSpeciesResultAlert)
+        let message = try XCTUnwrap(sut.debugSpeciesResultMessage)
+        XCTAssertTrue(message.contains("2 species"))
+        XCTAssertTrue(message.contains("Atlantic cod (COD)"))
+        XCTAssertTrue(message.contains("Haddock (HAD)"))
+    }
+
+    func test_debugFetchSpeciesTapped_onEmptySuccess_populatesZeroCountMessage() async {
+        let client = StubReferenceDataClient(species: [])
+        let sut = SettingsViewModel(
+            preferenceStore: InMemoryAnalyticsPreferenceStore(),
+            debugReferenceDataClient: client
+        )
+
+        await sut.debugFetchSpeciesTapped()
+
+        XCTAssertEqual(sut.debugSpeciesResultMessage, "Fetched 0 species.")
+    }
+
+    func test_debugFetchSpeciesTapped_onAPIError_populatesFailureMessage() async {
+        let client = StubReferenceDataClient(error: .response(status: 503, details: nil))
+        let sut = SettingsViewModel(
+            preferenceStore: InMemoryAnalyticsPreferenceStore(),
+            debugReferenceDataClient: client
+        )
+
+        await sut.debugFetchSpeciesTapped()
+
+        XCTAssertFalse(sut.isFetchingDebugSpecies)
+        let message = try? XCTUnwrap(sut.debugSpeciesResultMessage)
+        XCTAssertEqual(message, "Fetch failed: HTTP 503 (unknown).")
+    }
+
+    func test_debugFetchSpeciesTapped_onOfflineError_populatesOfflineMessage() async {
+        let client = StubReferenceDataClient(error: .offline)
+        let sut = SettingsViewModel(
+            preferenceStore: InMemoryAnalyticsPreferenceStore(),
+            debugReferenceDataClient: client
+        )
+
+        await sut.debugFetchSpeciesTapped()
+
+        XCTAssertEqual(sut.debugSpeciesResultMessage, "Fetch failed: device appears offline.")
+    }
+
+    func test_debugFetchSpeciesTapped_onTimeout_populatesTimeoutMessage() async {
+        let client = StubReferenceDataClient(error: .timedOut)
+        let sut = SettingsViewModel(
+            preferenceStore: InMemoryAnalyticsPreferenceStore(),
+            debugReferenceDataClient: client
+        )
+
+        await sut.debugFetchSpeciesTapped()
+
+        XCTAssertEqual(sut.debugSpeciesResultMessage, "Fetch failed: request timed out.")
+    }
+
+    func test_debugFetchSpeciesTapped_onInvalidConfiguration_populatesConfigurationMessage() async {
+        let client = StubReferenceDataClient(error: .invalidConfiguration)
+        let sut = SettingsViewModel(
+            preferenceStore: InMemoryAnalyticsPreferenceStore(),
+            debugReferenceDataClient: client
+        )
+
+        await sut.debugFetchSpeciesTapped()
+
+        XCTAssertEqual(sut.debugSpeciesResultMessage, "Fetch failed: invalid API configuration.")
+    }
+
+    func test_debugFetchSpeciesTapped_onDecodingError_populatesDecodingMessage() async {
+        let client = StubReferenceDataClient(error: .decoding("bad shape"))
+        let sut = SettingsViewModel(
+            preferenceStore: InMemoryAnalyticsPreferenceStore(),
+            debugReferenceDataClient: client
+        )
+
+        await sut.debugFetchSpeciesTapped()
+
+        XCTAssertEqual(sut.debugSpeciesResultMessage, "Fetch failed: could not decode response (bad shape).")
+    }
+
+    func test_isShowingDebugSpeciesResultAlert_settingFalse_clearsResultMessage() async {
+        let client = StubReferenceDataClient(species: [SpeciesOption(name: "Atlantic cod (COD)")])
+        let sut = SettingsViewModel(
+            preferenceStore: InMemoryAnalyticsPreferenceStore(),
+            debugReferenceDataClient: client
+        )
+        await sut.debugFetchSpeciesTapped()
+        XCTAssertTrue(sut.isShowingDebugSpeciesResultAlert)
+
+        sut.isShowingDebugSpeciesResultAlert = false
+
+        XCTAssertFalse(sut.isShowingDebugSpeciesResultAlert)
+        XCTAssertNil(sut.debugSpeciesResultMessage)
+    }
 }
 
 /// Records how many times `setAnalyticsEnabled` is called, so tests can assert the

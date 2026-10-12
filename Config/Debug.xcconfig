@@ -16,3 +16,10 @@
 // appends paths with `URLComponents.path +=`, so a trailing slash would produce a doubled `//`.
 // The `$()` escapes are required so xcconfig doesn't treat `//` as a line comment.
 API_BASE_URL = https:$()/$()/mmo-cr-catch-recording-service.api.dev.cdp-int.defra.cloud/reference-data-service
+
+// ⚠️ TEMPORARY — remove this line (and the `#if DEBUG || ENABLE_DEBUG_REFERENCE_DATA_TOOL`
+// code it gates in SettingsViewModel.swift / SettingsView.swift / AuthTokenProviding.swift)
+// before release. Added alongside (not replacing) `DEBUG` so the Settings "fetch species" debug
+// tool also survives an Archive/Release build for manual TestFlight verification — see the
+// matching entry (and its own warning) in Release.xcconfig.
+SWIFT_ACTIVE_COMPILATION_CONDITIONS = $(inherited) ENABLE_DEBUG_REFERENCE_DATA_TOOL

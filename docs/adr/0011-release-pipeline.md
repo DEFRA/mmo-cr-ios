@@ -1,6 +1,7 @@
 # ADR 0011 — Release (CD) pipeline: Fastlane on GitHub Actions, DEV increment
 
-- Status: Accepted
+- Status: Accepted — amended by [ADR-0020](0020-build-time-app-identity-configuration.md) and
+  [ADR-0021](0021-compile-once-configure-at-promotion.md) (see "Amendments" at the end)
 - Date: 2026-08
 - Deciders: iOS engineering / DevOps
 - Context tags: ci-cd, github-actions, fastlane, testflight, code-signing, match, native-iOS
@@ -79,10 +80,15 @@ a `MATCH_PASSWORD` passphrase and stored in the **private** repo
   because GitHub will not accept the same key on two repositories; `actions/checkout` uses the
   `GITHUB_TOKEN`, so there is no conflict.
 - **CI never mints credentials.** `setup_ci` creates an isolated temporary keychain (`fastlane_tmp_keychain`)
-  and `match(readonly: true)` only fetches existing assets. Certificate/profile creation and renewal are a
-  deliberate, local act by a signing administrator holding Apple Developer App Manager rights and write
-  access to the signing repo (`bundle exec fastlane match appstore`). A `certificates` lane exists so
-  developers can sync read-only.
+  and `match(readonly: true)` only fetches existing assets. All three apps share the team's single Apple
+  Distribution certificate; each app has its own App Store profile. Adding an app's profile
+  (`bundle exec fastlane match appstore --app_identifier <bundle-id>`) is a deliberate, local act by a signing
+  administrator holding Apple Developer App Manager rights and write access to the signing repo; Match never
+  creates a certificate. A `certificates` lane exists so developers can sync read-only.
+- The certificate's private key is stored as an **unencrypted PEM RSA key** (the format Fastlane itself
+  writes, under a `.p12` file name). `match` installs it with an empty password, and macOS rejects
+  OpenSSL-made PKCS#12 files that have an empty password. The release lane fails fast if a certificate
+  installs without its private key.
 - The provisioning profile name is taken from Match's
   `SharedValues::MATCH_PROVISIONING_PROFILE_MAPPING` (falling back to sigh's env var) and passed to
   `build_app` as `PROVISIONING_PROFILE_SPECIFIER` plus the `export_options` mapping, so no profile name is
@@ -94,9 +100,9 @@ has been removed, together with its `BUILD_CERTIFICATE_BASE64`, `P12_PASSWORD`,
 `BUILD_PROVISION_PROFILE_BASE64`, `KEYCHAIN_PASSWORD` and `PROVISIONING_PROFILE_NAME` secrets. Only the
 release job receives signing secrets; PR CI never does.
 
-The one-off administrator procedure for populating the store — GitHub SSH access, converting the existing
-certificate to DER and running `fastlane match import` — is documented in
-[Fastlane Match — importing existing signing assets](../release/fastlane-match-signing.md).
+Every administrator procedure is documented step by step, with the reason for each step, in the
+Fastlane Match signing runbook (`iOS/fastlane-match-signing.md` in the `mmo-cr-devops` repository). It covers importing the existing
+certificate and key into an empty store, adding the Test and Prod profiles, and replacing a stored key.
 
 ## Consequences
 
@@ -116,3 +122,39 @@ certificate to DER and running `fastlane match import` — is documented in
   Actions to full commit SHAs before this is relied on for real release engineering.
 - Xcode Cloud was considered and not adopted for release; GitHub Actions + Fastlane remains the sole
   orchestrator (design §3).
+
+## Amendments
+
+- **2026-09 — [ADR-0020](0020-build-time-app-identity-configuration.md):** versions move from `project.pbxproj`
+  to `Config/Base.xcconfig` (§3a's single source of truth is now that file); the tag scripts read it through
+  Fastlane. The three identities, `.xcconfig`/schemes and the CI-injected backend URL follow-ups are defined there.
+- **2026-09 — [ADR-0021](0021-compile-once-configure-at-promotion.md):** the six-job single-run topology is
+  replaced by build jobs in `ios-release.yml` plus a manually dispatched, gated `ios-promote.yml` (GitHub's
+  35-day run / 30-day approval limits). External promotion becomes *compile once, configure at promotion*
+  (re-package with the external backend URL, build `N.1`, upload) instead of a metadata-only assignment.
+  **Amended 2026-10:** `ios-promote.yml` is dropped; each app has its own `ios-release.yml` run holding its build and
+  promotions, within the accepted 35-day / 30-day limits (ADR-0021, Amendments).
+- **2026-09 — release tagging and trigger** (supersedes decision 2's triggers and 3a's overrides):
+  - *iOS CI* publishes the tag on every merge to `main` **except Dependabot merges** (detected from the commit's
+    PR), and on a manual run with `publish_release_tag: true` (default `false`); always after build and tests
+    pass. Runs on `main` are never cancelled. **CI never starts a release.**
+  - `ios-release.yml` has **one entry point, manual `workflow_dispatch` on a release tag**. The `v*` tag-push
+    trigger and the `marketing_version` / `project_version` override inputs are removed: the version comes
+    **only from the code**, and the run fails unless its tag matches that code.
+  - Release tags are protected by a `v*` ruleset (no update/delete).
+  - **PR version check:** every non-Dependabot PR must bump the version — *iOS CI* fails the PR if its tag already
+    exists or its build is not higher than the target branch's. The tag job on `main` remains the final guard.
+  - **POC exception:** tags may be published from non-`main` branches via manual *iOS CI*. After the POC,
+    tagging and releasing are restricted to `main`.
+
+## Post-POC hardening (required before real Test/Prod releases)
+
+Time-boxed POC deviations, each to be closed before this pipeline releases the Test or Prod app:
+
+1. **Release only from `main`.** Guard the *iOS CI* `release-tag` job so manual runs tag only on
+   `refs/heads/main`, and make `validate-release-tag.sh` confirm the tag's commit is on `main`
+   (`git merge-base --is-ancestor <tag> origin/main`). Today a manual *iOS CI* run on a feature branch can tag
+   unmerged code, and that tag can be released.
+2. **Pin every third-party Action to a full commit SHA** (DEFRA supply-chain requirement) across `ios-ci.yml`,
+   `ios-release.yml` and any new workflow, with Dependabot keeping the SHAs current. Actions are currently pinned
+   to version tags — the POC deviation first recorded in ADR-0008.

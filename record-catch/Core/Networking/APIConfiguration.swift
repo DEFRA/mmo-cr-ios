@@ -2,10 +2,8 @@
 //  APIConfiguration.swift
 //  record-catch
 //
-//  Build-time API base URL resolution (see ADR-0018 §3). Reads the `APIBaseURL` Info.plist key,
-//  itself substituted from the `API_BASE_URL` .xcconfig build setting per-configuration
-//  (Config/Debug.xcconfig, Config/Release.xcconfig) — the frozen "Option B" build-time
-//  configuration approach in .github/instructions/ci-cd.instructions.md.
+//  Build-time API base URL resolution (ADR-0020 §2): reads Info.plist MMOCRAppConfig.API_BASE_URL,
+//  written by the Debug build phase locally and by the release pipeline for shipped builds.
 //
 
 import Foundation
@@ -19,16 +17,18 @@ nonisolated protocol InfoDictionaryProviding: Sendable {
 
 extension Bundle: InfoDictionaryProviding {}
 
-/// Resolves and validates the app's reference-data API base URL from `Bundle.main`'s Info.plist.
+/// Resolves and validates the app's reference-data API base URL from `Bundle.main`'s Info.plist
+/// using the `MMOCRAppConfig` dictionary defined in ADR-0020 §2.
 nonisolated struct APIConfiguration: Sendable {
     let baseURL: URL
 
+    private static let configKey = "MMOCRAppConfig"
+    private static let baseURLKey = "API_BASE_URL"
+
     /// - Parameter bundle: Defaults to `Bundle.main`; overridable in tests via any
     ///   `InfoDictionaryProviding`.
-    /// - Throws: `APIError.invalidConfiguration` if `APIBaseURL` is missing, blank, fails to parse
-    ///   as a URL, or (outside a `DEBUG` build) is not `https`. The non-HTTPS rejection is
-    ///   defence-in-depth: even if a Release `.xcconfig` were ever misconfigured with an `http://`
-    ///   value, a Release/App-Store binary can never accept it (see ADR-0018 §3).
+    /// - Throws: `APIError.invalidConfiguration` if `MMOCRAppConfig.API_BASE_URL` is missing, blank,
+    ///   unparseable, or not `https` outside `DEBUG` (defence-in-depth, ADR-0020 §2).
     init(bundle: InfoDictionaryProviding = Bundle.main) throws {
         #if DEBUG
         let allowsInsecureHTTP = true
@@ -43,7 +43,8 @@ nonisolated struct APIConfiguration: Sendable {
     /// build (the public `init(bundle:)` above always resolves this from `#if DEBUG`).
     init(bundle: InfoDictionaryProviding, allowsInsecureHTTP: Bool) throws {
         guard
-            let rawValue = bundle.object(forInfoDictionaryKey: "APIBaseURL") as? String,
+            let config = bundle.object(forInfoDictionaryKey: Self.configKey) as? [String: Any],
+            let rawValue = config[Self.baseURLKey] as? String,
             !rawValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
             let url = URL(string: rawValue),
             let scheme = url.scheme,
@@ -56,7 +57,7 @@ nonisolated struct APIConfiguration: Sendable {
     }
 
     /// Pure scheme check: `https` is always acceptable; plain `http` is only acceptable when
-    /// `allowsInsecureHTTP` is `true` (i.e. a DEBUG build — see ADR-0018 §3).
+    /// `allowsInsecureHTTP` is `true` (i.e. a DEBUG build — see ADR-0020 §2).
     static func isAcceptableScheme(_ scheme: String, allowsInsecureHTTP: Bool) -> Bool {
         if scheme.caseInsensitiveCompare("https") == .orderedSame {
             return true

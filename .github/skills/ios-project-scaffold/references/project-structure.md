@@ -22,15 +22,16 @@ mmo-cr-ios/
 │   │   └── DesignSystem/                  # accessible components, colours, typography, spacing
 │   ├── Resources/
 │   │   ├── Assets.xcassets
-│   │   ├── Localizable.xcstrings
-│   │   └── Info.plist
+│   │   └── Localizable.xcstrings          # no Info.plist: Xcode generates it (ADR-0020)
 │   └── Support/
 │       ├── Logging/                       # OSLog wrappers, debug log level, diagnostics export
 │       └── Extensions/
-├── Config/
-│   ├── Debug.xcconfig
-│   ├── Staging.xcconfig
-│   └── Release.xcconfig
+├── Config/                                # ADR-0020: identity xcconfigs + the config schema, no stage values
+│   ├── Base.xcconfig                      # shared; #include? "Local.xcconfig"
+│   ├── Dev.xcconfig / Test.xcconfig / Prod.xcconfig   # identity only, when the three apps land
+│   ├── Local.xcconfig                     # yours, git-ignored, optional local values
+│   └── app-config.schema.json             # the only maintained config file (MMOCRAppConfig keys)
+├── scripts/inject-app-config.sh           # Debug-only build phase: writes MMOCRAppConfig locally
 ├── Tests/                                 # unit tests mirror source tree
 ├── UITests/                               # XCUITest + accessibility tests
 ├── fastlane/                              # Fastfile, Appfile, Matchfile

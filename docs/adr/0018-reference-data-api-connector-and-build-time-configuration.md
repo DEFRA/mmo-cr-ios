@@ -1,6 +1,7 @@
 # ADR 0018 — Reference data API connector and build-time configuration
 
-- Status: Accepted
+- Status: Accepted — §3 superseded and §4 relocated by
+  [ADR-0020](0020-build-time-app-identity-configuration.md) (see "Amendment (2026-10)" at the end)
 - Date: 2026-09
 - Deciders: iOS engineering
 - Context tags: networking, architecture, security, build-configuration, native-iOS
@@ -573,6 +574,26 @@ change, by team decision rather than oversight:
   `/health/ready`.** Unimplemented and not reconsidered in this pass; the app's
   bundled/precomputed offline map data (`scripts/generate-offline-map-data.sh`) remains the map
   data source.
+
+## Amendment (2026-10): configuration follows ADR-0020
+
+Merging this work with the release pipeline (ADR-0020 §2, ADR-0021) replaced §3's mechanism. A Release `.xcconfig`
+URL would have shipped one committed value to every stage and every App Store Connect app, and the pipeline never
+writes a flat `APIBaseURL` key.
+
+- **§3 superseded.** The base URL is `MMOCRAppConfig.API_BASE_URL`, written by the pipeline from the GitHub
+  Environment variable `CR_APP_CFG_API_BASE_URL`. `Config/Debug.xcconfig` and `Config/Release.xcconfig` are
+  removed; both configurations use `Config/Base.xcconfig`, and local values come from the git-ignored
+  `Config/Local.xcconfig` (e.g. `CR_APP_CFG_API_BASE_URL = http:/$()/localhost:3002`).
+- **§4 kept, now generated.** No `Info.plist` file is committed (the `record-catch/Resources/Info-*.plist` files are
+  removed). The Debug-only build phase *Inject app config (Debug)* adds the ATS exception for `localhost` and for
+  the host of any local `http://` URL, so device testing against this Mac's LAN IP needs no file edit. Release
+  builds never get an ATS key. `NSLocalNetworkUsageDescription` is set on the Debug configuration only, as §4
+  intended.
+- **App follow-up (iOS Developer):** `APIConfiguration` reads `MMOCRAppConfig` → `API_BASE_URL` instead of
+  `APIBaseURL`, keeping the DEBUG-only `http` allowance; the tests that inject `APIBaseURL` move to the same key.
+  Until then `APIConfiguration` reports `invalidConfiguration` at run time; unit tests are unaffected because they
+  inject their own values.
 
 ## References
 

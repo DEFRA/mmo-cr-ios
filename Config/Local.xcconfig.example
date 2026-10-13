@@ -1,0 +1,9 @@
+// Example local values for Config/Local.xcconfig (git-ignored, optional, never committed).
+// Copy this file to Config/Local.xcconfig and edit as needed — it is not required to build.
+//
+// This file is illustrative only and is not checked against Config/app-config.schema.json: adding
+// a new app-config key never requires updating this example. Xcode's build warnings (from the
+// "Inject app config (Debug)" build phase) name any schema key you have not set locally.
+//
+// "//" starts a comment in xcconfig files, so URLs are written with "$()" splitting the slashes.
+CR_APP_CFG_API_BASE_URL = http:/$()/localhost:3002

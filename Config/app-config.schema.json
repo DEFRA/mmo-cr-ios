@@ -1,0 +1,13 @@
+{
+  "plistKey": "MMOCRAppConfig",
+  "variablePrefix": "CR_APP_CFG_",
+  "keys": {
+    "API_BASE_URL": {
+      "type": "url",
+      "required": true,
+      "log": true,
+      "tracking": false,
+      "description": "Base URL of the catch recording backend API for this stage."
+    }
+  }
+}

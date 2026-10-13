@@ -73,6 +73,9 @@ fastlane/test_output
 ._*
 *.bak
 
+# Local app configuration values (ADR-0020); see the README
+Config/Local.xcconfig
+
 # Build output
 #
 # Fastlane redirects Xcode DerivedData into the repo root (see `derived_data_path`
@@ -97,3 +100,4 @@ docs/perf/*.log
 # only Gemfile and Gemfile.lock are version controlled.
 vendor/
 .bundle/
+tmp

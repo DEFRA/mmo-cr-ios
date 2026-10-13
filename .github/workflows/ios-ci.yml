@@ -39,20 +39,6 @@ jobs:
         if: ${{ github.event_name == 'pull_request' && github.event.pull_request.user.login != 'dependabot[bot]' }}
         run: bash .github/workflows/scripts/check-version-bump.sh
 
-      # Xcode is pre-selected by default on this runner image, so explicit xcode-select isn't needed — revisit if that changes.
-      # - name: Select Xcode
-      #   run: |
-      #     set -euo pipefail
-      #     XCODE_APP=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -n1)
-      #     if [ -z "$XCODE_APP" ]; then
-      #       echo "::error::No Xcode 26.x found under /Applications" >&2
-      #       ls /Applications | grep -i xcode >&2 || true
-      #       exit 1
-      #     fi
-      #     echo "Selecting $XCODE_APP"
-      #     sudo xcode-select -s "$XCODE_APP/Contents/Developer"
-      #     xcodebuild -version
-
       - name: Verify iOS Simulator
         run: bash .github/workflows/scripts/verify-simulator.sh
 
@@ -100,14 +86,13 @@ jobs:
           path: sonar-coverage.xml
           retention-days: 14
 
-          #COMMENTED FOR TESTING
-      # - name: SonarQube Cloud scan
-      #   uses: SonarSource/sonarqube-scan-action@v8.2.1
-      #   env:
-      #     SONAR_TOKEN: ${{ secrets.MMO_CR_SONAR_TOKEN }}
-      #     SONAR_HOST_URL: https://sonarcloud.io
-      #   with:
-      #     args: ${{ github.event_name != 'pull_request' && format('-Dsonar.branch.name={0}', github.ref_name) || '' }}
+      - name: SonarQube Cloud scan
+        uses: SonarSource/sonarqube-scan-action@v8.2.1
+        env:
+          SONAR_TOKEN: ${{ secrets.MMO_CR_SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+        with:
+          args: ${{ github.event_name != 'pull_request' && format('-Dsonar.branch.name={0}', github.ref_name) || '' }}
 
   # Tags only — CI never starts a release; iOS Release is run manually on the tag.
   release-tag:

@@ -19,11 +19,6 @@ final class OfflineMapCoordinator: NSObject, MKMapViewDelegate {
     /// Annotation view lookup keyed by sub_code, populated as MapKit requests views.
     private var annotationViewsBySubCode: [String: SubrectangleAnnotationView] = [:]
 
-    /// Port name label view lookup keyed by port_code, populated as MapKit requests views —
-    /// mirrors `annotationViewsBySubCode`, so both label layers show/hide together in
-    /// `regionDidChangeAnimated`.
-    private var portLabelViewsByCode: [Double: PortLabelAnnotationView] = [:]
-
     /// The sub_code currently reflected in the renderers/annotation views.
     /// Used to no-op `syncSelection(_:)` when SwiftUI calls `updateUIView` without the selection
     /// actually having changed, and to know which visuals still need clearing when it has.
@@ -135,23 +130,31 @@ final class OfflineMapCoordinator: NSObject, MKMapViewDelegate {
 
             view.annotation = portLabelAnnotation
             view.configure(name: portLabelAnnotation.name)
-            view.isHidden = !LabelVisibility.shouldShowLabels(forLatitudeDelta: mapView.region.span.latitudeDelta)
-
-            portLabelViewsByCode[portLabelAnnotation.portCode] = view
+            // Deliberately does NOT set `isHidden` from `LabelVisibility` — port name visibility
+            // is left entirely to MapKit's own collision handling (`collisionMode`/
+            // `displayPriority` — see `PortLabelAnnotationView`). Unlike subrectangle code labels
+            // (which must always render regardless of overlap, see `SubrectangleAnnotationView`),
+            // port names are allowed to be hidden by a collision at any zoom level within this
+            // map's range, so there is no separate zoom-driven rule to apply here. Touching
+            // `isHidden` for any other reason would fight MapKit's own decision the next time it
+            // re-evaluates collisions.
             return view
         }
 
         return nil
     }
 
+    /// Applies `LabelVisibility`'s zoom-based show/hide decision to every subrectangle code label.
+    ///
+    /// Only subrectangle labels are touched here — port name labels are deliberately left alone
+    /// (see `viewFor annotation:`) because their visibility is owned entirely by MapKit's own
+    /// collision handling, not by zoom. Subrectangle labels use `collisionMode = .none` (they must
+    /// always render), so there's no competing decision to avoid overriding, and this can simply
+    /// reassert `isHidden` unconditionally on every region change.
     func mapView(_ mapView: MKMapView, regionDidChangeAnimated _: Bool) {
         let showLabels = LabelVisibility.shouldShowLabels(forLatitudeDelta: mapView.region.span.latitudeDelta)
 
         for view in annotationViewsBySubCode.values {
-            view.isHidden = !showLabels
-        }
-
-        for view in portLabelViewsByCode.values {
             view.isHidden = !showLabels
         }
 

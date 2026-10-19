@@ -1,6 +1,7 @@
 # ADR 0018 — Reference data API connector and build-time configuration
 
-- Status: Accepted
+- Status: Accepted — §3 superseded and §4 relocated by
+  [ADR-0020](0020-build-time-app-identity-configuration.md) (see "Amendment (2026-10)" at the end)
 - Date: 2026-09
 - Deciders: iOS engineering
 - Context tags: networking, architecture, security, build-configuration, native-iOS
@@ -574,9 +575,12 @@ change, by team decision rather than oversight:
   bundled/precomputed offline map data (`scripts/generate-offline-map-data.sh`) remains the map
   data source.
 
-## Addendum (2026-10): Debug points at the CDP dev environment, not `localhost`
+## Addendum (2026-10a): Debug pointed at the CDP dev environment, not `localhost` (superseded below)
 
-`Config/Debug.xcconfig`'s `API_BASE_URL` now points at the CDP **dev** environment's
+> **Superseded by the 2026-10b amendment immediately below.** This addendum predates ADR-0020/ADR-0021's
+> build-time configuration rework; it is kept for history. Where it conflicts with 2026-10b, 2026-10b wins.
+
+`Config/Debug.xcconfig`'s `API_BASE_URL` was changed to point at the CDP **dev** environment's
 reference-data API gateway rather than a locally-running backend:
 
 ```
@@ -589,20 +593,22 @@ needed: every route in `ReferenceDataEndpoint.swift` is built by appending path 
 preserved automatically for every dataset and every route (`vessels`/`species`/`ports` collection
 and item routes, `manifest`, `health`). `ReferenceDataEndpointTests.swift` gained a dedicated suite
 asserting this for a path-prefixed base URL, since the existing tests only covered the
-no-path-prefix `http://localhost:3002` case.
+no-path-prefix `http://localhost:3002` case. This path-prefix behaviour is unaffected by the
+2026-10b amendment below and still holds.
 
-Consequences:
+Consequences recorded at the time (now superseded where noted):
 
-- **The Debug `localhost` ATS exception is removed.** `https://...cdp-int.defra.cloud` is HTTPS,
-  so `Info-Debug.plist` no longer carries an `NSAppTransportSecurity`/`NSExceptionDomains`
-  override — Debug is HTTPS-only, matching Release. Decision #4 above (the Debug-only, narrowly
-  scoped `localhost` exception) is superseded for the base URL; it would only be reinstated if a
-  developer needs to point Debug at a local backend again, as its own deliberate, re-reviewed
-  change.
-- **No local-backend override is provided.** The team decided against a git-ignored
-  `Config/Local.xcconfig` `#include?` escape hatch, to keep a single, unambiguous Debug target. A
-  developer who needs a local backend edits `Config/Debug.xcconfig` directly for their own
-  session and must not commit that edit.
+- **The Debug `localhost` ATS exception was removed.** `https://...cdp-int.defra.cloud` is HTTPS,
+  so `Info-Debug.plist` no longer carried an `NSAppTransportSecurity`/`NSExceptionDomains`
+  override. **Superseded:** `Info-Debug.plist` no longer exists at all (2026-10b); the generated
+  Debug `Info.plist` gets its ATS exception automatically from the *Inject app config (Debug)*
+  build phase, scoped to `localhost` and the host of any configured local `http://` URL.
+- **"No local-backend override is provided" — superseded.** The team's original decision against a
+  git-ignored `Config/Local.xcconfig` `#include?` escape hatch (to keep a single, unambiguous Debug
+  target) was revisited in ADR-0020: `Config/Local.xcconfig` (git-ignored, optional) is now the
+  supported way to point a personal Debug build at a local backend **or** the CDP dev environment,
+  via `CR_APP_CFG_API_BASE_URL` — see the 2026-10b amendment and the README's "Running against the
+  CDP dev reference-data API" section.
 - **Token handling is unchanged in code** (`EnvironmentTokenProvider`, DEBUG-only,
   `REFERENCE_DATA_API_TOKEN`), but the *source* of that variable now matters more, because the
   shared `record-catch` Xcode scheme is committed to source control:
@@ -614,7 +620,7 @@ Consequences:
     small shared helper, `XCUIApplication.forwardReferenceDataAPIToken()`
     (`record-catchUITests/XCUIApplication+ReferenceDataToken.swift`), so BrowserStack-driven UI
     test runs authenticate correctly. The token itself is supplied to the BrowserStack build API
-    from a CI secret, never committed.
+    from a CI secret, never committed. This remains accurate and unaffected by 2026-10b.
   - This remains a stopgap pending real OAuth/OIDC authentication (decision #5); it does not
     change the plan to migrate to `Core/Security/KeychainStoring.swift`.
 - **The CDP dev environment's `/health` route is assumed to exist at
@@ -622,8 +628,28 @@ Consequences:
   route. This has not been independently verified against the gateway at the time of writing;
   confirm before relying on `ReferenceDataDevSmokeCheck`/readiness tooling against this
   environment.
-- Production (`Config/Release.xcconfig`) is unaffected — it still points at its placeholder HTTPS
-  endpoint pending a real production API, per decision #3.
+- "Production (`Config/Release.xcconfig`) is unaffected" — **superseded**: `Config/Release.xcconfig`
+  no longer exists; production configuration is covered entirely by the 2026-10b amendment.
+
+## Amendment (2026-10b): configuration follows ADR-0020
+
+Merging this work with the release pipeline (ADR-0020 §2, ADR-0021) replaced §3's mechanism. A Release `.xcconfig`
+URL would have shipped one committed value to every stage and every App Store Connect app, and the pipeline never
+writes a flat `APIBaseURL` key.
+
+- **§3 superseded.** The base URL is `MMOCRAppConfig.API_BASE_URL`, written by the pipeline from the GitHub
+  Environment variable `CR_APP_CFG_API_BASE_URL`. `Config/Debug.xcconfig` and `Config/Release.xcconfig` are
+  removed; both configurations use `Config/Base.xcconfig`, and local values come from the git-ignored
+  `Config/Local.xcconfig` (e.g. `CR_APP_CFG_API_BASE_URL = http:/$()/localhost:3002`, or the CDP dev gateway URL
+  from the 2026-10a addendum above to run against the CDP dev environment instead of a local backend).
+- **§4 kept, now generated.** No `Info.plist` file is committed (the `record-catch/Resources/Info-*.plist` files are
+  removed). The Debug-only build phase *Inject app config (Debug)* adds the ATS exception for `localhost` and for
+  the host of any local `http://` URL, so device testing against this Mac's LAN IP needs no file edit. Release
+  builds never get an ATS key. `NSLocalNetworkUsageDescription` is set on the Debug configuration only, as §4
+  intended.
+- **App follow-up (iOS Developer):** `APIConfiguration` reads `MMOCRAppConfig` → `API_BASE_URL` instead of
+  `APIBaseURL`, keeping the DEBUG-only `http` allowance; the tests that inject `APIBaseURL` move to the same key.
+  This follow-up has been applied: `APIConfiguration` and its tests now use `MMOCRAppConfig`/`API_BASE_URL`.
 
 ## References
 

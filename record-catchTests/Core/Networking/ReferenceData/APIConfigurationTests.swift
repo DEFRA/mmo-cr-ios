@@ -2,7 +2,7 @@
 //  APIConfigurationTests.swift
 //  record-catchTests
 //
-//  Covers APIConfiguration's Info.plist resolution and scheme validation (see ADR-0018 §3).
+//  Covers APIConfiguration's Info.plist resolution and scheme validation (see ADR-0020 §2).
 //  100% coverage target — this is a security-relevant / error-handling path.
 //
 
@@ -23,7 +23,7 @@ final class APIConfigurationTests: XCTestCase {
     private func makeBundle(apiBaseURL: Any?) -> FakeInfoDictionary {
         var bundle = FakeInfoDictionary()
         if let apiBaseURL {
-            bundle.values["APIBaseURL"] = apiBaseURL
+            bundle.values["MMOCRAppConfig"] = ["API_BASE_URL": apiBaseURL]
         }
         return bundle
     }
@@ -74,6 +74,51 @@ final class APIConfigurationTests: XCTestCase {
         let bundle = makeBundle(apiBaseURL: "http://localhost:3002")
 
         XCTAssertThrowsError(try APIConfiguration(bundle: bundle, allowsInsecureHTTP: false)) {
+            XCTAssertEqual($0 as? APIError, .invalidConfiguration)
+        }
+    }
+
+    func test_init_throwsInvalidConfiguration_whenConfigDictionaryMissing() {
+        let bundle = FakeInfoDictionary()
+
+        XCTAssertThrowsError(try APIConfiguration(bundle: bundle, allowsInsecureHTTP: true)) {
+            XCTAssertEqual($0 as? APIError, .invalidConfiguration)
+        }
+    }
+
+    func test_init_throwsInvalidConfiguration_whenConfigDictionaryWrongType() {
+        var bundle = FakeInfoDictionary()
+        bundle.values["MMOCRAppConfig"] = "not-a-dictionary"
+
+        XCTAssertThrowsError(try APIConfiguration(bundle: bundle, allowsInsecureHTTP: true)) {
+            XCTAssertEqual($0 as? APIError, .invalidConfiguration)
+        }
+    }
+
+    func test_init_throwsInvalidConfiguration_whenBaseURLKeyMissingFromConfig() {
+        var bundle = FakeInfoDictionary()
+        bundle.values["MMOCRAppConfig"] = ["OTHER_KEY": "value"]
+
+        XCTAssertThrowsError(try APIConfiguration(bundle: bundle, allowsInsecureHTTP: true)) {
+            XCTAssertEqual($0 as? APIError, .invalidConfiguration)
+        }
+    }
+
+    func test_init_throwsInvalidConfiguration_whenBaseURLEmpty() {
+        // The build phase writes an empty string for a schema key with no local value.
+        let bundle = makeBundle(apiBaseURL: "")
+
+        XCTAssertThrowsError(try APIConfiguration(bundle: bundle, allowsInsecureHTTP: true)) {
+            XCTAssertEqual($0 as? APIError, .invalidConfiguration)
+        }
+    }
+
+    func test_init_throwsInvalidConfiguration_whenOnlyLegacyFlatKeyPresent() {
+        // The retired flat `APIBaseURL` key must never be read.
+        var bundle = FakeInfoDictionary()
+        bundle.values["APIBaseURL"] = "https://api.example.com"
+
+        XCTAssertThrowsError(try APIConfiguration(bundle: bundle, allowsInsecureHTTP: true)) {
             XCTAssertEqual($0 as? APIError, .invalidConfiguration)
         }
     }

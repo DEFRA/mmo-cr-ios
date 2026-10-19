@@ -319,12 +319,13 @@ trade-off to `SpeciesOption`'s "no migration path" decision, and why it was nece
 
 ## Configuration
 
-| Info.plist key | Source | Debug value | Release value |
+| Info.plist key | Source | Local Debug value | Pipeline builds |
 |---|---|---|---|
-| `APIBaseURL` | `API_BASE_URL` in `record-catch/Config/{Debug,Release}.xcconfig` | CDP **dev**: `https://mmo-cr-catch-recording-service.api.dev.cdp-int.defra.cloud/reference-data-service` | placeholder HTTPS endpoint |
+| `MMOCRAppConfig` → `API_BASE_URL` | `CR_APP_CFG_API_BASE_URL` in your git-ignored `Config/Local.xcconfig`, written by the Debug build phase `scripts/inject-app-config.sh` | e.g. `http://localhost:3002`, or the CDP **dev** environment: `https://mmo-cr-catch-recording-service.api.dev.cdp-int.defra.cloud/reference-data-service` | Written by the release pipeline from the GitHub Environment variable `CR_APP_CFG_API_BASE_URL` (ADR-0020) |
 
-`APIConfiguration` throws `APIError.invalidConfiguration` if `APIBaseURL` is missing/blank/malformed,
-or (outside a `DEBUG` build) not `https`.
+`APIConfiguration` throws `APIError.invalidConfiguration` if the base URL is missing/blank/malformed,
+or (outside a `DEBUG` build) not `https`. `APIConfiguration` reads the `MMOCRAppConfig` → `API_BASE_URL`
+key (ADR-0018, Amendment 2026-10b) — the old flat `APIBaseURL` key is no longer used.
 
 ## Authentication token (CDP dev — DEBUG builds only)
 
@@ -351,29 +352,26 @@ implementation, once OAuth/OIDC authentication lands, will read the token from
 **Never commit a real token** — not in `.xcconfig`, `Info.plist`, the shared scheme, or source. If
 one ever leaks, follow DEFRA's credential exposure process immediately.
 
-## Pointing Debug at a local backend instead (manual override)
+## Pointing Debug at a local backend instead (or the CDP dev environment)
 
-Debug builds point at the CDP **dev** environment by default (see Configuration above); no local
-backend is needed for normal development. If you do need to run against a local backend instead
-(e.g. the CDP dev environment is unavailable, or you're iterating on a local mock), edit
-`Config/Debug.xcconfig`'s `API_BASE_URL` for your own session and **do not commit that edit** (see
-ADR-0018's 2026-10 addendum, "No local-backend override is provided").
+There is no committed default any more — your own git-ignored `Config/Local.xcconfig` decides.
+Set `CR_APP_CFG_API_BASE_URL` there to either a locally-running backend (e.g.
+`http:/$()/localhost:3002`) or the CDP **dev** environment
+(`https:/$()/mmo-cr-catch-recording-service.api.dev.cdp-int.defra.cloud/reference-data-service`);
+see `README.md`'s "Running against the CDP dev reference-data API" section. Never commit
+`Config/Local.xcconfig` itself.
 
 ### Testing on a physical device (LAN IP)
 
-The Debug ATS exception, if you add one back for `localhost`, only covers `localhost` itself — it
-does not cover a physical device reaching your Mac over the LAN. To test on a physical device
-against your Mac's local backend:
+The Debug ATS exception covers `localhost` and the host of your local `http://` URL. To test on a physical
+device against your Mac's backend over the LAN:
 
 1. Find your Mac's LAN IP address (e.g. `System Settings ▸ Wi-Fi ▸ Details…`, or `ipconfig getifaddr en0`).
-2. Add that IP as a further `NSExceptionDomains` entry in `record-catch/Resources/Info-Debug.plist`
-   (**Debug only** — never in `Info-Release.plist`), alongside a local `NSAllowsInsecureHTTPLoads`
-   exception for that domain if your local backend only serves HTTP.
-3. Point `API_BASE_URL` at that IP for the device build (e.g. temporarily edit
-   `record-catch/Config/Debug.xcconfig`, or override the build setting for that run) — remember not
-   to commit this either.
-4. The app may also need to request local-network access (`NSLocalNetworkUsageDescription`, Debug
-   only) — you will see the standard local-network permission prompt on first launch.
+2. Point `CR_APP_CFG_API_BASE_URL` at that IP in your git-ignored `Config/Local.xcconfig`
+   (e.g. `http:/$()/192.168.1.20:3002`). The Debug build phase adds the ATS exception for that host
+   automatically (**Debug only** — Release builds never get one); no file needs editing.
+3. The app also requests local-network access (`NSLocalNetworkUsageDescription`, Debug only) — you
+   will see the standard local-network permission prompt on first launch.
 
 ## Developer smoke check
 

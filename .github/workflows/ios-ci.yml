@@ -8,14 +8,20 @@ on:
     branches: 
       - main
   workflow_dispatch:
+    inputs:
+      publish_release_tag:
+        description: "Publish release tag after CI passes"
+        type: boolean
+        default: false
   merge_group:
 
 permissions:
-  contents: write
+  contents: read
 
+# Never cancel a main run: every non-Dependabot merge to main must publish its own release tag.
 concurrency:
   group: ios-ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   build-test:
@@ -28,19 +34,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Xcode is pre-selected by default on this runner image, so explicit xcode-select isn't needed — revisit if that changes.
-      # - name: Select Xcode
-      #   run: |
-      #     set -euo pipefail
-      #     XCODE_APP=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -n1)
-      #     if [ -z "$XCODE_APP" ]; then
-      #       echo "::error::No Xcode 26.x found under /Applications" >&2
-      #       ls /Applications | grep -i xcode >&2 || true
-      #       exit 1
-      #     fi
-      #     echo "Selecting $XCODE_APP"
-      #     sudo xcode-select -s "$XCODE_APP/Contents/Developer"
-      #     xcodebuild -version
+      # Dependabot PRs carry no bump; they ship with the next release (and their merges are not tagged).
+      - name: Verify version has been bumped
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.user.login != 'dependabot[bot]' }}
+        run: bash .github/workflows/scripts/check-version-bump.sh
 
       - name: Verify iOS Simulator
         run: bash .github/workflows/scripts/verify-simulator.sh
@@ -68,6 +65,10 @@ jobs:
           ruby-version: "3.3"
           bundler-cache: true
 
+      # Fastfile wiring, release logic and the app config schema guard (no secret-like or tracking keys).
+      - name: Release tooling tests
+        run: bundle exec ruby -e 'Dir.glob("fastlane/test/*_test.rb").sort.each { |f| require File.expand_path(f) }'
+
       - name: Build (Fastlane)
         run: bundle exec fastlane build
 
@@ -93,6 +94,29 @@ jobs:
         with:
           args: ${{ github.event_name != 'pull_request' && format('-Dsonar.branch.name={0}', github.ref_name) || '' }}
 
+  # Tags only — CI never starts a release; iOS Release is run manually on the tag.
+  release-tag:
+    name: Publish release tag
+    needs: build-test
+    if: >-
+      ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'workflow_dispatch' && inputs.publish_release_tag) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5.1.0
+
+      - name: Detect Dependabot merge
+        id: source
+        if: ${{ github.event_name == 'push' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/workflows/scripts/detect-dependabot-merge.sh
+
       - name: Create and push release tag
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: ${{ steps.source.outputs.dependabot != 'true' }}
         run: bash .github/workflows/scripts/create-release-tag.sh

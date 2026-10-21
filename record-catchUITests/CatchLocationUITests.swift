@@ -95,6 +95,7 @@ final class CatchLocationUITests: XCTestCase {
     private func launch() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += ["-uiTestResetLanguage", "-uiTestCatchRecordSelectGear"]
+        app.forwardReferenceDataAPIToken()
         app.launch()
         return app
     }

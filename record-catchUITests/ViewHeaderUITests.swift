@@ -25,6 +25,7 @@ final class ViewHeaderUITests: XCTestCase {
     private func launch() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += ["-uiTestResetLanguage", "-uiTestHome"]
+        app.forwardReferenceDataAPIToken()
         app.launch()
         return app
     }

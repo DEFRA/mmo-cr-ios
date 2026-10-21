@@ -32,6 +32,7 @@ final class ManageAccountUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments += ["-uiTestResetLanguage"]
         app.launchArguments += manageAccount ? ["-uiTestManageAccount"] : ["-uiTestSettings"]
+        app.forwardReferenceDataAPIToken()
         app.launch()
         return app
     }

@@ -15,6 +15,13 @@ import UIKit
 /// Deliberately configured so a port can never be selected or show a callout — see
 /// `PortsOverlay`'s doc comment for why that guarantee must hold regardless of how names are
 /// drawn.
+///
+/// Overlapping names are decluttered entirely by MapKit's own collision handling
+/// (`collisionMode`/`displayPriority` — see `configureView`/`configure(name:)`): every port name
+/// shares the same `.defaultHigh` priority, so MapKit is free to hide whichever of two colliding
+/// names it chooses, and this view never overrides that decision (see `OfflineMapCoordinator`,
+/// which only ever touches `isHidden` for the separate, zoom-driven show/hide rule and does so for
+/// subrectangle labels, not these).
 final class PortLabelAnnotationView: MKAnnotationView {
 
     static let reuseIdentifier = "PortLabelAnnotationView"
@@ -48,11 +55,11 @@ final class PortLabelAnnotationView: MKAnnotationView {
         isEnabled = false
         isUserInteractionEnabled = false
 
-        // Collision handling deliberately turned off: `.rectangle`/`.defaultLow` (MapKit hiding
-        // overlapping port names automatically) was causing ports to silently disappear at
-        // certain zoom levels/label densities. `.none` guarantees every port name that
-        // `LabelVisibility` decides should be visible actually renders.
-        collisionMode = .none
+        // `.rectangle` lets MapKit hide whichever of two colliding names it chooses to — a dense
+        // cluster of port names is exactly the case MapKit's own collision handling is meant to
+        // declutter. Every label shares the same `displayPriority` (see `configure(name:)`), so
+        // no port name is ever guaranteed to win or lose that contest.
+        collisionMode = .rectangle
 
         label.numberOfLines = 1
         addSubview(label)
@@ -60,6 +67,11 @@ final class PortLabelAnnotationView: MKAnnotationView {
 
     /// Sizes and positions the badge for `name`, to the right of and vertically centred on the
     /// annotation's coordinate (the port's dot).
+    ///
+    /// Always sets `displayPriority` to `.defaultHigh` — `MKAnnotationView` otherwise defaults to
+    /// `.required` (MapKit's "never hide this for a collision" priority), which would silently
+    /// defeat `collisionMode = .rectangle` above and let every port name render regardless of
+    /// overlap.
     func configure(name: String) {
         label.attributedText = NSAttributedString(
             string: name,
@@ -84,5 +96,7 @@ final class PortLabelAnnotationView: MKAnnotationView {
         // Shifts the view so its left edge sits `labelOffset` to the right of the port coordinate,
         // while staying vertically centred on it — matching the previous CoreText-drawn layout.
         centerOffset = CGPoint(x: textSize.width / 2 + Self.labelOffset, y: 0)
+
+        displayPriority = .defaultHigh
     }
 }

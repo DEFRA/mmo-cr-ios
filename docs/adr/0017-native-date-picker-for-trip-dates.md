@@ -127,3 +127,34 @@ been re-tested against the current SwiftUI/iOS version. Before this change ships
 - Record the outcome of this pass here and update Delivery Architecture
   (`delivery.architecture@defra.gov.uk`) on the style deviation, per this repo's deviation-logging
   rule.
+
+## Addendum (2026-10-12): degenerate single-day range uses `.compact`, not a bespoke fallback state
+
+A real on-device crash was reported on the return-date screen for the common same-day-trip case
+(departure accepted as today → return's `selectableRange` collapses to `today...today`). Root
+cause: `.datePickerStyle(.wheel)` is backed by `UIPickerView`, and a wheel with zero scrollable
+rows in one or more of its day/month/year columns is a known-unstable UIKit configuration that
+repeatedly fails to satisfy its own internal layout constraints and can hang/crash the moment a
+user touches it.
+
+The first fix (2026-10-06) replaced the wheel, for a collapsed range only, with a bespoke static
+text state ("The only date you can select is `<date>`.") — a new `catchRecord.tripDate.*`
+string-catalog key and a `ParagraphText` fallback in `TripDatePicker`. This was never reviewed
+against the approved design (no such state appears in the `create-catch-record` Design Spec) and
+was removed once flagged: it was an undocumented deviation introduced to fix a crash, not a
+design decision.
+
+**Revised fix:** `TripDatePicker` now switches `.datePickerStyle` to `.compact` (instead of
+`.wheel`) only when `range` collapses to a single day; the same `DatePicker` binding, `range` and
+accessibility identifier are used either way, so the screen is always a plain native `DatePicker`
+with no separate fallback view or copy. `.compact`'s popover calendar grid does not exhibit the
+zero-scrollable-rows failure mode — it renders a calendar with exactly one enabled day — so this
+keeps the crash fix without reintroducing an out-of-design UI state.
+
+This does not change decision #2/the earlier addendum's open action: the `.wheel` style used for
+the normal (multi-day) case still needs the manual Dynamic Type/VoiceOver/target-size pass
+described above before production. The `.compact` branch used for the degenerate single-day case
+was already accepted as safe under the original (pre-addendum) ADR-0017 decision #2 analysis.
+
+Logged with Delivery Architecture (`delivery.architecture@defra.gov.uk`) per the deviation-
+recording rule, alongside the still-open `.wheel` accessibility re-verification above.

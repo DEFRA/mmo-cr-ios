@@ -29,6 +29,7 @@ final class OfflineBannerUITests: XCTestCase {
     private func launch(_ extraArguments: [String]) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += extraArguments
+        app.forwardReferenceDataAPIToken()
         app.launch()
         return app
     }

@@ -39,13 +39,21 @@ Build and run the unit tests with code coverage (used by CI). UI tests are exclu
 
 Sync every app's signing assets from the Match repo into the local keychain (read-only).
 
-### ios build_internal
+### ios compile
 
 ```sh
-[bundle exec] fastlane ios build_internal
+[bundle exec] fastlane ios compile
 ```
 
-Compile the app ONCE with its internal backend URL, upload build N to internal TestFlight, keep the archive.
+Compile the app ONCE with its bundle identity and keep the signed archive. No stage config, no upload.
+
+### ios upload_internal
+
+```sh
+[bundle exec] fastlane ios upload_internal
+```
+
+Package the compiled archive with this Environment's stage config as build N and upload it to TestFlight.
 
 ### ios promote_external
 
@@ -53,7 +61,15 @@ Compile the app ONCE with its internal backend URL, upload build N to internal T
 [bundle exec] fastlane ios promote_external
 ```
 
-Re-package the kept archive with this Environment's backend URL as build N.1 and send it to external TestFlight. No recompile.
+Re-package the kept archive with this Environment's stage config as build N.1 and send it to external TestFlight. No recompile.
+
+### ios submit_app_store
+
+```sh
+[bundle exec] fastlane ios submit_app_store
+```
+
+Submit the external build N.1 (the upload sanity testers used) for App Review. No packaging or signing.
 
 ----
 

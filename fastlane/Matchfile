@@ -6,7 +6,7 @@ git_url("git@github.com:DEFRA/mmo-cr-ios-signing-assets.git")
 git_branch("main")
 
 type("appstore")
-app_identifier(["mmo.catchrecordingdev.ios"])
+app_identifier(["mmo.catchrecordingdev.ios", "mmo.catchrecordingtest.ios", "mmo.catchrecording.ios"])
 
 # CI is forced read-only by the release lane (and by fastlane's setup_ci action); it is intentionally
 # not pinned here so a signing administrator can run `fastlane match appstore` to bootstrap or renew.

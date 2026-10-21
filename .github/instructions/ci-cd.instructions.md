@@ -150,21 +150,25 @@ short-lived feature branch  ──PR──▶  main (trunk, always releasable)
 main CI: full tests + SonarCloud main analysis + release tag vX.Y.Z-BUILD_N (every non-Dependabot merge)
   ▼  (manual: iOS Release → Run workflow on the tag — the only way a release starts)
   ▼
-ios-release.yml (manual dispatch on a tag, ONE RUN PER APP via the `app` input) — compile each app ONCE; promote in the same run, no recompile
-  ├─ app: dev   dev-build             [env: dev — no gate]               Dev N → internal + external TestFlight (Dev)
-  ├─ app: test  test-build            [env: test — APPROVAL A]           Test N → internal TestFlight (Test)
-  │             test-promote-external [env: test-external — APPROVAL B]  same archive → URL Perf-Test, build N.1 → external
-  └─ app: prod  (start after release-testing sign-off)
-                prod-build            [env: prod — APPROVAL C]           Prod N → internal TestFlight (Ext-Test / UAT)
-                prod-promote-external [env: prod-external — APPROVAL D]  same archive → URL Prod, build N.1 → external (sanity)
-                prod-appstore-submit  [env: prod-appstore — APPROVAL E]  SAME N.1 upload → App Store (phased release)
+ios-release.yml (manual dispatch on a tag; inputs dev / test / prod, all ticked by default) — one run, Dev → App Store
+  ├─ validate                      [ubuntu]                             tag matches the code; list the selected apps
+  ├─ compile (matrix per app)      [env: release-build — no gate]       each selected app compiled ONCE → encrypted archive
+  ├─ dev                           [env: dev — no gate]                 Dev N → internal + external TestFlight (Dev)
+  ├─ test-internal                 [env: test — APPROVAL A]             Test N → internal TestFlight (Test)
+  │  test-external                 [env: test-external — APPROVAL B]    same archive → Perf-Test config, N.1 → external
+  └─ prod-internal                 [env: prod — APPROVAL C]             Prod N → internal TestFlight (Ext-Test / UAT)
+     prod-external                 [env: prod-external — APPROVAL D]    same archive → Prod config, N.1 → external (sanity)
+     prod-appstore                 [env: prod-appstore — APPROVAL E]    SAME N.1 upload → App Store (phased release)
   ▼
 monitor (App Store Connect metrics + crash reporting)  ──▶  hotfix = fix on main + higher patch tag
 ```
 
-Promotion runs **inside the app's `ios-release.yml` run**; there is no separate promotion workflow. A GitHub run is
-cancelled after **35 days including approval waits** (a single approval may wait at most 30 days); these limits are
-accepted, and the Prod run starts only after release testing signs off. Include the app in the concurrency group.
+Stages run in order; an unticked app is skipped without blocking later ones, and a failed or rejected stage stops
+everything after it. An app's internal and external stages are always selected together. Promotion runs **inside
+the run**; there is no separate promotion workflow. A GitHub run is cancelled after **35 days including approval
+waits** (a single approval may wait at most 30 days); these limits are accepted. If Test sign-off would exhaust the
+window, reject the Prod approval and start a Prod-only run on the same tag later (the Prod app is compiled separately
+in either case).
 
 ### GitHub Environments & approval gates
 
@@ -175,20 +179,20 @@ determines the backend.
 
 | Environment | Workflow · job | Backend URL | Approval |
 |-------------|----------------|-------------|----------|
-| `dev` | `ios-release` (`app: dev`) · `dev-build` | Dev (internal + external groups) | None (manual start on tag) |
-| `test` | `ios-release` (`app: test`) · `test-build` | Test | **Required reviewer** (A); prevent self-approval |
-| `prod` | `ios-release` (`app: prod`) · `prod-build` | Ext-Test | **Required reviewer** (C); prevent self-approval |
-| `test-external` | `ios-release` (`app: test`) · `test-promote-external` | Perf-Test | **Required reviewer** (B) |
-| `prod-external` | `ios-release` (`app: prod`) · `prod-promote-external` | Prod | **Required reviewer** (D) |
-| `prod-appstore` | `ios-release` (`app: prod`) · `prod-appstore-submit` | — (submits `N.1` as-is) | **Required business/release reviewer** (E); prevent self-approval + admin bypass |
+| `release-build` | `ios-release` · `compile` | — (no stage config) | None; holds signing + archive key only |
+| `dev` | `ios-release` · `dev` | Dev (internal + external groups) | None (manual start on tag) |
+| `test` | `ios-release` · `test-internal` | Test | **Required reviewer** (A); prevent self-approval |
+| `test-external` | `ios-release` · `test-external` | Perf-Test | **Required reviewer** (B) |
+| `prod` | `ios-release` · `prod-internal` | Ext-Test | **Required reviewer** (C); prevent self-approval |
+| `prod-external` | `ios-release` · `prod-external` | Prod | **Required reviewer** (D) |
+| `prod-appstore` | `ios-release` · `prod-appstore` | — (submits `N.1` as-is) | **Required business/release reviewer** (E); prevent self-approval + admin bypass |
 
-A seventh Environment, **`dev_external`** (`ios-release` · `dev-promote-external`, required reviewer), is a proof
-of concept of the no-recompile promotion on the **Dev** app with a second backend; it runs in the same run as
-`dev-build` and is retired once Dev distributes one build to both groups.
+`release-build` is a seventh, ungated Environment for the compile job; every Environment that handles an archive
+holds the same `ARCHIVE_ENCRYPTION_KEY`.
 
 - Scope each stage's release secrets to its **own** Environment, not the repo, so they are only exposed
   after that stage's approval. Do not mix SonarCloud credentials with signing/release credentials.
-- Restrict all six Environments' deployments to `main` and the `v*` tags. Keep workflow
+- Restrict all seven Environments' deployments to `main` and the `v*` tags. Keep workflow
   `permissions:` least-privilege even after environment approval.
 - **Use phased release** for App Store production; monitor crash-free rate and key metrics before
   completing the roll-out. Keep the ability to pause the phased release.
@@ -235,8 +239,9 @@ workflows):**
 
 - **PR CI** (`.github/workflows/ios-ci.yml`) — SwiftLint, build, unit/UI tests with coverage, then the
   **SonarCloud** scan. Runs on pull requests and pushes to `main`.
-- **Release** (`.github/workflows/ios-release.yml`) — manually dispatched on a release tag, one run per app; compiles
-  the app once behind the gated Environments above and promotes it in the same run without recompiling.
+- **Release** (`.github/workflows/ios-release.yml`) — manually dispatched on a release tag with `dev`/`test`/`prod`
+  stage inputs; one compile job builds each selected app once, then the gated Environments above package and promote
+  it in the same run without recompiling.
 - **CodeQL** (`.github/workflows/codeql.yml`) — the separate advanced-setup SAST workflow described above.
 
 **MobSF binary (IPA) scanning** is **not required** for the baseline: SonarCloud + CodeQL + Dependabot +
@@ -318,14 +323,14 @@ Record adoption and the residency constraint as an **ADR**.
 Record at least these as ADRs under `docs/adr/`:
 
 1. GitHub Actions + Fastlane as the iOS delivery architecture (and the native-app exception).
-2. **Build-time app identity configuration** — three apps via `.xcconfig`, backend URL injected from CI
+2. **Build-time app identity configuration** — three apps; Fastlane sets the bundle ID and display name as
+   compile-time build-setting overrides, backend URL injected from CI
    ([ADR-0020](../../docs/adr/0020-build-time-app-identity-configuration.md)).
 3. Code-signing strategy and signing-asset custody (three bundle IDs managed by Match).
 4. **Three-application bundle-ID and five-backend environment model** (`dev` / `test` / `prod` as separate
    App Store Connect apps).
-5. **Release topology** — one manually dispatched release workflow (on a release tag, one run per app) holding
-   each app's build and promotions, six gated
-   Environments.
+5. **Release topology** — one manually dispatched release workflow (on a release tag, `dev`/`test`/`prod` stage
+   inputs) with a separate compile job and seven Environments (six gated stages plus `release-build`).
 6. **Compile once, configure at promotion** — no recompile internal → external; build once external → App
    Store ([ADR-0021](../../docs/adr/0021-compile-once-configure-at-promotion.md)).
 7. Internal & external TestFlight distribution model (per-app internal + external groups).

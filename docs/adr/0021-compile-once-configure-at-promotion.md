@@ -39,7 +39,7 @@ a signing key to manage), and ships the Ext-Test URL inside the public App Store
 
 ## Decision
 
-1. **Build** (`ios-release.yml`, one run per app): compile once, write the stage's `MMOCRAppConfig` (ADR-0020 §2),
+1. **Build** (`ios-release.yml`; run model amended 2026-10, see Amendments): compile once, write the stage's `MMOCRAppConfig` (ADR-0020 §2),
    build number `N`, upload to **internal** TestFlight. Keep the `.xcarchive` as an **encrypted** artifact of the
    run. Record the executable's Mach-O UUID. Dev also assigns this same build to its external groups.
 2. **Promote** (Test and Prod: a later, gated job in the **same** `ios-release.yml` run): take that same archive,
@@ -72,7 +72,7 @@ determines the backend:
    Ext-Test URL.
 5. Idempotent re-run: if `N.1` is already uploaded, skip the upload and continue to distribution.
 
-### Run model: one `ios-release.yml` run per app
+### Run model: one `ios-release.yml` run per app (superseded 2026-10 — see Amendments)
 
 `ios-release.yml` is the only release workflow. It is started manually on the release tag with an `app` input, and
 each run holds that app's build and its promotions, so the archive never leaves the run:
@@ -143,6 +143,25 @@ Prod TestFlight distribution as a GitHub Release, created as the job's last step
 - **2026-10 — Dev uses one backend.** Dev's internal and external groups both use the Dev backend and the same
   build `N`, ungated; `dev_external` is a proof of concept only. Assigning external groups needs an App Manager key
   in the ungated `dev` Environment, an open exception (DevOps design deviation D14).
+- **2026-10 — one run, Dev to App Store, with a separate compile job** (supersedes *Run model* and the per-app
+  runs above). `ios-release.yml` has three boolean inputs, all ticked by default: `dev`, `test` (Test + Perf-Test)
+  and `prod` (UAT + Prod candidate + App Store). An app's internal and external stages are never separated.
+  - `validate` (ubuntu) checks the tag and lists the selected apps; `compile` (matrix, ungated `release-build`
+    Environment) compiles each selected app **once**, signs it, records the Mach-O UUID and keeps the encrypted
+    archive. No stage config and no upload happen there, and no App Store Connect key is needed.
+  - Stages run in order: `dev` → `test-internal` (A) → `test-external` (B) → `prod-internal` (C) →
+    `prod-external` (D) → `prod-appstore` (E). An unticked app is skipped without blocking later stages; a failed
+    or rejected stage stops everything after it.
+  - Internal jobs write their config and `N` into the compiled archive, upload, then re-encrypt that archive for
+    their promotion job (whose leak check needs the internal config). Promotion is unchanged.
+  - `dev` uploads `N` once to its internal and external groups; the `dev_external` proof of concept is retired and
+    D14 (App Manager key in ungated `dev`) is accepted.
+  - Every Environment that handles an archive holds the **same** `ARCHIVE_ENCRYPTION_KEY`: the compile job holds
+    it for every app, so per-app keys would add no isolation.
+  - The 35-day run / 30-day approval limits now cover the whole Dev → App Store journey. If Test sign-off would
+    exhaust them, reject the Prod approval and start a Prod-only run on the same tag later; provenance is
+    unchanged because the Prod app is always its own compile. Concurrency stays per tag, so finish or cancel the
+    earlier run first.
 
 ## Sources
 

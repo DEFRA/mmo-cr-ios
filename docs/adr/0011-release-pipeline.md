@@ -134,6 +134,8 @@ certificate and key into an empty store, adding the Test and Prod profiles, and 
   (re-package with the external backend URL, build `N.1`, upload) instead of a metadata-only assignment.
   **Amended 2026-10:** `ios-promote.yml` is dropped; each app has its own `ios-release.yml` run holding its build and
   promotions, within the accepted 35-day / 30-day limits (ADR-0021, Amendments).
+  **Amended again 2026-10:** one run from Dev to App Store with `dev`/`test`/`prod` stage inputs and a separate
+  compile job; the `dev_external` proof of concept is retired (ADR-0021, Amendments).
 - **2026-09 — release tagging and trigger** (supersedes decision 2's triggers and 3a's overrides):
   - *iOS CI* publishes the tag on every merge to `main` **except Dependabot merges** (detected from the commit's
     PR), and on a manual run with `publish_release_tag: true` (default `false`); always after build and tests

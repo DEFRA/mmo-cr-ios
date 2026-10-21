@@ -25,17 +25,17 @@ governing standards.
                     main CI: full tests + SonarCloud (main) + release tag vX.Y.Z-BUILD_N on every merge
                     except Dependabot's (a manual iOS CI run with publish_release_tag=true also tags)
 
-3. Cut a release  start iOS Release manually on the tag, once per app (app input) — its only entry point;
+3. Cut a release  start iOS Release manually on the tag (dev/test/prod inputs, all ticked by default) — its only entry point;
                   CI never starts a release
                     marketing version = X.Y.Z, build number = N (Config/Base.xcconfig, validated vs tag)
                     GitCommitSHA      = read-only Info.plist metadata (traceability only)
 
-4. Build          ios-release.yml run per app — each app COMPILED ONCE, build N → internal TestFlight,
-                  encrypted .xcarchive kept as an artifact of the run, Mach-O UUID recorded
+4. Build          ios-release.yml compile job [env: release-build — no gate] — each selected app COMPILED ONCE,
+                  encrypted .xcarchive kept as an artifact of the run, Mach-O UUID recorded; then build N →
+                  internal TestFlight, in order (an unticked app is skipped, a rejection stops the rest)
                     [env: dev  — no gate]    Dev app  → Dev backend, internal + external groups
                     [env: test — APPROVAL A] Test app → Test backend       (sprint testing)
-                    [env: prod — APPROVAL C] Prod app → Ext-Test backend   (UAT; Prod run starts after
-                                                                            release-testing sign-off)
+                    [env: prod — APPROVAL C] Prod app → Ext-Test backend   (UAT, after release-testing sign-off)
 
 5. Promote        same ios-release.yml run — NO RECOMPILE: same archive, backend URL swapped,
                   build N.1, re-signed, proven (UUID match, codesign verify, internal host absent)
@@ -43,7 +43,7 @@ governing standards.
                     [env: prod-external — APPROVAL D] Prod app N.1 → Prod      → external group (sanity)
                     (TestFlight Beta App Review applies to each N.1)
 
-6. Production     [env: prod-appstore — APPROVAL E]  last job of the Prod run
+6. Production     [env: prod-appstore — APPROVAL E]  last job of the run
                     submit the SAME Prod N.1 upload → review → PHASED RELEASE (build once)
 
 7. Monitor        App Store Connect metrics + crash reporting during the phased roll-out

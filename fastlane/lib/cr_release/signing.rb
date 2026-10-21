@@ -2,13 +2,17 @@ module CrRelease
   module Signing
     module_function
 
-    def xcargs(team_id, profile_name)
-      [
+    def xcargs(team_id, profile_name, app)
+      args = [
         "DEVELOPMENT_TEAM=#{team_id}",
         "CODE_SIGN_STYLE=Manual",
         "CODE_SIGN_IDENTITY=\"Apple Distribution\"",
-        "PROVISIONING_PROFILE_SPECIFIER=\"#{profile_name}\""
-      ].join(" ")
+        "PROVISIONING_PROFILE_SPECIFIER=\"#{profile_name}\"",
+        # Command-line settings beat the target's literal, so one project builds all three apps.
+        "PRODUCT_BUNDLE_IDENTIFIER=#{app.fetch(:app_identifier)}"
+      ]
+      args << "INFOPLIST_KEY_CFBundleDisplayName=\"#{app[:display_name]}\"" if app[:display_name]
+      args.join(" ")
     end
 
     # Match reports success even when the private key fails to import; catch it here, not deep inside xcodebuild.

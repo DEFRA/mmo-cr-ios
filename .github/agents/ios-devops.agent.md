@@ -75,24 +75,25 @@ Do not run a second, separate validation round — the plan is checked against t
 
 - **CI pipelines** — PR validation (SwiftLint, build, unit/UI tests + coverage), the SonarCloud scan, and
   branch-protection-friendly checks.
-- **Release pipelines** — a single manually dispatched `ios-release.yml` (Fastlane, run on a release tag, **one run
-  per app** via an `app` input) that **compiles each of the three apps once** (dev/test/prod bundle IDs) from the
-  **same tagged commit** to internal TestFlight and, **in the same run**, promotes to external TestFlight by
-  **re-packaging the same archive with the external backend URL (build `N.1`) — no recompile** — then (Prod run)
-  submits that same `N.1` upload to the App Store (ADR-0021). There is **no** separate promotion workflow; GitHub's
-  35-day run / 30-day approval limits are accepted.
+- **Release pipelines** — a single manually dispatched `ios-release.yml` (Fastlane, run on a release tag, with
+  `dev`/`test`/`prod` stage inputs, all ticked by default) whose separate `compile` job **compiles each selected app
+  once** (dev/test/prod bundle IDs) from the **same tagged commit**; the stage jobs then upload `N` to internal
+  TestFlight and, **in the same run**, promote to external TestFlight by **re-packaging the same archive with the
+  external backend URL (build `N.1`) — no recompile** — then submit that same Prod `N.1` upload to the App Store
+  (ADR-0021). There is **no** separate promotion workflow; GitHub's 35-day run / 30-day approval limits are accepted.
 - **Fastlane** — `Fastfile` lanes, `Appfile`, `Matchfile`/signing config, `Gemfile` pinning.
 - **Signing & secrets** — App Store Connect API key auth, temporary keychains, Match vs manual `.p12` vs
   Xcode Cloud managed signing (decided in your plan + an ADR), Environment-scoped encrypted secrets.
-- **GitHub Environments & approvals** — **six** gated Environments `dev` (ungated), `test`,
+- **GitHub Environments & approvals** — **six** stage Environments `dev` (ungated), `test`,
   `test-external`, `prod`, `prod-external` and `prod-appstore`, each (except `dev`) gated by required
-  reviewers (self-approval prevented where supported); secrets scoped per stage; each Environment holds
+  reviewers (self-approval prevented where supported), plus the ungated `release-build` Environment for the compile
+  job; secrets scoped per stage; each stage Environment holds
   its stage config as `CR_APP_CFG_*` variables (allow-listed in `Config/app-config.schema.json`).
 - **Versioning** — Marketing version and build number sourced from `Config/Base.xcconfig`; release tag (`v<marketing_version>-BUILD_<current_project_version>`) published by *iOS CI* on every non-Dependabot merge to `main` or a manual run with `publish_release_tag: true`; CI never starts a release; *iOS Release* runs only by manual dispatch on a tag, with the version taken only from the code; external promotions use `N.1`; `GitCommitSHA` embedded as `Info.plist` traceability metadata (never the build number).
 - **Configuration & identity (frozen)** — three bundle IDs (`mmo.catchrecordingdev.ios` /
   `mmo.catchrecordingtest.ios` / `mmo.catchrecording.ios`) as three App Store Connect apps serving five
-  backends, identity via `.xcconfig`/schemes and the single backend URL injected from GitHub Environment
-  variables — never committed (ADR-0020).
+  backends, identity set by Fastlane build-setting overrides at compile time and the single backend URL injected from
+  GitHub Environment variables — never committed (ADR-0020).
 - **Security setup** — the **CodeQL advanced-setup workflow** and the **Dependabot config** as their own
   separate files; confirming secret scanning + push protection are on; pinning Actions to full commit SHAs.
 - **Config** — `.xcconfig` (non-sensitive), `exportOptions.plist`, and pipeline docs/ADRs.

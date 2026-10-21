@@ -61,7 +61,13 @@ struct SettingsView: View {
                 set: { viewModel.isShowingDebugSpeciesResultAlert = $0 }
             ),
             actions: {
-                Button("OK") {}
+                Button("OK") {
+                    // Intentionally empty: this is a dismiss-only acknowledgement for the debug
+                    // species-fetch result alert. SwiftUI dismisses the alert automatically on
+                    // tap; there is no state to reset here (`isShowingDebugSpeciesResultAlert`
+                    // is only ever set back to `true` by a fresh debug fetch, and the message is
+                    // overwritten next time, not cleared on dismiss).
+                }
             },
             message: {
                 Text(viewModel.debugSpeciesResultMessage ?? "")

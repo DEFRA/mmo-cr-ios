@@ -18,7 +18,7 @@ Info.plist dictionary from GitHub Environment variables.
 | File | Purpose |
 |---|---|
 | `Config/Base.xcconfig` | Shared settings for every build configuration; includes the optional `Config/Local.xcconfig` |
-| `Config/Local.xcconfig` | **Yours, git-ignored, optional.** Local values for the keys in the schema, e.g. `CR_APP_CFG_API_BASE_URL = http:/$()/localhost:3002` |
+| `Config/Local.xcconfig` | **Yours, git-ignored, optional.** Local values for the keys in the schema, e.g. `CR_APP_CFG_API_BASE_URL = http:/$()/localhost:3002` (or the CDP **dev** environment's reference-data API, `https:/$()/mmo-cr-catch-recording-service.api.dev.cdp-int.defra.cloud/reference-data-service` — see below) |
 | `Config/Local.xcconfig.example` | Illustrative starting point for `Config/Local.xcconfig`; not checked against the schema and not required |
 | `Config/app-config.schema.json` | The only maintained configuration file: allow-list of `MMOCRAppConfig` keys |
 | `scripts/inject-app-config.sh` | Debug-only build phase: writes `MMOCRAppConfig` from your local values and allows plain `http` to `localhost` (and to the host of any local `http://` URL) |
@@ -41,15 +41,28 @@ settings (`NSLocalNetworkUsageDescription` on Debug only); no `Info.plist` file 
 archives skip the build phase: the release pipeline writes `MMOCRAppConfig` for every TestFlight and App Store
 build.
 
-### Running against a local reference-data backend
+### Running against the CDP dev reference-data API
 
 1. Copy `Config/Local.xcconfig.example` to `Config/Local.xcconfig` (git-ignored) and edit as needed.
    In an xcconfig `//` starts a comment, hence `$()`. Xcode warns about any schema key you have not set.
-2. Start your local reference-data backend.
-3. If it requires a bearer token, set `REFERENCE_DATA_API_TOKEN` in the `record-catch` scheme's Run
-   environment variables (Xcode: **Product ▸ Scheme ▸ Edit Scheme… ▸ Run ▸ Arguments**). The scheme
-   already declares the key with an empty value; fill it in locally and never commit a real value.
+   To point at the CDP **dev** environment instead of a local backend, set
+   `CR_APP_CFG_API_BASE_URL = https:/$()/mmo-cr-catch-recording-service.api.dev.cdp-int.defra.cloud/reference-data-service`.
+2. If using a local backend, start it; the CDP dev environment needs no local backend.
+3. If the backend requires a bearer token, set `REFERENCE_DATA_API_TOKEN` as a Run environment
+   variable:
+   - **Local backend:** the `record-catch` scheme's Run environment variables (Xcode: **Product ▸
+     Scheme ▸ Edit Scheme… ▸ Run ▸ Arguments**). The scheme already declares the key with an empty
+     value; fill it in locally and never commit a real value.
+   - **CDP dev environment:** set it on your own **personal, non-shared** duplicate of the scheme
+     (Xcode: **Product ▸ Scheme ▸ Manage Schemes… ▸ duplicate `record-catch` ▸ untick Shared ▸ Edit
+     Scheme… ▸ Run ▸ Arguments**) — never on the shared `record-catch` scheme, which is committed to
+     source control.
 4. Build and run the Debug configuration as normal.
+5. For BrowserStack App Automate XCUITest runs, pass the token via the build API's
+   `setEnvVariables` parameter (sourced from a CI secret, never committed) — UI tests relay it to
+   the app under test via `XCUIApplication.forwardReferenceDataAPIToken()`
+   (`record-catchUITests/XCUIApplication+ReferenceDataToken.swift`), since BrowserStack's
+   `setEnvVariables` reaches only the test runner process, not the launched app.
 
 See `docs/api/reference-data-api.md` for the full endpoint/envelope reference, physical-device (LAN
 IP) testing instructions, and the developer smoke-check entry point.

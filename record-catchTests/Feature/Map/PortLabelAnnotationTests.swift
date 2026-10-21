@@ -57,13 +57,14 @@ final class PortLabelAnnotationViewTests: XCTestCase {
         XCTAssertFalse(view.isUserInteractionEnabled)
     }
 
-    /// Collision handling is deliberately off (see `PortLabelAnnotationView.configureView`) — a
-    /// port name must always render, never be silently hidden by MapKit's own collision system.
-    func testCollisionIsDisabled() {
+    /// Collision handling is deliberately on (see `PortLabelAnnotationView.configureView`) — a
+    /// dense cluster of overlapping port names should have MapKit hide all but one, rather than
+    /// every name rendering on top of each other.
+    func testCollisionIsEnabled() {
         let annotation = makeAnnotation()
         let view = PortLabelAnnotationView(annotation: annotation, reuseIdentifier: PortLabelAnnotationView.reuseIdentifier)
 
-        XCTAssertEqual(view.collisionMode, .none)
+        XCTAssertEqual(view.collisionMode, .rectangle)
     }
 
     func testConfigureSizesBoundsToFitTheName() {
@@ -87,5 +88,17 @@ final class PortLabelAnnotationViewTests: XCTestCase {
 
         XCTAssertGreaterThan(view.centerOffset.x, 0, "Label must sit to the right of the port coordinate, not on top of it")
         XCTAssertEqual(view.centerOffset.y, 0, "Label must stay vertically centred on the port coordinate")
+    }
+
+    /// Every port name must share the same `displayPriority` — if any single port name defaulted
+    /// to `MKAnnotationView`'s own `.required`, MapKit would never be able to hide it in a
+    /// collision, silently defeating `collisionMode = .rectangle` for that name.
+    func testConfigureAlwaysSetsDefaultHighPriority() {
+        let annotation = makeAnnotation()
+        let view = PortLabelAnnotationView(annotation: annotation, reuseIdentifier: PortLabelAnnotationView.reuseIdentifier)
+
+        view.configure(name: "Abbotsbury")
+
+        XCTAssertEqual(view.displayPriority, .defaultHigh)
     }
 }

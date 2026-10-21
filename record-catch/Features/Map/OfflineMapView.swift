@@ -10,7 +10,8 @@ import SwiftUI
 /// - **Ports are display-only**: they're never selectable and never show a callout — their dot is
 ///   drawn by `PortsOverlay`/`PortsOverlayRenderer` and their name by a non-interactive
 ///   `PortLabelAnnotationView` (see those types' doc comments) — the parent never learns about a
-///   port tap.
+///   port tap. Overlapping port names are decluttered entirely by MapKit's own collision handling
+///   (see `PortLabelAnnotationView`) — this view never overrides which name MapKit chooses to hide.
 /// - **Subrectangles are selectable**: tapping one highlights it and reports its
 ///   `SubrectangleProperties` via `selectedSubrectangle`. Tapping somewhere that isn't inside any
 ///   subrectangle clears the selection.

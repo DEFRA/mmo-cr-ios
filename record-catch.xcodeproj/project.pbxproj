@@ -24,10 +24,10 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		C0F1A0012FFE87DD00B7A0AB /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
 		DA6ABEDD2FFE87DC00B7A0AB /* record-catch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "record-catch.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		DA6ABEEC2FFE87DD00B7A0AB /* record-catchTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "record-catchTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		DA6ABEF62FFE87DD00B7A0AB /* record-catchUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "record-catchUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
-		C0F1A0012FFE87DD00B7A0AB /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -162,6 +162,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		C0F1A0042FFE87DD00B7A0AB /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				C0F1A0012FFE87DD00B7A0AB /* Base.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
 		DA6ABED42FFE87DC00B7A0AB = {
 			isa = PBXGroup;
 			children = (
@@ -181,14 +189,6 @@
 				DA6ABEF62FFE87DD00B7A0AB /* record-catchUITests.xctest */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		C0F1A0042FFE87DD00B7A0AB /* Config */ = {
-			isa = PBXGroup;
-			children = (
-				C0F1A0012FFE87DD00B7A0AB /* Base.xcconfig */,
-			);
-			path = Config;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -519,7 +519,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 19;
+				CURRENT_PROJECT_VERSION = 20;
 				DEVELOPMENT_TEAM = XBP2KL858T;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
@@ -557,7 +557,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 19;
+				CURRENT_PROJECT_VERSION = 20;
 				DEVELOPMENT_TEAM = XBP2KL858T;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;

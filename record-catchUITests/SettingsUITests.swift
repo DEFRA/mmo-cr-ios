@@ -29,6 +29,7 @@ final class SettingsUITests: XCTestCase {
     private func launch() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += ["-uiTestResetLanguage", "-uiTestSettings"]
+        app.forwardReferenceDataAPIToken()
         app.launch()
         return app
     }

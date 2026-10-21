@@ -279,7 +279,7 @@ final class OfflineMapCoordinatorTests: XCTestCase {
         XCTAssertFalse(view?.isUserInteractionEnabled ?? true)
     }
 
-    func testPortLabelViewVisibilityFollowsRegionZoom() {
+    func testPortLabelViewIsNeverHiddenByTheCoordinator() {
         let (binding, _) = makeBinding(initial: nil)
         let coordinator = OfflineMapCoordinator(selectedSubrectangle: binding)
         let mapView = MKMapView()
@@ -299,20 +299,94 @@ final class OfflineMapCoordinatorTests: XCTestCase {
         )
 
         let view = coordinator.mapView(mapView, viewFor: portAnnotation) as? PortLabelAnnotationView
+        XCTAssertEqual(view?.isHidden, false, "A freshly created port label view must start visible")
 
+        // Zoomed out past the subrectangle-label threshold — port name visibility is owned
+        // entirely by MapKit's own collision handling (`collisionMode`/`displayPriority` — see
+        // `PortLabelAnnotationView`), not by zoom, so the coordinator must never touch `isHidden`
+        // for a port label at any zoom level.
         mapView.setRegion(
             MKCoordinateRegion(center: portAnnotation.coordinate, span: MKCoordinateSpan(latitudeDelta: 5.0, longitudeDelta: 5.0)),
             animated: false
         )
         coordinator.mapView(mapView, regionDidChangeAnimated: false)
-        XCTAssertEqual(view?.isHidden, true, "Zoomed out past the threshold, port names should be hidden")
+        XCTAssertEqual(view?.isHidden, false, "The coordinator must never hide a port label for zoom")
+    }
+
+    /// Regression test for a real bug: `regionDidChangeAnimated` used to unconditionally reassert
+    /// `isHidden` on every port label on *every* region change, which immediately undid whatever
+    /// MapKit's own collision system (`collisionMode`/`displayPriority`) had just decided — so a
+    /// cluster of nearby ports never stayed decluttered. The fix removes the coordinator from that
+    /// decision entirely: it must never set `isHidden` on a port label view, regardless of region
+    /// changes. `isHidden` is simulated here as MapKit's collision engine would set it (see
+    /// `PortLabelAnnotationView`'s doc comment), without a real collision pass, because
+    /// `MKMapView`'s collision engine doesn't run in a unit-test host.
+    func testCollisionHiddenPortLabelSurvivesARegionChange() {
+        let (binding, _) = makeBinding(initial: nil)
+        let coordinator = OfflineMapCoordinator(selectedSubrectangle: binding)
+        let mapView = MKMapView()
+        mapView.frame = CGRect(x: 0, y: 0, width: 390, height: 844)
+
+        let portAnnotation = PortLabelAnnotation(
+            portCode: 678,
+            name: "Abbotsbury",
+            coordinate: CLLocationCoordinate2D(latitude: 50.667, longitude: -2.6)
+        )
+        coordinator.load(
+            landOverlays: [], subrectangleOverlays: [], selectableSubrectangleOverlays: [], subrectangleAnnotations: [],
+            portsOverlay: PortsOverlay(markers: []), portLabelAnnotations: [portAnnotation], into: mapView
+        )
+
+        let view = coordinator.mapView(mapView, viewFor: portAnnotation) as? PortLabelAnnotationView
+
+        // Simulates MapKit's own collision system hiding this label because it collided with a
+        // neighbouring port name — exactly what should be able to persist.
+        view?.isHidden = true
 
         mapView.setRegion(
             MKCoordinateRegion(center: portAnnotation.coordinate, span: MKCoordinateSpan(latitudeDelta: 0.5, longitudeDelta: 0.5)),
             animated: false
         )
         coordinator.mapView(mapView, regionDidChangeAnimated: false)
-        XCTAssertEqual(view?.isHidden, false, "Zoomed in past the threshold, port names should be shown")
+
+        XCTAssertEqual(
+            view?.isHidden, true,
+            "A region change must never override MapKit's own collision hiding of a port label"
+        )
+    }
+
+    /// Subrectangle code labels, unlike port names, must always render regardless of overlap
+    /// (`collisionMode = .none` — see `SubrectangleAnnotationView`), and their visibility is still
+    /// owned entirely by the zoom-driven `LabelVisibility` rule, unaffected by the port-label
+    /// change above.
+    func testSubrectangleLabelVisibilityStillFollowsRegionZoom() {
+        let (binding, _) = makeBinding(initial: nil)
+        let coordinator = OfflineMapCoordinator(selectedSubrectangle: binding)
+        let mapView = MKMapView()
+        mapView.frame = CGRect(x: 0, y: 0, width: 390, height: 844)
+
+        let zoneA = makeRectangleOverlay(subCode: "A1", minLat: 54.0, maxLat: 55.0, minLon: -4.0, maxLon: -3.0)
+        let annotation = SubrectangleAnnotation(subCode: "A1", coordinate: zoneA.labelCoordinate)
+        coordinator.load(
+            landOverlays: [], subrectangleOverlays: [zoneA], selectableSubrectangleOverlays: [zoneA],
+            subrectangleAnnotations: [annotation], portsOverlay: PortsOverlay(markers: []), into: mapView
+        )
+
+        let view = coordinator.mapView(mapView, viewFor: annotation) as? SubrectangleAnnotationView
+
+        mapView.setRegion(
+            MKCoordinateRegion(center: annotation.coordinate, span: MKCoordinateSpan(latitudeDelta: 5.0, longitudeDelta: 5.0)),
+            animated: false
+        )
+        coordinator.mapView(mapView, regionDidChangeAnimated: false)
+        XCTAssertEqual(view?.isHidden, true, "Zoomed out past the threshold, subrectangle codes should be hidden")
+
+        mapView.setRegion(
+            MKCoordinateRegion(center: annotation.coordinate, span: MKCoordinateSpan(latitudeDelta: 0.5, longitudeDelta: 0.5)),
+            animated: false
+        )
+        coordinator.mapView(mapView, regionDidChangeAnimated: false)
+        XCTAssertEqual(view?.isHidden, false, "Zoomed in past the threshold, subrectangle codes should be shown")
     }
 
     func testRendererForPortsOverlayNoLongerExposesShowsLabels() {

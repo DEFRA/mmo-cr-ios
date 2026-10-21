@@ -33,6 +33,7 @@ final class CatchLocationManualEntryUITests: XCTestCase {
     private func launch() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += ["-uiTestResetLanguage", "-uiTestCatchRecordCatchLocationManualEntry"]
+        app.forwardReferenceDataAPIToken()
         app.launch()
         return app
     }

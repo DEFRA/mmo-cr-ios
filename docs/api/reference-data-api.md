@@ -1,8 +1,8 @@
 # Reference data API (vessels, species, ports)
 
 See ADR-0018 for the full design rationale (including its dated addenda covering the `species`
-and `ports` datasets). This document is the quick developer reference for running the app against
-a local reference-data backend.
+and `ports` datasets, and the 2026-10 addendum covering the CDP dev base URL). This document is
+the quick developer reference for running the app against the reference-data API.
 
 ## Endpoints
 
@@ -225,8 +225,9 @@ transcript, watch out for exactly this: an empty/unset path variable silently pr
 ## Species dataset
 
 The `species` dataset (`ReferenceDataset.species`) follows the exact same two routes/response
-shapes above — only the item shape differs. Verified against the local backend at
-`http://localhost:3002` (216 items in the canonical view):
+shapes above — only the item shape differs. Originally verified against a local backend
+(216 items in the canonical view; the app now talks to the CDP dev environment by default,
+see Configuration below):
 
 ```json
 {
@@ -320,22 +321,27 @@ trade-off to `SpeciesOption`'s "no migration path" decision, and why it was nece
 
 | Info.plist key | Source | Local Debug value | Pipeline builds |
 |---|---|---|---|
-| `MMOCRAppConfig` → `API_BASE_URL` | `CR_APP_CFG_API_BASE_URL` in your git-ignored `Config/Local.xcconfig`, written by the Debug build phase `scripts/inject-app-config.sh` | e.g. `http://localhost:3002` | Written by the release pipeline from the GitHub Environment variable `CR_APP_CFG_API_BASE_URL` (ADR-0020) |
+| `MMOCRAppConfig` → `API_BASE_URL` | `CR_APP_CFG_API_BASE_URL` in your git-ignored `Config/Local.xcconfig`, written by the Debug build phase `scripts/inject-app-config.sh` | e.g. `http://localhost:3002`, or the CDP **dev** environment: `https://mmo-cr-catch-recording-service.api.dev.cdp-int.defra.cloud/reference-data-service` | Written by the release pipeline from the GitHub Environment variable `CR_APP_CFG_API_BASE_URL` (ADR-0020) |
 
 `APIConfiguration` throws `APIError.invalidConfiguration` if the base URL is missing/blank/malformed,
-or (outside a `DEBUG` build) not `https`. Until `APIConfiguration` moves from the old `APIBaseURL` key to
-`MMOCRAppConfig` (ADR-0018, Amendment 2026-10), it reports `invalidConfiguration` at run time.
+or (outside a `DEBUG` build) not `https`. `APIConfiguration` reads the `MMOCRAppConfig` → `API_BASE_URL`
+key (ADR-0018, Amendment 2026-10b) — the old flat `APIBaseURL` key is no longer used.
 
-## Authentication token (local development only)
+## Authentication token (CDP dev — DEBUG builds only)
 
-The app has no real authentication yet (see ADR-0018 §5). To authenticate against a local backend
-that requires a bearer token, set the `REFERENCE_DATA_API_TOKEN` environment variable for the
-`record-catch` scheme's Run action before building/running:
+The app has no real authentication yet (see ADR-0018 §5). The CDP dev reference-data API requires
+a bearer token. Set the `REFERENCE_DATA_API_TOKEN` environment variable before building/running:
 
-1. In Xcode: **Product ▸ Scheme ▸ Edit Scheme… ▸ Run ▸ Arguments ▸ Environment Variables**.
-2. Set `REFERENCE_DATA_API_TOKEN` to your local backend's token (the scheme already declares the
-   key with an empty value so it's discoverable — just fill in the value; **never commit a real
-   value**).
+1. **Local Xcode runs:** use your own **personal, non-shared** Xcode scheme — never the shared,
+   committed `record-catch` scheme. Duplicate it (**Product ▸ Scheme ▸ Manage Schemes… ▸**
+   duplicate `record-catch` **▸ untick Shared**), then set the variable under
+   **Edit Scheme… ▸ Run ▸ Arguments ▸ Environment Variables**.
+2. **BrowserStack App Automate (XCUITest):** pass the token via the build API's
+   `setEnvVariables` parameter, sourced from a CI secret (never committed). BrowserStack only
+   forwards `setEnvVariables` to the XCUITest *runner* process, not the application under test, so
+   every UI test's `launch()` call relays it explicitly via
+   `XCUIApplication.forwardReferenceDataAPIToken()`
+   (`record-catchUITests/XCUIApplication+ReferenceDataToken.swift`).
 
 If unset (or blank), requests are sent **without** an `Authorization` header, and the API's `401`
 response surfaces as `APIError.unauthorized` — a clear failure rather than a silent one. This is a
@@ -343,7 +349,19 @@ response surfaces as `APIError.unauthorized` — a clear failure rather than a s
 implementation, once OAuth/OIDC authentication lands, will read the token from
 `Core/Security/KeychainStoring.swift` instead.
 
-## Testing on a physical device (LAN IP)
+**Never commit a real token** — not in `.xcconfig`, `Info.plist`, the shared scheme, or source. If
+one ever leaks, follow DEFRA's credential exposure process immediately.
+
+## Pointing Debug at a local backend instead (or the CDP dev environment)
+
+There is no committed default any more — your own git-ignored `Config/Local.xcconfig` decides.
+Set `CR_APP_CFG_API_BASE_URL` there to either a locally-running backend (e.g.
+`http:/$()/localhost:3002`) or the CDP **dev** environment
+(`https:/$()/mmo-cr-catch-recording-service.api.dev.cdp-int.defra.cloud/reference-data-service`);
+see `README.md`'s "Running against the CDP dev reference-data API" section. Never commit
+`Config/Local.xcconfig` itself.
+
+### Testing on a physical device (LAN IP)
 
 The Debug ATS exception covers `localhost` and the host of your local `http://` URL. To test on a physical
 device against your Mac's backend over the LAN:

@@ -18,35 +18,28 @@ import SwiftUI
 ///
 /// - Important: When `range` collapses to a single selectable day (e.g. the trip return date
 ///   screen when the departure date is today, so the only legal return date is also today), this
-///   view deliberately does **not** render the interactive `.wheel` `DatePicker`. A
-///   `UIPickerView`-backed wheel with zero scrollable rows in one or more of its columns is a
-///   known-unstable UIKit configuration: it repeatedly fails to satisfy its own internal layout
-///   constraints (visible as `TUIKeyplaneView`/`TUIPredictionViewCell` "Unable to simultaneously
-///   satisfy constraints" log spam) and can hang/crash on-device the moment a user touches it —
-///   this is what the crash reported against the return-date screen turned out to be. Since there
-///   is only one legal value in that case, nothing is lost by presenting it as a static, accessible
-///   confirmation instead of a picker with nothing to scroll to.
+///   view renders the **same** `DatePicker` with `.datePickerStyle(.compact)` instead of
+///   `.wheel`. A `UIPickerView`-backed wheel with zero scrollable rows in one or more of its
+///   columns is a known-unstable UIKit configuration: it repeatedly fails to satisfy its own
+///   internal layout constraints (visible as `TUIKeyplaneView`/`TUIPredictionViewCell` "Unable to
+///   simultaneously satisfy constraints" log spam) and can hang/crash on-device the moment a user
+///   touches it — this is what the crash reported against the return-date screen turned out to
+///   be. `.compact`'s popover calendar grid does not have that failure mode even with a single
+///   enabled day, so switching style (rather than substituting a bespoke static-text state that
+///   was never part of the approved design — see ADR-0017 addendum) keeps the screen crash-safe
+///   while staying a plain native `DatePicker` throughout.
 struct TripDatePicker: View {
     let title: String
     let hint: String
     @Binding var selection: Date
     let range: ClosedRange<Date>
-    /// Localised format string (one `%@` placeholder for the formatted date) shown instead of the
-    /// wheel picker when `range` collapses to a single selectable day. Resolved by the caller via
-    /// `AppLanguageStore` (catalog key `catchRecord.tripDate.onlyDateAvailable`) so this reusable
-    /// component does not need its own localisation dependency.
-    let onlyDateAvailableFormat: String
-    /// Locale used only to format the single-day fallback's date text (e.g. "24 July 2025" vs the
-    /// Welsh equivalent). Passed explicitly by the caller rather than read from the environment so
-    /// this stays in step with `AppLanguageStore.language`, which does not change the environment
-    /// locale consumed by `DateFormatter.locale` automatically.
-    var dateFormattingLocale: Locale = .current
-    /// Accessibility identifier prefix; the picker control uses `<prefix>.picker` (or
-    /// `<prefix>.onlyDateAvailable` for the single-day fallback below).
+    /// Accessibility identifier prefix; the picker control uses `<prefix>.picker` regardless of
+    /// which style is rendered.
     var accessibilityIdentifierPrefix: String = "TripDatePicker"
 
-    /// `range` collapses to a single legal day — there is nothing to pick between, so an
-    /// interactive wheel must not be rendered (see the type-level doc comment above).
+    /// `range` collapses to a single legal day — there is nothing to scroll between, so the
+    /// unstable `.wheel` configuration must not be rendered (see the type-level doc comment
+    /// above). `.compact` is used instead; it remains a fully interactive native `DatePicker`.
     private var hasOnlySelectableDay: Bool { range.lowerBound == range.upperBound }
 
     var body: some View {
@@ -54,19 +47,19 @@ struct TripDatePicker: View {
             ParagraphText(text: hint, isHint: true)
 
             if hasOnlySelectableDay {
-                onlyDateAvailable
+                datePicker
+                    .datePickerStyle(.compact)
+                    .labelsHidden()
+                    .frame(maxWidth: nil, alignment: .leading)
+                    .accessibilityLabel(title)
+                    .accessibilityIdentifier("\(accessibilityIdentifierPrefix).picker")
             } else {
-                DatePicker(
-                    title,
-                    selection: $selection,
-                    in: range,
-                    displayedComponents: .date
-                )
-                .datePickerStyle(.wheel)
-                .labelsHidden()
-                .frame(maxWidth: .infinity, alignment: .center)
-                .accessibilityLabel(title)
-                .accessibilityIdentifier("\(accessibilityIdentifierPrefix).picker")
+                datePicker
+                    .datePickerStyle(.wheel)
+                    .labelsHidden()
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .accessibilityLabel(title)
+                    .accessibilityIdentifier("\(accessibilityIdentifierPrefix).picker")
             }
         }
         .onAppear {
@@ -78,12 +71,13 @@ struct TripDatePicker: View {
         }
     }
 
-    private var onlyDateAvailable: some View {
-        let dateText = CatchRecordDateRules.longDateString(range.lowerBound, locale: dateFormattingLocale)
-        let message = String(format: onlyDateAvailableFormat, dateText)
-        return ParagraphText(text: message)
-            .padding(.vertical, AppSpacing.small)
-            .accessibilityIdentifier("\(accessibilityIdentifierPrefix).onlyDateAvailable")
+    private var datePicker: some View {
+        DatePicker(
+            title,
+            selection: $selection,
+            in: range,
+            displayedComponents: .date
+        )
     }
 }
 
@@ -95,7 +89,6 @@ struct TripDatePicker: View {
         hint: "Select the date you left for your trip.",
         selection: $date,
         range: Date.distantPast...Date(),
-        onlyDateAvailableFormat: "The only date you can select is %@.",
         accessibilityIdentifierPrefix: "Preview.tripDate"
     )
     .padding()
@@ -109,7 +102,6 @@ struct TripDatePicker: View {
         hint: "Select the date you returned from your trip.",
         selection: $date,
         range: Date()...Date(),
-        onlyDateAvailableFormat: "The only date you can select is %@.",
         accessibilityIdentifierPrefix: "Preview.tripDate.onlyDay"
     )
     .padding()

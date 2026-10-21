@@ -35,6 +35,7 @@ final class SignInUITests: XCTestCase {
     @MainActor
     func test_signInScreen_showsExpectedElements() {
         let app = XCUIApplication()
+        app.forwardReferenceDataAPIToken()
         app.launch()
 
         XCTAssertTrue(app.staticTexts[ID.heading].waitForExistence(timeout: 5))
@@ -49,6 +50,7 @@ final class SignInUITests: XCTestCase {
         // DEMO-ONLY BYPASS: no real auth exists yet, so tapping "Sign in" always
         // succeeds and continues to Home regardless of what's in the form.
         let app = XCUIApplication()
+        app.forwardReferenceDataAPIToken()
         app.launch()
 
         app.buttons[ID.signIn].tap()
@@ -62,6 +64,7 @@ final class SignInUITests: XCTestCase {
     @MainActor
     func test_languageToggle_changesVisibleCopy() {
         let app = XCUIApplication()
+        app.forwardReferenceDataAPIToken()
         app.launch()
 
         let heading = app.staticTexts[ID.heading]
@@ -80,6 +83,7 @@ final class SignInUITests: XCTestCase {
     @MainActor
     func test_signInButton_navigatesToHome_withFilledForm() {
         let app = XCUIApplication()
+        app.forwardReferenceDataAPIToken()
         app.launch()
 
         // Type a valid-shaped email + password to demonstrate the form still
@@ -105,6 +109,7 @@ final class SignInUITests: XCTestCase {
     @MainActor
     func test_helpLinks_existAndAreInert() {
         let app = XCUIApplication()
+        app.forwardReferenceDataAPIToken()
         app.launch()
 
         let forgotten = app.buttons[ID.forgotten]

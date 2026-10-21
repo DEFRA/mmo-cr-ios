@@ -29,6 +29,7 @@ final class SubmissionNudgeUITests: XCTestCase {
     private func launch() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += ["-uiTestResetLanguage", "-uiTestCatchRecordSubmissionNudge"]
+        app.forwardReferenceDataAPIToken()
         app.launch()
         return app
     }

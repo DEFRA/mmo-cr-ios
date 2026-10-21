@@ -27,6 +27,7 @@ final class SecureTextInputFieldUITests: XCTestCase {
     @MainActor
     func testToggleFlipsAccessibilityLabelAndFieldVisibility() throws {
         let app = XCUIApplication()
+        app.forwardReferenceDataAPIToken()
         app.launch()
 
         let toggle = app.buttons[Identifier.secureToggle]

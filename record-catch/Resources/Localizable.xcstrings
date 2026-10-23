@@ -1932,13 +1932,13 @@
         "cy": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Dewiswch is-ardal ystadegol o'r rhestr"
+            "value": "Rhowch god is-ardal ystadegol dilys."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Select a statistical sub area from the list"
+            "value": "Enter a valid statistical sub area code."
           }
         }
       }

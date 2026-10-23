@@ -3,31 +3,22 @@ import Foundation
 /// Supplies submitted/amended/late records from the (not-yet-built) MMO backend.
 ///
 /// API-shaped stub seam, mirroring `FavouritePortsProviding`/`CatchRecordSubmissionServicing` (see
-/// ADR-0004/0015): there is no real backend yet, so `StubServerRecordsProvider` returns a fixed set
-/// of fixtures. A real implementation can swap in later without changing `MergingRecordsRepository`
+/// ADR-0004/0015): there is no real backend yet, so `StubServerRecordsProvider` returns no
+/// records. A real implementation can swap in later without changing `MergingRecordsRepository`
 /// or its tests.
 nonisolated protocol ServerRecordsProviding: Sendable {
     /// Every server-held record (submitted, amended, late) visible to the current user.
     func serverRecords() async throws -> [SubmissionRow]
 }
 
-/// Fixed, always-succeeding fixtures standing in for the real Records API (see ADR-0015). Kept
-/// deliberately small and static — this app has no real backend or auth yet.
+/// Always-succeeding stand-in for the real Records API (see ADR-0015) — there is no real backend
+/// yet, so this returns no rows. Home therefore only ever shows genuine data: real, persisted
+/// local Unsent drafts (merged in by `MergingRecordsRepository`), never placeholder/example
+/// records. Swap in a real implementation here once the backend exists, with no change required
+/// to `MergingRecordsRepository` or its call sites.
 nonisolated struct StubServerRecordsProvider: ServerRecordsProviding {
-
-    private static let fixtureDateText = "20 Nov 2020"
-    private static let fixtureDate: Date = {
-        var components = DateComponents(year: 2020, month: 11, day: 20)
-        components.calendar = Calendar(identifier: .gregorian)
-        return components.date ?? .distantPast
-    }()
-
     func serverRecords() async throws -> [SubmissionRow] {
-        [
-            SubmissionRow(dateText: Self.fixtureDateText, vesselName: "ACHILLES", status: .submitted, createdBy: "J.Smith", sortDate: Self.fixtureDate),
-            SubmissionRow(dateText: Self.fixtureDateText, vesselName: "ACHILLES", status: .amended, createdBy: "J.Smith", sortDate: Self.fixtureDate),
-            SubmissionRow(dateText: Self.fixtureDateText, vesselName: "ACHILLES", status: .late, createdBy: "J.Smith", sortDate: Self.fixtureDate)
-        ]
+        []
     }
 }
 

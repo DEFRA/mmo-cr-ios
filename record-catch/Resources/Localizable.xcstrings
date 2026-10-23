@@ -2753,6 +2753,24 @@
         }
       }
     },
+    "catchRecord.species.weight.validation.discardedExceedsRetained": {
+      "comment": "Species weight error shown on the 'legally discarded' field when it is greater than or equal to the 'above minimum size retained' weight for the same species (AC7/TC-12 of the weight-validation defect fix — discarding at least as much as was retained does not make sense). %@ is the species name. Only raised once both fields are otherwise valid (see RecordSpeciesWeightsValidation.discardedExceedsRetainedMessage).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Rhaid i'r pwysau uwchlaw'r maint lleiaf a gadwyd ar gyfer %@ fod yn uwch na'r pwysau a daflwyd yn gyfreithlon"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The weight above minimum size retained for %@ must be higher than the weight legally discarded"
+          }
+        }
+      }
+    },
     "catchRecord.species.weight.validation.enter": {
       "comment": "Record-species-weights: the mandatory 'above minimum' weight was left blank for a ticked species. %@ is the species name.",
       "extractionState": "manual",
@@ -2785,6 +2803,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "Weight for %@ must be more than 0kg"
+          }
+        }
+      }
+    },
+    "catchRecord.species.weight.validation.max": {
+      "comment": "Species weight error: the entered weight exceeds the maximum catch weight limit of 10,000kg (Scenario 10 of the weight-validation defect fix). %@ is the species name. Applies to every weight field sharing SpeciesWeightValidation.formatErrorMessage (the record-weights screen's 'above minimum'/'below minimum'/'legally discarded' fields, and the landing-storage species weight field).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Rhaid i'r pwysau ar gyfer %@ fod yn 10,000kg neu lai"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The weight for %@ must be 10,000kg or less"
           }
         }
       }

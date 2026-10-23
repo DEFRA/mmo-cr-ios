@@ -128,4 +128,68 @@ final class SpeciesWeightValidationTests: XCTestCase {
             SpeciesWeightValidation.optionalErrorMessage(for: "5", speciesName: species, precision: .oneDecimalPlace)
         )
     }
+
+    // MARK: - Maximum catch weight limit (Scenario 10)
+
+    func test_requiredErrorMessage_aboveMax_returnsMaxMessage() {
+        let message = SpeciesWeightValidation.requiredErrorMessage(
+            for: "10001",
+            speciesName: species,
+            precision: .wholeNumber,
+            enterKey: "catchRecord.species.weight.validation.enter"
+        )
+        XCTAssertEqual(message?.key, "catchRecord.species.weight.validation.max")
+        XCTAssertEqual(message?.arguments, [species])
+    }
+
+    func test_requiredErrorMessage_atMax_returnsNil() {
+        let message = SpeciesWeightValidation.requiredErrorMessage(
+            for: "10000",
+            speciesName: species,
+            precision: .wholeNumber,
+            enterKey: "catchRecord.species.weight.validation.enter"
+        )
+        XCTAssertNil(message)
+    }
+
+    func test_requiredErrorMessage_oneDecimalJustOverMax_returnsMaxMessage() {
+        let message = SpeciesWeightValidation.requiredErrorMessage(
+            for: "10000.1",
+            speciesName: species,
+            precision: .oneDecimalPlace,
+            enterKey: "catchRecord.species.weight.validation.enter"
+        )
+        XCTAssertEqual(message?.key, "catchRecord.species.weight.validation.max")
+    }
+
+    func test_optionalErrorMessage_aboveMax_returnsMaxMessage() {
+        let message = SpeciesWeightValidation.optionalErrorMessage(
+            for: "10001", speciesName: species, precision: .wholeNumber
+        )
+        XCTAssertEqual(message?.key, "catchRecord.species.weight.validation.max")
+    }
+
+    func test_requiredErrorMessage_blankTakesPriorityOverMax() {
+        // Blankness is checked before the maximum — this just documents that a blank value never
+        // reaches the max check (it would be nonsensical to compare "" against 10,000).
+        let message = SpeciesWeightValidation.requiredErrorMessage(
+            for: "",
+            speciesName: species,
+            precision: .wholeNumber,
+            enterKey: "catchRecord.species.weight.validation.enter"
+        )
+        XCTAssertEqual(message?.key, "catchRecord.species.weight.validation.enter")
+    }
+
+    func test_formatErrorTakesPriorityOverMax() {
+        // An over-precision value that also happens to exceed the maximum reports the format
+        // error, not the maximum error (GOV.UK priority order: format before range).
+        let message = SpeciesWeightValidation.requiredErrorMessage(
+            for: "10001.55",
+            speciesName: species,
+            precision: .oneDecimalPlace,
+            enterKey: "catchRecord.species.weight.validation.enter"
+        )
+        XCTAssertEqual(message?.key, "catchRecord.species.weight.validation.decimalPlace")
+    }
 }

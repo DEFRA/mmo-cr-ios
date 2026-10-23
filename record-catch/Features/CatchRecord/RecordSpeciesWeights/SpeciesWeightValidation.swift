@@ -3,14 +3,21 @@ import Foundation
 /// Pure, static validation for a single species weight field (e.g. "weight above minimum size
 /// retained"), shared by `RecordSpeciesWeightsViewModel` and `LandingStorageSpeciesViewModel`.
 ///
-/// Mirrors `GearMeasurementValidation`'s pure-parse style. Three rules, in GOV.UK priority order
+/// Mirrors `GearMeasurementValidation`'s pure-parse style. Four rules, in GOV.UK priority order
 /// (missing → wrong format → fails another rule):
 /// 1. Required fields must not be left blank (only the "above minimum" field is required — see
 ///    plan Q2; "below minimum" and "legally discarded" are optional and skipped entirely when blank).
 /// 2. The entered value must match the species' `WeightPrecision` (a whole number, or a number with
 ///    up to 1 decimal place).
 /// 3. The value must be greater than zero.
+/// 4. The value must not exceed `maxWeightKg` (10,000kg — the maximum catch weight limit; see
+///    Scenario 10 of the weight-validation defect fix).
 nonisolated enum SpeciesWeightValidation {
+
+    /// The maximum weight, in kilograms, accepted for any single weight field (retained,
+    /// below-minimum, legally discarded, or the landing-storage species weight). Exceeding this
+    /// is an error; exactly `maxWeightKg` is valid.
+    static let maxWeightKg: Double = 10_000
 
     /// Whether `raw` is present after trimming whitespace.
     private static func isBlank(_ raw: String) -> Bool {
@@ -87,6 +94,9 @@ nonisolated enum SpeciesWeightValidation {
         }
         guard value > 0 else {
             return ValidationMessage("catchRecord.species.weight.validation.greaterThanZero", arguments: [speciesName])
+        }
+        guard value <= maxWeightKg else {
+            return ValidationMessage("catchRecord.species.weight.validation.max", arguments: [speciesName])
         }
         return nil
     }

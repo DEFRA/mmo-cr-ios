@@ -81,12 +81,14 @@ final class CheckYourAnswersViewModelTests: XCTestCase {
 
     // MARK: - Trip section
 
-    func test_tripSection_showsVesselRow_routingToSelectVessel() {
+    func test_tripSection_vesselRow_hasNoChangeRoute() {
         let sut = CheckYourAnswersViewModel(referenceNumber: referenceNumber, router: CatchRecordRouter(), draft: populatedDraft())
 
         let row = sut.sections[0].rows.first { $0.id == "trip.vessel" }
         XCTAssertEqual(row?.value, "ACHILLES")
-        XCTAssertEqual(row?.changeRoute, .selectVessel)
+        // Vessel selection is a one-time step and cannot be changed once a record exists (see
+        // ADR-0013 amendment), so this row has no "Change" link at all.
+        XCTAssertNil(row?.changeRoute)
     }
 
     func test_tripSection_showsFormattedDepartureDateRow_routingToTripDateDeparturePhase() {
@@ -114,6 +116,28 @@ final class CheckYourAnswersViewModelTests: XCTestCase {
             row?.changeRoute,
             .tripDate(phase: .return, vessel: "ACHILLES", referenceNumber: referenceNumber, departureDate: draft.departureDate)
         )
+    }
+
+    // Regression test: when a trip started and finished on the same day (e.g. from
+    // `TripStartedTodayViewModel`'s "Yes" path), `departureDate` and `returnDate` are equal —
+    // both rows must still be shown, not just one of them.
+    func test_tripSection_withSameDayDepartureAndReturnDate_showsBothDateRows() {
+        let draft = populatedDraft()
+        let sameDay = Date(timeIntervalSince1970: 1_785_000_000)
+        draft.departureDate = sameDay
+        draft.returnDate = sameDay
+        let sut = CheckYourAnswersViewModel(referenceNumber: referenceNumber, router: CatchRecordRouter(), draft: draft)
+
+        let departureRow = sut.sections[0].rows.first { $0.id == "trip.departureDate" }
+        let returnRow = sut.sections[0].rows.first { $0.id == "trip.returnDate" }
+
+        let expectedFormatter = DateFormatter()
+        expectedFormatter.dateStyle = .long
+        expectedFormatter.timeStyle = .none
+        let expectedValue = expectedFormatter.string(from: sameDay)
+
+        XCTAssertEqual(departureRow?.value, expectedValue)
+        XCTAssertEqual(returnRow?.value, expectedValue)
     }
 
     func test_tripSection_showsDeparturePortRow_routingToSelectPortDeparturePhase() {
@@ -218,9 +242,9 @@ final class CheckYourAnswersViewModelTests: XCTestCase {
         let router = CatchRecordRouter()
         let sut = CheckYourAnswersViewModel(referenceNumber: referenceNumber, router: router, draft: populatedDraft())
 
-        sut.change(to: .selectVessel)
+        sut.change(to: .selectPort(phase: .departure, vessel: "ACHILLES", referenceNumber: referenceNumber))
 
-        XCTAssertEqual(router.path, [.selectVessel])
+        XCTAssertEqual(router.path, [.selectPort(phase: .departure, vessel: "ACHILLES", referenceNumber: referenceNumber)])
     }
 
     func test_change_alwaysSetsReturnToCheckYourAnswersDraftFlag() {
@@ -238,7 +262,7 @@ final class CheckYourAnswersViewModelTests: XCTestCase {
         let draft = populatedDraft()
         let sut = CheckYourAnswersViewModel(referenceNumber: referenceNumber, router: router, draft: draft)
 
-        sut.change(to: .selectVessel)
+        sut.change(to: .selectPort(phase: .departure, vessel: "ACHILLES", referenceNumber: referenceNumber))
 
         XCTAssertTrue(draft.returnToCheckYourAnswers)
     }

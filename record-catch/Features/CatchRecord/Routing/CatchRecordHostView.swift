@@ -111,10 +111,11 @@ struct CatchRecordHostView: View {
         .environment(draft)
         // Persists the draft after every "Save and continue" (any route push — see ADR-0014
         // decision #5), so a journey survives app termination and can be resumed as an Unsent
-        // Home row. Skips persisting until at least one value has been captured (`draft.vessel`),
-        // so a journey abandoned before the very first screen never creates an empty row.
+        // Home row. `CatchRecordRouter.shouldPersistDraft` gates this on the vessel step having
+        // actually been **committed** (not merely shown) and on not having just reached
+        // `.submissionSuccess` — see that function's doc comment, and ADR-0014 §4 (amended).
         .onChange(of: router.path) { _, newPath in
-            guard !newPath.isEmpty, draft.vessel != nil else { return }
+            guard CatchRecordRouter.shouldPersistDraft(path: newPath, vessel: draft.vessel) else { return }
             // Reaching Check your answers is the last section boundary before submission, and is
             // reachable from several places (the landing-storage "No" answer, the
             // landing-storage-species screen, and every "Change" link) — a single, DRY hook here
@@ -129,17 +130,19 @@ struct CatchRecordHostView: View {
         // reaches the next route boundary above (see `DraftAutosaver`, BR-SUB-008/AC14). Reading
         // `draft.payload` (rather than each individual property) makes the `@Observable` draft's
         // entire persisted surface the dependency, so this fires on every field change without
-        // per-property wiring. Skips until `draft.vessel` is captured, matching the route-change
-        // save's guard above, so an abandoned empty journey never creates a row.
+        // per-property wiring. Gated by the same `shouldPersistDraft` rule as the route-change save
+        // above, so an abandoned journey (still on `.selectVessel`, or just past
+        // `.submissionSuccess`) never creates or resurrects a row.
         .onChange(of: draft.payload) { _, _ in
-            guard draft.vessel != nil else { return }
+            guard CatchRecordRouter.shouldPersistDraft(path: router.path, vessel: draft.vessel) else { return }
             autosaverInstance().schedule(draft)
         }
         // Flushes any pending debounced save immediately when the app leaves the foreground, so an
         // edit mid-debounce is not lost if the process is suspended or terminated before the
         // debounce interval elapses (BR-SUB-008/AC15 — "no saved data is lost").
         .onChange(of: scenePhase) { _, newPhase in
-            guard newPhase != .active, draft.vessel != nil else { return }
+            guard newPhase != .active,
+                  CatchRecordRouter.shouldPersistDraft(path: router.path, vessel: draft.vessel) else { return }
             autosaverInstance().flush(draft)
         }
     }

@@ -15,6 +15,10 @@ struct HomeView: View {
     @Environment(AppLanguageStore.self) private var languageStore
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(CatchRecordRouter.self) private var router
+    /// The shared, journey-scoped draft (see `CatchRecordHostView`), reset before starting a brand
+    /// new journey (see `createNewRecord()`) so a second "Create a new catch record" in the same
+    /// session never inherits the previous journey's vessel or any other in-progress answer.
+    @Environment(CatchRecordDraft.self) private var draft
 
     /// Minimum width the 4-column table needs before columns clip; used to keep
     /// the horizontal-scroll reflow legible at accessibility text sizes.
@@ -56,7 +60,7 @@ struct HomeView: View {
         VStack(alignment: .leading, spacing: AppSpacing.large) {
             
             PrimaryButton(title: languageStore.localized("home.createRecord.button")) {
-                router.startNew()
+                createNewRecord()
             }
             .accessibilityIdentifier("Home.createRecordButton")
             ParagraphText(text: languageStore.localized("home.intro.webOnly"))
@@ -93,6 +97,16 @@ struct HomeView: View {
             }
 
         }
+    }
+
+    /// Starts a brand new "Create a catch record" journey: resets the shared draft first — so a
+    /// second "Create a new catch record" tapped in the same session never pre-fills Select vessel
+    /// with the previous journey's vessel, or saves over/resurrects an unrelated draft — then
+    /// starts the journey at `.selectVessel` (see `CatchRecordDraft.reset()`, `CatchRecordRouter.
+    /// startNew()`).
+    private func createNewRecord() {
+        draft.reset()
+        router.startNew()
     }
 
     /// The records list itself, or an explicit loading/empty/error state — never an indefinite
@@ -275,6 +289,7 @@ struct HomeView: View {
     HomeView()
         .environment(AppLanguageStore.preview)
         .environment(CatchRecordRouter())
+        .environment(CatchRecordDraft())
 }
 
 #Preview("Pagination – multiple pages") {
@@ -291,6 +306,7 @@ struct HomeView: View {
     HomeView(currentPage: 2, recordsProvider: StubRecordsProvider(rows: rows))
         .environment(AppLanguageStore.preview)
         .environment(CatchRecordRouter())
+        .environment(CatchRecordDraft())
 }
 
 #Preview("Welsh") {
@@ -301,6 +317,7 @@ struct HomeView: View {
             return store
         }())
         .environment(CatchRecordRouter())
+        .environment(CatchRecordDraft())
 }
 
 #Preview("Max Dynamic Type") {
@@ -308,4 +325,5 @@ struct HomeView: View {
         .environment(AppLanguageStore.preview)
         .environment(\.dynamicTypeSize, .accessibility5)
         .environment(CatchRecordRouter())
+        .environment(CatchRecordDraft())
 }

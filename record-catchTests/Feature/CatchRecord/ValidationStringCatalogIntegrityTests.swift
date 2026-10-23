@@ -51,6 +51,11 @@ final class ValidationStringCatalogIntegrityTests: XCTestCase {
         "catchRecord.species.weight.validation.greaterThanZero",
         "catchRecord.landingStorageSpecies.weight.validation.enter",
 
+        // Weight-validation defect fix: maximum catch weight (Scenario 10) and discarded vs
+        // retained comparison (AC7/TC-12)
+        "catchRecord.species.weight.validation.max",
+        "catchRecord.species.weight.validation.discardedExceedsRetained",
+
         // Error summary (Task 9)
         "catchRecord.errorSummary.title",
 

@@ -79,7 +79,7 @@ final class DraftActionViewModelTests: XCTestCase {
         XCTAssertNil(draft.vessel)
     }
 
-    func test_resumeDraft_withPersistedDraft_atVesselCheckpoint_pushesSelectVessel() async {
+    func test_resumeDraft_withPersistedDraft_atVesselCheckpoint_skipsStraightToTripStartedToday() async {
         let localID = UUID()
         let rowWithLocalID = record_catch.SubmissionRow(
             dateText: "—", vesselName: "—", status: .unsent, createdBy: "You", localID: localID
@@ -97,7 +97,12 @@ final class DraftActionViewModelTests: XCTestCase {
 
         XCTAssertEqual(sharedDraft.vessel, "ACHILLES")
         XCTAssertEqual(sharedDraft.departurePort, PortOption(name: "Hastings"))
-        XCTAssertEqual(router.path, [.selectVessel])
+        // The vessel is already captured, so vessel selection (a one-time step — see ADR-0013
+        // amendment) is never re-shown; the journey resumes at the next screen instead.
+        XCTAssertEqual(
+            router.path,
+            [.tripStartedToday(vessel: "ACHILLES", referenceNumber: SelectVesselViewModel.placeholderReferenceNumber)]
+        )
     }
 
     func test_resumeDraft_withUnknownLocalID_startsBlank_stillPushesSelectVessel() async {

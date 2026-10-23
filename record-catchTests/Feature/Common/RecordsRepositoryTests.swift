@@ -58,10 +58,11 @@ final class RecordsRepositoryTests: XCTestCase {
 
         let rows = try await repository.records()
 
+        // `StubServerRecordsProvider` returns no fixtures (there is no real backend yet — see
+        // ADR-0015), so the merged list is exactly the real local Unsent draft: no placeholder
+        // submitted/amended/late rows.
+        XCTAssertEqual(rows.count, 1)
         XCTAssertTrue(rows.contains { $0.status == .unsent && $0.vesselName == "ACHILLES" })
-        XCTAssertTrue(rows.contains { $0.status == .submitted })
-        XCTAssertTrue(rows.contains { $0.status == .amended })
-        XCTAssertTrue(rows.contains { $0.status == .late })
     }
 
     func test_records_withNoLocalDrafts_returnsOnlyServerRecords() async throws {
@@ -69,7 +70,8 @@ final class RecordsRepositoryTests: XCTestCase {
 
         let rows = try await repository.records()
 
-        XCTAssertFalse(rows.contains { $0.status == .unsent })
-        XCTAssertEqual(rows.count, 3)
+        // No local drafts and no server records yet (stub returns none) → empty list, which
+        // `HomeViewModel` surfaces as its explicit Empty state.
+        XCTAssertTrue(rows.isEmpty)
     }
 }

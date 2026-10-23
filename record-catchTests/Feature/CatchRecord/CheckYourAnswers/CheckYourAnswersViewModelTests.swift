@@ -116,6 +116,28 @@ final class CheckYourAnswersViewModelTests: XCTestCase {
         )
     }
 
+    // Regression test: when a trip started and finished on the same day (e.g. from
+    // `TripStartedTodayViewModel`'s "Yes" path), `departureDate` and `returnDate` are equal —
+    // both rows must still be shown, not just one of them.
+    func test_tripSection_withSameDayDepartureAndReturnDate_showsBothDateRows() {
+        let draft = populatedDraft()
+        let sameDay = Date(timeIntervalSince1970: 1_785_000_000)
+        draft.departureDate = sameDay
+        draft.returnDate = sameDay
+        let sut = CheckYourAnswersViewModel(referenceNumber: referenceNumber, router: CatchRecordRouter(), draft: draft)
+
+        let departureRow = sut.sections[0].rows.first { $0.id == "trip.departureDate" }
+        let returnRow = sut.sections[0].rows.first { $0.id == "trip.returnDate" }
+
+        let expectedFormatter = DateFormatter()
+        expectedFormatter.dateStyle = .long
+        expectedFormatter.timeStyle = .none
+        let expectedValue = expectedFormatter.string(from: sameDay)
+
+        XCTAssertEqual(departureRow?.value, expectedValue)
+        XCTAssertEqual(returnRow?.value, expectedValue)
+    }
+
     func test_tripSection_showsDeparturePortRow_routingToSelectPortDeparturePhase() {
         let sut = CheckYourAnswersViewModel(referenceNumber: referenceNumber, router: CatchRecordRouter(), draft: populatedDraft())
 

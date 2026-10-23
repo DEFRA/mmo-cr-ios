@@ -93,20 +93,26 @@ struct CheckYourAnswersView: View {
 
             Spacer(minLength: AppSpacing.small)
 
-            Button {
-                viewModel.change(to: row.changeRoute)
-            } label: {
-                Text(languageStore.localized("catchRecord.checkYourAnswers.change"))
-                    .font(AppTypography.bodySmall)
-                    .foregroundStyle(AppColors.linkText)
-                    .underline()
-                    .frame(minWidth: AppControlSize.buttonHeight, minHeight: AppControlSize.buttonHeight)
-                    .contentShape(Rectangle())
+            // No "Change" control at all for a read-only row (currently only the vessel — see
+            // ADR-0013 amendment), rather than a disabled-looking link, matching the GOV.UK Design
+            // System summary-list pattern for rows with no action
+            // (https://design-system.service.gov.uk/components/summary-list/).
+            if let changeRoute = row.changeRoute {
+                Button {
+                    viewModel.change(to: changeRoute)
+                } label: {
+                    Text(languageStore.localized("catchRecord.checkYourAnswers.change"))
+                        .font(AppTypography.bodySmall)
+                        .foregroundStyle(AppColors.linkText)
+                        .underline()
+                        .frame(minWidth: AppControlSize.buttonHeight, minHeight: AppControlSize.buttonHeight)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(.isLink)
+                .accessibilityLabel(changeAccessibilityLabel(for: row, label: label))
+                .accessibilityIdentifier("\(identifierPrefix).change.\(row.id)")
             }
-            .buttonStyle(.plain)
-            .accessibilityAddTraits(.isLink)
-            .accessibilityLabel(changeAccessibilityLabel(for: row, label: label))
-            .accessibilityIdentifier("\(identifierPrefix).change.\(row.id)")
         }
         .accessibilityElement(children: .contain)
     }

@@ -32,7 +32,11 @@ final class CheckYourAnswersViewModel {
         /// The already-formatted value to display (dates, names and weights are pre-formatted so
         /// the view performs no further formatting logic).
         let value: String
-        let changeRoute: CatchRecordRoute
+        /// The route this row's "Change" control returns the user to, or `nil` when the field
+        /// cannot be changed from here — currently only the vessel: vessel selection is a one-time
+        /// first step of the journey and cannot be changed once a record exists (see ADR-0013
+        /// amendment), so its row is shown read-only, with no "Change" link rendered at all.
+        let changeRoute: CatchRecordRoute?
         /// The gear this row belongs to, when it is part of a per-gear section — `nil` for
         /// trip-level/species-not-landed rows. Used to build a gear-disambiguated accessibility
         /// label for the row's "Change" control, since the same field label (e.g. "Statistical
@@ -44,7 +48,7 @@ final class CheckYourAnswersViewModel {
             id: String,
             labelKey: String,
             value: String,
-            changeRoute: CatchRecordRoute,
+            changeRoute: CatchRecordRoute?,
             gearName: String? = nil
         ) {
             self.id = id
@@ -139,7 +143,9 @@ final class CheckYourAnswersViewModel {
                     id: "trip.vessel",
                     labelKey: "catchRecord.checkYourAnswers.label.vessel",
                     value: vessel,
-                    changeRoute: .selectVessel
+                    // No "Change" link: vessel selection is a one-time first step of the journey
+                    // and cannot be changed once a record exists (see ADR-0013 amendment).
+                    changeRoute: nil
                 )
             )
         }

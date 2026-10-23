@@ -41,6 +41,24 @@ final class SelectVesselViewModelTests: XCTestCase {
         )
     }
 
+    // MARK: - Vessel is a one-time step (see ADR-0013 amendment)
+
+    func test_submit_withSelection_replacesSelectVessel_ratherThanPushingOnTop() {
+        let router = CatchRecordRouter()
+        router.startNew() // path == [.selectVessel]
+        let sut = SelectVesselViewModel(router: router, provider: StaticVesselProvider())
+        sut.selection = "ACHILLES"
+
+        sut.submit()
+
+        // .selectVessel is replaced, not left behind the next screen — so Back from here leaves
+        // the journey rather than re-opening vessel selection.
+        XCTAssertEqual(
+            router.path,
+            [.tripStartedToday(vessel: "ACHILLES", referenceNumber: SelectVesselViewModel.placeholderReferenceNumber)]
+        )
+    }
+
     func test_errorKey_beforeSubmit_isNil() {
         let sut = SelectVesselViewModel(router: CatchRecordRouter(), provider: StaticVesselProvider())
         XCTAssertNil(sut.errorKey)
@@ -56,34 +74,6 @@ final class SelectVesselViewModelTests: XCTestCase {
         sut.submit()
 
         XCTAssertEqual(draft.vessel, "ACHILLES")
-    }
-
-    // MARK: - Resume at Check your answers (see ADR-0013)
-
-    func test_submit_whenResumingAtCheckYourAnswers_pushesCheckYourAnswers_insteadOfTripStartedToday() {
-        let router = CatchRecordRouter()
-        let draft = CatchRecordDraft()
-        draft.returnToCheckYourAnswers = true
-        let sut = SelectVesselViewModel(router: router, provider: StaticVesselProvider(), draft: draft)
-        sut.selection = "ACHILLES"
-
-        sut.submit()
-
-        XCTAssertEqual(
-            router.path,
-            [.checkYourAnswers(referenceNumber: SelectVesselViewModel.placeholderReferenceNumber)]
-        )
-    }
-
-    func test_submit_whenResumingAtCheckYourAnswers_clearsDraftFlag() {
-        let draft = CatchRecordDraft()
-        draft.returnToCheckYourAnswers = true
-        let sut = SelectVesselViewModel(router: CatchRecordRouter(), provider: StaticVesselProvider(), draft: draft)
-        sut.selection = "ACHILLES"
-
-        sut.submit()
-
-        XCTAssertFalse(draft.returnToCheckYourAnswers)
     }
 
     // MARK: - Pre-fill on resume (see ADR-0015 decision #1)

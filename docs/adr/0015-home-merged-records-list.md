@@ -102,9 +102,11 @@ as agreed.
   with no connectivity or if the (stubbed) server call fails, and a draft persists and reappears
   across app restarts (ADR-0014).
 - `DraftActionViewModel.resumeDraft()` looks up the persisted payload by `row.localID` (when
-  present) before restarting the journey at `.selectVessel`, so "Complete" on a real Unsent row
-  actually loads what was previously captured; a row with no `localID` (e.g. a hand-built
-  preview/test row) still routes forward, just with a blank draft.
+  present) before resuming the journey at its last completed section (see ADR-0014 §5, amended), so
+  "Complete" on a real Unsent row actually loads what was previously captured; a row with no
+  `localID` (e.g. a hand-built preview/test row) still routes forward, just with a blank draft. A
+  draft only ever exists once its vessel has been captured, so resuming skips straight past vessel
+  selection — it is never shown again once answered (see ADR-0013 amendment).
 - Coverage: `RecordsRepositoryTests` (pure `RecordsMerging` functions + end-to-end
   `MergingRecordsRepository`) and `HomeViewModelTests` (all four load states, recovery after
   failure) meet the ≥95% core-logic coverage target.

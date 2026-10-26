@@ -104,7 +104,10 @@ platform :ios do
     if CrRelease::TestFlight.build_exists?(app[:app_identifier], version, external_build)
       # Only a package that passed every check below is ever uploaded, so a re-run just finishes distribution.
       UI.important("Build #{version} (#{external_build}) is already in TestFlight; distributing it without re-uploading")
-      upload_to_testflight(**distribution, distribute_only: true, app_version: version, build_number: external_build)
+      upload_to_testflight(
+        **distribution, distribute_only: true, app_version: version, build_number: external_build,
+        app_platform: "ios"
+      )
     else
       profile_name = sync_signing(app_identifier: app[:app_identifier], api_key: api_key)
 

@@ -51,7 +51,7 @@ nonisolated struct CatchRecordSubmissionRequestDTO: Encodable, Sendable, Equatab
 /// Placeholder response body for a successful submission.
 ///
 /// `referenceNumber` matches the existing UI-facing concept already threaded through
-/// `CatchRecordSubmissionServicing`/`SubmissionConfirmationViewModel` (see
+/// `CatchRecordSubmissionServicing`/`CheckYourAnswersViewModel` (see
 /// Features/Common/Data/CatchRecordSubmissionService.swift) — the real backend's actual field
 /// name/shape for this is unconfirmed.
 nonisolated struct CatchRecordSubmissionResponseDTO: Decodable, Sendable, Equatable {

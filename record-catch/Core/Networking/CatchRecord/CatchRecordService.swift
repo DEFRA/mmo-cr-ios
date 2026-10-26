@@ -16,7 +16,7 @@
 //
 //  **Not yet wired to anything.** This is the connector only, matching the scope ADR-0018 set for
 //  `ReferenceDataClient`: it is not plugged into `CatchRecordSubmissionServicing`/
-//  `SubmissionConfirmationViewModel` (Features/Common/Data/CatchRecordSubmissionService.swift),
+//  `CheckYourAnswersViewModel` (Features/Common/Data/CatchRecordSubmissionService.swift),
 //  which still use `StubCatchRecordSubmissionService`'s fixed-delay stub. Wiring this connector in
 //  as that protocol's real implementation is future work once the backend contract is confirmed.
 //

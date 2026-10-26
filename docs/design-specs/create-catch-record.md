@@ -103,8 +103,39 @@ model (`GearCatch`) this section renders.
      → species screen) is saved, rather than continuing through any other selected gears' screens
      (ADR-0011) — since walking through every other gear again would be a disproportionate
      detour for what is usually a single-field correction.
-5. This is a **UI-only, unsubmitted** summary in this phase — there is no further "Submit" action
-   past this screen; see the design spec's placeholder-next-step note for what comes after.
+5. **Declaration and submission** (added after this spec was first written — see the Figma
+   screenshot provided when this was built, and the deviation register below): beneath the last
+   section, a bold declaration notice (`.declaration.notice`) explains what submitting the record
+   means, followed by a three-point bullet list (`.declaration.bulletList`). There is **no separate
+   confirmation checkbox** — "Accept and submit trip details" (`.accept`) is itself the acceptance
+   action (GOV.UK Design System "Check answers" pattern:
+   https://design-system.service.gov.uk/patterns/check-answers/). Tapping it submits the record:
+   online, via the (stubbed) submission API, routing to the "submitted" screen on success or
+   showing a recoverable inline error (`.submitError`) on failure; offline, the draft is saved and
+   the journey routes to the "saved on this device" screen instead (BR-SUB-008/AC10/AC11). This
+   replaced an earlier, separate "Confirmation" screen reached from a "Save and continue" button
+   here — the design now puts the declaration and the accept action directly on this screen.
+
+### Deviation register — Check your answers vs the supplied Figma screenshot
+
+Recorded per the [figma-design instructions](../../.github/instructions/figma-design.instructions.md)
+deviation-register requirement; followed (not silently overridden), for governance to log:
+
+- The screenshot formats dates as `DD/MM/YYYY` (e.g. "03/07/2026"); this app uses the existing
+  long-style format (e.g. "27 July 2026") already used across the journey (`DateFormatter`,
+  `.dateStyle = .long`) rather than switching to match the screenshot.
+- The screenshot shows a single "Gear used" section with a flat "Gear type" row; this app
+  keeps **one section per selected gear** (ADR-0011), which is a deliberate, already-decided data
+  model and is not changed by this merge.
+- The screenshot's rows stack the label above the value; this app keeps the existing label/value
+  side-by-side row layout (`HStack`) used throughout the rest of the journey, for visual
+  consistency with every other screen.
+- The screenshot has no caption or reference number above the heading; this app keeps the existing
+  caption + reference number header used on every other screen in the journey.
+- The screenshot's copy ("Statistical sub area", "Weight legally discard") differs slightly from
+  this app's existing field labels; existing app copy was kept rather than matched verbatim.
+- The screenshot shows a "Not landed: Yes" row; this app's "Species not landed" section omits a
+  redundant yes/no row (it is only shown at all once there is something not landed).
 
 ## States (per screen)
 
@@ -175,6 +206,13 @@ String Catalog (never a `[CY-TODO]` prefix in rendered copy).
 | `catchRecord.checkYourAnswers.label.weightBelow` | Weight below minimum size | Pwysau o dan y maint lleiaf |
 | `catchRecord.checkYourAnswers.label.weightDiscarded` | Weight legally discarded | Pwysau a waredwyd yn gyfreithiol |
 | `catchRecord.checkYourAnswers.label.weightNotLanded` | Weight kept onboard | Pwysau a gadwyd ar y llong |
+| `catchRecord.checkYourAnswers.declaration.notice` | By submitting this record, you agree that the information you've given is complete and correct. | Drwy gyflwyno'r cofnod hwn, rydych yn cytuno bod y wybodaeth a roddwyd gennych yn gyflawn ac yn gywir. |
+| `catchRecord.checkYourAnswers.declaration.body` | By submitting your catch record, you're confirming | Drwy gyflwyno'ch cofnod dalfa, rydych yn cadarnhau |
+| `catchRecord.checkYourAnswers.declaration.bullet.weight` | The weight of fish you have landed is accurate | Bod pwysau'r pysgod rydych wedi'u glanio yn gywir |
+| `catchRecord.checkYourAnswers.declaration.bullet.tolerance` | This is within permitted tolerance levels | Bod hyn o fewn y lefelau goddefiant a ganiateir |
+| `catchRecord.checkYourAnswers.declaration.bullet.action` | Fishing authorities may take action in respect of inaccurate catch recording | Gall awdurdodau pysgota gymryd camau mewn perthynas â chofnodi dalfa anghywir |
+| `catchRecord.checkYourAnswers.accept` | Accept and submit trip details | Derbyn a chyflwyno manylion y daith |
+| `catchRecord.checkYourAnswers.submitFailed` | Could not submit your catch record. Check your connection and try again. | Methwyd â chyflwyno'ch cofnod dalfa. Gwiriwch eich cysylltiad a rhowch gynnig arall arni. |
 | `a11y.errorPrefix` | (existing) Error: | Gwall: |
 
 ## Accessibility annotations

@@ -44,7 +44,6 @@ struct LaunchArguments {
         case catchRecordRecordSpeciesWeights = "-uiTestCatchRecordRecordSpeciesWeights"
         case catchRecordRemoveSpecies = "-uiTestCatchRecordRemoveSpecies"
         case catchRecordCheckYourAnswers = "-uiTestCatchRecordCheckYourAnswers"
-        case catchRecordSubmissionConfirmation = "-uiTestCatchRecordSubmissionConfirmation"
         case catchRecordSubmissionSuccess = "-uiTestCatchRecordSubmissionSuccess"
 
         // Connectivity (ADR-0019): forces the offline banner on deterministically, without

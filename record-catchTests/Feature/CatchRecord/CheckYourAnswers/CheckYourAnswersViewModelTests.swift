@@ -1,6 +1,29 @@
 import XCTest
 @testable import record_catch
 
+/// Always-succeeding stub submission service for exercising the happy path deterministically,
+/// with no real delay.
+private struct StubSuccessSubmissionService: CatchRecordSubmissionServicing {
+    func submit(referenceNumber: String) async throws {}
+}
+
+private struct StubFailingSubmissionService: CatchRecordSubmissionServicing {
+    func submit(referenceNumber: String) async throws {
+        throw CatchRecordSubmissionError.network
+    }
+}
+
+/// Mutable mock so a single view model instance can be retried after a failure — the first
+/// `submit()` fails, the second succeeds — to test the "clears submitFailed on retry" behaviour
+/// without recreating the view model (as a real retry-after-reconnect would look).
+private final class MockRetrySubmissionService: CatchRecordSubmissionServicing, @unchecked Sendable {
+    var shouldFail = true
+
+    func submit(referenceNumber: String) async throws {
+        if shouldFail { throw CatchRecordSubmissionError.network }
+    }
+}
+
 @MainActor
 final class CheckYourAnswersViewModelTests: XCTestCase {
 
@@ -269,12 +292,161 @@ final class CheckYourAnswersViewModelTests: XCTestCase {
 
     // MARK: - Submit
 
-    func test_submit_pushesSubmissionConfirmationOntoRouter() {
+    func test_submit_whenOnline_pushesSubmissionSuccessOntoRouter_andDeletesTheDraft() async throws {
         let router = CatchRecordRouter()
-        let sut = CheckYourAnswersViewModel(referenceNumber: referenceNumber, router: router, draft: populatedDraft())
+        let draftStore = InMemoryCatchRecordDraftStore()
+        let draft = populatedDraft()
+        try await draftStore.save(draft)
+        let sut = CheckYourAnswersViewModel(
+            referenceNumber: referenceNumber,
+            router: router,
+            draft: draft,
+            submissionService: StubSuccessSubmissionService(),
+            draftStore: draftStore
+        )
 
-        sut.submit()
+        await sut.submit()
 
-        XCTAssertEqual(router.path, [.submissionConfirmation(referenceNumber: referenceNumber)])
+        XCTAssertEqual(router.path, [.submissionSuccess(referenceNumber: referenceNumber)])
+        // Allow the fire-and-forget deletion Task to run (see `DraftActionViewModelTests`'
+        // equivalent pattern for the same fire-and-forget delete shape).
+        try? await Task.sleep(nanoseconds: 10_000_000)
+        let loaded = try await draftStore.loadDraft(localID: draft.localID)
+        XCTAssertNil(loaded, "a successfully submitted draft must be deleted so it no longer shows as Unsent")
+    }
+
+    // MARK: - Submission failure (error-handling path — 100% coverage requirement)
+
+    func test_submit_whenSubmissionServiceFails_setsSubmitFailed_andDoesNotRoute() async {
+        let router = CatchRecordRouter()
+        let sut = CheckYourAnswersViewModel(
+            referenceNumber: referenceNumber,
+            router: router,
+            draft: populatedDraft(),
+            submissionService: StubFailingSubmissionService()
+        )
+
+        await sut.submit()
+
+        XCTAssertTrue(sut.submitFailed)
+        XCTAssertTrue(router.path.isEmpty)
+    }
+
+    func test_submit_retryAfterFailure_clearsSubmitFailed_andRoutesOnSuccess() async {
+        let router = CatchRecordRouter()
+        let service = MockRetrySubmissionService()
+        let sut = CheckYourAnswersViewModel(
+            referenceNumber: referenceNumber,
+            router: router,
+            draft: populatedDraft(),
+            submissionService: service
+        )
+
+        await sut.submit()
+        XCTAssertTrue(sut.submitFailed)
+        XCTAssertTrue(router.path.isEmpty)
+
+        // User is back online; retapping "Accept and submit trip details" now succeeds.
+        service.shouldFail = false
+        await sut.submit()
+
+        XCTAssertFalse(sut.submitFailed)
+        XCTAssertEqual(router.path, [.submissionSuccess(referenceNumber: referenceNumber)])
+    }
+
+    func test_isSubmitting_isFalseAfterSubmitCompletes() async {
+        let sut = CheckYourAnswersViewModel(
+            referenceNumber: referenceNumber,
+            router: CatchRecordRouter(),
+            draft: populatedDraft(),
+            submissionService: StubSuccessSubmissionService()
+        )
+
+        await sut.submit()
+
+        XCTAssertFalse(sut.isSubmitting)
+    }
+
+    /// A single-use spy that fails the test if `submit()` is ever called more than once,
+    /// guarding against a double tap re-entering an in-flight submission.
+    private final class CountingSubmissionService: CatchRecordSubmissionServicing, @unchecked Sendable {
+        private(set) var callCount = 0
+
+        func submit(referenceNumber: String) async throws {
+            callCount += 1
+            try? await Task.sleep(nanoseconds: 50_000_000)
+        }
+    }
+
+    func test_submit_whileAlreadySubmitting_doesNotCallTheServiceASecondTime() async {
+        let service = CountingSubmissionService()
+        let sut = CheckYourAnswersViewModel(
+            referenceNumber: referenceNumber,
+            router: CatchRecordRouter(),
+            draft: populatedDraft(),
+            submissionService: service
+        )
+
+        async let first: Void = sut.submit()
+        async let second: Void = sut.submit()
+        _ = await (first, second)
+
+        XCTAssertEqual(service.callCount, 1)
+    }
+
+    // MARK: - Offline submission (BR-SUB-008/AC10/AC11 — no silent data loss, no false "submitted")
+
+    /// A fail-if-called spy: proves the (stubbed) submission service is never invoked while
+    /// offline — the record must not be claimed as submitted when nothing was sent.
+    private struct FailIfCalledSubmissionService: CatchRecordSubmissionServicing {
+        func submit(referenceNumber: String) async throws {
+            XCTFail("the submission service must not be called while offline")
+        }
+    }
+
+    func test_submit_whenOffline_doesNotCallTheSubmissionService_andRoutesToSubmissionSaved() async {
+        let router = CatchRecordRouter()
+        let sut = CheckYourAnswersViewModel(
+            referenceNumber: referenceNumber,
+            router: router,
+            draft: populatedDraft(),
+            submissionService: FailIfCalledSubmissionService()
+        )
+
+        await sut.submit(isOnline: false)
+
+        XCTAssertEqual(router.path, [.submissionSaved(referenceNumber: referenceNumber)])
+    }
+
+    func test_submit_whenOffline_doesNotDeleteThePersistedDraft() async throws {
+        let draftStore = InMemoryCatchRecordDraftStore()
+        let draft = populatedDraft()
+        try await draftStore.save(draft)
+        let sut = CheckYourAnswersViewModel(
+            referenceNumber: referenceNumber,
+            router: CatchRecordRouter(),
+            draft: draft,
+            submissionService: FailIfCalledSubmissionService(),
+            draftStore: draftStore
+        )
+
+        await sut.submit(isOnline: false)
+
+        let loaded = try await draftStore.loadDraft(localID: draft.localID)
+        XCTAssertNotNil(loaded, "the draft must remain resumable — nothing was submitted")
+    }
+
+    func test_submit_isOnline_defaultsToTrue_soExistingCallersAreUnaffected() async {
+        let router = CatchRecordRouter()
+        let sut = CheckYourAnswersViewModel(
+            referenceNumber: referenceNumber,
+            router: router,
+            draft: populatedDraft(),
+            submissionService: StubSuccessSubmissionService()
+        )
+
+        await sut.submit() // no `isOnline:` argument — must still take the online path
+
+        XCTAssertEqual(router.path, [.submissionSuccess(referenceNumber: referenceNumber)])
     }
 }

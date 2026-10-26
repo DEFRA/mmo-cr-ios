@@ -196,6 +196,20 @@ later gains a stricter classification, revisit with `NSFileProtectionComplete`.
   checkpoint), and each affected view model's pre-fill/checkpoint tests meet the project's ≥95%
   core-logic coverage target.
 
+## Amendment (2026-10) — submit/delete call site moved to Check your answers
+
+The standalone "Confirmation" screen (`SubmissionConfirmationView`/`ViewModel`) has been removed
+and its submission step folded directly into "Check your answers" (`CheckYourAnswersViewModel`,
+see the `CatchRecord` module README): "Accept and submit trip details" now lives on Check your
+answers itself, beneath a declaration notice/bullet list, with no separate confirmation checkbox.
+
+This is a call-site move only — **the persistence behaviour this ADR describes is unchanged**:
+`CheckYourAnswersViewModel.submit(isOnline:)` still deletes the persisted draft
+(`CatchRecordDraftStoring.deleteDraft(localID:)`) on a successful online submit, still (re)saves
+the draft rather than deleting it when offline (BR-SUB-008/AC10/AC11), and `CatchRecordRouter`'s
+`shouldPersistDraft` still stops autosaving once `.submissionSuccess` is reached. No new ADR was
+raised for this change — it is a screen merge, not a change to the persistence architecture.
+
 ## References
 
 - ADR-0004 (API-shaped stub seam pattern, reused here for `CatchRecordDraftStoring`).

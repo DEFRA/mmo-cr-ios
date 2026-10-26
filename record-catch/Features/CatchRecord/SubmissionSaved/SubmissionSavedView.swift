@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// "Your catch record has been saved" — shown instead of `SubmissionSuccessView` when
-/// `SubmissionConfirmationViewModel.submit()` detects the device has no connectivity
+/// `CheckYourAnswersViewModel.submit(isOnline:)` detects the device has no connectivity
 /// (BR-SUB-008/AC10/AC11).
 ///
 /// Deliberately does **not** reuse `ConfirmationPanel` (the green "success" banner): the record

@@ -510,40 +510,23 @@ final class CatchRecordUITests: XCTestCase {
     }
 
     @MainActor
-    func test_checkYourAnswers_tappingSaveAndContinue_navigatesToSubmissionConfirmation() {
+    func test_checkYourAnswers_showsDeclarationNoticeAndBullets() {
+        let app = launch("-uiTestCatchRecordCheckYourAnswers")
+
+        XCTAssertTrue(element(app, "CatchRecord.checkYourAnswers.heading").waitForExistence(timeout: 5))
+        XCTAssertTrue(element(app, "CatchRecord.checkYourAnswers.declaration.notice").exists)
+        XCTAssertTrue(element(app, "CatchRecord.checkYourAnswers.declaration.bulletList").exists)
+    }
+
+    @MainActor
+    func test_checkYourAnswers_tappingAcceptAndSubmit_navigatesToSubmissionSuccess() {
         let app = launch("-uiTestCatchRecordCheckYourAnswers")
 
         XCTAssertTrue(element(app, "CatchRecord.checkYourAnswers.heading").waitForExistence(timeout: 5))
 
-        let saveContinue = app.buttons["CatchRecord.checkYourAnswers.saveContinue"]
-        XCTAssertTrue(saveContinue.waitForExistence(timeout: 5))
-        saveContinue.tap()
-
-        XCTAssertTrue(element(app, "CatchRecord.submissionConfirmation.heading").waitForExistence(timeout: 5))
-    }
-
-    // MARK: - Submission confirmation
-
-    @MainActor
-    func test_submissionConfirmation_acceptWithNoTick_showsInlineError_andDoesNotRoute() {
-        let app = launch("-uiTestCatchRecordSubmissionConfirmation")
-
-        XCTAssertTrue(element(app, "CatchRecord.submissionConfirmation.heading").waitForExistence(timeout: 5))
-
-        app.buttons["CatchRecord.submissionConfirmation.accept"].tap()
-
-        XCTAssertTrue(element(app, "CatchRecord.submissionConfirmation.error").waitForExistence(timeout: 5))
-        XCTAssertTrue(element(app, "CatchRecord.submissionConfirmation.heading").exists)
-    }
-
-    @MainActor
-    func test_submissionConfirmation_tickingCheckboxThenAccept_navigatesToSubmissionSuccess() {
-        let app = launch("-uiTestCatchRecordSubmissionConfirmation")
-
-        XCTAssertTrue(element(app, "CatchRecord.submissionConfirmation.heading").waitForExistence(timeout: 5))
-
-        element(app, "CatchRecord.submissionConfirmation.confirmCheckbox").tap()
-        app.buttons["CatchRecord.submissionConfirmation.accept"].tap()
+        let accept = app.buttons["CatchRecord.checkYourAnswers.accept"]
+        XCTAssertTrue(accept.waitForExistence(timeout: 5))
+        accept.tap()
 
         XCTAssertTrue(element(app, "CatchRecord.submissionSuccess.panel").waitForExistence(timeout: 10))
     }

@@ -127,15 +127,11 @@
 		};
 		DA6ABEEF2FFE87DD00B7A0AB /* record-catchTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = "record-catchTests";
 			sourceTree = "<group>";
 		};
 		DA6ABEF92FFE87DD00B7A0AB /* record-catchUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = "record-catchUITests";
 			sourceTree = "<group>";
 		};

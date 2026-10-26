@@ -240,7 +240,7 @@ struct HomeView: View {
     }
 
     /// Renders a simple bullet list, matching the established "•" + text row
-    /// pattern used by `SubmissionConfirmationView`/`SubmissionSuccessView`.
+    /// pattern used by `CheckYourAnswersView`/`SubmissionSuccessView`.
     private func howToRecordBulletList(_ items: [String]) -> some View {
         VStack(alignment: .leading, spacing: AppSpacing.small) {
             ForEach(items, id: \.self) { item in

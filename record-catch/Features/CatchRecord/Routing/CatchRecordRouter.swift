@@ -74,7 +74,7 @@ final class CatchRecordRouter {
     /// not while still showing `.selectVessel` itself, so going back (or swiping back) from vessel
     /// selection before an answer is saved never creates an empty or stale draft row. It also stops
     /// once `.submissionSuccess` is reached: the persisted draft has just been deleted by a
-    /// successful submit (`SubmissionConfirmationViewModel.submit()`), and a save reaching the host
+    /// successful submit (`CheckYourAnswersViewModel.submit(isOnline:)`), and a save reaching the host
     /// view's observers after that deletion must not resurrect it as a fresh Unsent row. A pure,
     /// static function (rather than an instance method) so it is trivially unit-testable against any
     /// `path`/`vessel` combination without constructing a router.

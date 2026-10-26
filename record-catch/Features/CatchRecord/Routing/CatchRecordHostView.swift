@@ -160,7 +160,7 @@ struct CatchRecordHostView: View {
             portAndGearDestination(for: route)
         case .catchLocation, .catchLocationManualEntry, .recordSpeciesWeights, .addSpecies, .removeSpecies:
             speciesDestination(for: route)
-        case .landingStorage, .landingStorageSpecies, .checkYourAnswers, .submissionConfirmation,
+        case .landingStorage, .landingStorageSpecies, .checkYourAnswers,
              .submissionSuccess, .submissionSaved:
             landingAndSubmissionDestination(for: route)
         }
@@ -340,14 +340,7 @@ struct CatchRecordHostView: View {
                 draft: draft
             )
         case .checkYourAnswers(let referenceNumber):
-            CheckYourAnswersView(referenceNumber: referenceNumber, router: router, draft: draft)
-        case .submissionConfirmation(let referenceNumber):
-            SubmissionConfirmationView(
-                referenceNumber: referenceNumber,
-                router: router,
-                draft: draft,
-                draftStore: draftStore
-            )
+            CheckYourAnswersView(referenceNumber: referenceNumber, router: router, draft: draft, draftStore: draftStore)
         case .submissionSuccess(let referenceNumber):
             SubmissionSuccessView(referenceNumber: referenceNumber, router: router)
         case .submissionSaved(let referenceNumber):

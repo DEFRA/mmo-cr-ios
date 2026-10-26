@@ -5,16 +5,28 @@ import SwiftUI
 /// Renders every value captured in `CatchRecordDraft` as four sections (Trip, Gear used, Species
 /// caught, Species not landed), each row pairing a label and value with a "Change" control that
 /// jumps back to the screen where that value was captured (`CheckYourAnswersViewModel.change(to:)`).
+///
+/// Beneath the summary, the declaration notice and bullets (`SubmissionDeclarationView`) explain
+/// what submitting confirms, and "Accept and submit trip details" submits directly from here — the
+/// former standalone "Confirmation" screen was folded into this screen (see the module README and
+/// the ADR-0014 amendment).
 struct CheckYourAnswersView: View {
 
     @Environment(AppLanguageStore.self) private var languageStore
+    @Environment(\.connectivityMonitor) private var connectivityMonitor
     @State private var viewModel: CheckYourAnswersViewModel
 
-    init(referenceNumber: String, router: CatchRecordRouter, draft: CatchRecordDraft) {
+    init(
+        referenceNumber: String,
+        router: CatchRecordRouter,
+        draft: CatchRecordDraft,
+        draftStore: CatchRecordDraftStoring = InMemoryCatchRecordDraftStore()
+    ) {
         _viewModel = State(wrappedValue: CheckYourAnswersViewModel(
             referenceNumber: referenceNumber,
             router: router,
-            draft: draft
+            draft: draft,
+            draftStore: draftStore
         ))
     }
 
@@ -47,11 +59,38 @@ struct CheckYourAnswersView: View {
                 sectionView(section)
             }
 
-            PrimaryButton(title: languageStore.localized("catchRecord.saveContinue")) {
-                viewModel.submit()
+            SubmissionDeclarationView(identifierPrefix: identifierPrefix)
+
+            if viewModel.submitFailed {
+                submitFailedBanner
             }
-            .accessibilityIdentifier("\(identifierPrefix).saveContinue")
+
+            PrimaryButton(
+                title: languageStore.localized("catchRecord.checkYourAnswers.accept"),
+                isDisabled: viewModel.isSubmitting
+            ) {
+                // `nil` (no monitor configured, e.g. an unconfigured preview) is treated as
+                // online, matching `OfflineBanner`'s convention.
+                Task { await viewModel.submit(isOnline: connectivityMonitor?.isOnline ?? true) }
+            }
+            .accessibilityIdentifier("\(identifierPrefix).accept")
         }
+    }
+
+    private var submitFailedBanner: some View {
+        HStack(alignment: .top, spacing: AppSpacing.xSmall) {
+            Image(systemName: "exclamationmark.circle.fill")
+                .foregroundStyle(AppColors.errorRed)
+                .accessibilityHidden(true)
+            Text(languageStore.localized("catchRecord.checkYourAnswers.submitFailed"))
+                .font(AppTypography.error)
+                .foregroundStyle(AppColors.errorRed)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(
+            "\(languageStore.localized("a11y.errorPrefix")) \(languageStore.localized("catchRecord.checkYourAnswers.submitFailed"))"
+        )
+        .accessibilityIdentifier("\(identifierPrefix).submitError")
     }
 
     @ViewBuilder

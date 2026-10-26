@@ -127,11 +127,15 @@
 		};
 		DA6ABEEF2FFE87DD00B7A0AB /* record-catchTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = "record-catchTests";
 			sourceTree = "<group>";
 		};
 		DA6ABEF92FFE87DD00B7A0AB /* record-catchUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = "record-catchUITests";
 			sourceTree = "<group>";
 		};
@@ -211,8 +215,6 @@
 				DA6ABEDF2FFE87DC00B7A0AB /* record-catch */,
 			);
 			name = "record-catch";
-			packageProductDependencies = (
-			);
 			productName = "record-catch";
 			productReference = DA6ABEDD2FFE87DC00B7A0AB /* record-catch.app */;
 			productType = "com.apple.product-type.application";
@@ -234,8 +236,6 @@
 				DA6ABEEF2FFE87DD00B7A0AB /* record-catchTests */,
 			);
 			name = "record-catchTests";
-			packageProductDependencies = (
-			);
 			productName = "record-catchTests";
 			productReference = DA6ABEEC2FFE87DD00B7A0AB /* record-catchTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -257,8 +257,6 @@
 				DA6ABEF92FFE87DD00B7A0AB /* record-catchUITests */,
 			);
 			name = "record-catchUITests";
-			packageProductDependencies = (
-			);
 			productName = "record-catchUITests";
 			productReference = DA6ABEF62FFE87DD00B7A0AB /* record-catchUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
@@ -564,7 +562,6 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "We use Face ID to let you sign back in to your catch records quickly and securely on this device.";
-				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Record catch connects to a development server running on your local network so the app can load test reference data.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

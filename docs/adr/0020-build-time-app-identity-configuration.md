@@ -1,6 +1,6 @@
 # ADR 0020 — Build-time app identity configuration (three apps, backend URL injected from CI)
 
-- Status: Accepted; renumbered from 0014 in 2026-10 (that number belongs to catch record draft persistence)
+- Status: Accepted; amended 2026-10 (see Amendments); renumbered from 0014 in 2026-10 (that number belongs to catch record draft persistence)
 - Date: 2026-09
 - Deciders: iOS engineering / DevOps
 - Context tags: ci-cd, configuration, bundle-id, xcconfig, fastlane, github-environments
@@ -18,7 +18,7 @@ Backend URLs must **not** be committed to git; they are supplied per stage by Gi
 
 ## Decision
 
-### 1. One identity per Xcode configuration, driven by `.xcconfig`
+### 1. One identity per Xcode configuration, driven by `.xcconfig` (superseded 2026-10 — see Amendments)
 
 - `Config/Base.xcconfig` holds shared settings, including `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION`
   (single source of truth for versions — amends ADR-0011 §3a).
@@ -88,7 +88,7 @@ stage values need no workflow change.
 - Treat configuration as untrusted for security decisions: a modified package can change it, so the backend
   enforces authorisation (server-side App Attest remains optional, ADR-0021).
 
-### 4. Fastlane has one identity table
+### 4. Fastlane has one identity table (amended 2026-10 — see Amendments)
 
 The Fastfile maps an app key (`dev`/`test`/`prod`) to scheme, configuration and xcconfig, and reads
 `APP_BUNDLE_ID` from that xcconfig rather than repeating it. The `Matchfile` lists all three identities (Match
@@ -105,3 +105,13 @@ needs them explicitly); `Appfile` drops its hard-coded identifier.
 - **Ownership:** `Config/app-config.schema.json`, `Config/*.xcconfig`, schemes and the app-side items in §3 are
   iOS Developer work; Fastlane, workflows, scripts (including `scripts/inject-app-config.sh`) and signing are DevOps
   work.
+
+## Amendments
+
+- **2026-10 — identity by build-setting overrides (supersedes §1, amends §4).** There are no per-app `.xcconfig`
+  files, configurations or schemes. Fastlane's `compile` lane archives the shared `record-catch` scheme (`Release`)
+  and passes `PRODUCT_BUNDLE_IDENTIFIER` and, where set, `INFOPLIST_KEY_CFBundleDisplayName` as command-line build
+  settings, which take precedence over the target's literal. `CrRelease::APPS` holds each app's bundle ID and
+  display name (`CR Dev`, `CR Test`; Prod keeps its product name); `expect_app!` fails the compile if the archive's
+  bundle ID differs. The project keeps the Dev literal, so local builds and the version reader are unchanged.
+  Revisit if app extensions are added: a command-line override applies to every target in the build.

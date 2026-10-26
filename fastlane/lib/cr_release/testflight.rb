@@ -2,6 +2,12 @@ module CrRelease
   module TestFlight
     module_function
 
+    def external_groups!(value)
+      groups = value.to_s.split(",").map(&:strip).reject(&:empty?)
+      CrRelease.fail!("ASC_EXTERNAL_TESTING_GROUPS is empty") if groups.empty?
+      groups
+    end
+
     # Needs the App Store Connect API key to be set first.
     def build_exists?(app_identifier, version, build_number)
       asc_app = Spaceship::ConnectAPI::App.find(app_identifier) ||

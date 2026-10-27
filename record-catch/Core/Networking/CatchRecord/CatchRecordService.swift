@@ -156,7 +156,7 @@ nonisolated struct StubCatchRecordService: CatchRecordServicing {
     var response: CatchRecordSubmissionResponseDTO?
     var error: APIError?
 
-    func submitCatchReport(_ report: CatchRecordSubmissionRequestDTO) async throws -> CatchRecordSubmissionResponseDTO {
+    func submitCatchReport(_ : CatchRecordSubmissionRequestDTO) async throws -> CatchRecordSubmissionResponseDTO {
         if let error { throw error }
         if let response { return response }
         throw APIError.response(status: 503, details: nil)

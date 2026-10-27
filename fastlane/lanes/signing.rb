@@ -26,7 +26,8 @@ platform :ios do
       type: "appstore",
       app_identifier: app_identifier,
       readonly: true,
-      api_key: options.fetch(:api_key),
+      # Read-only Match only clones and decrypts the store, so the compile job needs no API key.
+      api_key: options[:api_key],
       # Path to the SSH deploy key written by the workflow; nil locally, where the agent's key is used.
       git_private_key: ENV["MATCH_GIT_PRIVATE_KEY"]
     )

@@ -3,7 +3,7 @@ require "fastlane"
 
 # Loads the real Fastfile, so broken imports or lane wiring fail in CI rather than in a release.
 class FastfileTest < Minitest::Test
-  PUBLIC_LANES = %i[build test certificates build_internal promote_external].freeze
+  PUBLIC_LANES = %i[build test certificates compile upload_internal promote_external submit_app_store].freeze
   PRIVATE_LANES = %i[asc_api_key sync_signing export_package].freeze
 
   def lanes

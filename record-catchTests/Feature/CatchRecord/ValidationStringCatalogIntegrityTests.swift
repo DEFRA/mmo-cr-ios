@@ -32,10 +32,8 @@ final class ValidationStringCatalogIntegrityTests: XCTestCase {
         // departure" validation keys were removed as part of ADR-0017 (native `DatePicker`
         // replacing the day/month/year `DateEntryField`): `TripDateViewModel.selectableRange`
         // clamps out every invalid value, so those states can no longer occur and their copy
-        // keys were retired along with `TripDateValidation`. Only the (still-shown) hints
-        // remain under test here.
-        "catchRecord.tripDate.departure.hint",
-        "catchRecord.tripDate.return.hint",
+        // keys were retired along with `TripDateValidation`. The screen's hint paragraph was
+        // later removed too (duplicated the H1 heading above it), so no keys remain to test here.
 
         // Species (Task 7a)
         "catchRecord.species.add.validation.enter",

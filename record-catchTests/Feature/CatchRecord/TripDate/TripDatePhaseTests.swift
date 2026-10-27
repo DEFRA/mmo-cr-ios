@@ -6,13 +6,11 @@ final class TripDatePhaseTests: XCTestCase {
 
     func test_departure_copyKeysAndIdentifierFragment() {
         XCTAssertEqual(TripDatePhase.departure.titleKey, "catchRecord.tripDate.departure.title")
-        XCTAssertEqual(TripDatePhase.departure.hintKey, "catchRecord.tripDate.departure.hint")
         XCTAssertEqual(TripDatePhase.departure.accessibilityIdentifierFragment, "departure")
     }
 
     func test_return_copyKeysAndIdentifierFragment() {
         XCTAssertEqual(TripDatePhase.return.titleKey, "catchRecord.tripDate.return.title")
-        XCTAssertEqual(TripDatePhase.return.hintKey, "catchRecord.tripDate.return.hint")
         XCTAssertEqual(TripDatePhase.return.accessibilityIdentifierFragment, "return")
     }
 

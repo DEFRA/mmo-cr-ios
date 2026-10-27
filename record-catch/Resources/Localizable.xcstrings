@@ -521,24 +521,6 @@
         }
       }
     },
-    "catchRecord.caption": {
-      "comment": "Page caption shown on all 'Create a catch record' screens.",
-      "extractionState": "manual",
-      "localizations": {
-        "cy": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Cofnod dalfa newydd"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "New catch record"
-          }
-        }
-      }
-    },
     "catchRecord.catchLocation.heading": {
       "comment": "Heading for the catch-location screen. %@ is the gear name plus its captured required measurements, e.g. \"Seine nets (mesh size 100mm)\" — see GearOption.descriptionWithMeasurements(localize:).",
       "extractionState": "manual",
@@ -3257,24 +3239,6 @@
         }
       }
     },
-    "catchRecord.tripDate.departure.hint": {
-      "comment": "Hint for the trip departure date screen.",
-      "extractionState": "manual",
-      "localizations": {
-        "cy": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Dewiswch y dyddiad y gwnaethoch adael am eich taith."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Select the date you left for your trip."
-          }
-        }
-      }
-    },
     "catchRecord.tripDate.departure.title": {
       "comment": "Trip departure date screen H1.",
       "extractionState": "manual",
@@ -3289,24 +3253,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Which date did you set off on your trip?"
-          }
-        }
-      }
-    },
-    "catchRecord.tripDate.return.hint": {
-      "comment": "Hint for the trip return date screen.",
-      "extractionState": "manual",
-      "localizations": {
-        "cy": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Dewiswch y dyddiad y gwnaethoch ddychwelyd o'ch taith."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Select the date you returned from your trip."
           }
         }
       }

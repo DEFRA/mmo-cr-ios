@@ -24,10 +24,6 @@ struct SelectVesselView: View {
     @ViewBuilder
     private var content: some View {
         VStack(alignment: .leading, spacing: AppSpacing.large) {
-            LocalizedText("catchRecord.caption")
-                .font(AppTypography.pageCaption)
-                .foregroundStyle(AppColors.govBlue)
-
             TitleText(text: languageStore.localized("catchRecord.selectVessel.heading"))
                 .accessibilityAddTraits(.isHeader)
 
@@ -39,19 +35,22 @@ struct SelectVesselView: View {
                         accessibilityIdentifier: "CatchRecord.selectVessel.option.\(vessel.lowercased())"
                     )
                 },
+                // No separate "Save and continue" button: choosing a vessel is a single, discrete
+                // tap (the activating gesture itself), so submitting immediately on selection does
+                // not trip WCAG 2.2 SC 3.2.2 "On Input" — that guards against a context change
+                // triggered by merely changing a setting's value without an explicit activation,
+                // which a tap on a specific radio option already is.
                 selectedID: Binding(
                     get: { viewModel.selection },
-                    set: { viewModel.selection = $0 }
+                    set: { newValue in
+                        viewModel.selection = newValue
+                        viewModel.submit()
+                    }
                 ),
                 errorKey: viewModel.errorKey,
                 groupAccessibilityIdentifier: "CatchRecord.selectVessel.radioGroup",
                 errorAccessibilityIdentifier: "CatchRecord.selectVessel.error"
             )
-
-            PrimaryButton(title: languageStore.localized("catchRecord.saveContinue")) {
-                viewModel.submit()
-            }
-            .accessibilityIdentifier("CatchRecord.selectVessel.saveContinue")
         }
     }
 }

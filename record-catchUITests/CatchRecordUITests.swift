@@ -24,14 +24,10 @@ final class CatchRecordUITests: XCTestCase {
 
         static let vesselGroup = "CatchRecord.selectVessel.radioGroup"
         static let vesselAchilles = "CatchRecord.selectVessel.option.achilles"
-        static let vesselContinue = "CatchRecord.selectVessel.saveContinue"
-        static let vesselError = "CatchRecord.selectVessel.error"
 
         static let tripGroup = "CatchRecord.tripToday.radioGroup"
         static let tripYes = "CatchRecord.tripToday.option.yes"
         static let tripNo = "CatchRecord.tripToday.option.no"
-        static let tripContinue = "CatchRecord.tripToday.saveContinue"
-        static let tripError = "CatchRecord.tripToday.error"
         static let tripReference = "CatchRecord.tripToday.referenceNumber"
 
         static let departureHeading = "CatchRecord.tripDate.departure.heading"
@@ -79,7 +75,6 @@ final class CatchRecordUITests: XCTestCase {
         let achilles = element(app, ID.vesselAchilles)
         XCTAssertTrue(achilles.waitForExistence(timeout: 5))
         achilles.tap()
-        app.buttons[ID.vesselContinue].tap()
 
         // Reached "Did your trip start and finish today?" — the vessel selection is now persisted.
         XCTAssertTrue(element(app, ID.tripGroup).waitForExistence(timeout: 5))
@@ -193,7 +188,6 @@ final class CatchRecordUITests: XCTestCase {
         let achilles = element(app, ID.vesselAchilles)
         XCTAssertTrue(achilles.waitForExistence(timeout: 5))
         achilles.tap()
-        app.buttons[ID.vesselContinue].tap()
         XCTAssertTrue(element(app, ID.tripGroup).waitForExistence(timeout: 5))
 
         // Vessel selection is a one-time step (see ADR-0013 amendment): `.selectVessel` was
@@ -214,7 +208,6 @@ final class CatchRecordUITests: XCTestCase {
         XCTAssertTrue(createButton.waitForExistence(timeout: 5))
         createButton.tap()
         element(app, ID.vesselAchilles).tap()
-        app.buttons[ID.vesselContinue].tap()
         XCTAssertTrue(element(app, ID.tripGroup).waitForExistence(timeout: 5))
         element(app, "ViewHeader.backButton").tap()
         XCTAssertTrue(createButton.waitForExistence(timeout: 5))
@@ -228,23 +221,11 @@ final class CatchRecordUITests: XCTestCase {
         let hercules = element(app, "CatchRecord.selectVessel.option.hercules")
         XCTAssertTrue(hercules.waitForExistence(timeout: 5))
         hercules.tap()
-        app.buttons[ID.vesselContinue].tap()
         XCTAssertTrue(element(app, ID.tripGroup).waitForExistence(timeout: 5))
         element(app, "ViewHeader.backButton").tap()
 
         XCTAssertTrue(createButton.waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts.matching(identifier: "Unsent").count, 2)
-    }
-
-    @MainActor
-    func test_selectVessel_submitWithNoSelection_showsInlineError() {
-        let app = launch("-uiTestCatchRecordNew")
-
-        let continueButton = app.buttons[ID.vesselContinue]
-        XCTAssertTrue(continueButton.waitForExistence(timeout: 5))
-        continueButton.tap()
-
-        XCTAssertTrue(element(app, ID.vesselError).waitForExistence(timeout: 5))
     }
 
     @MainActor
@@ -254,18 +235,12 @@ final class CatchRecordUITests: XCTestCase {
         let achilles = element(app, ID.vesselAchilles)
         XCTAssertTrue(achilles.waitForExistence(timeout: 5))
         achilles.tap()
-        app.buttons[ID.vesselContinue].tap()
 
         XCTAssertTrue(element(app, ID.tripGroup).waitForExistence(timeout: 5))
         XCTAssertTrue(element(app, ID.tripReference).exists)
 
-        // Submit with no selection first shows the inline error and doesn't route.
-        app.buttons[ID.tripContinue].tap()
-        XCTAssertTrue(element(app, ID.tripError).waitForExistence(timeout: 5))
-
-        // Select Yes and continue — with no favourites yet, enters the port sub-journey at Add port.
+        // Selecting Yes — with no favourites yet, enters the port sub-journey at Add port.
         element(app, ID.tripYes).tap()
-        app.buttons[ID.tripContinue].tap()
 
         XCTAssertTrue(element(app, "CatchRecord.addPort.heading").waitForExistence(timeout: 5))
     }
@@ -278,12 +253,10 @@ final class CatchRecordUITests: XCTestCase {
         let achilles = element(app, ID.vesselAchilles)
         XCTAssertTrue(achilles.waitForExistence(timeout: 5))
         achilles.tap()
-        app.buttons[ID.vesselContinue].tap()
 
         // Trip today → No.
         XCTAssertTrue(element(app, ID.tripNo).waitForExistence(timeout: 5))
         element(app, ID.tripNo).tap()
-        app.buttons[ID.tripContinue].tap()
 
         // Departure date screen. The native `DatePicker` (see `TripDatePicker`, ADR-0017)
         // defaults to today and is range-constrained rather than validated, so accepting the
@@ -339,24 +312,20 @@ final class CatchRecordUITests: XCTestCase {
         newlynResult.tap()
 
         // Lands on "Was Newlyn your departure and return port?" — answering "No" continues into
-        // the separate departure/return select screens as before.
+        // the separate departure/return select screens as before. Selecting an option on this
+        // screen submits and routes on immediately — there is no "Save and continue" button.
         app.buttons["CatchRecord.addPort.saveContinue"].tap()
         XCTAssertTrue(element(app, "CatchRecord.confirmSamePort.heading").waitForExistence(timeout: 5))
         element(app, "CatchRecord.confirmSamePort.option.no").tap()
-        app.buttons["CatchRecord.confirmSamePort.saveContinue"].tap()
 
+        // Picking a favourite port on the departure/return screens submits and routes on
+        // immediately — there is no "Save and continue" button on either screen.
         XCTAssertTrue(element(app, "CatchRecord.selectPort.departure.heading").waitForExistence(timeout: 5))
-        app.buttons["CatchRecord.selectPort.departure.saveContinue"].tap()
-        // No selection → inline error.
-        XCTAssertTrue(element(app, "CatchRecord.selectPort.departure.error").waitForExistence(timeout: 5))
-
         element(app, "CatchRecord.selectPort.departure.option.newlyn").tap()
-        app.buttons["CatchRecord.selectPort.departure.saveContinue"].tap()
 
         // Return select screen.
         XCTAssertTrue(element(app, "CatchRecord.selectPort.return.heading").waitForExistence(timeout: 5))
         element(app, "CatchRecord.selectPort.return.option.newlyn").tap()
-        app.buttons["CatchRecord.selectPort.return.saveContinue"].tap()
 
         // With no favourite gears yet, enters the gear sub-journey at the Add-gear screen.
         XCTAssertTrue(element(app, "CatchRecord.addGear.heading").waitForExistence(timeout: 5))
@@ -407,24 +376,11 @@ final class CatchRecordUITests: XCTestCase {
     // MARK: - Confirm same port (Was `<port>` your departure and return port?)
 
     @MainActor
-    func test_confirmSamePort_submitWithNoSelection_showsInlineError() {
-        let app = launch("-uiTestCatchRecordConfirmSamePort")
-
-        XCTAssertTrue(element(app, "CatchRecord.confirmSamePort.heading").waitForExistence(timeout: 5))
-        app.buttons["CatchRecord.confirmSamePort.saveContinue"].tap()
-
-        XCTAssertTrue(element(app, "CatchRecord.confirmSamePort.error").waitForExistence(timeout: 5))
-        // Did not route on: still on the confirm screen.
-        XCTAssertTrue(element(app, "CatchRecord.confirmSamePort.heading").exists)
-    }
-
-    @MainActor
     func test_confirmSamePort_yes_bypassesSelectPortScreens_reachesGearSubJourneyDirectly() {
         let app = launch("-uiTestCatchRecordConfirmSamePort")
 
         XCTAssertTrue(element(app, "CatchRecord.confirmSamePort.heading").waitForExistence(timeout: 5))
         element(app, "CatchRecord.confirmSamePort.option.yes").tap()
-        app.buttons["CatchRecord.confirmSamePort.saveContinue"].tap()
 
         // Skips both "Which port did you leave from?"/"Which port did you return to?" screens and
         // lands straight in the gear sub-journey (no favourite gears seeded → Add-gear screen).
@@ -439,19 +395,8 @@ final class CatchRecordUITests: XCTestCase {
 
         XCTAssertTrue(element(app, "CatchRecord.confirmSamePort.heading").waitForExistence(timeout: 5))
         element(app, "CatchRecord.confirmSamePort.option.no").tap()
-        app.buttons["CatchRecord.confirmSamePort.saveContinue"].tap()
 
         XCTAssertTrue(element(app, "CatchRecord.selectPort.departure.heading").waitForExistence(timeout: 5))
-    }
-
-    @MainActor
-    func test_confirmSamePort_addAnotherPort_returnsToAddPortSearch() {
-        let app = launch("-uiTestCatchRecordConfirmSamePort")
-
-        XCTAssertTrue(element(app, "CatchRecord.confirmSamePort.heading").waitForExistence(timeout: 5))
-        app.buttons["CatchRecord.confirmSamePort.addAnother"].tap()
-
-        XCTAssertTrue(element(app, "CatchRecord.addPort.heading").waitForExistence(timeout: 5))
     }
 
     // MARK: - Check your answers

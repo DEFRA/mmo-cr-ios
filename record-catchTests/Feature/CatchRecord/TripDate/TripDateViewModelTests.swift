@@ -28,7 +28,6 @@ final class TripDateViewModelTests: XCTestCase {
         XCTAssertEqual(sut.referenceNumber, referenceNumber)
         XCTAssertEqual(sut.vessel, vessel)
         XCTAssertEqual(sut.titleKey, "catchRecord.tripDate.departure.title")
-        XCTAssertEqual(sut.hintKey, "catchRecord.tripDate.departure.hint")
     }
 
     func test_returnPhase_exposesReturnCopy() {
@@ -40,7 +39,6 @@ final class TripDateViewModelTests: XCTestCase {
             router: CatchRecordRouter()
         )
         XCTAssertEqual(sut.titleKey, "catchRecord.tripDate.return.title")
-        XCTAssertEqual(sut.hintKey, "catchRecord.tripDate.return.hint")
     }
 
     // MARK: - Selectable range (see plan §3 Q3 — range-constrained rather than validated)

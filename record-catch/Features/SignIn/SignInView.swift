@@ -30,7 +30,11 @@ struct SignInView: View {
         VStack(spacing: 0) {
             HStack {
                 Spacer()
-                LanguageToggleButton(foregroundColor: AppColors.linkText)
+                // Per the sign-in design, the language toggle renders in the primary text
+                // colour (black) rather than the link colour used elsewhere — contrast is
+                // unaffected (black-on-white exceeds AA) and it remains visually distinct as a
+                // bold abbreviation in the top-right corner.
+                LanguageToggleButton(foregroundColor: AppColors.textPrimary)
             }
             .padding(.horizontal, AppSpacing.medium)
 
@@ -109,6 +113,7 @@ struct SignInView: View {
                 textInputAutocapitalization: .never,
                 autocorrectionDisabled: true,
                 secureTextContentType: .username,
+                labelColor: AppColors.textSecondary,
                 text: emailBinding
             )
             .accessibilityIdentifier("SignIn.emailField")
@@ -142,6 +147,7 @@ struct SignInView: View {
                 label: languageStore.localized("signIn.password.label"),
                 isSecure: true,
                 secureTextContentType: .password,
+                labelColor: AppColors.textSecondary,
                 text: passwordBinding
             )
 
@@ -173,8 +179,31 @@ struct SignInView: View {
                 .accessibilityIdentifier("SignIn.troubleHeading")
 
             linkButton(key: "signIn.link.forgottenPassword", identifier: "SignIn.forgottenPasswordLink")
-            linkButton(key: "signIn.link.createAccount", identifier: "SignIn.createAccountLink")
+            createAccountSection
         }
+    }
+
+    /// "Create an account" — a GDS-style disclosure (reusing the shared
+    /// `ExpandableHelpSection`, as used elsewhere e.g. Home's status-help section) rather than
+    /// the inert link used for "Forgotten your password?" above. Tapping it reveals guidance for
+    /// the two routes into the app: a vessel owner is invited automatically when their vessel is
+    /// added, while a skipper/agent must be added by their vessel owner. It remains inert beyond
+    /// expanding/collapsing — there is no account-creation flow in this UI-only phase.
+    private var createAccountSection: some View {
+        ExpandableHelpSection(
+            title: languageStore.localized("signIn.link.createAccount"),
+            accessibilityIdentifier: "SignIn.createAccountLink",
+            items: [
+                HelpItem(
+                    heading: languageStore.localized("signIn.createAccount.vesselOwner.heading"),
+                    description: languageStore.localized("signIn.createAccount.vesselOwner.body")
+                ),
+                HelpItem(
+                    heading: languageStore.localized("signIn.createAccount.skipper.heading"),
+                    description: languageStore.localized("signIn.createAccount.skipper.body")
+                )
+            ]
+        )
     }
 
     private func linkButton(key: String, identifier: String) -> some View {

@@ -5147,6 +5147,78 @@
         }
       }
     },
+    "signIn.createAccount.skipper.body": {
+      "comment": "Body paragraph under the 'Skipper or agent' sub-heading in the Sign In 'Create an account' disclosure.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Gofynnwch i berchennog eich llong eich ychwanegu. Gallant wneud hyn o'u cyfrif."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ask your vessel owner to add you. They can do this from their account."
+          }
+        }
+      }
+    },
+    "signIn.createAccount.skipper.heading": {
+      "comment": "Bold sub-heading in the Sign In 'Create an account' disclosure, for skippers/agents who must be added by their vessel owner.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Sgipper neu asiant:"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skipper or agent:"
+          }
+        }
+      }
+    },
+    "signIn.createAccount.vesselOwner.body": {
+      "comment": "Body paragraph under the 'Vessel owner' sub-heading in the Sign In 'Create an account' disclosure.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Byddwch yn derbyn gwahoddiad drwy e-bost i gofrestru pan fydd eich llong yn cael ei hychwanegu at y system."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You will receive an email invitation to register when your vessel is added to the system."
+          }
+        }
+      }
+    },
+    "signIn.createAccount.vesselOwner.heading": {
+      "comment": "Bold sub-heading in the Sign In 'Create an account' disclosure, for vessel owners who are invited automatically.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Perchennog llong:"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vessel owner:"
+          }
+        }
+      }
+    },
     "signIn.email.label": {
       "comment": "Email address field label.",
       "extractionState": "manual",

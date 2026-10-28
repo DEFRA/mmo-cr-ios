@@ -193,6 +193,11 @@ struct SignInView: View {
         ExpandableHelpSection(
             title: languageStore.localized("signIn.link.createAccount"),
             accessibilityIdentifier: "SignIn.createAccountLink",
+            // Match the font size of the "Forgotten your password?" link above
+            // (`AppTypography.body`), rather than the `bodySmall` default used by
+            // other `ExpandableHelpSection` call sites (e.g. Home's status-help
+            // section), so the two Sign In links read at the same size.
+            titleFont: AppTypography.body,
             items: [
                 HelpItem(
                     heading: languageStore.localized("signIn.createAccount.vesselOwner.heading"),

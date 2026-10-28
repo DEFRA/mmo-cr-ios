@@ -10,7 +10,9 @@
 //
 //  Exhaustive port-framing/coordinate logic is covered where it is actually assertable — in
 //  `PortMapCameraTests` and `CatchLocationViewModelTests` (XCUITest can't assert map pixels). This
-//  is the in-app smoke test that the map screen actually opens and Save and continue is reachable.
+//  is the in-app smoke test that the map screen actually opens and is reachable; tapping a
+//  subrectangle submits and routes on immediately — there is no separate "Save and continue"
+//  button on this screen (see `CatchLocationView`).
 //
 
 import XCTest
@@ -27,7 +29,6 @@ final class CatchLocationUITests: XCTestCase {
     private enum CatchLocationID {
         static let heading = "CatchRecord.catchLocation.heading"
         static let map = "CatchRecord.catchLocation.map"
-        static let saveContinue = "CatchRecord.catchLocation.saveContinue"
         static let otherButton = "CatchRecord.catchLocation.otherButton"
         static let error = "CatchRecord.catchLocation.error"
     }
@@ -104,35 +105,10 @@ final class CatchLocationUITests: XCTestCase {
     func test_selectGearToCatchLocation_opensMapScreen() {
         let app = reachCatchLocationMap()
 
-        // The catch-location map screen opens with the interactive map and Save and continue (FR2).
+        // The catch-location map screen opens with the interactive map, ready for the user to tap
+        // a subrectangle to select it (FR2) — there is no separate "Save and continue" button.
         XCTAssertTrue(element(app, CatchLocationID.map).exists, "The offline map should be present on the screen")
-        XCTAssertTrue(element(app, CatchLocationID.saveContinue).exists, "Save and continue should be reachable")
-    }
-
-    /// Scenario 5 / FR11 — "Save and continue" with no area selected must show the inline
-    /// validation error and keep the user on the same screen (it must not route on).
-    @MainActor
-    func test_catchLocation_saveContinueWithNoSelection_showsErrorAndStays() {
-        let app = reachCatchLocationMap()
-
-        app.buttons[CatchLocationID.saveContinue].tap()
-
-        XCTAssertTrue(
-            element(app, CatchLocationID.error).waitForExistence(timeout: 5),
-            "Continuing with no statistical area selected should show the inline validation error"
-        )
-        XCTAssertTrue(
-            element(app, CatchLocationID.heading).exists,
-            "The user should remain on the catch-location screen when no area is selected"
-        )
-        XCTAssertFalse(
-            element(app, "CatchRecord.recordSpeciesWeights.heading").exists,
-            "The journey must not advance to the species screen without a selected area"
-        )
-        XCTAssertFalse(
-            element(app, "CatchRecord.addSpecies.heading").exists,
-            "The journey must not advance to the add-species screen without a selected area"
-        )
+        XCTAssertTrue(element(app, CatchLocationID.otherButton).exists, "The manual \"Other\" entry point should be reachable")
     }
 
     /// Scenario 1 / FR1 — the "Other" option navigates to the statistical sub-area selection
@@ -203,9 +179,9 @@ final class CatchLocationUITests: XCTestCase {
         )
     }
 
-    /// Pinch-zooms in on the map and confirms the same responsiveness, then that "Save and
-    /// continue" still functions afterwards (exercising the no-selection validation path so the
-    /// test doesn't depend on tapping a specific subrectangle at an unpredictable zoom level).
+    /// Pinch-zooms in on the map and confirms the same responsiveness, then that navigation still
+    /// functions afterwards via the "Other" entry point (mirrors the zoom-out test above) — there
+    /// is no "Save and continue" button to re-exercise on this screen.
     @MainActor
     func test_catchLocationMap_pinchToZoomIn_mapRemainsResponsive() {
         let app = reachCatchLocationMap()
@@ -223,10 +199,12 @@ final class CatchLocationUITests: XCTestCase {
         waitForZoomGestureToSettle()
         attachScreenshot(named: "CatchLocation-Map-After-PinchZoomIn", app: app)
 
-        app.buttons[CatchLocationID.saveContinue].tap()
+        let other = element(app, CatchLocationID.otherButton)
+        XCTAssertTrue(other.waitForExistence(timeout: 5), "The \"Other\" control should still be reachable after a zoom-in gesture")
+        other.tap()
         XCTAssertTrue(
-            element(app, CatchLocationID.error).waitForExistence(timeout: 5),
-            "Save and continue should still function normally after a zoom-in gesture"
+            element(app, ManualEntryID.heading).waitForExistence(timeout: 5),
+            "Navigation should still work normally after a zoom-in gesture"
         )
     }
 
@@ -253,14 +231,16 @@ final class CatchLocationUITests: XCTestCase {
         waitForZoomGestureToSettle()
         attachScreenshot(named: "CatchLocation-Map-After-PinchZoomIn", app: app)
 
-        // Tap Save and continue and confirm it still actually functions (rather than just
+        // Tap the "Other" control and confirm it still actually functions (rather than just
         // checking `isHittable`, which can be reported before the simulator settles after two
-        // gestures fired back-to-back) — reaching the validation error proves the whole screen,
-        // not just the map, is still genuinely responsive.
-        app.buttons[CatchLocationID.saveContinue].tap()
+        // gestures fired back-to-back) — reaching the manual-entry heading proves the whole
+        // screen, not just the map, is still genuinely responsive.
+        let other = element(app, CatchLocationID.otherButton)
+        XCTAssertTrue(other.waitForExistence(timeout: 5), "The \"Other\" control should still be reachable after repeated zoom gestures")
+        other.tap()
         XCTAssertTrue(
-            element(app, CatchLocationID.error).waitForExistence(timeout: 5),
-            "Save and continue should still function normally after repeated zoom gestures"
+            element(app, ManualEntryID.heading).waitForExistence(timeout: 5),
+            "Navigation should still work normally after repeated zoom gestures"
         )
     }
 }

@@ -110,4 +110,110 @@ final class RecordSpeciesWeightsValidationTests: XCTestCase {
             "catchRecord.species.weight.validation.decimalPlace"
         )
     }
+
+    // MARK: - Discarded vs retained comparison (AC7/TC-12)
+
+    func test_weightErrorMessages_discardedGreaterThanRetained_returnsComparisonErrorOnDiscarded() {
+        let errors = RecordSpeciesWeightsValidation.weightErrorMessages(
+            selection: [cod.id],
+            species: [cod],
+            entries: SpeciesWeightEntries(
+                above: [cod.id: "5"], below: [:], discarded: [cod.id: "10"],
+                belowRevealed: [], discardedRevealed: [cod.id]
+            )
+        )
+        XCTAssertEqual(
+            errors[SpeciesFieldKey(speciesID: cod.id, field: .discarded)]?.key,
+            "catchRecord.species.weight.validation.discardedExceedsRetained"
+        )
+        XCTAssertEqual(
+            errors[SpeciesFieldKey(speciesID: cod.id, field: .discarded)]?.arguments,
+            [cod.name]
+        )
+        XCTAssertNil(errors[SpeciesFieldKey(speciesID: cod.id, field: .above)])
+    }
+
+    func test_weightErrorMessages_discardedEqualToRetained_returnsComparisonError() {
+        let errors = RecordSpeciesWeightsValidation.weightErrorMessages(
+            selection: [cod.id],
+            species: [cod],
+            entries: SpeciesWeightEntries(
+                above: [cod.id: "10"], below: [:], discarded: [cod.id: "10"],
+                belowRevealed: [], discardedRevealed: [cod.id]
+            )
+        )
+        XCTAssertEqual(
+            errors[SpeciesFieldKey(speciesID: cod.id, field: .discarded)]?.key,
+            "catchRecord.species.weight.validation.discardedExceedsRetained"
+        )
+    }
+
+    func test_weightErrorMessages_discardedLessThanRetained_returnsNoError() {
+        let errors = RecordSpeciesWeightsValidation.weightErrorMessages(
+            selection: [cod.id],
+            species: [cod],
+            entries: SpeciesWeightEntries(
+                above: [cod.id: "10"], below: [:], discarded: [cod.id: "5"],
+                belowRevealed: [], discardedRevealed: [cod.id]
+            )
+        )
+        XCTAssertTrue(errors.isEmpty)
+    }
+
+    func test_weightErrorMessages_discardedNotRevealed_skipsComparison() {
+        let errors = RecordSpeciesWeightsValidation.weightErrorMessages(
+            selection: [cod.id],
+            species: [cod],
+            entries: SpeciesWeightEntries(
+                // Stale text left behind after "Remove" is not validated even though it would
+                // otherwise fail the comparison.
+                above: [cod.id: "5"], below: [:], discarded: [cod.id: "10"],
+                belowRevealed: [], discardedRevealed: []
+            )
+        )
+        XCTAssertTrue(errors.isEmpty)
+    }
+
+    func test_weightErrorMessages_discardedBlank_skipsComparison() {
+        let errors = RecordSpeciesWeightsValidation.weightErrorMessages(
+            selection: [cod.id],
+            species: [cod],
+            entries: SpeciesWeightEntries(
+                above: [cod.id: "5"], below: [:], discarded: [:],
+                belowRevealed: [], discardedRevealed: [cod.id]
+            )
+        )
+        XCTAssertTrue(errors.isEmpty)
+    }
+
+    func test_weightErrorMessages_retainedInvalid_showsOnlyRetainedFieldError() {
+        let errors = RecordSpeciesWeightsValidation.weightErrorMessages(
+            selection: [cod.id],
+            species: [cod],
+            entries: SpeciesWeightEntries(
+                above: [cod.id: "abc"], below: [:], discarded: [cod.id: "10"],
+                belowRevealed: [], discardedRevealed: [cod.id]
+            )
+        )
+        XCTAssertEqual(
+            errors[SpeciesFieldKey(speciesID: cod.id, field: .above)]?.key,
+            "catchRecord.species.weight.validation.decimalPlace"
+        )
+        XCTAssertNil(errors[SpeciesFieldKey(speciesID: cod.id, field: .discarded)])
+    }
+
+    func test_weightErrorMessages_discardedOverMax_showsMaxNotComparison() {
+        let errors = RecordSpeciesWeightsValidation.weightErrorMessages(
+            selection: [cod.id],
+            species: [cod],
+            entries: SpeciesWeightEntries(
+                above: [cod.id: "5"], below: [:], discarded: [cod.id: "10001"],
+                belowRevealed: [], discardedRevealed: [cod.id]
+            )
+        )
+        XCTAssertEqual(
+            errors[SpeciesFieldKey(speciesID: cod.id, field: .discarded)]?.key,
+            "catchRecord.species.weight.validation.max"
+        )
+    }
 }

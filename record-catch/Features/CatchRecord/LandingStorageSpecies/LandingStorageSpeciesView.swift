@@ -39,10 +39,6 @@ struct LandingStorageSpeciesView: View {
     @ViewBuilder
     private var content: some View {
         VStack(alignment: .leading, spacing: AppSpacing.large) {
-            LocalizedText("catchRecord.caption")
-                .font(AppTypography.pageCaption)
-                .foregroundStyle(AppColors.govBlue)
-
             Text(viewModel.referenceNumber)
                 .font(AppTypography.bodySmall)
                 .foregroundStyle(AppColors.textSecondary)

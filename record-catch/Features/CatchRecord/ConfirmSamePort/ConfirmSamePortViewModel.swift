@@ -7,7 +7,7 @@ import Foundation
 /// "Yes" sets both `CatchRecordDraft.departurePort` and `.returnPort` to the same port and enters
 /// the gear sub-journey directly, skipping the separate departure/return select screens. "No"
 /// continues into the departure select screen as before, so the user can pick (or add) different
-/// ports for each leg. "Add another port" lets the user search again if the saved port was wrong.
+/// ports for each leg.
 @MainActor
 @Observable
 final class ConfirmSamePortViewModel {
@@ -73,10 +73,5 @@ final class ConfirmSamePortViewModel {
             vessel: vessel,
             referenceNumber: referenceNumber
         ))
-    }
-
-    /// Routes to the Add-port screen to search for a different port (first-time entry again).
-    func addAnotherPort() {
-        router.push(.addPort(vessel: vessel, referenceNumber: referenceNumber, returnPhase: nil))
     }
 }

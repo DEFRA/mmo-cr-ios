@@ -72,4 +72,61 @@ final class CatchRecordRouterTests: XCTestCase {
 
         XCTAssertEqual(sut.path, [.submissionSuccess(referenceNumber: "REF")])
     }
+
+    // MARK: - replaceCurrent (see ADR-0013 amendment — vessel selection is a one-time step)
+
+    func test_replaceCurrent_swapsTheTopRoute_leavingEarlierRoutesUntouched() {
+        let sut = CatchRecordRouter()
+        sut.startFromDraft(draftRow)
+        sut.push(.selectVessel)
+
+        sut.replaceCurrent(with: .tripStartedToday(vessel: "ACHILLES", referenceNumber: "REF"))
+
+        XCTAssertEqual(sut.path, [.draftAction(draftRow), .tripStartedToday(vessel: "ACHILLES", referenceNumber: "REF")])
+    }
+
+    func test_replaceCurrent_whenPathIsEmpty_pushesAsSoleEntry() {
+        let sut = CatchRecordRouter()
+
+        sut.replaceCurrent(with: .tripStartedToday(vessel: "ACHILLES", referenceNumber: "REF"))
+
+        XCTAssertEqual(sut.path, [.tripStartedToday(vessel: "ACHILLES", referenceNumber: "REF")])
+    }
+
+    // MARK: - shouldPersistDraft (see ADR-0014 §4, amended)
+
+    func test_shouldPersistDraft_withEmptyPath_isFalse() {
+        XCTAssertFalse(CatchRecordRouter.shouldPersistDraft(path: [], vessel: "ACHILLES"))
+    }
+
+    func test_shouldPersistDraft_withNoVesselYet_isFalse() {
+        XCTAssertFalse(
+            CatchRecordRouter.shouldPersistDraft(
+                path: [.tripStartedToday(vessel: "ACHILLES", referenceNumber: "REF")],
+                vessel: nil
+            )
+        )
+    }
+
+    func test_shouldPersistDraft_whileStillShowingSelectVessel_isFalse() {
+        XCTAssertFalse(CatchRecordRouter.shouldPersistDraft(path: [.selectVessel], vessel: "ACHILLES"))
+    }
+
+    func test_shouldPersistDraft_onTheScreenAfterVesselSelection_isTrue() {
+        XCTAssertTrue(
+            CatchRecordRouter.shouldPersistDraft(
+                path: [.tripStartedToday(vessel: "ACHILLES", referenceNumber: "REF")],
+                vessel: "ACHILLES"
+            )
+        )
+    }
+
+    func test_shouldPersistDraft_onSubmissionSuccess_isFalse() {
+        XCTAssertFalse(
+            CatchRecordRouter.shouldPersistDraft(
+                path: [.submissionSuccess(referenceNumber: "REF")],
+                vessel: "ACHILLES"
+            )
+        )
+    }
 }

@@ -52,7 +52,7 @@ protocol CatchRecordDraftStoring {
     /// (e.g. already deleted).
     func loadDraft(localID: UUID) async throws -> CatchRecordDraftPayload?
     /// Permanently deletes a persisted draft (used for both explicit "Delete" and once a draft has
-    /// been successfully submitted — see `SubmissionConfirmationViewModel`).
+    /// been successfully submitted — see `CheckYourAnswersViewModel`).
     func deleteDraft(localID: UUID) async throws
     /// Every persisted draft not yet submitted, for Home's "Unsent" rows.
     func allUnsentDrafts() async throws -> [UnsentDraftSummary]

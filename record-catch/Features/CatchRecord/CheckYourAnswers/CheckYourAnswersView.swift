@@ -5,16 +5,28 @@ import SwiftUI
 /// Renders every value captured in `CatchRecordDraft` as four sections (Trip, Gear used, Species
 /// caught, Species not landed), each row pairing a label and value with a "Change" control that
 /// jumps back to the screen where that value was captured (`CheckYourAnswersViewModel.change(to:)`).
+///
+/// Beneath the summary, the declaration notice and bullets (`SubmissionDeclarationView`) explain
+/// what submitting confirms, and "Accept and submit trip details" submits directly from here — the
+/// former standalone "Confirmation" screen was folded into this screen (see the module README and
+/// the ADR-0014 amendment).
 struct CheckYourAnswersView: View {
 
     @Environment(AppLanguageStore.self) private var languageStore
+    @Environment(\.connectivityMonitor) private var connectivityMonitor
     @State private var viewModel: CheckYourAnswersViewModel
 
-    init(referenceNumber: String, router: CatchRecordRouter, draft: CatchRecordDraft) {
+    init(
+        referenceNumber: String,
+        router: CatchRecordRouter,
+        draft: CatchRecordDraft,
+        draftStore: CatchRecordDraftStoring = InMemoryCatchRecordDraftStore()
+    ) {
         _viewModel = State(wrappedValue: CheckYourAnswersViewModel(
             referenceNumber: referenceNumber,
             router: router,
-            draft: draft
+            draft: draft,
+            draftStore: draftStore
         ))
     }
 
@@ -30,10 +42,6 @@ struct CheckYourAnswersView: View {
     @ViewBuilder
     private var content: some View {
         VStack(alignment: .leading, spacing: AppSpacing.large) {
-            LocalizedText("catchRecord.caption")
-                .font(AppTypography.pageCaption)
-                .foregroundStyle(AppColors.govBlue)
-
             Text(viewModel.referenceNumber)
                 .font(AppTypography.bodySmall)
                 .foregroundStyle(AppColors.textSecondary)
@@ -47,11 +55,38 @@ struct CheckYourAnswersView: View {
                 sectionView(section)
             }
 
-            PrimaryButton(title: languageStore.localized("catchRecord.saveContinue")) {
-                viewModel.submit()
+            SubmissionDeclarationView(identifierPrefix: identifierPrefix)
+
+            if viewModel.submitFailed {
+                submitFailedBanner
             }
-            .accessibilityIdentifier("\(identifierPrefix).saveContinue")
+
+            PrimaryButton(
+                title: languageStore.localized("catchRecord.checkYourAnswers.accept"),
+                isDisabled: viewModel.isSubmitting
+            ) {
+                // `nil` (no monitor configured, e.g. an unconfigured preview) is treated as
+                // online, matching `OfflineBanner`'s convention.
+                Task { await viewModel.submit(isOnline: connectivityMonitor?.isOnline ?? true) }
+            }
+            .accessibilityIdentifier("\(identifierPrefix).accept")
         }
+    }
+
+    private var submitFailedBanner: some View {
+        HStack(alignment: .top, spacing: AppSpacing.xSmall) {
+            Image(systemName: "exclamationmark.circle.fill")
+                .foregroundStyle(AppColors.errorRed)
+                .accessibilityHidden(true)
+            Text(languageStore.localized("catchRecord.checkYourAnswers.submitFailed"))
+                .font(AppTypography.error)
+                .foregroundStyle(AppColors.errorRed)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(
+            "\(languageStore.localized("a11y.errorPrefix")) \(languageStore.localized("catchRecord.checkYourAnswers.submitFailed"))"
+        )
+        .accessibilityIdentifier("\(identifierPrefix).submitError")
     }
 
     @ViewBuilder
@@ -93,20 +128,26 @@ struct CheckYourAnswersView: View {
 
             Spacer(minLength: AppSpacing.small)
 
-            Button {
-                viewModel.change(to: row.changeRoute)
-            } label: {
-                Text(languageStore.localized("catchRecord.checkYourAnswers.change"))
-                    .font(AppTypography.bodySmall)
-                    .foregroundStyle(AppColors.linkText)
-                    .underline()
-                    .frame(minWidth: AppControlSize.buttonHeight, minHeight: AppControlSize.buttonHeight)
-                    .contentShape(Rectangle())
+            // No "Change" control at all for a read-only row (currently only the vessel — see
+            // ADR-0013 amendment), rather than a disabled-looking link, matching the GOV.UK Design
+            // System summary-list pattern for rows with no action
+            // (https://design-system.service.gov.uk/components/summary-list/).
+            if let changeRoute = row.changeRoute {
+                Button {
+                    viewModel.change(to: changeRoute)
+                } label: {
+                    Text(languageStore.localized("catchRecord.checkYourAnswers.change"))
+                        .font(AppTypography.bodySmall)
+                        .foregroundStyle(AppColors.linkText)
+                        .underline()
+                        .frame(minWidth: AppControlSize.buttonHeight, minHeight: AppControlSize.buttonHeight)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(.isLink)
+                .accessibilityLabel(changeAccessibilityLabel(for: row, label: label))
+                .accessibilityIdentifier("\(identifierPrefix).change.\(row.id)")
             }
-            .buttonStyle(.plain)
-            .accessibilityAddTraits(.isLink)
-            .accessibilityLabel(changeAccessibilityLabel(for: row, label: label))
-            .accessibilityIdentifier("\(identifierPrefix).change.\(row.id)")
         }
         .accessibilityElement(children: .contain)
     }

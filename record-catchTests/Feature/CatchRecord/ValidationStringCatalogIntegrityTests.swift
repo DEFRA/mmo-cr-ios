@@ -32,10 +32,8 @@ final class ValidationStringCatalogIntegrityTests: XCTestCase {
         // departure" validation keys were removed as part of ADR-0017 (native `DatePicker`
         // replacing the day/month/year `DateEntryField`): `TripDateViewModel.selectableRange`
         // clamps out every invalid value, so those states can no longer occur and their copy
-        // keys were retired along with `TripDateValidation`. Only the (still-shown) hints
-        // remain under test here.
-        "catchRecord.tripDate.departure.hint",
-        "catchRecord.tripDate.return.hint",
+        // keys were retired along with `TripDateValidation`. The screen's hint paragraph was
+        // later removed too (duplicated the H1 heading above it), so no keys remain to test here.
 
         // Species (Task 7a)
         "catchRecord.species.add.validation.enter",
@@ -50,6 +48,11 @@ final class ValidationStringCatalogIntegrityTests: XCTestCase {
         "catchRecord.species.weight.validation.wholeNumber",
         "catchRecord.species.weight.validation.greaterThanZero",
         "catchRecord.landingStorageSpecies.weight.validation.enter",
+
+        // Weight-validation defect fix: maximum catch weight (Scenario 10) and discarded vs
+        // retained comparison (AC7/TC-12)
+        "catchRecord.species.weight.validation.max",
+        "catchRecord.species.weight.validation.discardedExceedsRetained",
 
         // Error summary (Task 9)
         "catchRecord.errorSummary.title",

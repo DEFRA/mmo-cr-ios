@@ -87,6 +87,22 @@ changes and `draft.vessel != nil` (i.e. at least the first screen has been answe
 DRY call site rather than threading a save call through every screen's `submit()`. A journey
 abandoned before the very first screen is answered never creates a persisted row.
 
+> **Amended 2026-10.** The guard above was refined to `CatchRecordRouter.shouldPersistDraft(path:
+> vessel:)`, a pure static function used by all three save triggers (the route-change save above,
+> the debounced in-screen autosave, and the scene-phase flush). It additionally withholds the save
+> while the top of the stack is still `.selectVessel` itself — not just when `draft.vessel` is nil
+> — so going back (or swiping back) out of vessel selection *before* "Save and continue" commits an
+> answer never creates a draft row (previously, `draft.vessel` being set the instant a radio option
+> was ticked, before "Save and continue", was not itself a risk since the guard read `draft.vessel`
+> rather than the radio selection — but once `.selectVessel` became a one-time step (ADR-0013
+> amendment) a stale, un-reset shared draft could otherwise still save before the user ever reached
+> vessel selection a second time). It also withholds the save once `.submissionSuccess` is reached,
+> so a save racing in just behind `SubmissionConfirmationViewModel.submit()`'s delete cannot
+> resurrect a just-submitted draft as a fresh Unsent row. Separately, `HomeView.createNewRecord()`
+> now calls `CatchRecordDraft.reset()` before `CatchRecordRouter.startNew()`, so a second "Create a
+> new catch record" in the same session starts from a blank draft (new `localID`, no pre-filled
+> vessel) rather than inheriting the previous journey's in-progress answers.
+
 ### 5. Resuming: jump to the last completed section, pre-filled
 
 > **Amended 2026-09.** The original decision below ("restart from the first screen") is
@@ -179,6 +195,20 @@ later gains a stricter classification, revisit with `NSFileProtectionComplete`.
   decoding of pre-checkpoint drafts), `DraftActionViewModelTests` (resume routes to every
   checkpoint), and each affected view model's pre-fill/checkpoint tests meet the project's ≥95%
   core-logic coverage target.
+
+## Amendment (2026-10) — submit/delete call site moved to Check your answers
+
+The standalone "Confirmation" screen (`SubmissionConfirmationView`/`ViewModel`) has been removed
+and its submission step folded directly into "Check your answers" (`CheckYourAnswersViewModel`,
+see the `CatchRecord` module README): "Accept and submit trip details" now lives on Check your
+answers itself, beneath a declaration notice/bullet list, with no separate confirmation checkbox.
+
+This is a call-site move only — **the persistence behaviour this ADR describes is unchanged**:
+`CheckYourAnswersViewModel.submit(isOnline:)` still deletes the persisted draft
+(`CatchRecordDraftStoring.deleteDraft(localID:)`) on a successful online submit, still (re)saves
+the draft rather than deleting it when offline (BR-SUB-008/AC10/AC11), and `CatchRecordRouter`'s
+`shouldPersistDraft` still stops autosaving once `.submissionSuccess` is reached. No new ADR was
+raised for this change — it is a screen merge, not a change to the persistence architecture.
 
 ## References
 

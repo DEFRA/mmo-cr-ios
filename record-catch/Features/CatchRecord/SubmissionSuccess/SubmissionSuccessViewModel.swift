@@ -3,7 +3,7 @@ import Foundation
 /// View model for the final "Your catch record has been submitted" screen.
 ///
 /// Reached once the (stubbed) submission API call on the Confirmation screen succeeds (see
-/// `SubmissionConfirmationViewModel`). Holds no other state — this screen is a read-only summary —
+/// `CheckYourAnswersViewModel`). Holds no other state — this screen is a read-only summary —
 /// so its only intent is "View your catch records", which returns to Home.
 @MainActor
 @Observable

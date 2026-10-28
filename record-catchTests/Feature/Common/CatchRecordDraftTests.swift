@@ -119,4 +119,40 @@ final class CatchRecordDraftTests: XCTestCase {
         XCTAssertEqual(decoded.vessel, "ACHILLES")
         XCTAssertEqual(decoded.checkpoint, .vessel)
     }
+
+    // MARK: - reset (see `HomeView.createNewRecord()`)
+
+    func test_reset_clearsEveryCapturedField() {
+        let sut = CatchRecordDraft()
+        sut.vessel = "ACHILLES"
+        sut.departureDate = Date(timeIntervalSince1970: 1_000)
+        sut.returnDate = Date(timeIntervalSince1970: 2_000)
+        sut.departurePort = PortOption(name: "Hastings")
+        sut.returnPort = PortOption(name: "Newlyn")
+        sut.gearCatches = [GearCatch(gear: .seineNets, statisticalArea: "38E96", speciesCaught: [.atlanticCod])]
+        sut.speciesNotLanded = [.atlanticCod]
+        sut.returnToCheckYourAnswers = true
+        sut.advance(to: .checkYourAnswers)
+
+        sut.reset()
+
+        XCTAssertNil(sut.vessel)
+        XCTAssertNil(sut.departureDate)
+        XCTAssertNil(sut.returnDate)
+        XCTAssertNil(sut.departurePort)
+        XCTAssertNil(sut.returnPort)
+        XCTAssertTrue(sut.gearCatches.isEmpty)
+        XCTAssertTrue(sut.speciesNotLanded.isEmpty)
+        XCTAssertFalse(sut.returnToCheckYourAnswers)
+        XCTAssertEqual(sut.checkpoint, .vessel)
+    }
+
+    func test_reset_generatesAFreshLocalID() {
+        let localID = UUID()
+        let sut = CatchRecordDraft(localID: localID)
+
+        sut.reset()
+
+        XCTAssertNotEqual(sut.localID, localID)
+    }
 }

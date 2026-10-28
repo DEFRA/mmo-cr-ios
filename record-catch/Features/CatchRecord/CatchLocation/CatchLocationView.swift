@@ -5,7 +5,8 @@ import SwiftUI
 ///
 /// Renders the shared journey chrome (caption, reference number, heading, hints) then the
 /// `OfflineMapView` map component for area selection; its cartographic style intentionally need
-/// not match the design mock. "Save and continue" validates that an area was chosen and routes on.
+/// not match the design mock. Tapping a subrectangle submits and routes on immediately — there is
+/// no separate "Save and continue" step.
 struct CatchLocationView: View {
 
     @Environment(AppLanguageStore.self) private var languageStore
@@ -53,15 +54,17 @@ struct CatchLocationView: View {
             content
                 .environment(\.locale, languageStore.language.locale)
         }
+        // Tapping a subrectangle submits and routes on immediately (see
+        // `CatchLocationViewModel.submit()`) — there is no separate "Save and continue" button.
+        .onChange(of: viewModel.selectedArea) { _, newValue in
+            guard newValue != nil else { return }
+            viewModel.submit()
+        }
     }
 
     @ViewBuilder
     private var content: some View {
         VStack(alignment: .leading, spacing: AppSpacing.large) {
-            LocalizedText("catchRecord.caption")
-                .font(AppTypography.pageCaption)
-                .foregroundStyle(AppColors.govBlue)
-
             Text(viewModel.referenceNumber)
                 .font(AppTypography.bodySmall)
                 .foregroundStyle(AppColors.textSecondary)
@@ -82,11 +85,6 @@ struct CatchLocationView: View {
             if viewModel.errorKey != nil {
                 errorBanner
             }
-
-            PrimaryButton(title: languageStore.localized("catchRecord.saveContinue")) {
-                viewModel.submit()
-            }
-            .accessibilityIdentifier("\(identifierPrefix).saveContinue")
         }
     }
 

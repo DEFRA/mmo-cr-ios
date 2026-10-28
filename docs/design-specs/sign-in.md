@@ -22,8 +22,12 @@ area and `ViewFooter`. Content, top to bottom:
    Inline error below when empty after submit.
 5. **Sign in** — green `PrimaryButton` (`SignIn.signInButton`).
 6. **"Having trouble signing in?"** secondary heading (`SignIn.troubleHeading`).
-7. Two **inert link-styled buttons**: "Forgotten your password?" (`SignIn.forgottenPasswordLink`)
-   and "Create an account" (`SignIn.createAccountLink`). They navigate nowhere in this phase.
+7. **"Forgotten your password?"** — an inert link-styled button (`SignIn.forgottenPasswordLink`).
+   Navigates nowhere in this phase.
+8. **"Create an account"** — a GDS-style disclosure (`SignIn.createAccountLink`, reusing the shared
+   `ExpandableHelpSection` component — see deviation #1 below). Tapping it expands/collapses
+   guidance for the two routes into the app ("Vessel owner:" / "Skipper or agent:"); it remains
+   inert beyond expanding/collapsing — there is no account-creation flow in this UI-only phase.
 
 ## States
 
@@ -42,9 +46,16 @@ area and `ViewFooter`. Content, top to bottom:
 | Primary button | `govGreen` (white text) |
 | Error text / icon / borders | `errorRed` |
 | Body text | `textPrimary` |
-| Secondary / muted text | `textSecondary` |
+| Secondary / muted text / field labels | `textSecondary` |
+| Language toggle ("CYM"/"ENG") | `textPrimary` (black — not `linkText`, per the updated design) |
 | Screen background | `background` |
 | Links | `linkText` (= `govBlue`) |
+
+Field labels ("Email address", "Password") use the muted `textSecondary` token rather than the
+shared `TextInputField` component's default `textPrimary`. `TextInputField` gained an optional
+`labelColor` parameter (defaulting to `textPrimary`, unchanged for every other screen) so this
+override is scoped to Sign In only. `textSecondary` on white measures well above the 4.5:1 AA
+threshold for normal text (~8.6:1), so accessibility is unaffected.
 
 ## Typography (`AppTypography`)
 
@@ -92,6 +103,10 @@ fails AA is flagged in the delivery report rather than silently shipped.
 | `signIn.trouble.heading` | Having trouble signing in? | Cael trafferth mewngofnodi? |
 | `signIn.link.forgottenPassword` | Forgotten your password? | Wedi anghofio'ch cyfrinair? |
 | `signIn.link.createAccount` | Create an account | Creu cyfrif |
+| `signIn.createAccount.vesselOwner.heading` | Vessel owner: | Perchennog llong: _(needs_review)_ |
+| `signIn.createAccount.vesselOwner.body` | You will receive an email invitation to register when your vessel is added to the system. | Byddwch yn derbyn gwahoddiad drwy e-bost i gofrestru pan fydd eich llong yn cael ei hychwanegu at y system. _(needs_review)_ |
+| `signIn.createAccount.skipper.heading` | Skipper or agent: | Sgipper neu asiant: _(needs_review)_ |
+| `signIn.createAccount.skipper.body` | Ask your vessel owner to add you. They can do this from their account. | Gofynnwch i berchennog eich llong eich ychwanegu. Gallant wneud hyn o'u cyfrif. _(needs_review)_ |
 | `a11y.errorPrefix` | Error: | Gwall: |
 | `header.back` | Back | Yn ôl |
 | `header.branding` | GOV.UK | GOV.UK |
@@ -102,7 +117,22 @@ fails AA is flagged in the delivery report rather than silently shipped.
 
 Welsh strings needing confirmation by a Welsh speaker are tracked via the String Catalog
 `state: needs_review` plus a translator `comment` — never via a user-visible `[CY-TODO]` prefix in the
-rendered value. `signIn.error.credentials` (cy) currently remains `needs_review`.
+rendered value. `signIn.error.credentials` (cy) currently remains `needs_review`, as do all four
+`signIn.createAccount.*` Welsh values added for the disclosure.
+
+## Deviation register
+
+Per the figma-design instructions, every deviation from the app DesignSystem / Apple HIG / GOV.UK
+content patterns is recorded here (not silently applied) so it can be logged for governance
+(Delivery Architecture, `delivery.architecture@defra.gov.uk`):
+
+1. **"Create an account" disclosure icon.** The design shows a filled triangle (▼/▶)
+   as the disclosure indicator. This screen reuses the existing, already-accessible
+   `ExpandableHelpSection` component (also used by Home's "How to record a catch" / status-help
+   sections), which renders a chevron (`chevron.down`/`chevron.right`) instead of a filled
+   triangle. Reusing the tested, consistent DesignSystem disclosure pattern was judged to
+   outweigh an exact icon-shape match for this small, purely visual difference; flag for
+   governance sign-off if an exact triangle glyph is required.
 
 ## Accessibility identifier note
 

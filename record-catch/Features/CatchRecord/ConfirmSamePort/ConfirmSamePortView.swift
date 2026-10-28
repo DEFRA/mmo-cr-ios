@@ -2,8 +2,10 @@ import SwiftUI
 
 /// "Was `<port>` your departure and return port?" — reached after saving a searched port on
 /// `AddPortView`'s first-time entry (no favourites yet). "Yes" bypasses the separate
-/// departure/return select screens; "No" continues into them as before. Mirrors the
-/// `LandingStorageView`/`SelectPortView` Yes/No + "Add another port" pattern.
+/// departure/return select screens; "No" continues into them as before. Selecting an option
+/// submits and routes on immediately — there is no separate "Save and continue" step and no
+/// "Add another port" escape hatch on this screen (the normal select-port screens still offer
+/// one, reached via "No").
 struct ConfirmSamePortView: View {
 
     @Environment(AppLanguageStore.self) private var languageStore
@@ -34,15 +36,16 @@ struct ConfirmSamePortView: View {
             content
                 .environment(\.locale, languageStore.language.locale)
         }
+        // Selecting Yes/No submits and routes on immediately (see `ConfirmSamePortViewModel.submit()`).
+        .onChange(of: viewModel.selection) { _, newValue in
+            guard newValue != nil else { return }
+            viewModel.submit()
+        }
     }
 
     @ViewBuilder
     private var content: some View {
         VStack(alignment: .leading, spacing: AppSpacing.large) {
-            LocalizedText("catchRecord.caption")
-                .font(AppTypography.pageCaption)
-                .foregroundStyle(AppColors.govBlue)
-
             Text(viewModel.referenceNumber)
                 .font(AppTypography.bodySmall)
                 .foregroundStyle(AppColors.textSecondary)
@@ -70,18 +73,6 @@ struct ConfirmSamePortView: View {
                 groupAccessibilityIdentifier: "\(identifierPrefix).radioGroup",
                 errorAccessibilityIdentifier: "\(identifierPrefix).error"
             )
-
-            VStack(spacing: AppSpacing.small) {
-                PrimaryButton(title: languageStore.localized("catchRecord.saveContinue")) {
-                    viewModel.submit()
-                }
-                .accessibilityIdentifier("\(identifierPrefix).saveContinue")
-
-                SecondaryButton(title: languageStore.localized("catchRecord.addAnotherPort")) {
-                    viewModel.addAnotherPort()
-                }
-                .accessibilityIdentifier("\(identifierPrefix).addAnother")
-            }
         }
     }
 

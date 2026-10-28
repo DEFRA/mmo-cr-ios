@@ -14,6 +14,12 @@ struct ExpandableHelpSection<Content: View>: View {
     /// Optional stable accessibility identifier applied to the disclosure
     /// button, so UI tests can address a specific section unambiguously.
     let accessibilityIdentifier: String?
+    /// Font used for the title button. Defaults to `bodySmall` to preserve the
+    /// original behaviour for existing call sites (e.g. `HomeView`'s status-help
+    /// section). Call sites that sit alongside another link of a different size
+    /// (e.g. Sign In's "Forgotten your password?") can override this so both
+    /// read at the same size.
+    let titleFont: Font
     @ViewBuilder let helpContent: () -> Content
 
     @State private var isExpanded = false
@@ -21,10 +27,12 @@ struct ExpandableHelpSection<Content: View>: View {
     init(
         title: String,
         accessibilityIdentifier: String? = nil,
+        titleFont: Font = AppTypography.bodySmall,
         @ViewBuilder content: @escaping () -> Content
     ) {
         self.title = title
         self.accessibilityIdentifier = accessibilityIdentifier
+        self.titleFont = titleFont
         self.helpContent = content
     }
 
@@ -39,7 +47,7 @@ struct ExpandableHelpSection<Content: View>: View {
                         .foregroundStyle(AppColors.linkText)
 
                     Text(title)
-                        .font(AppTypography.bodySmall)
+                        .font(titleFont)
                         .foregroundStyle(AppColors.linkText)
                         .underline()
                 }
@@ -70,8 +78,13 @@ struct ExpandableHelpSection<Content: View>: View {
 extension ExpandableHelpSection {
     /// Convenience initializer preserving the original heading + paragraph
     /// pairs API used by the status-help section and the component demos.
-    init(title: String, accessibilityIdentifier: String? = nil, items: [HelpItem]) where Content == HelpItemsList {
-        self.init(title: title, accessibilityIdentifier: accessibilityIdentifier) {
+    init(
+        title: String,
+        accessibilityIdentifier: String? = nil,
+        titleFont: Font = AppTypography.bodySmall,
+        items: [HelpItem]
+    ) where Content == HelpItemsList {
+        self.init(title: title, accessibilityIdentifier: accessibilityIdentifier, titleFont: titleFont) {
             HelpItemsList(items: items)
         }
     }

@@ -96,7 +96,7 @@ final class SignInUITests: XCTestCase {
         let password = app.secureTextFields[ID.secureInput]
         XCTAssertTrue(password.waitForExistence(timeout: 5))
         password.tap()
-        password.typeText("hunter2")
+        password.typeText("TestPassword123")
 
         app.buttons[ID.signIn].tap()
 

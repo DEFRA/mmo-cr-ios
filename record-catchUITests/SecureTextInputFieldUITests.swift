@@ -40,7 +40,7 @@ final class SecureTextInputFieldUITests: XCTestCase {
         XCTAssertTrue(maskedField.waitForExistence(timeout: 5), "Field should be masked (SecureField) initially")
 
         maskedField.tap()
-        maskedField.typeText("hunter2")
+        maskedField.typeText("TestPassword123")
 
         // Reveal: toggle now offers to "Hide password" and the field becomes a
         // plain, visible TextField.
@@ -48,7 +48,7 @@ final class SecureTextInputFieldUITests: XCTestCase {
         XCTAssertEqual(toggle.label, ToggleLabel.hide)
         let visibleField = app.textFields[Identifier.secureInput]
         XCTAssertTrue(visibleField.waitForExistence(timeout: 5), "Field should be visible (TextField) after reveal")
-        XCTAssertEqual(visibleField.value as? String, "hunter2")
+        XCTAssertEqual(visibleField.value as? String, "TestPassword123")
 
         // Hide again: label flips back and the field re-masks.
         toggle.tap()

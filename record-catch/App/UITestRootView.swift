@@ -135,10 +135,6 @@ struct UITestRootView<ProductionRoot: View>: View {
                 initialRoute: .removeSpecies(gear: .seineNets, vessel: "ACHILLES", referenceNumber: "A1234520260727150815"),
                 draft: Self.seedRemoveSpeciesDraft
             )
-        } else if launchArguments.contains(.catchRecordSubmissionConfirmation) {
-            // Seeds straight to the final Confirmation screen, for UI testing the checkbox
-            // validation and Accept action without driving the whole journey by hand.
-            CatchRecordHostView(initialRoute: .submissionConfirmation(referenceNumber: "A1234520260727150815"))
         } else if launchArguments.contains(.catchRecordSubmissionSuccess) {
             // Seeds straight to the final "Submitted" screen, for UI testing the confirmation
             // panel and "View your catch records" action without driving the whole journey by hand.

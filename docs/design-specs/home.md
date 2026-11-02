@@ -7,13 +7,14 @@ for this update. Diffed against the previously-recorded spec below; changes are 
 the **Deviation register** near the end of this document for open items raised against this read.
 
 Feature: bilingual Home / trips-overview screen for the DEFRA / MMO Catch Recording iOS app.
-Scope: no real auth or Keychain-backed auth yet. Server records (Submitted/Amended/Late) remain a
-fixed **stub** (`StubServerRecordsProvider` — see ADR-0015), pending the real backend; pagination
-is a single stubbed page; the bottom tab bar is out of scope. **Local Unsent drafts are real,
-persisted, offline-first data** (SwiftData-backed, see ADR-0014), merged with the stubbed server
-rows by `HomeViewModel`/`MergingRecordsRepository` (ADR-0015) — newest first, loading/empty/error
-states explicit. `HomeView` is the production screen and **supersedes** `TripsOverviewDemoView`
-(kept only as a component showcase).
+Scope: no real auth or Keychain-backed auth yet. Server records (Submitted/Amended/Late) are
+sourced from a **stub** (`StubServerRecordsProvider` — see ADR-0015) which returns **no
+fixtures** pending the real backend, so Home only ever shows genuine data; pagination is driven
+by whatever real rows exist. The bottom tab bar is out of scope. **Local Unsent drafts are real,
+persisted, offline-first data** (SwiftData-backed, see ADR-0014), merged with the (currently
+empty) stubbed server rows by `HomeViewModel`/`MergingRecordsRepository` (ADR-0015) — newest
+first, loading/empty/error states explicit. `HomeView` is the production screen and
+**supersedes** `TripsOverviewDemoView` (kept only as a component showcase).
 
 ## Layout (inside `ViewTemplate`)
 
@@ -38,10 +39,12 @@ supplies them as parameters. Content, top to bottom:
    `.accessibilityAddTraits(.isHeader)`. Existing divider / border / status-tag styling and the
    date-cell link button are retained; status tags render on a single line (`.lineLimit(1)` +
    `.fixedSize`). Rows are now **data-driven** (see ADR-0015): every persisted, not-yet-submitted
-   local draft (Unsent — resumable/deletable, see the Draft-action screen) merged with 3 fixed
-   stub server rows (20 Nov 2020 / ACHILLES / {submitted, amended, late} / "J.Smith"), newest
-   first. A draft field not yet captured (vessel/trip end date) renders as a placeholder ("—")
-   rather than being omitted.
+   local draft (Unsent — resumable/deletable, see the Draft-action screen) merged with whatever
+   real server records exist (currently none — `StubServerRecordsProvider` returns an empty list
+   pending the real backend, so Home never shows placeholder/example rows), newest first. A
+   draft field not yet captured (vessel/trip end date) renders as a placeholder ("—") rather than
+   being omitted. With no local drafts and no server records, Home shows its Empty state (see
+   below) rather than any rows.
 4. **`PaginationControls`** + pure `PaginationState` — renders "← Previous · Showing 1 to 4 of 4 ·
    [1] · Next →". Stubbed single page (so Previous/Next are hidden per the GDS pattern).
 5. **`ExpandableHelpSection`** (generic `content:` form) — "Help with catch recording"
@@ -113,11 +116,20 @@ can look up the persisted draft; `nil` for a server row) and `sortDate: Date` (o
 newest first). Both are excluded from `SubmissionRow`'s existing content-based `Equatable`/
 `Hashable`, so no previously-shipped row-equality expectation changed.
 
+**No placeholder data is shown to real users.** `StubServerRecordsProvider.serverRecords()`
+returns `[]` — there is no real backend yet, and the previous 3 fixed "ACHILLES" fixture rows
+(20 Nov 2020 / Submitted, Amended, Late / "J.Smith") were removed so Home never mixes fake example
+rows with genuine local drafts. A fresh install with no drafts now shows the Empty state by
+default. The `-uiTestHomePaged` launch argument (`UITestRootView.seedPagedRows`) still injects an
+explicit, separate `StubRecordsProvider` with synthetic rows — that is test-only scaffolding for
+exercising pagination, not the default records source.
+
 ## States
 
 | State | Trigger | Presentation |
 |---|---|---|
-| Default | Initial | Warning box, intro copy, 4 stub rows, single-page pagination, collapsed help, button |
+| Default (no records yet) | Initial, no local drafts | Warning box, intro copy, Empty state ("You have no trips yet."), collapsed help, button |
+| Default (with records) | Local drafts and/or server records exist | Warning box, intro copy, trips table, pagination, collapsed help, button |
 | Help expanded | Tap disclosure | Status definitions revealed |
 | Accessibility text sizes | Dynamic Type ≥ AX1 | Table wrapped in a horizontal `ScrollView` (reflow — see below) |
 

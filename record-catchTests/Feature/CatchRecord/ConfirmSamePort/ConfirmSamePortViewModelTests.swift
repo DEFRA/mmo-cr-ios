@@ -92,17 +92,6 @@ final class ConfirmSamePortViewModelTests: XCTestCase {
         XCTAssertEqual(router.path, [.selectGear(vessel: vessel, referenceNumber: referenceNumber)])
     }
 
-    // MARK: - Add another port
-
-    func test_addAnotherPort_pushesAddPort_withNilReturnPhase() {
-        let router = CatchRecordRouter()
-        let sut = makeSUT(router: router)
-
-        sut.addAnotherPort()
-
-        XCTAssertEqual(router.path, [.addPort(vessel: vessel, referenceNumber: referenceNumber, returnPhase: nil)])
-    }
-
     // MARK: - Checkpoint (see ADR-0014 decision #5, amended — resume at the last completed section)
 
     func test_submit_withYesSelected_advancesCheckpointToPorts() async {

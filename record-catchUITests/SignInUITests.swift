@@ -120,4 +120,31 @@ final class SignInUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts[ID.heading].exists)
         XCTAssertTrue(app.buttons[ID.createAccount].exists)
     }
+
+    @MainActor
+    func test_createAccountLink_expandsAndCollapsesHelpContent() {
+        let app = XCUIApplication()
+        app.forwardReferenceDataAPIToken()
+        app.launch()
+
+        let createAccount = app.buttons[ID.createAccount]
+        XCTAssertTrue(createAccount.waitForExistence(timeout: 5))
+
+        // Collapsed by default: the vessel owner / skipper guidance is not yet on screen.
+        XCTAssertFalse(app.staticTexts["Vessel owner:"].exists)
+
+        createAccount.tap()
+
+        XCTAssertTrue(app.staticTexts["Vessel owner:"].waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            app.staticTexts["You will receive an email invitation to register when your vessel is added to the system."].exists
+        )
+        XCTAssertTrue(app.staticTexts["Skipper or agent:"].exists)
+        XCTAssertTrue(app.staticTexts["Ask your vessel owner to add you. They can do this from their account."].exists)
+
+        createAccount.tap()
+
+        // Collapses again: content leaves the accessibility tree.
+        XCTAssertFalse(app.staticTexts["Vessel owner:"].exists)
+    }
 }

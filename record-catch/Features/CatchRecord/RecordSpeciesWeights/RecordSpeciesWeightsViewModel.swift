@@ -10,8 +10,10 @@ import Foundation
 ///
 /// Validated on "Save and continue": at least one species must be ticked, and each ticked
 /// species' mandatory "above minimum" weight must be present and match its `WeightPrecision`; the
-/// optional "below minimum"/"legally discarded" fields are validated only when non-blank (see
-/// `RecordSpeciesWeightsValidation`, `SpeciesWeightValidation`).
+/// optional "below minimum"/"legally discarded" fields are validated only when non-blank; every
+/// weight field must not exceed the 10,000kg maximum catch weight limit; and the "legally
+/// discarded" weight must not reach or exceed the "above minimum" (retained) weight when both are
+/// present (see `RecordSpeciesWeightsValidation`, `SpeciesWeightValidation`).
 @MainActor
 @Observable
 final class RecordSpeciesWeightsViewModel {

@@ -20,7 +20,6 @@ list — though two rows are flagged below as candidates for the next content pa
 | Trip started today | `catchRecord.tripToday.validation.none` | "Select whether your trip started and finished today" |
 | Gear measurements | `catchRecord.gear.measurement.validation.wholeNumber` | "Enter a whole number" |
 | Remove species | `catchRecord.species.remove.error` | "Select at least one species to remove" |
-| Submission confirmation | `catchRecord.submissionConfirmation.validation.none` | "Confirm that the information is complete and accurate before continuing" |
 | Date component default (now unused by the trip-date screens themselves, still the generic fallback for `DateEntryField`) | `component.dateEntry.validation.none` | "Enter a real date" |
 
 ## Outside the catch-record journey

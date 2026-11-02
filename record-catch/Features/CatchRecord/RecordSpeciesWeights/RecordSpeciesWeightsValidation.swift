@@ -6,7 +6,12 @@ import Foundation
 /// 1. At least one species must be ticked ("Select at least one species").
 /// 2. For each ticked species, the mandatory "above minimum" weight must be present and valid; the
 ///    optional "below minimum"/"legally discarded" weights, when revealed, must be valid if
-///    non-blank (see plan Q2 — only the above-minimum weight is required).
+///    non-blank (see plan Q2 — only the above-minimum weight is required); and, when both the
+///    "above minimum" (retained) and "legally discarded" weights are present and individually
+///    valid, the retained weight must be strictly higher than the discarded weight (AC7/TC-12 —
+///    legally discarding at least as much as was retained does not make sense). The comparison
+///    error is only raised once both fields are otherwise error-free, and is attached to the
+///    "legally discarded" field.
 nonisolated enum RecordSpeciesWeightsValidation {
 
     /// Which weight field on a species row a validation message belongs to, so the view can
@@ -37,8 +42,9 @@ nonisolated enum RecordSpeciesWeightsValidation {
     ) -> [SpeciesFieldKey: ValidationMessage] {
         var errors: [SpeciesFieldKey: ValidationMessage] = [:]
         for option in species where selection.contains(option.id) {
+            let aboveRaw = entries.above[option.id] ?? ""
             if let message = SpeciesWeightValidation.requiredErrorMessage(
-                for: entries.above[option.id] ?? "",
+                for: aboveRaw,
                 speciesName: option.name,
                 precision: option.weightPrecision,
                 enterKey: "catchRecord.species.weight.validation.enter"
@@ -53,16 +59,47 @@ nonisolated enum RecordSpeciesWeightsValidation {
                ) {
                 errors[SpeciesFieldKey(speciesID: option.id, field: .below)] = message
             }
+            let discardedKey = SpeciesFieldKey(speciesID: option.id, field: .discarded)
+            let discardedRaw = entries.discarded[option.id] ?? ""
             if entries.discardedRevealed.contains(option.id),
                let message = SpeciesWeightValidation.optionalErrorMessage(
-                   for: entries.discarded[option.id] ?? "",
+                   for: discardedRaw,
                    speciesName: option.name,
                    precision: option.weightPrecision
                ) {
-                errors[SpeciesFieldKey(speciesID: option.id, field: .discarded)] = message
+                errors[discardedKey] = message
+            } else if entries.discardedRevealed.contains(option.id),
+                      errors[SpeciesFieldKey(speciesID: option.id, field: .above)] == nil,
+                      let comparisonMessage = discardedExceedsRetainedMessage(
+                          aboveRaw: aboveRaw,
+                          discardedRaw: discardedRaw,
+                          speciesName: option.name,
+                          precision: option.weightPrecision
+                      ) {
+                errors[discardedKey] = comparisonMessage
             }
         }
         return errors
+    }
+
+    /// Returns the AC7/TC-12 "must be higher than" message when both the retained ("above
+    /// minimum") and legally-discarded weights parse successfully and the discarded weight is
+    /// greater than or equal to the retained weight, or `nil` otherwise (including when either
+    /// field is blank — the comparison only applies once both are present).
+    private static func discardedExceedsRetainedMessage(
+        aboveRaw: String,
+        discardedRaw: String,
+        speciesName: String,
+        precision: WeightPrecision
+    ) -> ValidationMessage? {
+        guard let above = SpeciesWeightValidation.parse(aboveRaw, precision: precision),
+              let discarded = SpeciesWeightValidation.parse(discardedRaw, precision: precision),
+              discarded >= above
+        else { return nil }
+        return ValidationMessage(
+            "catchRecord.species.weight.validation.discardedExceedsRetained",
+            arguments: [speciesName]
+        )
     }
 }
 

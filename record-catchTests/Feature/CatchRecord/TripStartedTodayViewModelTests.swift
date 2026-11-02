@@ -103,4 +103,44 @@ final class TripStartedTodayViewModelTests: XCTestCase {
 
         XCTAssertEqual(draft.checkpoint, .vessel)
     }
+
+    // MARK: - Same-day trip dates (BUG: "Yes" previously left departureDate/returnDate nil, so
+    // the date never appeared on Check your answers or the Home records list — see
+    // `CheckYourAnswersViewModel.tripRows` and `RecordsRepository.row(for:)`, both of which are a
+    // pure projection of `draft.departureDate`/`draft.returnDate`.)
+
+    func test_submit_withYesSelected_setsDepartureAndReturnDateToStartOfToday() {
+        let draft = CatchRecordDraft()
+        let fixedNow = DateComponents(
+            calendar: Calendar(identifier: .gregorian), year: 2026, month: 7, day: 27, hour: 15, minute: 8
+        ).date!
+        let sut = TripStartedTodayViewModel(
+            vessel: vessel,
+            referenceNumber: referenceNumber,
+            router: CatchRecordRouter(),
+            draft: draft,
+            now: { fixedNow }
+        )
+        sut.selection = .yes
+
+        sut.submit()
+
+        let expectedStartOfDay = Calendar(identifier: .gregorian).startOfDay(for: fixedNow)
+        XCTAssertEqual(draft.departureDate, expectedStartOfDay)
+        XCTAssertEqual(draft.returnDate, expectedStartOfDay)
+        XCTAssertEqual(draft.departureDate, draft.returnDate)
+    }
+
+    func test_submit_withNoSelected_leavesDepartureAndReturnDateNil() {
+        let draft = CatchRecordDraft()
+        let sut = TripStartedTodayViewModel(
+            vessel: vessel, referenceNumber: referenceNumber, router: CatchRecordRouter(), draft: draft
+        )
+        sut.selection = .no
+
+        sut.submit()
+
+        XCTAssertNil(draft.departureDate)
+        XCTAssertNil(draft.returnDate)
+    }
 }

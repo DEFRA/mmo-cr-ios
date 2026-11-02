@@ -152,10 +152,10 @@ final class CatchLocationManualEntryUITests: XCTestCase {
         // (`catchRecord.catchLocation.validation.none`, the *map* screen's copy) — a recorded
         // copy gap. This screen now has its own two-rule validator
         // (`CatchLocationManualEntryValidation`), so a typed-but-unmatched code correctly shows
-        // "Select a statistical sub area from the list" instead. (Not to be confused with
+        // "Enter a valid statistical sub area code." instead. (Not to be confused with
         // `catchRecord.catchLocation.hint.select`, "Select the area where most of your catch was
         // caught.", which is the field's *hint* text, always visible, not the validation error.)
-        let error = app.staticTexts["Select a statistical sub area from the list"]
+        let error = app.staticTexts["Enter a valid statistical sub area code."]
         XCTAssertTrue(error.waitForExistence(timeout: 5), "An invalid code should surface an inline validation error")
         XCTAssertTrue(element(app, ID.heading).exists, "The user should remain on the manual-entry screen")
         XCTAssertFalse(element(app, "CatchRecord.addSpecies.heading").exists)

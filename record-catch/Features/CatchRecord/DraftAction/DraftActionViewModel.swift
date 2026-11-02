@@ -90,7 +90,14 @@ final class DraftActionViewModel {
         let referenceNumber = SelectVesselViewModel.placeholderReferenceNumber
         switch draft.checkpoint {
         case .vessel:
-            return .selectVessel
+            // A persisted draft only ever exists once the vessel step has been committed (see
+            // `CatchRecordRouter.shouldPersistDraft`), so `draft.vessel` is non-nil here for any
+            // real Unsent row. This branch therefore only reaches `.selectVessel` for a genuinely
+            // blank, never-saved draft (e.g. a row whose persisted payload failed to load — see
+            // `resumeDraft()`). Vessel selection cannot be revisited once a vessel has been
+            // captured (see ADR-0013 amendment), so a draft that has one skips straight past it.
+            guard draft.vessel != nil else { return .selectVessel }
+            return .tripStartedToday(vessel: vessel, referenceNumber: referenceNumber)
         case .tripDates:
             let favourites = (try? await favouritePorts.favouritePorts()) ?? []
             return CatchRecordRouting.portEntryRoute(hasFavourites: !favourites.isEmpty, vessel: vessel, referenceNumber: referenceNumber)

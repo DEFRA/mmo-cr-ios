@@ -53,8 +53,8 @@ NEW_KEYS = {
         "View your catch records",
         "Gweld eich cofnodion dalfa",
     ),
-    "catchRecord.submissionConfirmation.submitFailed": (
-        "Error banner shown when the (stubbed) submission API call fails on the Confirmation screen.",
+    "catchRecord.checkYourAnswers.submitFailed": (
+        "Error banner shown when the (stubbed) submission API call fails on Check your answers.",
         "Could not submit your catch record. Check your connection and try again.",
         "Methwyd â chyflwyno'ch cofnod dalfa. Gwiriwch eich cysylltiad a rhowch gynnig arall arni.",
     ),

@@ -2,9 +2,8 @@ import Foundation
 
 /// Which trip date the reusable `TripDateView` is collecting.
 ///
-/// Drives the screen's heading, hint, accessibility identifiers and the next route
-/// so a single View/ViewModel serves both the "trip departure" and "trip return"
-/// variants of the design.
+/// Drives the screen's heading, accessibility identifiers and the next route so a single
+/// View/ViewModel serves both the "trip departure" and "trip return" variants of the design.
 nonisolated enum TripDatePhase: Hashable {
     /// "When did you leave for your trip?"
     case departure
@@ -16,14 +15,6 @@ nonisolated enum TripDatePhase: Hashable {
         switch self {
         case .departure: return "catchRecord.tripDate.departure.title"
         case .return: return "catchRecord.tripDate.return.title"
-        }
-    }
-
-    /// String Catalog key for the screen's hint paragraph.
-    var hintKey: String {
-        switch self {
-        case .departure: return "catchRecord.tripDate.departure.hint"
-        case .return: return "catchRecord.tripDate.return.hint"
         }
     }
 

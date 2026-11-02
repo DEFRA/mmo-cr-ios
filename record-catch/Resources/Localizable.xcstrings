@@ -521,24 +521,6 @@
         }
       }
     },
-    "catchRecord.caption": {
-      "comment": "Page caption shown on all 'Create a catch record' screens.",
-      "extractionState": "manual",
-      "localizations": {
-        "cy": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Cofnod dalfa newydd"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "New catch record"
-          }
-        }
-      }
-    },
     "catchRecord.catchLocation.heading": {
       "comment": "Heading for the catch-location screen. %@ is the gear name plus its captured required measurements, e.g. \"Seine nets (mesh size 100mm)\" — see GearOption.descriptionWithMeasurements(localize:).",
       "extractionState": "manual",
@@ -701,6 +683,24 @@
         }
       }
     },
+    "catchRecord.checkYourAnswers.accept": {
+      "comment": "Primary button label on Check your answers that submits the completed catch record.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Derbyn a chyflwyno manylion y daith"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accept and submit trip details"
+          }
+        }
+      }
+    },
     "catchRecord.checkYourAnswers.change": {
       "comment": "Link text that returns to the screen where a value was captured, to change it.",
       "extractionState": "manual",
@@ -733,6 +733,96 @@
           "stringUnit": {
             "state": "translated",
             "value": "Change %1$@ for %2$@"
+          }
+        }
+      }
+    },
+    "catchRecord.checkYourAnswers.declaration.body": {
+      "comment": "Intro line for the declaration bullet list of what submission confirms, shown beneath the Check your answers summary.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Drwy gyflwyno'ch cofnod dalfa, rydych yn cadarnhau"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "By submitting your catch record, you're confirming"
+          }
+        }
+      }
+    },
+    "catchRecord.checkYourAnswers.declaration.bullet.action": {
+      "comment": "Third bullet — enforcement consequence of inaccurate recording.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Gall awdurdodau pysgota gymryd camau mewn perthynas â chofnodi dalfa anghywir"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fishing authorities may take action in respect of inaccurate catch recording"
+          }
+        }
+      }
+    },
+    "catchRecord.checkYourAnswers.declaration.bullet.tolerance": {
+      "comment": "Second bullet — within permitted tolerance levels.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bod hyn o fewn y lefelau goddefiant a ganiateir"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This is within permitted tolerance levels"
+          }
+        }
+      }
+    },
+    "catchRecord.checkYourAnswers.declaration.bullet.weight": {
+      "comment": "First bullet — accuracy of landed weight.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Bod pwysau'r pysgod rydych wedi'u glanio yn gywir"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The weight of fish you have landed is accurate"
+          }
+        }
+      }
+    },
+    "catchRecord.checkYourAnswers.declaration.notice": {
+      "comment": "Bold declaration notice explaining what submitting the record means, shown with a leading icon beneath the Check your answers summary.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Drwy gyflwyno'r cofnod hwn, rydych yn cytuno bod y wybodaeth a roddwyd gennych yn gyflawn ac yn gywir."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "By submitting this record, you agree that the information you've given is complete and correct."
           }
         }
       }
@@ -1039,6 +1129,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "Trip"
+          }
+        }
+      }
+    },
+    "catchRecord.checkYourAnswers.submitFailed": {
+      "comment": "Error banner shown when the (stubbed) submission API call fails on Check your answers.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Methwyd â chyflwyno'ch cofnod dalfa. Gwiriwch eich cysylltiad a rhowch gynnig arall arni."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not submit your catch record. Check your connection and try again."
           }
         }
       }
@@ -1932,13 +2040,13 @@
         "cy": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Dewiswch is-ardal ystadegol o'r rhestr"
+            "value": "Rhowch god is-ardal ystadegol dilys."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Select a statistical sub area from the list"
+            "value": "Enter a valid statistical sub area code."
           }
         }
       }
@@ -2753,6 +2861,24 @@
         }
       }
     },
+    "catchRecord.species.weight.validation.discardedExceedsRetained": {
+      "comment": "Species weight error shown on the 'legally discarded' field when it is greater than or equal to the 'above minimum size retained' weight for the same species (AC7/TC-12 of the weight-validation defect fix — discarding at least as much as was retained does not make sense). %@ is the species name. Only raised once both fields are otherwise valid (see RecordSpeciesWeightsValidation.discardedExceedsRetainedMessage).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Rhaid i'r pwysau uwchlaw'r maint lleiaf a gadwyd ar gyfer %@ fod yn uwch na'r pwysau a daflwyd yn gyfreithlon"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The weight above minimum size retained for %@ must be higher than the weight legally discarded"
+          }
+        }
+      }
+    },
     "catchRecord.species.weight.validation.enter": {
       "comment": "Record-species-weights: the mandatory 'above minimum' weight was left blank for a ticked species. %@ is the species name.",
       "extractionState": "manual",
@@ -2789,6 +2915,24 @@
         }
       }
     },
+    "catchRecord.species.weight.validation.max": {
+      "comment": "Species weight error: the entered weight exceeds the maximum catch weight limit of 10,000kg (Scenario 10 of the weight-validation defect fix). %@ is the species name. Applies to every weight field sharing SpeciesWeightValidation.formatErrorMessage (the record-weights screen's 'above minimum'/'below minimum'/'legally discarded' fields, and the landing-storage species weight field).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Rhaid i'r pwysau ar gyfer %@ fod yn 10,000kg neu lai"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The weight for %@ must be 10,000kg or less"
+          }
+        }
+      }
+    },
     "catchRecord.species.weight.validation.wholeNumber": {
       "comment": "Species weight error: wrong precision for a species recorded as a whole number. %@ is the species name.",
       "extractionState": "manual",
@@ -2803,186 +2947,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Weight for %@ must be a whole number"
-          }
-        }
-      }
-    },
-    "catchRecord.submissionConfirmation.accept": {
-      "comment": "Primary button label that submits the completed catch record.",
-      "extractionState": "manual",
-      "localizations": {
-        "cy": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Derbyn a chyflwyno manylion y daith"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Accept and submit trip details"
-          }
-        }
-      }
-    },
-    "catchRecord.submissionConfirmation.body": {
-      "comment": "Intro line for the bullet list of what submission confirms.",
-      "extractionState": "manual",
-      "localizations": {
-        "cy": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Drwy gyflwyno'ch cofnod dalfa, rydych yn cadarnhau"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "By submitting your catch record, you're confirming"
-          }
-        }
-      }
-    },
-    "catchRecord.submissionConfirmation.bullet.action": {
-      "comment": "Third bullet — enforcement consequence of inaccurate recording.",
-      "extractionState": "manual",
-      "localizations": {
-        "cy": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Gall awdurdodau pysgota gymryd camau mewn perthynas â chofnodi dalfa anghywir"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fishing authorities may take action in respect of inaccurate catch recording"
-          }
-        }
-      }
-    },
-    "catchRecord.submissionConfirmation.bullet.tolerance": {
-      "comment": "Second bullet — within permitted tolerance levels.",
-      "extractionState": "manual",
-      "localizations": {
-        "cy": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Bod hyn o fewn y lefelau goddefiant a ganiateir"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This is within permitted tolerance levels"
-          }
-        }
-      }
-    },
-    "catchRecord.submissionConfirmation.bullet.weight": {
-      "comment": "First bullet — accuracy of landed weight.",
-      "extractionState": "manual",
-      "localizations": {
-        "cy": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Bod pwysau'r pysgod rydych wedi'u glanio yn gywir"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The weight of fish you have landed is accurate"
-          }
-        }
-      }
-    },
-    "catchRecord.submissionConfirmation.confirmCheckbox": {
-      "comment": "Label for the single required confirmation checkbox.",
-      "extractionState": "manual",
-      "localizations": {
-        "cy": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Rwy'n cadarnhau bod y wybodaeth yn gyflawn ac yn gywir"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "I confirm the information is complete and accurate"
-          }
-        }
-      }
-    },
-    "catchRecord.submissionConfirmation.heading": {
-      "comment": "H1 for the final confirmation screen before submitting a completed catch record.",
-      "extractionState": "manual",
-      "localizations": {
-        "cy": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Cadarnhad"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Confirmation"
-          }
-        }
-      }
-    },
-    "catchRecord.submissionConfirmation.notice": {
-      "comment": "Bold notice explaining what submitting the record means, shown with a leading icon.",
-      "extractionState": "manual",
-      "localizations": {
-        "cy": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Drwy gyflwyno'r cofnod hwn, rydych yn cytuno bod y wybodaeth a roddwyd gennych yn gyflawn ac yn gywir."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "By submitting this record, you agree that the information you've given is complete and correct."
-          }
-        }
-      }
-    },
-    "catchRecord.submissionConfirmation.submitFailed": {
-      "comment": "Error banner shown when the (stubbed) submission API call fails on the Confirmation screen.",
-      "extractionState": "manual",
-      "localizations": {
-        "cy": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Methwyd â chyflwyno'ch cofnod dalfa. Gwiriwch eich cysylltiad a rhowch gynnig arall arni."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Could not submit your catch record. Check your connection and try again."
-          }
-        }
-      }
-    },
-    "catchRecord.submissionConfirmation.validation.none": {
-      "comment": "Inline error shown when Accept and submit is tapped without ticking the checkbox.",
-      "extractionState": "manual",
-      "localizations": {
-        "cy": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Cadarnhewch fod y wybodaeth yn gyflawn ac yn gywir cyn parhau"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Confirm that the information is complete and accurate before continuing"
           }
         }
       }
@@ -3275,24 +3239,6 @@
         }
       }
     },
-    "catchRecord.tripDate.departure.hint": {
-      "comment": "Hint for the trip departure date screen.",
-      "extractionState": "manual",
-      "localizations": {
-        "cy": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Dewiswch y dyddiad y gwnaethoch adael am eich taith."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Select the date you left for your trip."
-          }
-        }
-      }
-    },
     "catchRecord.tripDate.departure.title": {
       "comment": "Trip departure date screen H1.",
       "extractionState": "manual",
@@ -3307,24 +3253,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Which date did you set off on your trip?"
-          }
-        }
-      }
-    },
-    "catchRecord.tripDate.return.hint": {
-      "comment": "Hint for the trip return date screen.",
-      "extractionState": "manual",
-      "localizations": {
-        "cy": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Dewiswch y dyddiad y gwnaethoch ddychwelyd o'ch taith."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Select the date you returned from your trip."
           }
         }
       }
@@ -5215,6 +5143,78 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sign in"
+          }
+        }
+      }
+    },
+    "signIn.createAccount.skipper.body": {
+      "comment": "Body paragraph under the 'Skipper or agent' sub-heading in the Sign In 'Create an account' disclosure.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Gofynnwch i berchennog eich llong eich ychwanegu. Gallant wneud hyn o'u cyfrif."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ask your vessel owner to add you. They can do this from their account."
+          }
+        }
+      }
+    },
+    "signIn.createAccount.skipper.heading": {
+      "comment": "Bold sub-heading in the Sign In 'Create an account' disclosure, for skippers/agents who must be added by their vessel owner.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Sgipper neu asiant:"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skipper or agent:"
+          }
+        }
+      }
+    },
+    "signIn.createAccount.vesselOwner.body": {
+      "comment": "Body paragraph under the 'Vessel owner' sub-heading in the Sign In 'Create an account' disclosure.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Byddwch yn derbyn gwahoddiad drwy e-bost i gofrestru pan fydd eich llong yn cael ei hychwanegu at y system."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You will receive an email invitation to register when your vessel is added to the system."
+          }
+        }
+      }
+    },
+    "signIn.createAccount.vesselOwner.heading": {
+      "comment": "Bold sub-heading in the Sign In 'Create an account' disclosure, for vessel owners who are invited automatically.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Perchennog llong:"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vessel owner:"
           }
         }
       }

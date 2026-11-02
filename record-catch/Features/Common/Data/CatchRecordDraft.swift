@@ -85,6 +85,25 @@ final class CatchRecordDraft {
         checkpoint = newCheckpoint
     }
 
+    /// Clears every captured field and starts a fresh local identity, so a brand new "Create a new
+    /// catch record" journey never inherits a previous, unrelated journey's in-progress answers
+    /// (e.g. a stale vessel pre-filling Select vessel, or a save racing against the wrong
+    /// `localID`). Mutates this instance in place — like `apply(_:)` — so every screen already
+    /// holding a reference to the shared draft observes the reset. Called from `HomeView` before
+    /// `CatchRecordRouter.startNew()` pushes `.selectVessel`.
+    func reset() {
+        localID = UUID()
+        vessel = nil
+        departureDate = nil
+        returnDate = nil
+        departurePort = nil
+        returnPort = nil
+        gearCatches = []
+        speciesNotLanded = []
+        returnToCheckYourAnswers = false
+        checkpoint = .vessel
+    }
+
     /// A `Codable` snapshot of every persisted field, suitable for writing to
     /// `CatchRecordDraftStoring` (see ADR-0014). Deliberately excludes `localID` (carried
     /// separately by the store) and `returnToCheckYourAnswers` (a transient, in-memory navigation

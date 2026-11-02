@@ -2,10 +2,11 @@ import Foundation
 
 /// View model for the "Where was most of your catch caught using <gear>?" screen.
 ///
-/// The user picks a single statistical area (subzone) on the map. On "Save and continue" the
-/// selection is validated (an area must be chosen) and the journey routes on. UI-only for this
-/// phase: the chosen area is threaded no further than the placeholder next step, and the map is
-/// the existing `SeaMapView` component (its style need not match the design).
+/// The user picks a single statistical area (subzone) on the map. Tapping an area submits — the
+/// selection is validated (an area must be chosen) and the journey routes on - immediately, with
+/// no separate "Save and continue" step. UI-only for this phase: the chosen area is threaded no
+/// further than the placeholder next step, and the map is the existing `SeaMapView` component (its
+/// style need not match the design).
 @MainActor
 @Observable
 final class CatchLocationViewModel {

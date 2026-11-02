@@ -18,19 +18,24 @@ final class TripStartedTodayViewModel {
     /// Shared journey draft; advanced to `.tripDates` once this question is answered (see
     /// `CatchRecordDraft.checkpoint`).
     private let draft: CatchRecordDraft
+    /// Injectable "now" so the "Yes" (same-day) departure/return date is deterministic in tests.
+    private let now: () -> Date
+    private let calendar = Calendar(identifier: .gregorian)
 
     init(
         vessel: String,
         referenceNumber: String,
         router: CatchRecordRouter,
         favouritePorts: FavouritePortsProviding = StubFavouritePortsProvider(),
-        draft: CatchRecordDraft = CatchRecordDraft()
+        draft: CatchRecordDraft = CatchRecordDraft(),
+        now: @escaping () -> Date = Date.init
     ) {
         self.vessel = vessel
         self.referenceNumber = referenceNumber
         self.router = router
         self.favouritePorts = favouritePorts
         self.draft = draft
+        self.now = now
     }
 
     /// Current inline error, once a submit has been attempted.
@@ -41,13 +46,18 @@ final class TripStartedTodayViewModel {
 
     /// Runs validation for "Save and continue" and routes on to the next screen when valid.
     ///
-    /// "Yes" (trip started and finished today) enters the port sub-journey now; "No" branches into
-    /// the trip-date sub-journey, starting with the departure date.
+    /// "Yes" (trip started and finished today) records today's date as both the departure and
+    /// return date — this is the only screen that captures a date for that path, since the
+    /// `TripDate` sub-journey is skipped entirely — then enters the port sub-journey now; "No"
+    /// branches into the trip-date sub-journey, starting with the departure date.
     func submit() {
         didAttemptSubmit = true
         guard let selection else { return }
         switch selection {
         case .yes:
+            let today = calendar.startOfDay(for: now())
+            draft.departureDate = today
+            draft.returnDate = today
             draft.advance(to: .tripDates)
             Task { await enterPortSubJourney() }
         case .no:

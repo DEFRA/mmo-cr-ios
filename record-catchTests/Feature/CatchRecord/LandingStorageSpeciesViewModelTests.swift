@@ -224,6 +224,23 @@ final class LandingStorageSpeciesViewModelTests: XCTestCase {
 
         XCTAssertTrue(sut.weightErrorMessages.isEmpty)
     }
+
+    // MARK: - Maximum catch weight limit (Scenario 10)
+
+    func test_submit_withWeightOverMax_setsMaxError_andDoesNotRoute() async {
+        let cod = SpeciesOption(name: "Atlantic cod (COD)")
+        let provider = StubFavouriteSpeciesProvider(initialFavourites: [cod])
+        let router = CatchRecordRouter()
+        let sut = LandingStorageSpeciesViewModel(referenceNumber: referenceNumber, router: router, favouriteSpecies: provider)
+        await sut.loadFavourites()
+        sut.toggleSelection(cod.id)
+        sut.weightEntries[cod.id] = "10001"
+
+        await sut.submit()
+
+        XCTAssertEqual(sut.weightErrorMessages[cod.id]?.key, "catchRecord.species.weight.validation.max")
+        XCTAssertTrue(router.path.isEmpty)
+    }
 }
 
 /// Favourite species provider whose `addFavourite` always throws, to exercise the save-failure path.

@@ -6,8 +6,21 @@ import Foundation
 /// section **per selected gear** (that gear's details, its statistical area and the species caught
 /// with it — see ADR-0011), then Species not landed — each row pairing a label with an
 /// already-formatted display value and a `changeRoute` that returns the user to the screen where
-/// that value was captured. Purely a projection of the draft: it holds no mutable state of its own
-/// and performs no validation, so it is directly unit-testable against a seeded `CatchRecordDraft`.
+/// that value was captured.
+///
+/// Also owns the submission step itself (the former standalone "Confirmation" screen's behaviour
+/// was folded into this screen — see the module README and ADR-0014 amendment): the declaration
+/// notice/bullets shown beneath the summary are informational only (there is no separate
+/// confirmation checkbox), so "Accept and submit trip details" calls `submit(isOnline:)` directly.
+/// If the device is online, this (stubbed) calls `CatchRecordSubmissionServicing` and, on success,
+/// deletes the persisted local draft (fire-and-forget) so it no longer appears as an Unsent row on
+/// Home (see ADR-0014/0015) and routes to `submissionSuccess`. A transient/offline *service*
+/// failure surfaces a recoverable inline error and does not navigate (and leaves the persisted
+/// draft untouched, so it remains resumable), matching the `saveFailed` pattern used elsewhere in
+/// this module (e.g. `GearMeasurementsViewModel`). If the device has **no connectivity at all**
+/// (BR-SUB-008/AC10/AC11), the submission service is never called: the draft is (re)saved to be
+/// certain it is not lost, and the journey routes to `submissionSaved` instead — a truthful "saved
+/// on this device" screen, not the green submitted confirmation.
 @MainActor
 @Observable
 final class CheckYourAnswersViewModel {
@@ -15,13 +28,28 @@ final class CheckYourAnswersViewModel {
     /// Display-only placeholder reference number shown at the top of the screen.
     let referenceNumber: String
 
+    private(set) var isSubmitting = false
+    /// Set when the (stubbed) submission API call fails, so the view can surface a recoverable,
+    /// accessible error rather than silently discarding the attempt.
+    private(set) var submitFailed = false
+
     private let router: CatchRecordRouter
     private let draft: CatchRecordDraft
+    private let submissionService: CatchRecordSubmissionServicing
+    private let draftStore: CatchRecordDraftStoring
 
-    init(referenceNumber: String, router: CatchRecordRouter, draft: CatchRecordDraft) {
+    init(
+        referenceNumber: String,
+        router: CatchRecordRouter,
+        draft: CatchRecordDraft,
+        submissionService: CatchRecordSubmissionServicing = StubCatchRecordSubmissionService(),
+        draftStore: CatchRecordDraftStoring = InMemoryCatchRecordDraftStore()
+    ) {
         self.referenceNumber = referenceNumber
         self.router = router
         self.draft = draft
+        self.submissionService = submissionService
+        self.draftStore = draftStore
     }
 
     /// A single labelled fact about the trip, with the route its "Change" link returns to.
@@ -32,7 +60,11 @@ final class CheckYourAnswersViewModel {
         /// The already-formatted value to display (dates, names and weights are pre-formatted so
         /// the view performs no further formatting logic).
         let value: String
-        let changeRoute: CatchRecordRoute
+        /// The route this row's "Change" control returns the user to, or `nil` when the field
+        /// cannot be changed from here — currently only the vessel: vessel selection is a one-time
+        /// first step of the journey and cannot be changed once a record exists (see ADR-0013
+        /// amendment), so its row is shown read-only, with no "Change" link rendered at all.
+        let changeRoute: CatchRecordRoute?
         /// The gear this row belongs to, when it is part of a per-gear section — `nil` for
         /// trip-level/species-not-landed rows. Used to build a gear-disambiguated accessibility
         /// label for the row's "Change" control, since the same field label (e.g. "Statistical
@@ -44,7 +76,7 @@ final class CheckYourAnswersViewModel {
             id: String,
             labelKey: String,
             value: String,
-            changeRoute: CatchRecordRoute,
+            changeRoute: CatchRecordRoute?,
             gearName: String? = nil
         ) {
             self.id = id
@@ -119,9 +151,37 @@ final class CheckYourAnswersViewModel {
         router.push(route)
     }
 
-    /// Confirms the summary and advances to the final submission-confirmation screen.
-    func submit() {
-        router.push(.submissionConfirmation(referenceNumber: referenceNumber))
+    /// Confirms the summary and submits the completed record, either via the (stubbed) submission
+    /// service (when `isOnline`) or by routing to the saved-not-sent screen (when not). See the
+    /// class doc comment for the full behaviour (this folds in what was previously
+    /// `SubmissionConfirmationViewModel.submit()`).
+    ///
+    /// - Parameter isOnline: the device's connectivity at the moment "Accept and submit trip
+    ///   details" is tapped (see `ConnectivityMonitoring`). Defaults to `true` so every existing
+    ///   call site and test exercises the online path unchanged; the view passes the live signal
+    ///   explicitly, matching the "nil/unknown treated as online" convention used by
+    ///   `OfflineBanner`.
+    func submit(isOnline: Bool = true) async {
+        // Guards against a double-tap submitting twice while the first attempt is in flight.
+        guard !isSubmitting else { return }
+        submitFailed = false
+
+        guard isOnline else {
+            Task { try? await draftStore.save(draft) }
+            router.push(.submissionSaved(referenceNumber: referenceNumber))
+            return
+        }
+
+        isSubmitting = true
+        defer { isSubmitting = false }
+        do {
+            try await submissionService.submit(referenceNumber: referenceNumber)
+            let localID = draft.localID
+            Task { try? await draftStore.deleteDraft(localID: localID) }
+            router.push(.submissionSuccess(referenceNumber: referenceNumber))
+        } catch {
+            submitFailed = true
+        }
     }
 
     // MARK: - Trip
@@ -139,7 +199,9 @@ final class CheckYourAnswersViewModel {
                     id: "trip.vessel",
                     labelKey: "catchRecord.checkYourAnswers.label.vessel",
                     value: vessel,
-                    changeRoute: .selectVessel
+                    // No "Change" link: vessel selection is a one-time first step of the journey
+                    // and cannot be changed once a record exists (see ADR-0013 amendment).
+                    changeRoute: nil
                 )
             )
         }

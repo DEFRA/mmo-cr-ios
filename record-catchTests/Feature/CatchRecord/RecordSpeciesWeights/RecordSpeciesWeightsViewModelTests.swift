@@ -259,6 +259,53 @@ final class RecordSpeciesWeightsViewModelTests: XCTestCase {
         XCTAssertTrue(sut.weightErrorMessages.isEmpty)
     }
 
+    // MARK: - Discarded vs retained (AC7/TC-12) and maximum catch weight (Scenario 10)
+
+    func test_submit_whenDiscardedExceedsRetained_setsError_andDoesNotRoute() async {
+        let router = CatchRecordRouter()
+        let sut = makeSUT(favourites: [cod], router: router, draft: singleGearDraft())
+        await sut.loadFavourites()
+        sut.selection = [cod.id]
+        sut.aboveEntries[cod.id] = "5"
+        sut.revealDiscarded(cod.id)
+        sut.discardedEntries[cod.id] = "10"
+
+        await sut.submit()
+
+        let key = SpeciesFieldKey(speciesID: cod.id, field: .discarded)
+        XCTAssertEqual(
+            sut.weightErrorMessages[key]?.key,
+            "catchRecord.species.weight.validation.discardedExceedsRetained"
+        )
+        XCTAssertTrue(router.path.isEmpty)
+    }
+
+    func test_submit_withWeightOverMax_setsMaxError_andDoesNotRoute() async {
+        let router = CatchRecordRouter()
+        let sut = makeSUT(favourites: [cod], router: router, draft: singleGearDraft())
+        await sut.loadFavourites()
+        sut.selection = [cod.id]
+        sut.aboveEntries[cod.id] = "10001"
+
+        await sut.submit()
+
+        let key = SpeciesFieldKey(speciesID: cod.id, field: .above)
+        XCTAssertEqual(sut.weightErrorMessages[key]?.key, "catchRecord.species.weight.validation.max")
+        XCTAssertTrue(router.path.isEmpty)
+    }
+
+    func test_submit_withWeightAtMax_routesOnward() async {
+        let router = CatchRecordRouter()
+        let sut = makeSUT(favourites: [cod], router: router, draft: singleGearDraft())
+        await sut.loadFavourites()
+        sut.selection = [cod.id]
+        sut.aboveEntries[cod.id] = "10000"
+
+        await sut.submit()
+
+        XCTAssertEqual(router.path, [.landingStorage(referenceNumber: referenceNumber)])
+    }
+
     // MARK: - Draft capture
 
     func test_submit_writesTickedSpeciesWithWeightsIntoDraft() async {

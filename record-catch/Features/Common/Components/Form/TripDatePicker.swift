@@ -30,7 +30,6 @@ import SwiftUI
 ///   while staying a plain native `DatePicker` throughout.
 struct TripDatePicker: View {
     let title: String
-    let hint: String
     @Binding var selection: Date
     let range: ClosedRange<Date>
     /// Accessibility identifier prefix; the picker control uses `<prefix>.picker` regardless of
@@ -44,8 +43,6 @@ struct TripDatePicker: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.small) {
-            ParagraphText(text: hint, isHint: true)
-
             if hasOnlySelectableDay {
                 datePicker
                     .datePickerStyle(.compact)
@@ -86,7 +83,6 @@ struct TripDatePicker: View {
 
     return TripDatePicker(
         title: "When did you leave for your trip?",
-        hint: "Select the date you left for your trip.",
         selection: $date,
         range: Date.distantPast...Date(),
         accessibilityIdentifierPrefix: "Preview.tripDate"
@@ -99,7 +95,6 @@ struct TripDatePicker: View {
 
     return TripDatePicker(
         title: "When did you return from your trip?",
-        hint: "Select the date you returned from your trip.",
         selection: $date,
         range: Date()...Date(),
         accessibilityIdentifierPrefix: "Preview.tripDate.onlyDay"

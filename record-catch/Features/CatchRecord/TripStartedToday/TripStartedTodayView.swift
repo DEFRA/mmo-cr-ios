@@ -28,10 +28,6 @@ struct TripStartedTodayView: View {
     @ViewBuilder
     private var content: some View {
         VStack(alignment: .leading, spacing: AppSpacing.large) {
-            LocalizedText("catchRecord.caption")
-                .font(AppTypography.pageCaption)
-                .foregroundStyle(AppColors.govBlue)
-
             Text(viewModel.referenceNumber)
                 .font(AppTypography.bodySmall)
                 .foregroundStyle(AppColors.textSecondary)
@@ -58,18 +54,21 @@ struct TripStartedTodayView: View {
                 groupAccessibilityIdentifier: "CatchRecord.tripToday.radioGroup",
                 errorAccessibilityIdentifier: "CatchRecord.tripToday.error"
             )
-
-            PrimaryButton(title: languageStore.localized("catchRecord.saveContinue")) {
-                viewModel.submit()
-            }
-            .accessibilityIdentifier("CatchRecord.tripToday.saveContinue")
         }
     }
 
+    // No separate "Save and continue" button: answering Yes/No is a single, discrete tap (the
+    // activating gesture itself), so submitting immediately on selection does not trip WCAG 2.2
+    // SC 3.2.2 "On Input" — that guards against a context change triggered by merely changing a
+    // setting's value without an explicit activation, which a tap on a specific radio option
+    // already is.
     private var selectionBinding: Binding<String?> {
         Binding(
             get: { viewModel.selection?.id },
-            set: { viewModel.selection = $0.flatMap(TripTodayOption.init(rawValue:)) }
+            set: { newValue in
+                viewModel.selection = newValue.flatMap(TripTodayOption.init(rawValue:))
+                viewModel.submit()
+            }
         )
     }
 }

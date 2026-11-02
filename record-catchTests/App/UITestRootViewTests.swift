@@ -29,7 +29,6 @@ final class UITestRootViewTests: XCTestCase {
             .catchRecordCheckYourAnswers,
             .catchRecordRecordSpeciesWeights,
             .catchRecordRemoveSpecies,
-            .catchRecordSubmissionConfirmation,
             .catchRecordSubmissionSuccess,
             .home,
             .settings,

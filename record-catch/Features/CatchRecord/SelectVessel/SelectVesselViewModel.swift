@@ -39,21 +39,19 @@ final class SelectVesselViewModel {
         return SelectVesselValidation.errorKey(for: selection)
     }
 
-    /// Runs validation for "Save and continue" and routes on to the next screen when valid.
+    /// Runs validation for "Save and continue" and, once valid, replaces this screen with the
+    /// journey's next one.
     ///
-    /// When reached via "Change" from Check your answers (`draft.returnToCheckYourAnswers`), the
-    /// vessel is the only value being corrected, so the journey returns straight there instead of
-    /// continuing into "Did your trip start and finish today?" and the rest of the journey (see
-    /// ADR-0013).
+    /// Vessel selection is a one-time, first step of the journey (see ADR-0013 amendment — the
+    /// vessel cannot be changed once a record exists): there is no "Change" link to it from Check
+    /// your answers, and `router.replaceCurrent(with:)` removes `.selectVessel` from the
+    /// navigation stack as it commits, rather than pushing on top of it — so Back/the swipe-back
+    /// gesture from the next screen leaves the journey (returning to Home) instead of re-opening
+    /// vessel selection.
     func submit() {
         didAttemptSubmit = true
         guard let selection else { return }
         draft.vessel = selection
-        if draft.returnToCheckYourAnswers {
-            draft.returnToCheckYourAnswers = false
-            router.push(.checkYourAnswers(referenceNumber: Self.placeholderReferenceNumber))
-            return
-        }
-        router.push(.tripStartedToday(vessel: selection, referenceNumber: Self.placeholderReferenceNumber))
+        router.replaceCurrent(with: .tripStartedToday(vessel: selection, referenceNumber: Self.placeholderReferenceNumber))
     }
 }

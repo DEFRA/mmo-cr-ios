@@ -43,27 +43,21 @@ final class HomeUITests: XCTestCase {
 
         XCTAssertTrue(element(app, ID.warningBox).waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons[ID.createRecord].exists)
-
-        // First table row date link (driven by a stable identifier, not a
-        // language-specific accessibility label).
-        let firstDateLink = element(app, ID.firstRowDate)
-        XCTAssertTrue(firstDateLink.exists)
     }
 
     @MainActor
-    func test_pagination_singlePage_showsPageOneAndRangeHidesPreviousNext() {
+    func test_homeScreen_withNoRecords_showsEmptyStateNotPlaceholderRows() {
+        // No stub server records (see `StubServerRecordsProvider`, which returns none — there is
+        // no real backend yet) and no local Unsent drafts: Home must show its genuine Empty state
+        // rather than padding the list with placeholder/example rows.
         let app = launchHome()
 
-        XCTAssertTrue(element(app, ID.paginationPage1).waitForExistence(timeout: 5))
+        XCTAssertTrue(element(app, "Home.records.empty").waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["You have no trips yet."].exists)
 
-        // Single page: Previous and Next are hidden.
-        XCTAssertFalse(element(app, ID.paginationPrevious).exists)
-        XCTAssertFalse(element(app, ID.paginationNext).exists)
-
-        // 3 stubbed server records (see `StubServerRecordsProvider`) and no local drafts fit on a
-        // single page — asserted against the real loaded count, not a value fixed independently of
-        // it, so this test would catch the pagination control going stale again.
-        XCTAssertTrue(app.staticTexts["Showing 1 to 3 of 3"].exists)
+        // No table row, and no pagination controls — both only render for the `.loaded` state.
+        XCTAssertFalse(element(app, ID.firstRowDate).exists)
+        XCTAssertFalse(element(app, ID.paginationPage1).exists)
     }
 
     @MainActor

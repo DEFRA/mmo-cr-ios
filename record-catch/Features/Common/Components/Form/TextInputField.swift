@@ -10,6 +10,11 @@ struct TextInputField: View {
     let textInputAutocapitalization: TextInputAutocapitalization
     let autocorrectionDisabled: Bool
     let secureTextContentType: UITextContentType
+    /// Colour applied to the visible field label (above the input). Defaults to `textPrimary`,
+    /// matching every existing call site's appearance; callers whose design specifies a muted
+    /// label colour (e.g. Sign In — see `docs/design-specs/sign-in.md`) can override it without
+    /// affecting other screens built from this shared component.
+    let labelColor: Color
     @Binding var text: String
     var didAttemptSubmit: Bool = false
     var errorMessage: String?
@@ -33,6 +38,7 @@ struct TextInputField: View {
         textInputAutocapitalization: TextInputAutocapitalization = .sentences,
         autocorrectionDisabled: Bool = false,
         secureTextContentType: UITextContentType = .password,
+        labelColor: Color = AppColors.textPrimary,
         text: Binding<String>,
         didAttemptSubmit: Bool = false,
         errorMessage: String? = nil
@@ -46,6 +52,7 @@ struct TextInputField: View {
         self.textInputAutocapitalization = textInputAutocapitalization
         self.autocorrectionDisabled = autocorrectionDisabled
         self.secureTextContentType = secureTextContentType
+        self.labelColor = labelColor
         _text = text
         self.didAttemptSubmit = didAttemptSubmit
         self.errorMessage = errorMessage
@@ -78,7 +85,7 @@ struct TextInputField: View {
         VStack(alignment: .leading, spacing: AppSpacing.small) {
             Text(label)
                 .font(AppTypography.body)
-                .foregroundStyle(AppColors.textPrimary)
+                .foregroundStyle(labelColor)
 
             if let hint {
                 ParagraphText(text: hint, isHint: true)

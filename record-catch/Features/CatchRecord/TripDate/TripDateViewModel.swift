@@ -103,9 +103,6 @@ final class TripDateViewModel {
     /// String Catalog key for the screen's H1.
     var titleKey: String { phase.titleKey }
 
-    /// String Catalog key for the screen's hint.
-    var hintKey: String { phase.hintKey }
-
     /// The allowed date range for this phase, given `today` and (for the return phase) the
     /// departure date. A defensive `min(lower, today)` keeps the range non-inverted (a
     /// `ClosedRange` with `lowerBound > upperBound` traps at runtime) even if an older/corrupt

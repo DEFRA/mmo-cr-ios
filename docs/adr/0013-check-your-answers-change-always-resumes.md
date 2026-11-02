@@ -102,3 +102,31 @@ when re-ticking gears after "Add another gear" mid-journey.
   ADR).
 - GOV.UK Design System, *Check answers* —
   https://design-system.service.gov.uk/patterns/check-answers/
+
+## Amendment 2026-10 — Vessel is a one-time step and cannot be changed
+
+**Context.** The vessel is the first answer captured in the journey, and product confirmed it
+cannot be changed once a catch record has been started — unlike every other field, it has no
+legitimate "Change" journey at all.
+
+**Decision.**
+
+1. **No "Change" link for the vessel row.** `CheckYourAnswersViewModel.Row.changeRoute` becomes
+   `CatchRecordRoute?`; the vessel row passes `nil` and the view renders no "Change" control for it
+   (every other row is unaffected). This narrowly reverses this ADR's "every Change link returns to
+   Check your answers" rule for the one field that was never meant to be re-enterable.
+2. **`.selectVessel` is removed from the navigation stack once committed.** `SelectVesselViewModel.
+   submit()` calls a new `CatchRecordRouter.replaceCurrent(with:)` instead of `push(_:)`, swapping
+   `.selectVessel` for `.tripStartedToday(...)` rather than leaving it underneath. Back (and the
+   interactive swipe-back gesture, which `NavigationStack` reflects into the bound router `path` —
+   see `CatchRecordHostView`) from the screen that follows therefore leaves the journey (returning
+   to Home) instead of re-opening vessel selection. The now-unreachable `draft.
+   returnToCheckYourAnswers` branch in `SelectVesselViewModel.submit()` is removed.
+3. **Resuming a saved draft never re-opens vessel selection either.** A persisted draft only ever
+   exists once the vessel step has been committed (see the ADR-0014 §4 amendment), so
+   `DraftActionViewModel.resumeRoute()`'s `.vessel`-checkpoint case now resumes at
+   `.tripStartedToday(...)` whenever `draft.vessel` is set, falling back to `.selectVessel` only for
+   a genuinely blank draft (e.g. a row whose persisted payload failed to load).
+
+**References:** GOV.UK Design System, *Summary list* (rows with no action) —
+https://design-system.service.gov.uk/components/summary-list/

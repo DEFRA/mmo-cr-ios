@@ -14,7 +14,7 @@ enum CatchRecordSubmissionError: Error, Equatable {
 /// Submits a completed catch record to the (not-yet-built) MMO backend.
 ///
 /// API-shaped stub seam, mirroring the favourites providers (see ADR-0004): the real network
-/// implementation can be swapped in later without changing `SubmissionConfirmationViewModel` or
+/// implementation can be swapped in later without changing `CheckYourAnswersViewModel` or
 /// its tests. There is no live network call in this phase — see the module README's "UI-only
 /// phase" note.
 nonisolated protocol CatchRecordSubmissionServicing: Sendable {

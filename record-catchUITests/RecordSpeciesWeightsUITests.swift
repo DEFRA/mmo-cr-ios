@@ -3,8 +3,8 @@
 //  record-catchUITests
 //
 //  Journey tests for the "Which species did you catch with <gear>?" weights screen and its
-//  Add-species search (AC Scenarios 11 and 12). Seeded straight to the screen via the
-//  `-uiTestCatchRecordSpeciesWeights` launch seam (see `UITestRootView`), which seeds one
+//  Add-species search (AC Scenarios 10, 11 and 12/TC-12/AC7). Seeded straight to the screen via
+//  the `-uiTestCatchRecordSpeciesWeights` launch seam (see `UITestRootView`), which seeds one
 //  favourite species (Atlantic cod) so the checkbox and its weight fields are present.
 //
 
@@ -26,6 +26,7 @@ final class RecordSpeciesWeightsUITests: XCTestCase {
         static let addSpeciesHeading = "CatchRecord.addSpecies.heading"
         static let addSpeciesSaveContinue = "CatchRecord.addSpecies.saveContinue"
         static let landingStorageHeading = "CatchRecord.landingStorage.heading"
+        static let errorSummary = "CatchRecord.recordSpeciesWeights.errorSummary"
     }
 
     override func setUpWithError() throws {
@@ -63,18 +64,22 @@ final class RecordSpeciesWeightsUITests: XCTestCase {
         XCTAssertTrue(element(app, ID.codAddDiscarded).exists)
     }
 
-    // MARK: - Scenario 12: species recorded with only a legally-discarded weight
+    // MARK: - Scenario 12 / TC-12 / AC7: legally discarded weight must not reach or exceed the
+    // retained ("above minimum size") weight
 
     @MainActor
-    func test_speciesWithOnlyDiscardedWeight_savesAndContinuesToLandingStorage() {
+    func test_discardedWeightExceedsRetainedWeight_showsValidationError_andDoesNotContinue() {
         let app = launch()
 
         let cod = element(app, ID.codOption)
         XCTAssertTrue(cod.waitForExistence(timeout: 5))
         cod.tap()
 
-        // Reveal the optional "legally discarded" field and enter a weight, leaving the
-        // "above minimum size retained" field blank.
+        let aboveField = app.textFields[ID.codWeightAbove]
+        XCTAssertTrue(aboveField.waitForExistence(timeout: 5))
+        aboveField.tap()
+        aboveField.typeText("5")
+
         let addDiscarded = element(app, ID.codAddDiscarded)
         XCTAssertTrue(addDiscarded.waitForExistence(timeout: 5))
         addDiscarded.tap()
@@ -82,14 +87,38 @@ final class RecordSpeciesWeightsUITests: XCTestCase {
         let discardedField = app.textFields[ID.codWeightDiscarded]
         XCTAssertTrue(discardedField.waitForExistence(timeout: 5))
         discardedField.tap()
-        discardedField.typeText("12")
+        discardedField.typeText("10")
 
         // Dismiss the number pad by tapping the heading, then continue.
         element(app, ID.heading).tap()
         app.buttons[ID.saveContinue].tap()
 
-        // Reaches the trip-level landing-storage question with only a discarded weight recorded.
-        XCTAssertTrue(element(app, ID.landingStorageHeading).waitForExistence(timeout: 5))
+        // The "There is a problem" error summary surfaces the comparison error, and the user
+        // stays on this screen rather than reaching the landing-storage question.
+        XCTAssertTrue(element(app, ID.errorSummary).waitForExistence(timeout: 5))
+        XCTAssertFalse(element(app, ID.landingStorageHeading).exists)
+    }
+
+    // MARK: - Scenario 10: maximum catch weight of 10,000kg
+
+    @MainActor
+    func test_weightOverMaximum_showsValidationError_andDoesNotContinue() {
+        let app = launch()
+
+        let cod = element(app, ID.codOption)
+        XCTAssertTrue(cod.waitForExistence(timeout: 5))
+        cod.tap()
+
+        let aboveField = app.textFields[ID.codWeightAbove]
+        XCTAssertTrue(aboveField.waitForExistence(timeout: 5))
+        aboveField.tap()
+        aboveField.typeText("10001")
+
+        element(app, ID.heading).tap()
+        app.buttons[ID.saveContinue].tap()
+
+        XCTAssertTrue(element(app, ID.errorSummary).waitForExistence(timeout: 5))
+        XCTAssertFalse(element(app, ID.landingStorageHeading).exists)
     }
 
     // MARK: - Scenario 11: add another species via search (name + official code)

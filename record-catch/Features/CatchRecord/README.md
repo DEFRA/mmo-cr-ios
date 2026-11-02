@@ -113,12 +113,10 @@ Home ──(Create new)───────────────────
                          └──────────────────┬──────────────────┘
                                              ▼
                                    CheckYourAnswers
-                                             │
-                                             ▼
-                                SubmissionConfirmation
-                                             │
-                                             ▼
-                                  PlaceholderNextStep  (future phase)
+                                             │ (declaration + "Accept and submit trip details")
+                                  ┌──────────┴──────────┐
+                                  ▼                      ▼
+                        SubmissionSuccess       SubmissionSaved (offline)
 ```
 
 ## Screens
@@ -144,9 +142,9 @@ namespaced `CatchRecord.<screenId>.*` throughout (e.g. `CatchRecord.selectVessel
 | 13 | `RecordSpeciesWeights/` | `.recordSpeciesWeights(gear:...)` | Tick favourite species and enter live weights (above minimum always shown; below-minimum/legally-discarded are reveal-able optional fields). Includes an "Add a species" link and a **dummy "Remove species"** link (not yet implemented). Writes `draft.speciesCaught`. Weight validation is deferred — free text for now. | `.landingStorage` |
 | 14 | `LandingStorage/` | `.landingStorage(...)` | Yes/No — any catch not landed straight away (bait/keep pots)? | Yes → `.landingStorageSpecies`; No → `.checkYourAnswers` |
 | 15 | `LandingStorageSpecies/` | `.landingStorageSpecies(...)` | Tick species kept onboard/in keep pots and record one weight each. Writes `draft.speciesNotLanded`. | `.checkYourAnswers` |
-| 16 | `CheckYourAnswers/` | `.checkYourAnswers(...)` | Read-only summary of the whole `CatchRecordDraft` in four sections (Trip, Gear used, Species caught, Species not landed); each row's "Change" control pushes **forward** into the journey at the screen that captured it. | `.submissionConfirmation` |
-| 17 | `SubmissionConfirmation/` | `.submissionConfirmation(...)` | Final "Confirmation" screen: explains what submitting means (weight accuracy, tolerance levels, enforcement), requires a single confirmation checkbox before "Accept and submit trip details" proceeds. | `.placeholderNextStep` |
-| 18 | `PlaceholderNextStep/` | `.placeholderNextStep` | Minimal, no-view-model placeholder ending the journey until the next phase (real submission) is built. | — |
+| 16 | `CheckYourAnswers/` | `.checkYourAnswers(...)` | Read-only summary of the whole `CatchRecordDraft` in four sections (Trip, Gear used, Species caught, Species not landed); each row's "Change" control pushes **forward** into the journey at the screen that captured it. Beneath the summary, a declaration notice/bullet list explains what submitting confirms (no separate checkbox — see GOV.UK Design System "Check answers" pattern), and "Accept and submit trip details" submits directly from here. | online → `.submissionSuccess`; offline → `.submissionSaved` |
+| 17 | `SubmissionSuccess/` | `.submissionSuccess(...)` | Green confirmation panel once the (stubbed) submission API call succeeds, plus a "What happens next" bullet list. "View your catch records" returns to Home (`popToRoot()`). | — |
+| 18 | `SubmissionSaved/` | `.submissionSaved(...)` | Shown instead when the device had no connectivity at the moment of submitting (BR-SUB-008/AC10/AC11) — the record stays saved on-device, not submitted. | — |
 
 ### 1. Draft action (`DraftAction/`)
 
@@ -230,26 +228,23 @@ species — which writes `draft.speciesNotLanded`. Both branches converge on `.c
 
 ### 16. Check your answers (`CheckYourAnswers/`)
 
-Purely a **projection** of `CatchRecordDraft` — the view model holds no mutable state of its own
-and performs no validation, so it's directly unit-testable against a seeded draft. Four ordered
-sections (`Section`/`Row` structs): **Trip** and **Gear used** always render (even with zero rows);
-**Species caught**/**Species not landed** are omitted entirely when empty. Every row carries a
-`changeRoute` back to the screen where that value was captured; tapping "Change" **pushes forward**
-(not a pop) so the existing "Save and continue" flow naturally returns here.
+Purely a **projection** of `CatchRecordDraft` for its summary sections (`Section`/`Row` structs) —
+**Trip** and **Gear used** always render (even with zero rows); **Species caught**/**Species not
+landed** are omitted entirely when empty. Every row carries a `changeRoute` back to the screen
+where that value was captured; tapping "Change" **pushes forward** (not a pop) so the existing
+"Save and continue" flow naturally returns here.
 
-### 17. Submission confirmation (`SubmissionConfirmation/`)
-
-The final gate before "submission". A bold notice (icon + sentence, meaning never conveyed by
-colour/icon alone) explains what submitting means, followed by a three-point bullet list and a
-single required confirmation checkbox (`CheckboxGroup` with one option). "Accept and submit trip
-details" validates the checkbox (`SubmissionConfirmationValidation`) — an inline error shows and the
-screen does **not** navigate until it's ticked. A real submit action doesn't exist yet, so a
-confirmed accept continues to `.placeholderNextStep`.
-
-### 18. Placeholder next step (`PlaceholderNextStep/`)
-
-Deliberately has no view model — no state or behaviour yet. Marks where the next phase (a real
-submission/success screen, backed by a real API) will be built.
+The screen also owns the submission step itself (the former standalone "Confirmation" screen was
+folded in here — see the ADR-0014 amendment): beneath the summary, `SubmissionDeclarationView`
+renders a bold notice (icon + sentence, meaning never conveyed by colour/icon alone) explaining
+what submitting means, followed by a three-point bullet list. There is **no separate confirmation
+checkbox** — "Accept and submit trip details" is itself the acceptance action, matching the GOV.UK
+Design System "Check answers" pattern (https://design-system.service.gov.uk/patterns/check-answers/).
+If the device is online, tapping it calls the (stubbed) `CatchRecordSubmissionServicing`; on success
+the persisted local draft is deleted and the journey routes to `.submissionSuccess` — a transient
+service failure shows a recoverable inline error instead. If the device has no connectivity at all
+(BR-SUB-008/AC10/AC11), the submission service is never called: the draft is (re)saved and the
+journey routes to `.submissionSaved` instead.
 
 ## Providers & data models
 
@@ -347,7 +342,7 @@ design spec's accessibility annotations):
 All copy goes through `AppLanguageStore.localized(_:)` / `LocalizedText`, backed by
 `Resources/Localizable.xcstrings`. Because the String Catalog is a structured file this agent
 cannot hand-edit reliably, new keys are added via small, idempotent Python scripts in `scripts/`
-(e.g. `add_submission_nudge_strings.py`, `add_submission_confirmation_strings.py`) — each skips
+(e.g. `add_submission_nudge_strings.py`, `add_submission_success_strings.py`) — each skips
 keys that already exist and marks Welsh values `needs_review` (never a `[CY-TODO]` prefix in
 rendered copy) pending real translation.
 
@@ -361,7 +356,7 @@ rendered copy) pending real translation.
 - **UI tests** (`record-catchUITests/CatchRecordUITests.swift`) drive critical journeys end-to-end
   via stable `CatchRecord.*` accessibility identifiers, seeded by dedicated `-uiTestCatchRecord…`
   launch arguments in `record_catchApp.swift` (e.g. `-uiTestCatchRecordCheckYourAnswers`,
-  `-uiTestCatchRecordSubmissionConfirmation`) so a mid-journey screen can be UI-tested without
+  `-uiTestCatchRecordSubmissionSuccess`) so a mid-journey screen can be UI-tested without
   driving the whole flow by hand.
 - Coverage targets follow the project-wide gate: **≥95%** for view models/services/routing logic,
   **100%** for validation/error-handling paths — see the

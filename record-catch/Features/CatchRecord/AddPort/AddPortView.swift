@@ -38,10 +38,6 @@ struct AddPortView: View {
     @ViewBuilder
     private var content: some View {
         VStack(alignment: .leading, spacing: AppSpacing.large) {
-            LocalizedText("catchRecord.caption")
-                .font(AppTypography.pageCaption)
-                .foregroundStyle(AppColors.govBlue)
-
             Text(viewModel.referenceNumber)
                 .font(AppTypography.bodySmall)
                 .foregroundStyle(AppColors.textSecondary)
@@ -53,6 +49,10 @@ struct AddPortView: View {
 
             SearchDropdownField(
                 label: heading,
+                // The heading above already states the question (see `AddSpeciesView`'s identical
+                // pattern), so the field's own visible label would just repeat it — hidden here,
+                // but still exposed to VoiceOver/Voice Control via the field's accessibility label.
+                showsLabel: false,
                 placeholder: languageStore.localized("catchRecord.addPort.search.placeholder"),
                 options: viewModel.portNames,
                 query: Binding(get: { viewModel.query }, set: { viewModel.query = $0 }),

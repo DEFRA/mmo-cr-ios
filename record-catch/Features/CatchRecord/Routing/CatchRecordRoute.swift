@@ -89,20 +89,17 @@ enum CatchRecordRoute: Hashable {
     case landingStorageSpecies(referenceNumber: String)
     /// Review every answer captured so far before submission. Reached at the end of the
     /// landing-storage sub-journey; carries the display-only reference number shown at the top of
-    /// the screen.
+    /// the screen. Also the final submission step itself: beneath the summary, a declaration
+    /// notice/bullets explain what submitting confirms, and "Accept and submit trip details" calls
+    /// the (stubbed) `CatchRecordSubmissionServicing` and, on success, pushes `submissionSuccess`
+    /// (the former standalone "Confirmation" screen was folded into this screen).
     case checkYourAnswers(referenceNumber: String)
-    /// Final confirmation before submitting a completed catch record. Reached from "Save and
-    /// continue" on Check your answers; requires an explicit checkbox confirmation before
-    /// "Accept and submit trip details" proceeds, which then calls the (stubbed)
-    /// `CatchRecordSubmissionServicing` and, on success, pushes `submissionSuccess`. Carries the
-    /// display-only reference number shown at the top of the screen.
-    case submissionConfirmation(referenceNumber: String)
     /// The final "Your catch record has been submitted" screen, reached once the (stubbed)
     /// submission API call succeeds. Carries the reference number so it can be shown in the
     /// green confirmation panel; "View your catch records" returns to Home (`popToRoot()`).
     case submissionSuccess(referenceNumber: String)
-    /// Shown instead of `submissionSuccess` when `submissionConfirmation`'s "Accept and submit
-    /// trip details" is confirmed while the device has no connectivity (BR-SUB-008/AC10/AC11): the
+    /// Shown instead of `submissionSuccess` when `checkYourAnswers`'s "Accept and submit trip
+    /// details" is confirmed while the device has no connectivity (BR-SUB-008/AC10/AC11): the
     /// record stays saved on-device and is **not** submitted. Carries the reference number so it
     /// can be shown alongside the explanatory message; "View your catch records" returns to Home.
     case submissionSaved(referenceNumber: String)

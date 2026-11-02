@@ -1,13 +1,14 @@
 import Foundation
 
 /// View model for the manual "Enter the statistical sub area…" screen (type-to-search a
-/// subrectangle code), reached from `CatchLocationView`'s "Other" button.
+/// subrectangle code), reached from `CatchLocationNearestAreasView`'s "Other" option.
 ///
-/// A parallel entry point to `CatchLocationViewModel` for the same statistical-area decision:
-/// instead of tapping the map, the user searches for the code directly. Shares the same
-/// validation rule (`CatchLocationValidation`) and the same "enter species sub-journey" routing
-/// (`SpeciesSubJourneyEntry`) as the map screen, so both paths behave identically once an area is
-/// chosen.
+/// A parallel entry point to `CatchLocationViewModel`/`CatchLocationNearestAreasViewModel` for the
+/// same statistical-area decision: instead of tapping the map or picking from the nearest-areas
+/// list, the user searches for the code directly. Shares the same validation rule
+/// (`CatchLocationValidation`) and the same "enter species sub-journey" routing
+/// (`SpeciesSubJourneyEntry`) as the other two screens, so every path behaves identically once an
+/// area is chosen.
 @MainActor
 @Observable
 final class CatchLocationManualEntryViewModel {

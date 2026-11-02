@@ -2051,6 +2051,42 @@
         }
       }
     },
+    "catchRecord.nearestAreas.heading": {
+      "comment": "Heading for the 'Select the statistical sub area…' nearest-areas screen (CatchLocationNearestAreasView), reached from the catch-location map's 'Other' button. %@ is the gear's description with measurements (see GearOption.descriptionWithMeasurements), matching catchRecord.catchLocation.heading's placeholder. Copy follows the supplied Figma design as-is (a recorded deviation from GOV.UK question-heading style, which avoids a trailing '?' on an instruction) — see docs/design-specs/create-catch-record.md.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Dewiswch yr is-ardal ystadegol lle cafodd y rhan fwyaf o'ch dalfa ei dal gan ddefnyddio %@?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select the statistical sub area where the majority of your catch was caught using %@?"
+          }
+        }
+      }
+    },
+    "catchRecord.nearestAreas.validation.none": {
+      "comment": "Inline validation error on the nearest-areas screen when 'Save and continue' is pressed with nothing selected (no area and not 'Other') — CatchLocationNearestAreasValidation.errorKey(for:).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Dewiswch yr is-ardal ystadegol lle cafodd y rhan fwyaf o'ch dalfa ei dal"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select the statistical sub area where most of your catch was caught"
+          }
+        }
+      }
+    },
     "catchRecord.saveContinue": {
       "comment": "Primary button title across the Create a catch record journey.",
       "extractionState": "manual",

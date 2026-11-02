@@ -14,6 +14,13 @@
 //  subrectangle submits and routes on immediately — there is no separate "Save and continue"
 //  button on this screen (see `CatchLocationView`).
 //
+//  The map's "Other" button now opens the "Select the statistical sub area…" nearest-areas screen
+//  (`CatchLocationNearestAreasView`), not the manual type-to-search screen directly — see
+//  `CatchLocationNearestAreasUITests` for that screen's own journey tests, and
+//  `CatchLocationManualEntryUITests` for the manual screen's. This file's seam reaches the map with
+//  no departure port seeded (it jumps straight into the gear step), so the nearest-areas screen it
+//  reaches offers only "Other" — exactly the screen's documented empty-port fallback.
+//
 
 import XCTest
 
@@ -31,6 +38,12 @@ final class CatchLocationUITests: XCTestCase {
         static let map = "CatchRecord.catchLocation.map"
         static let otherButton = "CatchRecord.catchLocation.otherButton"
         static let error = "CatchRecord.catchLocation.error"
+    }
+
+    private enum NearestAreasID {
+        static let heading = "CatchRecord.catchLocationNearestAreas.heading"
+        static let otherOption = "CatchRecord.catchLocationNearestAreas.option.other"
+        static let saveContinue = "CatchRecord.catchLocationNearestAreas.saveContinue"
     }
 
     private enum ManualEntryID {
@@ -111,9 +124,10 @@ final class CatchLocationUITests: XCTestCase {
         XCTAssertTrue(element(app, CatchLocationID.otherButton).exists, "The manual \"Other\" entry point should be reachable")
     }
 
-    /// Scenario 1 / FR1 — the "Other" option navigates to the statistical sub-area selection
-    /// screen where the fisher can pick an area another way (in this build, the manual
-    /// type-to-search "Enter the statistical sub area…" screen).
+    /// Scenario 1 / FR1 — the "Other" button navigates to the statistical sub-area selection
+    /// screen, where the fisher can pick an area another way: first the nearest-areas radio list
+    /// (`CatchLocationNearestAreasView`), whose own "Other" option reaches the manual
+    /// type-to-search "Enter the statistical sub area…" screen.
     @MainActor
     func test_catchLocation_otherButton_navigatesToSubAreaSelection() {
         let app = reachCatchLocationMap()
@@ -123,8 +137,19 @@ final class CatchLocationUITests: XCTestCase {
         other.tap()
 
         XCTAssertTrue(
+            element(app, NearestAreasID.heading).waitForExistence(timeout: 5),
+            "Choosing \"Other\" should navigate to the nearest-areas statistical sub-area selection screen"
+        )
+
+        // With no departure port seeded by this seam, the nearest-areas screen offers only
+        // "Other" — picking it and continuing reaches the manual type-to-search screen, exactly as
+        // tapping the map's "Other" button used to before this screen was inserted.
+        element(app, NearestAreasID.otherOption).tap()
+        app.buttons[NearestAreasID.saveContinue].tap()
+
+        XCTAssertTrue(
             element(app, ManualEntryID.heading).waitForExistence(timeout: 5),
-            "Choosing \"Other\" should navigate to the statistical sub-area selection screen"
+            "Choosing \"Other\" on the nearest-areas screen should navigate to the manual sub-area entry screen"
         )
     }
 
@@ -174,7 +199,7 @@ final class CatchLocationUITests: XCTestCase {
         XCTAssertTrue(other.waitForExistence(timeout: 5), "The \"Other\" control should still be reachable after zooming out")
         other.tap()
         XCTAssertTrue(
-            element(app, ManualEntryID.heading).waitForExistence(timeout: 5),
+            element(app, NearestAreasID.heading).waitForExistence(timeout: 5),
             "Navigation should still work normally after a zoom-out gesture"
         )
     }
@@ -203,7 +228,7 @@ final class CatchLocationUITests: XCTestCase {
         XCTAssertTrue(other.waitForExistence(timeout: 5), "The \"Other\" control should still be reachable after a zoom-in gesture")
         other.tap()
         XCTAssertTrue(
-            element(app, ManualEntryID.heading).waitForExistence(timeout: 5),
+            element(app, NearestAreasID.heading).waitForExistence(timeout: 5),
             "Navigation should still work normally after a zoom-in gesture"
         )
     }
@@ -233,13 +258,13 @@ final class CatchLocationUITests: XCTestCase {
 
         // Tap the "Other" control and confirm it still actually functions (rather than just
         // checking `isHittable`, which can be reported before the simulator settles after two
-        // gestures fired back-to-back) — reaching the manual-entry heading proves the whole
+        // gestures fired back-to-back) — reaching the nearest-areas heading proves the whole
         // screen, not just the map, is still genuinely responsive.
         let other = element(app, CatchLocationID.otherButton)
         XCTAssertTrue(other.waitForExistence(timeout: 5), "The \"Other\" control should still be reachable after repeated zoom gestures")
         other.tap()
         XCTAssertTrue(
-            element(app, ManualEntryID.heading).waitForExistence(timeout: 5),
+            element(app, NearestAreasID.heading).waitForExistence(timeout: 5),
             "Navigation should still work normally after repeated zoom gestures"
         )
     }

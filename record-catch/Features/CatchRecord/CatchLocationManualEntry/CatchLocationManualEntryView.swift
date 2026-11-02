@@ -1,7 +1,9 @@
 import SwiftUI
 
 /// "Enter the statistical sub area where most of your catch was caught using <gear>" — manual,
-/// type-to-search alternative to tapping the map (`CatchLocationView`'s "Other" button).
+/// type-to-search alternative reached from the "Other" option on
+/// `CatchLocationNearestAreasView` (itself reached from `CatchLocationView`'s "Other" button
+/// overlaid on the map).
 ///
 /// Uses the standard `SearchDropdownField` component, mirroring `AddPortView`'s layout. On "Save
 /// and continue" the selection is validated (an area must be chosen — same rule as the map

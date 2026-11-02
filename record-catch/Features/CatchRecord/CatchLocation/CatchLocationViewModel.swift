@@ -6,7 +6,9 @@ import Foundation
 /// selection is validated (an area must be chosen) and the journey routes on - immediately, with
 /// no separate "Save and continue" step. UI-only for this phase: the chosen area is threaded no
 /// further than the placeholder next step, and the map is the existing `SeaMapView` component (its
-/// style need not match the design).
+/// style need not match the design). The "Other" button overlaid on the map instead opens
+/// `CatchLocationNearestAreasView` — a radio-button list of the nearest areas, with its own
+/// "Other" option reaching the manual type-to-search screen.
 @MainActor
 @Observable
 final class CatchLocationViewModel {
@@ -70,10 +72,12 @@ final class CatchLocationViewModel {
         Task { await enterSpeciesSubJourney() }
     }
 
-    /// Pushes the manual, type-to-search alternative to tapping the map — reached from the
-    /// "Other" button overlaid on the map (see `CatchLocationView.otherButton`).
-    func enterManualEntry() {
-        router.push(.catchLocationManualEntry(gear: gear, vessel: vessel, referenceNumber: referenceNumber))
+    /// Pushes the "Select the statistical sub area…" nearest-areas list — the alternative to
+    /// tapping the map directly — reached from the "Other" button overlaid on the map (see
+    /// `CatchLocationView.otherButton`). That screen's own "Other" option is what reaches the
+    /// manual, type-to-search screen (`catchLocationManualEntry`).
+    func enterOtherAreas() {
+        router.push(.catchLocationNearestAreas(gear: gear, vessel: vessel, referenceNumber: referenceNumber))
     }
 
     /// Enters the species sub-journey once an area has been chosen — delegates to the shared

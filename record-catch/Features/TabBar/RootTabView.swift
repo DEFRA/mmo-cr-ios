@@ -20,6 +20,9 @@ struct RootTabView: View {
     /// UI tests use this to seed a deterministic row count (e.g. `-uiTestHomePaged`'s 6 rows) when
     /// booting straight to the root `TabView` via `UITestRootView`.
     private let homeRecordsProvider: RecordsProviding?
+    /// Forwarded to the Settings tab's "Sign out" confirmation (ADR-0022 §9). Defaults to a
+    /// no-op for previews/tests that don't care about the app-root transition.
+    private let onSignOut: () -> Void
 
     /// - Parameters:
     ///   - initialSettingsRoute: optional route to seed the Settings tab's stack with at launch,
@@ -27,13 +30,19 @@ struct RootTabView: View {
     ///     mirroring `CatchRecordHostView(initialRoute:)`.
     ///   - homeRecordsProvider: optional override forwarded to the Home tab's
     ///     `CatchRecordHostView`; see above.
-    init(initialSettingsRoute: SettingsRoute? = nil, homeRecordsProvider: RecordsProviding? = nil) {
+    ///   - onSignOut: called when the user confirms "Sign out" in Settings.
+    init(
+        initialSettingsRoute: SettingsRoute? = nil,
+        homeRecordsProvider: RecordsProviding? = nil,
+        onSignOut: @escaping () -> Void = {}
+    ) {
         let router = SettingsRouter()
         if let initialSettingsRoute {
             router.push(initialSettingsRoute)
         }
         _settingsRouter = State(wrappedValue: router)
         self.homeRecordsProvider = homeRecordsProvider
+        self.onSignOut = onSignOut
     }
 
     var body: some View {
@@ -74,7 +83,7 @@ struct RootTabView: View {
     /// tab bar visible on this pushed screen.
     private var settingsTab: some View {
         NavigationStack(path: Binding(get: { settingsRouter.path }, set: { settingsRouter.setPath($0) })) {
-            SettingsView(router: settingsRouter)
+            SettingsView(router: settingsRouter, onSignOut: onSignOut)
                 .navigationDestination(for: SettingsRoute.self) { route in
                     destination(for: route)
                 }

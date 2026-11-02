@@ -5255,6 +5255,42 @@
         }
       }
     },
+    "signIn.a11y.hint": {
+      "comment": "Accessibility hint for the Sign In button when enabled and not loading (ADR-0022).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Yn cyflwyno'ch manylion mewngofnodi"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Submits your sign in details"
+          }
+        }
+      }
+    },
+    "signIn.a11y.signingIn": {
+      "comment": "VoiceOver label for the Sign In button while a sign-in request is in flight (EC1, ADR-0022).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Wrthi'n mewngofnodi"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signing in"
+          }
+        }
+      }
+    },
     "signIn.button": {
       "comment": "Primary sign in button title.",
       "extractionState": "manual",
@@ -5399,6 +5435,24 @@
         }
       }
     },
+    "signIn.error.email.invalid": {
+      "comment": "Inline error when the email field is non-empty but not a valid email format (ES4, ADR-0022).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Rhowch gyfeiriad e-bost dilys"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a valid email address"
+          }
+        }
+      }
+    },
     "signIn.error.password.empty": {
       "comment": "Inline error when the password field is empty on submit.",
       "extractionState": "manual",
@@ -5413,6 +5467,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "Enter your password"
+          }
+        }
+      }
+    },
+    "signIn.error.service": {
+      "comment": "Provisional form-level error covering no network connectivity, an Entra/MSAL service failure, an unsupported sign-in step (MFA/browser/code required), and the 'not configured' placeholder state (ADR-0022 §7). NEEDS CONTENT REVIEW before release -- see docs/design-specs/sign-in.md.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Mae'n ddrwg gennym, mae problem wrth fewngofnodi. Rhowch gynnig arall arni yn nes ymlaen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sorry, there is a problem signing in. Try again later"
           }
         }
       }

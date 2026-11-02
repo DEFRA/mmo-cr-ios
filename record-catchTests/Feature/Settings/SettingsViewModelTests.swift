@@ -102,17 +102,17 @@ final class SettingsViewModelTests: XCTestCase {
         XCTAssertEqual(sut.gearUsed, "Seine nets")
     }
 
-    func test_confirmSignOut_dismissesDialog_remainsInertAsideFromFavourites() {
+    func test_confirmSignOut_dismissesDialog_clearsFavouritesAndCallsOnSignOut() {
+        var signOutCallCount = 0
         let store = InMemoryAnalyticsPreferenceStore(initialValue: true)
-        let sut = SettingsViewModel(preferenceStore: store, gearUsed: "Seine nets")
+        let sut = SettingsViewModel(preferenceStore: store, gearUsed: "Seine nets", onSignOut: { signOutCallCount += 1 })
         sut.signOutTapped()
 
         sut.confirmSignOut(favouritesClearing: NoOpFavouritesClearing())
 
-        // Inert aside from clearing favourites (see ADR-0023): still no backend session/auth
-        // exists, so confirming has no other side effect — analytics preference and gear used
-        // are unaffected.
         XCTAssertFalse(sut.showSignOutConfirmation)
+        XCTAssertEqual(signOutCallCount, 1)
+        // Unrelated Settings state is unaffected by sign-out.
         XCTAssertTrue(sut.analyticsEnabled)
         XCTAssertEqual(sut.gearUsed, "Seine nets")
     }
@@ -126,6 +126,16 @@ final class SettingsViewModelTests: XCTestCase {
         sut.confirmSignOut(favouritesClearing: clearing)
 
         XCTAssertEqual(clearing.clearCallCount, 1)
+    }
+
+    func test_cancelSignOutConfirmation_doesNotCallOnSignOut() {
+        var signOutCallCount = 0
+        let sut = SettingsViewModel(preferenceStore: InMemoryAnalyticsPreferenceStore(), onSignOut: { signOutCallCount += 1 })
+        sut.signOutTapped()
+
+        sut.cancelSignOutConfirmation()
+
+        XCTAssertEqual(signOutCallCount, 0)
     }
 
     func test_myAccountTapped_pushesManageAccountRoute() {

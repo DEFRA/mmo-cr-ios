@@ -18,16 +18,15 @@ import SwiftUI
 ///
 /// - Important: When `range` collapses to a single selectable day (e.g. the trip return date
 ///   screen when the departure date is today, so the only legal return date is also today), this
-///   view renders the **same** `DatePicker` with `.datePickerStyle(.compact)` instead of
-///   `.wheel`. A `UIPickerView`-backed wheel with zero scrollable rows in one or more of its
-///   columns is a known-unstable UIKit configuration: it repeatedly fails to satisfy its own
-///   internal layout constraints (visible as `TUIKeyplaneView`/`TUIPredictionViewCell` "Unable to
-///   simultaneously satisfy constraints" log spam) and can hang/crash on-device the moment a user
-///   touches it — this is what the crash reported against the return-date screen turned out to
-///   be. `.compact`'s popover calendar grid does not have that failure mode even with a single
-///   enabled day, so switching style (rather than substituting a bespoke static-text state that
-///   was never part of the approved design — see ADR-0017 addendum) keeps the screen crash-safe
-///   while staying a plain native `DatePicker` throughout.
+///   view still renders a scrolling **wheel** control — see `singleDayWheel` — rather than
+///   switching to a different picker style or a static-text fallback. See ADR-0017 addendum
+///   (2026-11-03) for why this is safe: it deliberately does **not** reuse `DatePicker`'s compound
+///   day/month/year `.wheel` machinery, which is what previously crashed here (a `UIDatePicker`
+///   wheel with zero scrollable rows in one or more of its columns is a known-unstable UIKit
+///   configuration — see the 2026-10-12 addendum). Instead it is a plain SwiftUI `Picker` with a
+///   single row bound to the one valid date; that is an ordinary, stable wheel-picker
+///   configuration used throughout iOS (a `UIPickerView` with one row in one column), so it never
+///   reaches the failure mode that the compound `DatePicker` wheel did.
 struct TripDatePicker: View {
     let title: String
     @Binding var selection: Date
@@ -36,20 +35,17 @@ struct TripDatePicker: View {
     /// which style is rendered.
     var accessibilityIdentifierPrefix: String = "TripDatePicker"
 
+    @Environment(\.locale) private var locale
+
     /// `range` collapses to a single legal day — there is nothing to scroll between, so the
-    /// unstable `.wheel` configuration must not be rendered (see the type-level doc comment
-    /// above). `.compact` is used instead; it remains a fully interactive native `DatePicker`.
+    /// `DatePicker`-backed `.wheel` configuration must not be rendered (see the type-level doc
+    /// comment above). `singleDayWheel` is used instead.
     private var hasOnlySelectableDay: Bool { range.lowerBound == range.upperBound }
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.small) {
             if hasOnlySelectableDay {
-                datePicker
-                    .datePickerStyle(.compact)
-                    .labelsHidden()
-                    .frame(maxWidth: nil, alignment: .leading)
-                    .accessibilityLabel(title)
-                    .accessibilityIdentifier("\(accessibilityIdentifierPrefix).picker")
+                singleDayWheel
             } else {
                 datePicker
                     .datePickerStyle(.wheel)
@@ -75,6 +71,23 @@ struct TripDatePicker: View {
             in: range,
             displayedComponents: .date
         )
+    }
+
+    /// A genuine scrolling wheel with exactly one, already-selected row — matches the multi-day
+    /// case's wheel appearance without reusing `DatePicker`'s crash-prone compound wheel (see the
+    /// type-level doc comment). There is nothing else to scroll to, so the control is effectively
+    /// locked to `range.lowerBound`, but it is never rendered as a tappable button/capsule.
+    private var singleDayWheel: some View {
+        Picker(title, selection: $selection) {
+            Text(CatchRecordDateRules.longDateString(range.lowerBound, locale: locale))
+                .tag(range.lowerBound)
+        }
+        .pickerStyle(.wheel)
+        .labelsHidden()
+        .frame(maxWidth: .infinity, alignment: .center)
+        .accessibilityLabel(title)
+        .accessibilityValue(CatchRecordDateRules.longDateString(range.lowerBound, locale: locale))
+        .accessibilityIdentifier("\(accessibilityIdentifierPrefix).picker")
     }
 }
 

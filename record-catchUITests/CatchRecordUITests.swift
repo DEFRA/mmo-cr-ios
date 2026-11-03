@@ -268,11 +268,11 @@ final class CatchRecordUITests: XCTestCase {
         app.buttons[ID.departureContinue].tap()
 
         // Return date screen. Departure was accepted unchanged (defaults to today), so the only
-        // legal return date is also today — the range collapses to a single day and the picker
-        // renders in `.compact` style instead of `.wheel` (see `TripDatePicker`: a `.wheel`
-        // `DatePicker` with a single-day range is an unstable UIKit configuration that can
-        // hang/crash on-device the moment it's touched). It stays the same native `DatePicker`
-        // control, just a different style — there is no separate fallback state to assert.
+        // legal return date is also today — the range collapses to a single day and
+        // `TripDatePicker` renders a single-row `.wheel` `Picker` (not `DatePicker`'s compound
+        // day/month/year wheel, which is an unstable UIKit configuration with a zero-scrollable-row
+        // column — see ADR-0017's 2026-10-12/2026-11-03 addenda) under the same accessibility
+        // identifier, so there is no separate fallback state to assert here.
         XCTAssertTrue(element(app, ID.returnHeading).waitForExistence(timeout: 5))
         XCTAssertTrue(element(app, ID.returnPicker).exists)
         app.buttons[ID.returnContinue].tap()

@@ -15,7 +15,9 @@ final class DraftAutosaverTests: XCTestCase {
         }
         func loadDraft(localID: UUID) async throws -> CatchRecordDraftPayload? { nil }
         func deleteDraft(localID: UUID) async throws {}
+        func markSubmitted(localID: UUID) async throws {}
         func allUnsentDrafts() async throws -> [UnsentDraftSummary] { [] }
+        func allRecords() async throws -> [UnsentDraftSummary] { [] }
     }
 
     /// A controllable "sleep" that only resumes once the test explicitly signals it, so the

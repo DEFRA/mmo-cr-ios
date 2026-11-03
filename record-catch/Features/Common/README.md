@@ -26,10 +26,13 @@ This folder contains reusable GDS-inspired SwiftUI components and shared design 
 ## Data source (stub)
 
 - `Data/PortOptionProvider.swift` provides static options now and can be replaced by SwiftData-backed options later.
-- `Data/RecordsRepository.swift` merges local, on-device-persisted Unsent drafts (see
+- `Data/RecordsRepository.swift` merges every local, on-device-persisted draft — Unsent and
+  locally-submitted (see
   [ADR-0014](../../../docs/adr/0014-catch-record-draft-persistence.md)) with a fixed server-record
   stub, newest first, for Home's trips table (see
-  [ADR-0015](../../../docs/adr/0015-home-merged-records-list.md)).
+  [ADR-0015](../../../docs/adr/0015-home-merged-records-list.md)). A submitted local draft is
+  retained (not deleted) and rendered as `.submitted` until a real backend exists.
 - `Components/Table/SubmissionsTable.swift`'s `SubmissionRow` carries an optional `localID: UUID?`
-  (set for a local Unsent row so it can be resumed/deleted) and a `sortDate: Date` (ordering only);
+  (set only for a local **Unsent** row so it can be resumed/deleted — `nil` for a local row already
+  marked submitted) and a `sortDate: Date` (ordering only);
   both are excluded from its existing content-based equality/hashing.

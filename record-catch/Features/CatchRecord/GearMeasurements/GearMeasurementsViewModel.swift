@@ -70,6 +70,14 @@ final class GearMeasurementsViewModel {
     /// if this gear is already part of the trip's confirmed `gearCatches` (ADR-0011), its entry is
     /// updated in place so the new measurement values are reflected immediately, without losing
     /// that gear's already-captured statistical area/species caught.
+    ///
+    /// Required (per-favourite) measurements belong to the user's saved gear and persist across
+    /// trips; variable (per-trip) measurements do not — they belong to *this* trip only (see
+    /// `FavouriteGearProviding`, ADR-0023). So the **draft** keeps `gear`'s variable measurements
+    /// exactly as they already are (which may already carry this trip's captured values, e.g. when
+    /// reached via "Change" from Check your answers), while the copy saved to **favourites** has
+    /// every variable measurement's value cleared, so a value entered on one trip never leaks into
+    /// the gear's favourite and reappears pre-filled on a future trip.
     func submit() async {
         didAttemptSubmit = true
         saveFailed = false
@@ -78,14 +86,17 @@ final class GearMeasurementsViewModel {
         let captured = gear.requiredMeasurements.map { measurement in
             measurement.withValue(GearMeasurementValidation.parse(entries[measurement.id] ?? ""))
         }
-        let savedGear = gear.withRequiredMeasurements(captured)
+        let draftGear = gear.withRequiredMeasurements(captured)
+        let favouriteGear = draftGear.withVariableMeasurements(
+            draftGear.variableMeasurements.map { $0.withValue(nil) }
+        )
 
         isSaving = true
         defer { isSaving = false }
         do {
-            try await favouriteGears.addFavourite(savedGear)
-            if let index = draft.gearCatchIndex(forGearID: savedGear.id) {
-                draft.gearCatches[index].gear = savedGear
+            try await favouriteGears.addFavourite(favouriteGear)
+            if let index = draft.gearCatchIndex(forGearID: draftGear.id) {
+                draft.gearCatches[index].gear = draftGear
             }
             if draft.returnToCheckYourAnswers {
                 draft.returnToCheckYourAnswers = false

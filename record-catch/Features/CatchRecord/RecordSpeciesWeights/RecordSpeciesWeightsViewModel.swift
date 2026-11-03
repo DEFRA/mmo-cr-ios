@@ -213,8 +213,14 @@ final class RecordSpeciesWeightsViewModel {
     }
 
     /// Validates "Select at least one species" and each ticked species' weight fields before
-    /// writing captured weights for ticked species back to favourites and into this gear's own
-    /// `GearCatch` entry (`draft.gearCatches[…].speciesCaught` - see ADR-0011), then routing on.
+    /// writing this trip's captured weights into this gear's own `GearCatch` entry
+    /// (`draft.gearCatches[…].speciesCaught` - see ADR-0011), then routing on.
+    ///
+    /// Weights are per-trip data, not per-user favourites data (see `FavouriteSpeciesProviding`,
+    /// ADR-0023): `favouriteSpecies.addFavourite` is given the **unweighted** species (`species`,
+    /// not `recorded`) so a weight entered on one trip never persists into the favourite and
+    /// reappears pre-filled on a future trip. The weighted copy (`recorded`) is still captured into
+    /// `draft.gearCatches` so this trip's Check-your-answers/submission sees it.
     func submit() async {
         didAttemptSubmit = true
         saveFailed = false
@@ -225,7 +231,7 @@ final class RecordSpeciesWeightsViewModel {
             var captured: [SpeciesOption] = []
             for species in favourites where selection.contains(species.id) {
                 let recorded = capturedSpecies(species)
-                try await favouriteSpecies.addFavourite(recorded)
+                try await favouriteSpecies.addFavourite(species)
                 captured.append(recorded)
             }
             if let index = draft.gearCatchIndex(forGearID: gear.id) {

@@ -1,10 +1,12 @@
 import Foundation
 import SwiftData
 
-/// A lightweight summary of a persisted, not-yet-submitted local draft, used to render a Home
-/// "Unsent" row without decoding its full payload (see ADR-0014/0015). Placeholder text for any
-/// uncaptured field (`vessel`/`tripEndDate` are `nil` until the corresponding journey screen has
-/// been completed) is applied by the caller (`SubmissionRow.unsentDraft(_:)`), not here.
+/// A lightweight summary of a persisted local draft, used to render a Home row without decoding
+/// its full payload (see ADR-0014/0015). Covers both a still-in-progress/Unsent draft and one that
+/// has since been marked submitted (`isSubmitted`) — see `CatchRecordDraftStoring.allRecords()`.
+/// Placeholder text for any uncaptured field (`vessel`/`tripEndDate` are `nil` until the
+/// corresponding journey screen has been completed) is applied by the caller
+/// (`SubmissionRow.unsentDraft(_:)`), not here.
 nonisolated struct UnsentDraftSummary: Identifiable, Hashable, Sendable {
     let localID: UUID
     let vessel: String?
@@ -13,19 +15,25 @@ nonisolated struct UnsentDraftSummary: Identifiable, Hashable, Sendable {
     /// Denormalised checkpoint for this draft (see `CatchRecordEntity.checkpointRawValue`,
     /// BR-SUB-010/AC12). Falls back to `.vessel` for any row persisted before this field existed.
     let checkpoint: CatchRecordCheckpoint
+    /// Whether this draft has been successfully submitted (see `CatchRecordEntity.isSubmitted`).
+    /// `false` for every row returned by `allUnsentDrafts()`; may be `true` for a row returned by
+    /// `allRecords()`. Drives the Home row's status (`RecordsMerging.row(for:)`).
+    let isSubmitted: Bool
 
     init(
         localID: UUID,
         vessel: String?,
         tripEndDate: Date?,
         lastEditedAt: Date,
-        checkpointRawValue: Int? = nil
+        checkpointRawValue: Int? = nil,
+        isSubmitted: Bool = false
     ) {
         self.localID = localID
         self.vessel = vessel
         self.tripEndDate = tripEndDate
         self.lastEditedAt = lastEditedAt
         self.checkpoint = checkpointRawValue.flatMap(CatchRecordCheckpoint.init(rawValue:)) ?? .vessel
+        self.isSubmitted = isSubmitted
     }
 
     var id: UUID { localID }
@@ -51,11 +59,25 @@ protocol CatchRecordDraftStoring {
     /// Loads the full, resumable payload for a previously-saved draft, or `nil` if none exists
     /// (e.g. already deleted).
     func loadDraft(localID: UUID) async throws -> CatchRecordDraftPayload?
-    /// Permanently deletes a persisted draft (used for both explicit "Delete" and once a draft has
-    /// been successfully submitted — see `CheckYourAnswersViewModel`).
+    /// Permanently deletes a persisted draft (used only for the user's explicit "Delete" action on
+    /// `DraftActionView` — see ADR-0014 decision #5). A successfully submitted draft is retained
+    /// and flagged via `markSubmitted(localID:)` instead, so it keeps showing on Home.
     func deleteDraft(localID: UUID) async throws
+    /// Flags a persisted draft as submitted (see `CatchRecordEntity.isSubmitted`), without deleting
+    /// it, once `CatchRecordSubmissionServicing.submit(referenceNumber:)` has succeeded (see
+    /// `CheckYourAnswersViewModel`). A no-op if `localID` is unknown. Leaves every other field
+    /// (`vessel`, `tripEndDate`, `payload`, `checkpointRawValue`) untouched, so the record keeps
+    /// showing on Home — now as `.submitted` rather than `.unsent` (see `RecordsMerging.row(for:)`)
+    /// — with its correct, already-captured trip-end date, until a real backend becomes the source
+    /// of truth for it (see ADR-0014/0015).
+    func markSubmitted(localID: UUID) async throws
     /// Every persisted draft not yet submitted, for Home's "Unsent" rows.
     func allUnsentDrafts() async throws -> [UnsentDraftSummary]
+    /// Every persisted local draft, submitted or not — Home's full local contribution to the
+    /// merged records list (see `MergingRecordsRepository`). Unlike `allUnsentDrafts()`, this
+    /// includes rows flagged by `markSubmitted(localID:)` so a completed catch record keeps
+    /// appearing (as `.submitted`) once the stub/real server's own copy also exists.
+    func allRecords() async throws -> [UnsentDraftSummary]
 }
 
 /// SwiftData-backed `CatchRecordDraftStoring`.
@@ -115,21 +137,41 @@ final class SwiftDataCatchRecordDraftStore: CatchRecordDraftStoring {
         try modelContext.save()
     }
 
+    func markSubmitted(localID: UUID) async throws {
+        let descriptor = FetchDescriptor<CatchRecordEntity>(
+            predicate: #Predicate { $0.localID == localID }
+        )
+        guard let existing = try modelContext.fetch(descriptor).first else { return }
+        existing.isSubmitted = true
+        try modelContext.save()
+    }
+
     func allUnsentDrafts() async throws -> [UnsentDraftSummary] {
         let descriptor = FetchDescriptor<CatchRecordEntity>(
             predicate: #Predicate { !$0.isSubmitted },
             sortBy: [SortDescriptor(\.lastEditedAt, order: .reverse)]
         )
         let entities = try modelContext.fetch(descriptor)
-        return entities.map {
-            UnsentDraftSummary(
-                localID: $0.localID,
-                vessel: $0.vessel,
-                tripEndDate: $0.tripEndDate,
-                lastEditedAt: $0.lastEditedAt,
-                checkpointRawValue: $0.checkpointRawValue
-            )
-        }
+        return entities.map(Self.summary(for:))
+    }
+
+    func allRecords() async throws -> [UnsentDraftSummary] {
+        let descriptor = FetchDescriptor<CatchRecordEntity>(
+            sortBy: [SortDescriptor(\.lastEditedAt, order: .reverse)]
+        )
+        let entities = try modelContext.fetch(descriptor)
+        return entities.map(Self.summary(for:))
+    }
+
+    private static func summary(for entity: CatchRecordEntity) -> UnsentDraftSummary {
+        UnsentDraftSummary(
+            localID: entity.localID,
+            vessel: entity.vessel,
+            tripEndDate: entity.tripEndDate,
+            lastEditedAt: entity.lastEditedAt,
+            checkpointRawValue: entity.checkpointRawValue,
+            isSubmitted: entity.isSubmitted
+        )
     }
 }
 
@@ -185,18 +227,32 @@ final class InMemoryCatchRecordDraftStore: CatchRecordDraftStoring {
         records[localID] = nil
     }
 
+    func markSubmitted(localID: UUID) async throws {
+        guard records[localID] != nil else { return }
+        records[localID]?.isSubmitted = true
+    }
+
     func allUnsentDrafts() async throws -> [UnsentDraftSummary] {
         records
             .filter { !$0.value.isSubmitted }
-            .map {
-                UnsentDraftSummary(
-                    localID: $0.key,
-                    vessel: $0.value.vessel,
-                    tripEndDate: $0.value.tripEndDate,
-                    lastEditedAt: $0.value.lastEditedAt,
-                    checkpointRawValue: $0.value.checkpoint.rawValue
-                )
-            }
+            .map(Self.summary(for:))
             .sorted { $0.lastEditedAt > $1.lastEditedAt }
+    }
+
+    func allRecords() async throws -> [UnsentDraftSummary] {
+        records
+            .map(Self.summary(for:))
+            .sorted { $0.lastEditedAt > $1.lastEditedAt }
+    }
+
+    private static func summary(for entry: (key: UUID, value: Record)) -> UnsentDraftSummary {
+        UnsentDraftSummary(
+            localID: entry.key,
+            vessel: entry.value.vessel,
+            tripEndDate: entry.value.tripEndDate,
+            lastEditedAt: entry.value.lastEditedAt,
+            checkpointRawValue: entry.value.checkpoint.rawValue,
+            isSubmitted: entry.value.isSubmitted
+        )
     }
 }

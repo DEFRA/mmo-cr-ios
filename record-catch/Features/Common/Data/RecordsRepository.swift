@@ -62,14 +62,17 @@ enum RecordsMerging {
     static let localCreatedByPlaceholder = "You"
 
     /// Builds the Home row for a persisted local draft, using placeholder text for any field not
-    /// yet captured.
+    /// yet captured. A draft flagged submitted (`UnsentDraftSummary.isSubmitted` — see
+    /// `CatchRecordDraftStoring.markSubmitted(localID:)`) renders as `.submitted` with no
+    /// resume/delete `localID`, since `DraftActionView`'s actions only apply to an Unsent row (see
+    /// `CatchRecordRouting.entryRoute(for:)`); an Unsent row keeps its `localID` as before.
     static func row(for summary: UnsentDraftSummary) -> SubmissionRow {
         SubmissionRow(
             dateText: summary.tripEndDate.map { dateFormatter.string(from: $0) } ?? placeholder,
             vesselName: summary.vessel ?? placeholder,
-            status: .unsent,
+            status: summary.isSubmitted ? .submitted : .unsent,
             createdBy: localCreatedByPlaceholder,
-            localID: summary.localID,
+            localID: summary.isSubmitted ? nil : summary.localID,
             sortDate: summary.tripEndDate ?? summary.lastEditedAt
         )
     }
@@ -120,11 +123,11 @@ final class MutableStubRecordsProvider: RecordsProviding {
     }
 }
 
-/// The production `RecordsProviding`: local Unsent drafts (always available, offline-first) merged
-/// with stubbed server records, newest first. `@unchecked Sendable` because it is confined to the
-/// main actor (`@MainActor`) even though one of its stored properties (`CatchRecordDraftStoring`,
-/// itself `@MainActor`-isolated) is not itself `Sendable` — safe because every access is already
-/// serialised through the main actor.
+/// The production `RecordsProviding`: every local draft (Unsent and locally-submitted, always
+/// available offline-first) merged with stubbed server records, newest first. `@unchecked
+/// Sendable` because it is confined to the main actor (`@MainActor`) even though one of its stored
+/// properties (`CatchRecordDraftStoring`, itself `@MainActor`-isolated) is not itself `Sendable` —
+/// safe because every access is already serialised through the main actor.
 @MainActor
 final class MergingRecordsRepository: RecordsProviding {
 
@@ -140,7 +143,7 @@ final class MergingRecordsRepository: RecordsProviding {
     }
 
     func records() async throws -> [SubmissionRow] {
-        let summaries = (try? await draftStore.allUnsentDrafts()) ?? []
+        let summaries = (try? await draftStore.allRecords()) ?? []
         let draftRows = summaries.map { RecordsMerging.row(for: $0) }
         let serverRows = (try? await serverRecords.serverRecords()) ?? []
         return RecordsMerging.merge(draftRows: draftRows, serverRows: serverRows)

@@ -46,6 +46,29 @@ final class RecordsRepositoryTests: XCTestCase {
         XCTAssertEqual(row.createdBy, RecordsMerging.localCreatedByPlaceholder)
     }
 
+    // A submitted local draft is retained (not deleted — see `CheckYourAnswersViewModel` and
+    // ADR-0014/0015 amendment) and must keep showing on Home, now as `.submitted` with its
+    // already-captured date, and with no `localID` (it is no longer resumable/deletable via
+    // `DraftActionView` — see `CatchRecordRouting.entryRoute(for:)`).
+    func test_row_forASubmittedSummary_rendersSubmittedStatus_withNoResumableLocalID() {
+        let localID = UUID()
+        let tripEndDate = Calendar(identifier: .gregorian).date(from: DateComponents(year: 2026, month: 7, day: 27))!
+        let summary = UnsentDraftSummary(
+            localID: localID,
+            vessel: "ACHILLES",
+            tripEndDate: tripEndDate,
+            lastEditedAt: now,
+            isSubmitted: true
+        )
+
+        let row = RecordsMerging.row(for: summary)
+
+        XCTAssertEqual(row.vesselName, "ACHILLES")
+        XCTAssertEqual(row.dateText, "27 Jul 2026")
+        XCTAssertEqual(row.status, .submitted)
+        XCTAssertNil(row.localID)
+    }
+
     // MARK: - End-to-end via the repository
 
     func test_records_mergesLocalDraftsAndServerRecords() async throws {
@@ -73,5 +96,27 @@ final class RecordsRepositoryTests: XCTestCase {
         // No local drafts and no server records yet (stub returns none) → empty list, which
         // `HomeViewModel` surfaces as its explicit Empty state.
         XCTAssertTrue(rows.isEmpty)
+    }
+
+    // Regression test for the bug where a completed/submitted catch record vanished from Home: it
+    // was deleted locally on successful submission and the (stub) server never returns it either
+    // (see ADR-0014/0015 amendment, `CheckYourAnswersViewModel.submit(isOnline:)`).
+    func test_records_includesASubmittedLocalDraft_withSubmittedStatus_soItDoesNotVanishFromHome() async throws {
+        let draftStore = InMemoryCatchRecordDraftStore()
+        let draft = CatchRecordDraft()
+        draft.vessel = "ACHILLES"
+        draft.returnDate = Calendar(identifier: .gregorian).date(from: DateComponents(year: 2026, month: 7, day: 27))!
+        try await draftStore.save(draft)
+        try await draftStore.markSubmitted(localID: draft.localID)
+
+        let repository = MergingRecordsRepository(draftStore: draftStore, serverRecords: StubServerRecordsProvider())
+
+        let rows = try await repository.records()
+
+        XCTAssertEqual(rows.count, 1)
+        let row = try XCTUnwrap(rows.first)
+        XCTAssertEqual(row.status, .submitted)
+        XCTAssertEqual(row.vesselName, "ACHILLES")
+        XCTAssertEqual(row.dateText, "27 Jul 2026")
     }
 }

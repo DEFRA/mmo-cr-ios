@@ -292,7 +292,7 @@ final class CheckYourAnswersViewModelTests: XCTestCase {
 
     // MARK: - Submit
 
-    func test_submit_whenOnline_pushesSubmissionSuccessOntoRouter_andDeletesTheDraft() async throws {
+    func test_submit_whenOnline_pushesSubmissionSuccessOntoRouter_andMarksTheDraftSubmitted() async throws {
         let router = CatchRecordRouter()
         let draftStore = InMemoryCatchRecordDraftStore()
         let draft = populatedDraft()
@@ -308,11 +308,18 @@ final class CheckYourAnswersViewModelTests: XCTestCase {
         await sut.submit()
 
         XCTAssertEqual(router.path, [.submissionSuccess(referenceNumber: referenceNumber)])
-        // Allow the fire-and-forget deletion Task to run (see `DraftActionViewModelTests`'
-        // equivalent pattern for the same fire-and-forget delete shape).
+        // Allow the fire-and-forget "mark submitted" Task to run (see `DraftActionViewModelTests`'
+        // equivalent pattern for the same fire-and-forget shape).
         try? await Task.sleep(nanoseconds: 10_000_000)
         let loaded = try await draftStore.loadDraft(localID: draft.localID)
-        XCTAssertNil(loaded, "a successfully submitted draft must be deleted so it no longer shows as Unsent")
+        XCTAssertNotNil(loaded, "a successfully submitted draft must be retained, not deleted, so it keeps showing on Home")
+
+        let unsentSummaries = try await draftStore.allUnsentDrafts()
+        XCTAssertTrue(unsentSummaries.isEmpty, "a submitted draft must no longer appear as Unsent")
+
+        let allRecords = try await draftStore.allRecords()
+        XCTAssertEqual(allRecords.count, 1)
+        XCTAssertTrue(allRecords.first?.isSubmitted ?? false, "the draft must be flagged submitted so Home shows it as Submitted")
     }
 
     // MARK: - Submission failure (error-handling path — 100% coverage requirement)

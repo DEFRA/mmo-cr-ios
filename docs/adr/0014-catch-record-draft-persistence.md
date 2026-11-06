@@ -210,6 +210,37 @@ the draft rather than deleting it when offline (BR-SUB-008/AC10/AC11), and `Catc
 `shouldPersistDraft` still stops autosaving once `.submissionSuccess` is reached. No new ADR was
 raised for this change — it is a screen merge, not a change to the persistence architecture.
 
+## Amendment (2026-11) — bugfix: a submitted record is retained, not deleted
+
+Field report: a completed catch record disappeared from Home entirely after a successful online
+submit. Root cause was decision #6 above — deleting the local draft on successful submission —
+combined with ADR-0015's stub server never actually returning that record (there is no real
+backend yet in this phase). The record had nowhere left to be shown: it was removed from the local
+"Unsent" store, and the fixed server-record stub fixture set knows nothing about it.
+
+This supersedes decision #6's "deleted once successfully submitted" clause and the equivalent
+clause in the amendment above:
+
+- `CatchRecordEntity.isSubmitted` is retained (not deleted) once set; `deleteDraft(localID:)` is now
+  used **only** for the user's explicit "Delete" action on `DraftActionView` (unchanged).
+- `CatchRecordDraftStoring` gained `markSubmitted(localID:)` (flips `isSubmitted` to `true`, leaving
+  every other field — `vessel`, `tripEndDate`, `payload`, `checkpointRawValue` — untouched) and
+  `allRecords()` (every persisted draft, submitted or not — see ADR-0015's merge, which now reads
+  `allRecords()` instead of `allUnsentDrafts()`).
+- `CheckYourAnswersViewModel.submit(isOnline:)`'s online-success path now calls
+  `markSubmitted(localID:)` instead of `deleteDraft(localID:)`.
+- `RecordsMerging.row(for:)` renders a `isSubmitted` summary as `.submitted` (not `.unsent`) with no
+  resumable `localID` (a submitted row is inert on tap, matching ADR-0015 §5's existing rule that
+  `entryRoute(for:)` only resolves for `.unsent`).
+- The already-captured `tripEndDate`/`vessel` are preserved exactly as last saved, so the row keeps
+  showing its correct trip end date rather than reverting to the "—" placeholder.
+
+Coverage added: `CatchRecordDraftStoreTests` (`markSubmitted`/`allRecords`, unknown-`localID` no-op),
+`CheckYourAnswersViewModelTests` (submit-success now asserts retention, not deletion), and
+`RecordsRepositoryTests` (a submitted local draft still renders, end to end, as a `.submitted` Home
+row) — meeting the project's ≥95% core-logic coverage target. No new ADR was raised; this is a bug
+fix to the persistence/merge behaviour this ADR and ADR-0015 already describe, not a new decision.
+
 ## References
 
 - ADR-0004 (API-shaped stub seam pattern, reused here for `CatchRecordDraftStoring`).

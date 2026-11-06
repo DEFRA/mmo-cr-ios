@@ -133,4 +133,36 @@ final class GearMeasurementsViewModelTests: XCTestCase {
         XCTAssertEqual(router.path, [.checkYourAnswers(referenceNumber: referenceNumber)])
         XCTAssertFalse(draft.returnToCheckYourAnswers)
     }
+
+    // MARK: - Per-trip variable measurements never leak into the favourite (see ADR-0023)
+
+    /// Reached via "Change" from Check your answers, this gear's own `GearCatch.gear` already
+    /// carries a per-trip variable-measurement value (e.g. "times shot") captured earlier in this
+    /// same trip. `submit()` must still write that value back into the **draft** unchanged, but
+    /// must clear it from the copy saved to **favourites** — a per-trip value must never persist
+    /// into the favourite and reappear pre-filled on a future trip.
+    func test_submit_clearsVariableMeasurementValues_whenSavingToFavourites_butKeepsThemInTheDraft() async {
+        let router = CatchRecordRouter()
+        let gearWithCapturedVariableValue = GearOption.seineNets.withVariableMeasurements([
+            GearMeasurement(id: "timesShot", labelKey: "catchRecord.gear.variableMeasurement.timesShot", value: 5)
+        ])
+        let draft = CatchRecordDraft()
+        draft.gearCatches = [GearCatch(gear: gearWithCapturedVariableValue)]
+        let favourites = StubFavouriteGearProvider()
+        let sut = GearMeasurementsViewModel(
+            gear: gearWithCapturedVariableValue,
+            vessel: vessel,
+            referenceNumber: referenceNumber,
+            router: router,
+            favouriteGears: favourites,
+            draft: draft
+        )
+        sut.entries["meshSize"] = "100"
+
+        await sut.submit()
+
+        let saved = try? await favourites.favouriteGears()
+        XCTAssertEqual(saved?.first?.variableMeasurements.first?.value, nil)
+        XCTAssertEqual(draft.gearCatches.first?.gear.variableMeasurements.first?.value, 5)
+    }
 }

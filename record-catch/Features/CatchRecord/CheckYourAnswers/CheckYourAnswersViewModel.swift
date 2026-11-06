@@ -13,14 +13,15 @@ import Foundation
 /// notice/bullets shown beneath the summary are informational only (there is no separate
 /// confirmation checkbox), so "Accept and submit trip details" calls `submit(isOnline:)` directly.
 /// If the device is online, this (stubbed) calls `CatchRecordSubmissionServicing` and, on success,
-/// deletes the persisted local draft (fire-and-forget) so it no longer appears as an Unsent row on
-/// Home (see ADR-0014/0015) and routes to `submissionSuccess`. A transient/offline *service*
-/// failure surfaces a recoverable inline error and does not navigate (and leaves the persisted
-/// draft untouched, so it remains resumable), matching the `saveFailed` pattern used elsewhere in
-/// this module (e.g. `GearMeasurementsViewModel`). If the device has **no connectivity at all**
-/// (BR-SUB-008/AC10/AC11), the submission service is never called: the draft is (re)saved to be
-/// certain it is not lost, and the journey routes to `submissionSaved` instead — a truthful "saved
-/// on this device" screen, not the green submitted confirmation.
+/// flags the persisted local draft as submitted (fire-and-forget — see
+/// `CatchRecordDraftStoring.markSubmitted(localID:)`) so it keeps showing on Home as `.submitted`
+/// rather than `.unsent` (see ADR-0014/0015), then routes to `submissionSuccess`. A
+/// transient/offline *service* failure surfaces a recoverable inline error and does not navigate
+/// (and leaves the persisted draft untouched, so it remains resumable), matching the `saveFailed`
+/// pattern used elsewhere in this module (e.g. `GearMeasurementsViewModel`). If the device has
+/// **no connectivity at all** (BR-SUB-008/AC10/AC11), the submission service is never called: the
+/// draft is (re)saved to be certain it is not lost, and the journey routes to `submissionSaved`
+/// instead — a truthful "saved on this device" screen, not the green submitted confirmation.
 @MainActor
 @Observable
 final class CheckYourAnswersViewModel {
@@ -177,7 +178,7 @@ final class CheckYourAnswersViewModel {
         do {
             try await submissionService.submit(referenceNumber: referenceNumber)
             let localID = draft.localID
-            Task { try? await draftStore.deleteDraft(localID: localID) }
+            Task { try? await draftStore.markSubmitted(localID: localID) }
             router.push(.submissionSuccess(referenceNumber: referenceNumber))
         } catch {
             submitFailed = true

@@ -2051,6 +2051,42 @@
         }
       }
     },
+    "catchRecord.nearestAreas.heading": {
+      "comment": "Heading for the 'Select the statistical sub area…' nearest-areas screen (CatchLocationNearestAreasView), reached from the catch-location map's 'Other' button. %@ is the gear's description with measurements (see GearOption.descriptionWithMeasurements), matching catchRecord.catchLocation.heading's placeholder. Copy follows the supplied Figma design as-is (a recorded deviation from GOV.UK question-heading style, which avoids a trailing '?' on an instruction) — see docs/design-specs/create-catch-record.md.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Dewiswch yr is-ardal ystadegol lle cafodd y rhan fwyaf o'ch dalfa ei dal gan ddefnyddio %@?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select the statistical sub area where the majority of your catch was caught using %@?"
+          }
+        }
+      }
+    },
+    "catchRecord.nearestAreas.validation.none": {
+      "comment": "Inline validation error on the nearest-areas screen when 'Save and continue' is pressed with nothing selected (no area and not 'Other') — CatchLocationNearestAreasValidation.errorKey(for:).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Dewiswch yr is-ardal ystadegol lle cafodd y rhan fwyaf o'ch dalfa ei dal"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select the statistical sub area where most of your catch was caught"
+          }
+        }
+      }
+    },
     "catchRecord.saveContinue": {
       "comment": "Primary button title across the Create a catch record journey.",
       "extractionState": "manual",
@@ -3006,37 +3042,109 @@
       }
     },
     "catchRecord.submissionSaved.body": {
-      "comment": "Body copy explaining the record is saved on-device and not yet sent. Deliberately does not promise automatic background submission on reconnect — that capability does not exist yet (see ADR-0019 'Follow-up'); the user is told to open the app again to submit once back online.",
+      "comment": "Paragraph explaining the record is saved on-device and will be sent automatically once back online. Rendered as plain body copy beneath the sub-heading (no longer inside the WarningBox — see catchRecord.submissionSaved.warning for the 24-hour reminder now shown there).",
       "extractionState": "manual",
       "localizations": {
         "cy": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Nid oes cysylltiad rhyngrwyd, felly nid yw eich cofnod wedi'i gyflwyno eto. Mae wedi'i gadw ar y ddyfais hon — agorwch yr ap a'i gyflwyno eto unwaith y byddwch yn ôl ar-lein."
+            "value": "Mae eich cofnod dalfa wedi'i gadw a bydd yn cael ei anfon yn awtomatig y tro nesaf y bydd gennych signal symudol neu gysylltiad Wi-Fi."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "There's no internet connection, so your record has not been submitted yet. It's saved on this device — open the app and submit it again once you're back online."
+            "value": "Your catch record has been saved and will be sent automatically when you next have a mobile signal or Wi-Fi connection."
+          }
+        }
+      }
+    },
+    "catchRecord.submissionSaved.checkRecordsBody": {
+      "comment": "Continuation sentence directly after the 'Check your catch records' link.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "i wneud yn siŵr bod y statws yn newid i Wedi'i gyflwyno. Chi sy'n gyfrifol am wneud yn siŵr ein bod yn ei dderbyn."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "to make sure the status changes to Submitted. You are responsible for making sure we receive it."
+          }
+        }
+      }
+    },
+    "catchRecord.submissionSaved.checkRecordsLink": {
+      "comment": "Standalone tappable link (not in-string markdown) that returns to Home/the catch records list, immediately followed by catchRecord.submissionSaved.checkRecordsBody.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Gwiriwch eich cofnodion dalfa"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check your catch records"
           }
         }
       }
     },
     "catchRecord.submissionSaved.heading": {
-      "comment": "H1 for the screen shown when 'Accept and submit trip details' is confirmed while the device is offline: the record is kept locally, not submitted (BR-SUB-008/AC10/AC11).",
+      "comment": "H1 rendered inside the blue confirmation panel on the screen shown when 'Accept and submit trip details' is confirmed while the device is offline: the record is kept locally, not submitted (BR-SUB-008/AC10/AC11).",
       "extractionState": "manual",
       "localizations": {
         "cy": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Mae eich cofnod dalfa wedi'i gadw"
+            "value": "Mae eich cofnod dalfa wedi'i gofnodi"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your catch record has been saved"
+            "value": "Your catch record has been recorded"
+          }
+        }
+      }
+    },
+    "catchRecord.submissionSaved.referenceLabel": {
+      "comment": "Label above the reference number inside the blue confirmation panel (mirrors catchRecord.submissionSuccess.referenceLabel).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cyfeirnod eich cofnod dalfa"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your catch record reference"
+          }
+        }
+      }
+    },
+    "catchRecord.submissionSaved.sendHeading": {
+      "comment": "Sub-heading introducing the explanation of what the user still needs to do while offline.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Anfonwch eich cofnod dalfa i gwblhau'r cyflwyniad hwn"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send your catch record to complete this submission"
           }
         }
       }
@@ -3055,6 +3163,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "View your catch records"
+          }
+        }
+      }
+    },
+    "catchRecord.submissionSaved.warning": {
+      "comment": "Message shown inside the 'Important' WarningBox, reminding the user of the 24-hour submission window even though this record is only saved, not yet sent.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Rhaid i chi gofnodi'ch dalfa o fewn 24 awr i'r glanio."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You must record your catch within 24 hours of landing."
           }
         }
       }

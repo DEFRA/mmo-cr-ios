@@ -24,6 +24,29 @@ struct UITestRootView<ProductionRoot: View>: View {
     private let launchArguments: LaunchArguments
     private let productionRoot: () -> ProductionRoot
 
+    // The `-uiTest*` stub providers below are held in `@State` — created once the first time this
+    // view appears, then preserved across any later re-render of `body` — rather than constructed
+    // inline in `body` as plain expressions. `body` is a computed property: any ancestor
+    // re-render (e.g. a scene-phase blip, or any `@Observable` change higher in the tree) causes
+    // SwiftUI to re-evaluate it, which would otherwise re-run `StubFavouritePortsProvider()` and
+    // hand `CatchRecordHostView` a brand-new, *empty* instance — silently discarding whatever a
+    // mid-journey screen had just added (e.g. `-uiTestCatchRecordAddPort` adding "Newlyn" to
+    // favourites on the Add-port screen, then losing it by the time the Select-port screen reads
+    // favourites back). `@State`'s initial-value expression only runs once for a given view
+    // identity, so this mirrors `CatchRecordHostView`'s own `autosaver` ("held in @State so the
+    // same instance ... persists across view updates").
+    @State private var addPortFavouritePorts = StubFavouritePortsProvider()
+    @State private var confirmSamePortFavouritePorts = StubFavouritePortsProvider()
+    @State private var selectPortFavouritePorts = StubFavouritePortsProvider(initialFavourites: [PortOption(name: "Hastings")])
+    @State private var selectGearFavouriteGears = StubFavouriteGearProvider(initialFavourites: [
+        GearOption.seineNets.withRequiredMeasurements([
+            GearMeasurement(id: "meshSize", labelKey: "catchRecord.gear.measurement.meshSize", value: 100)
+        ])
+    ])
+    @State private var speciesWeightsFavouriteSpecies = StubFavouriteSpeciesProvider(initialFavourites: [.atlanticCod])
+    @State private var landingStorageFavouriteSpecies = StubFavouriteSpeciesProvider(initialFavourites: [.atlanticCod])
+    @State private var recordSpeciesWeightsFavouriteSpecies = StubFavouriteSpeciesProvider(initialFavourites: Self.seedRemoveSpeciesList)
+
     init(
         launchArguments: LaunchArguments = .current,
         @ViewBuilder productionRoot: @escaping () -> ProductionRoot
@@ -41,7 +64,7 @@ struct UITestRootView<ProductionRoot: View>: View {
             // No favourites yet → Add-port screen first.
             CatchRecordHostView(
                 initialRoute: .addPort(vessel: "ACHILLES", referenceNumber: "A1234520260727150815", returnPhase: nil),
-                favouritePorts: StubFavouritePortsProvider()
+                favouritePorts: addPortFavouritePorts
             )
         } else if launchArguments.contains(.catchRecordConfirmSamePort) {
             // Seeds straight to the "Was <port> your departure and return port?" confirmation
@@ -52,24 +75,33 @@ struct UITestRootView<ProductionRoot: View>: View {
                     referenceNumber: "A1234520260727150815",
                     port: PortOption(name: "Hastings")
                 ),
-                favouritePorts: StubFavouritePortsProvider()
+                favouritePorts: confirmSamePortFavouritePorts
             )
         } else if launchArguments.contains(.catchRecordSelectPort) {
             // Seeded favourites → Select-departure-port screen first.
             CatchRecordHostView(
                 initialRoute: .selectPort(phase: .departure, vessel: "ACHILLES", referenceNumber: "A1234520260727150815"),
-                favouritePorts: StubFavouritePortsProvider(initialFavourites: [PortOption(name: "Hastings")])
+                favouritePorts: selectPortFavouritePorts
             )
         } else if launchArguments.contains(.catchRecordSelectGear) {
             // Seeded favourite gear → "What gear did you use?" screen first, for UI testing the
             // per-trip variable-measurement conditional reveal and its validation.
             CatchRecordHostView(
                 initialRoute: .selectGear(vessel: "ACHILLES", referenceNumber: "A1234520260727150815"),
-                favouriteGears: StubFavouriteGearProvider(initialFavourites: [
-                    GearOption.seineNets.withRequiredMeasurements([
-                        GearMeasurement(id: "meshSize", labelKey: "catchRecord.gear.measurement.meshSize", value: 100)
-                    ])
-                ])
+                favouriteGears: selectGearFavouriteGears
+            )
+        } else if launchArguments.contains(.catchRecordCatchLocationNearestAreas) {
+            // Seeds straight to the "Select the statistical sub area…" nearest-areas screen
+            // reached from the catch-location map's "Other" button, with a departure port (so the
+            // bundled, offline nearest-areas lookup has a real coordinate to rank against) for UI
+            // testing its radio list/"Other" option/validation without driving the map by hand.
+            CatchRecordHostView(
+                initialRoute: .catchLocationNearestAreas(
+                    gear: .seineNets,
+                    vessel: "ACHILLES",
+                    referenceNumber: "A1234520260727150815"
+                ),
+                draft: Self.seedCatchLocationNearestAreasDraft
             )
         } else if launchArguments.contains(.catchRecordCatchLocationManualEntry) {
             // Seeds straight to the manual "Enter the statistical sub area…" screen reached from
@@ -91,7 +123,7 @@ struct UITestRootView<ProductionRoot: View>: View {
                     vessel: "ACHILLES",
                     referenceNumber: "A1234520260727150815"
                 ),
-                favouriteSpecies: StubFavouriteSpeciesProvider(initialFavourites: [.atlanticCod])
+                favouriteSpecies: speciesWeightsFavouriteSpecies
             )
         } else if launchArguments.contains(.catchRecordLandingStorage) {
             // Seeds straight to the "Is there any catch you will not be landing straight away?"
@@ -99,7 +131,7 @@ struct UITestRootView<ProductionRoot: View>: View {
             // has an option to tick.
             CatchRecordHostView(
                 initialRoute: .landingStorage(referenceNumber: "A1234520260727150815"),
-                favouriteSpecies: StubFavouriteSpeciesProvider(initialFavourites: [.atlanticCod])
+                favouriteSpecies: landingStorageFavouriteSpecies
             )
         } else if launchArguments.contains(.catchRecordSubmissionNudge) {
             // Seeds straight to the late-submission nudge screen (return date more than 24 hours
@@ -124,7 +156,7 @@ struct UITestRootView<ProductionRoot: View>: View {
             // shown, for UI testing that it navigates to the Remove-species screen and back.
             CatchRecordHostView(
                 initialRoute: .recordSpeciesWeights(gear: .seineNets, vessel: "ACHILLES", referenceNumber: "A1234520260727150815"),
-                favouriteSpecies: StubFavouriteSpeciesProvider(initialFavourites: Self.seedRemoveSpeciesList),
+                favouriteSpecies: recordSpeciesWeightsFavouriteSpecies,
                 draft: Self.seedRemoveSpeciesDraft
             )
         } else if launchArguments.contains(.catchRecordRemoveSpecies) {
@@ -178,6 +210,20 @@ struct UITestRootView<ProductionRoot: View>: View {
                 sortDate: Date(timeIntervalSince1970: TimeInterval(7 - index))
             )
         }
+    }
+
+    /// Draft with a known departure port (Plymouth) used to seed
+    /// `-uiTestCatchRecordCatchLocationNearestAreas`, so the bundled, offline nearest-areas lookup
+    /// (`BundledNearestSubrectangleProvider`) has a real coordinate to rank the sea-overlapping
+    /// subrectangle layer against, producing a deterministic, non-empty radio list.
+    @MainActor
+    private static var seedCatchLocationNearestAreasDraft: CatchRecordDraft {
+        let draft = CatchRecordDraft()
+        draft.departurePort = PortOption(
+            name: "Plymouth",
+            coordinate: PortCoordinate(latitude: 50.3660, longitude: -4.1427)
+        )
+        return draft
     }
 
     /// Fully-populated `CatchRecordDraft` used to seed `-uiTestCatchRecordCheckYourAnswers`, so the

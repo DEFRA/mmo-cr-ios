@@ -14,17 +14,20 @@ struct CatchRecordHostView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var router: CatchRecordRouter
-    /// Shared, journey-scoped favourite ports store so a port added on the Add-port screen is
-    /// visible on the select screens (offline-first, local source of truth — see ADR-0004).
-    /// A reference type shared across every screen in the stack.
-    @State private var favouritePorts: FavouritePortsProviding
-    /// Shared, journey-scoped favourite gears store so a gear added on the measurements screen is
-    /// visible on the select screen (offline-first, local source of truth — mirrors ports).
-    @State private var favouriteGears: FavouriteGearProviding
-    /// Shared, journey-scoped favourite species store so a species added on the Add-species screen,
-    /// and weights recorded on the weights screen, are visible on the summary screen (offline-first,
-    /// local source of truth — mirrors gears).
-    @State private var favouriteSpecies: FavouriteSpeciesProviding
+    /// Injectable override for the journey-scoped favourite ports store (see ADR-0023: favourites
+    /// are per-user, not per-trip). `nil` by default, in which case a
+    /// `SwiftDataFavouritePortsProvider` bound to the environment's `modelContext` is used —
+    /// deferred to a computed property since `modelContext` is not available until the view
+    /// resolves its environment (i.e. not yet at `init`), mirroring `draftStore` below. UI tests
+    /// inject a seeded `StubFavouritePortsProvider` instead, to exercise the
+    /// has-favourites/no-favourites branches deterministically.
+    private let injectedFavouritePorts: FavouritePortsProviding?
+    /// Injectable override for the journey-scoped favourite gears store — see
+    /// `injectedFavouritePorts` above (mirrors it exactly).
+    private let injectedFavouriteGears: FavouriteGearProviding?
+    /// Injectable override for the journey-scoped favourite species store — see
+    /// `injectedFavouritePorts` above (mirrors it exactly).
+    private let injectedFavouriteSpecies: FavouriteSpeciesProviding?
     /// Shared, journey-scoped draft accumulating the in-progress catch record (vessel, dates,
     /// ports, gear and species) so it is available to every screen in the stack without re-deriving
     /// it from route payloads. Offline-first, local source of truth — persisted on-device after
@@ -45,8 +48,26 @@ struct CatchRecordHostView: View {
         injectedDraftStore ?? SwiftDataCatchRecordDraftStore(modelContext: modelContext)
     }
 
+    /// The favourite ports store for this journey - the injected override (tests/previews), or a
+    /// `SwiftDataFavouritePortsProvider` bound to the environment's `modelContext` in production
+    /// (see `injectedFavouritePorts`, ADR-0023). Recomputed, not cached: every instance wraps the
+    /// same `modelContext`, so reads/writes from any screen in the stack stay consistent without
+    /// needing a single shared object identity (unlike the old in-memory `StubFavouriteGearProvider`).
+    private var favouritePorts: FavouritePortsProviding {
+        injectedFavouritePorts ?? SwiftDataFavouritePortsProvider(modelContext: modelContext)
+    }
+    /// The favourite gears store for this journey — see `favouritePorts` above (mirrors it exactly).
+    private var favouriteGears: FavouriteGearProviding {
+        injectedFavouriteGears ?? SwiftDataFavouriteGearProvider(modelContext: modelContext)
+    }
+    /// The favourite species store for this journey — see `favouritePorts` above (mirrors it
+    /// exactly).
+    private var favouriteSpecies: FavouriteSpeciesProviding {
+        injectedFavouriteSpecies ?? SwiftDataFavouriteSpeciesProvider(modelContext: modelContext)
+    }
+
     /// Debounced autosave for in-progress, not-yet-routed edits (see `DraftAutosaver`,
-    /// BR-SUB-008/AC14). Created once, lazily, the first time it is needed — `modelContext` (via
+    /// BR-SUB-008/AC14). Created once, lazily, the first time it is needed - `modelContext` (via
     /// `draftStore`) is not available until the view resolves its environment, i.e. not yet at
     /// `init` — and held in `@State` so the same instance (and its debounce timer) persists across
     /// view updates for the lifetime of this journey.
@@ -62,10 +83,14 @@ struct CatchRecordHostView: View {
     /// - Parameters:
     ///   - initialRoute: optional route to seed the stack with at launch, used by UI tests to jump
     ///     straight to a screen (see `-uiTestCatchRecord*`).
-    ///   - favouritePorts: injectable favourites store; UI tests seed it to exercise the
-    ///     has-favourites vs no-favourites branches.
-    ///   - favouriteGears: injectable favourite gears store; seeded by UI tests as above.
-    ///   - favouriteSpecies: injectable favourite species store; seeded by UI tests as above.
+    ///   - favouritePorts: injectable override for the per-user favourite ports store. Defaults to
+    ///     `nil`, in which case a `SwiftDataFavouritePortsProvider` is used (see ADR-0023). UI tests
+    ///     pass a seeded `StubFavouritePortsProvider` to exercise the has-favourites vs
+    ///     no-favourites branches deterministically.
+    ///   - favouriteGears: injectable override for the per-user favourite gears store; see
+    ///     `favouritePorts` above.
+    ///   - favouriteSpecies: injectable override for the per-user favourite species store; see
+    ///     `favouritePorts` above.
     ///   - draft: injectable journey draft; UI tests can seed it to jump into a mid-journey state.
     ///   - draftStore: injectable on-device draft persistence; UI tests/previews can supply an
     ///     `InMemoryCatchRecordDraftStore` instead of a real `ModelContainer`.
@@ -74,9 +99,9 @@ struct CatchRecordHostView: View {
     ///     `draftStore` state.
     init(
         initialRoute: CatchRecordRoute? = nil,
-        favouritePorts: FavouritePortsProviding = StubFavouritePortsProvider(),
-        favouriteGears: FavouriteGearProviding = StubFavouriteGearProvider(),
-        favouriteSpecies: FavouriteSpeciesProviding = StubFavouriteSpeciesProvider(),
+        favouritePorts: FavouritePortsProviding? = nil,
+        favouriteGears: FavouriteGearProviding? = nil,
+        favouriteSpecies: FavouriteSpeciesProviding? = nil,
         draft: CatchRecordDraft? = nil,
         draftStore: CatchRecordDraftStoring? = nil,
         recordsProvider: RecordsProviding? = nil
@@ -86,9 +111,9 @@ struct CatchRecordHostView: View {
             router.push(initialRoute)
         }
         _router = State(wrappedValue: router)
-        _favouritePorts = State(wrappedValue: favouritePorts)
-        _favouriteGears = State(wrappedValue: favouriteGears)
-        _favouriteSpecies = State(wrappedValue: favouriteSpecies)
+        injectedFavouritePorts = favouritePorts
+        injectedFavouriteGears = favouriteGears
+        injectedFavouriteSpecies = favouriteSpecies
         _draft = State(wrappedValue: draft ?? CatchRecordDraft())
         injectedDraftStore = draftStore
         injectedRecordsProvider = recordsProvider
@@ -158,7 +183,8 @@ struct CatchRecordHostView: View {
             vesselAndTripDestination(for: route)
         case .addPort, .confirmSamePort, .selectPort, .selectGear, .addGear, .gearMeasurements:
             portAndGearDestination(for: route)
-        case .catchLocation, .catchLocationManualEntry, .recordSpeciesWeights, .addSpecies, .removeSpecies:
+        case .catchLocation, .catchLocationNearestAreas, .catchLocationManualEntry,
+             .recordSpeciesWeights, .addSpecies, .removeSpecies:
             speciesDestination(for: route)
         case .landingStorage, .landingStorageSpecies, .checkYourAnswers,
              .submissionSuccess, .submissionSaved:
@@ -278,6 +304,15 @@ struct CatchRecordHostView: View {
         switch route {
         case .catchLocation(let gear, let vessel, let referenceNumber):
             CatchLocationView(
+                gear: gear,
+                vessel: vessel,
+                referenceNumber: referenceNumber,
+                router: router,
+                favouriteSpecies: favouriteSpecies,
+                draft: draft
+            )
+        case .catchLocationNearestAreas(let gear, let vessel, let referenceNumber):
+            CatchLocationNearestAreasView(
                 gear: gear,
                 vessel: vessel,
                 referenceNumber: referenceNumber,

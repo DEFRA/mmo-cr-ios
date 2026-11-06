@@ -17,10 +17,11 @@ import SwiftData
 final class CatchRecordEntity {
     @Attribute(.unique) var localID: UUID
     var lastEditedAt: Date
-    /// Whether this record has been submitted. Submitted records are removed from the Unsent list
-    /// (see `CatchRecordDraftStoring.allUnsentDrafts()`); this app currently deletes on submission
-    /// rather than retaining submitted rows locally (see ADR-0014 — the server is the source of
-    /// truth for submitted/amended/late records in this phase).
+    /// Whether this record has been submitted. A submitted record is retained (not deleted) and
+    /// excluded from the Unsent list (`CatchRecordDraftStoring.allUnsentDrafts()`), but still
+    /// included — as `.submitted` — in the full local contribution to Home's merged list
+    /// (`CatchRecordDraftStoring.allRecords()`, `RecordsMerging.row(for:)`) until a real backend
+    /// exists and becomes the source of truth for it (see ADR-0014/0015).
     var isSubmitted: Bool
     /// Denormalised for cheap Home-row rendering (see the note above). `nil` until captured.
     var vessel: String?

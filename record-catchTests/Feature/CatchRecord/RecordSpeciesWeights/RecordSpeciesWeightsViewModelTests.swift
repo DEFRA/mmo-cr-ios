@@ -349,6 +349,31 @@ final class RecordSpeciesWeightsViewModelTests: XCTestCase {
         XCTAssertTrue(draft.gearCatches[1].speciesCaught.isEmpty)
     }
 
+    /// Weights are per-trip data, not a per-user favourite (see ADR-0023): `submit()` must save the
+    /// **unweighted** species to `favouriteSpecies`, even though the draft's own copy keeps the
+    /// weight the user just entered.
+    func test_submit_savesUnweightedSpeciesToFavourites_whileDraftKeepsTheWeight() async {
+        let favourites = StubFavouriteSpeciesProvider(initialFavourites: [cod])
+        let draft = singleGearDraft()
+        let sut = RecordSpeciesWeightsViewModel(
+            gear: .seineNets,
+            vessel: vessel,
+            referenceNumber: referenceNumber,
+            router: CatchRecordRouter(),
+            favouriteSpecies: favourites,
+            draft: draft
+        )
+        await sut.loadFavourites()
+        sut.selection = [cod.id]
+        sut.aboveEntries[cod.id] = "250"
+
+        await sut.submit()
+
+        let saved = (try? await favourites.favouriteSpecies()) ?? []
+        XCTAssertEqual(saved.first { $0.id == cod.id }?.weightAboveMinimumKg, "")
+        XCTAssertEqual(draft.gearCatches.first?.speciesCaught.first?.weightAboveMinimumKg, "250")
+    }
+
     // MARK: - Seeding on load (must not leak another gear's weights — see the multi-gear loop bug)
 
     /// Reproduces the reported bug: on a multi-gear trip, looping to the **second** gear's species

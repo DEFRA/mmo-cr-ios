@@ -158,3 +158,39 @@ was already accepted as safe under the original (pre-addendum) ADR-0017 decision
 
 Logged with Delivery Architecture (`delivery.architecture@defra.gov.uk`) per the deviation-
 recording rule, alongside the still-open `.wheel` accessibility re-verification above.
+
+## Addendum (2026-11-03): degenerate single-day range renders a plain `Picker` wheel, not `.compact`
+
+Product/engineering asked for the single-day return-date screen to keep the **scrolling wheel**
+appearance used by the normal (multi-day) case — the 2026-10-12 `.compact` fallback renders as a
+static grey capsule/button, which reads as a different, unexplained control on the one screen
+users are most likely to hit (the common same-day-trip journey).
+
+**Revised fix:** `TripDatePicker` still detects the collapsed `range` via `hasOnlySelectableDay`,
+but instead of switching `DatePicker`'s `.datePickerStyle` to `.compact`, it renders a **different,
+simpler control** for that case — a plain SwiftUI `Picker` (`singleDayWheel`) with
+`.pickerStyle(.wheel)` and a single row containing the one valid date's long-formatted,
+locale-aware label (reusing `CatchRecordDateRules.longDateString`). This is **not** `DatePicker`'s
+compound day/month/year `.wheel` machinery — the thing the 2026-10-12 addendum identified as
+unstable with zero scrollable rows — it is an ordinary single-column `UIPickerView` with one row,
+a configuration used throughout iOS without the reported failure mode. The same `<prefix>.picker`
+accessibility identifier, label and binding are preserved either way, so callers and existing tests
+are unaffected.
+
+**Residual risk / required follow-up before production:** this is still a different internal
+control (`Picker` vs `DatePicker`) for the single-day case, so it is not simply "the same control,
+different style" as the 2026-10-12 fix was. Before shipping:
+
+- Manually verify on-device that the single-row `.wheel` `Picker` does not reproduce the
+  `TUIKeyplaneView`/`TUIPredictionViewCell` constraint failures seen previously (expected not to,
+  since it has no synchronised day/month/year columns, but must be confirmed rather than assumed).
+- Include it in the still-open Dynamic Type (200%)/VoiceOver/44×44pt pass required for the
+  2026-09-23 `.wheel` addendum — a one-row wheel has the same reflow and adjustable-value-
+  announcement questions as the multi-day wheel.
+- VoiceOver on a single-row, effectively non-interactive wheel should still announce it as an
+  adjustable element with one value; if that reads as confusing to screen-reader users, revisit
+  (e.g. an explicit "only one date available" hint) — raise as a follow-up rather than blocking this
+  fix, since it is no worse than the multi-day wheel's existing open accessibility action item.
+
+Logged with Delivery Architecture (`delivery.architecture@defra.gov.uk`) per the deviation-
+recording rule.

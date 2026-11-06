@@ -71,7 +71,7 @@ final class SettingsViewModel {
         router: SettingsRouter? = nil,
         preferenceStore: AnalyticsPreferenceStoring = UserDefaultsAnalyticsPreferenceStore(),
         gearUsed: String? = nil,
-        onSignOut: @escaping () -> Void = {}
+        onSignOut: @escaping () -> Void = { /* no-op default: previews/tests that don't exercise sign-out */ }
     ) {
         self.router = router ?? SettingsRouter()
         self.preferenceStore = preferenceStore
@@ -90,7 +90,7 @@ final class SettingsViewModel {
         router: SettingsRouter? = nil,
         preferenceStore: AnalyticsPreferenceStoring = UserDefaultsAnalyticsPreferenceStore(),
         gearUsed: String? = nil,
-        onSignOut: @escaping () -> Void = {},
+        onSignOut: @escaping () -> Void = { /* no-op default: previews/tests that don't exercise sign-out */ },
         debugReferenceDataClient: ReferenceDataFetching
     ) {
         self.router = router ?? SettingsRouter()

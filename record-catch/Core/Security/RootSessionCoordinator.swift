@@ -20,6 +20,16 @@ enum RootPhase: Equatable {
     case home
 }
 
+/// Bundles the four local-session/offline-re-entry store dependencies (ADR-0009/ADR-0022) into
+/// one value, keeping `RootSessionCoordinator.init` within SonarCloud's 7-parameter limit
+/// (swift:S107) without changing how the class addresses each store individually internally.
+struct SessionStores {
+    let sessionStore: LocalSessionStoring
+    let secretStore: ReentrySecretStoring
+    let preferenceStore: BiometricPreferenceStoring
+    let verificationStore: SessionVerificationStoring
+}
+
 @MainActor
 @Observable
 final class RootSessionCoordinator {
@@ -43,20 +53,17 @@ final class RootSessionCoordinator {
     init(
         authenticator: any Authenticating,
         biometricAuthenticator: BiometricAuthenticating,
-        sessionStore: LocalSessionStoring,
-        secretStore: ReentrySecretStoring,
-        preferenceStore: BiometricPreferenceStoring,
-        verificationStore: SessionVerificationStoring,
+        stores: SessionStores,
         connectivityMonitor: ConnectivityMonitoring,
         offlineAccessPolicy: OfflineAccessPolicy = .current,
         skipsBackgroundVerification: Bool = false
     ) {
         self.authenticator = authenticator
         self.biometricAuthenticator = biometricAuthenticator
-        self.sessionStore = sessionStore
-        self.secretStore = secretStore
-        self.preferenceStore = preferenceStore
-        self.verificationStore = verificationStore
+        self.sessionStore = stores.sessionStore
+        self.secretStore = stores.secretStore
+        self.preferenceStore = stores.preferenceStore
+        self.verificationStore = stores.verificationStore
         self.connectivityMonitor = connectivityMonitor
         self.offlineAccessPolicy = offlineAccessPolicy
         self.skipsBackgroundVerification = skipsBackgroundVerification
@@ -111,7 +118,7 @@ final class RootSessionCoordinator {
     /// Runs after a successful sign-in: begins the local session, records the verification time,
     /// and — if the user has previously opted in to Face ID re-entry — re-provisions the secret
     /// defensively (idempotent — a no-op if one is already provisioned).
-    func handleSignIn(_ account: AuthenticatedAccount) {
+    func handleSignIn(_: AuthenticatedAccount) {
         try? sessionStore.beginSession()
         try? verificationStore.markVerified(.now)
         if preferenceStore.isFaceIDEnabled() {
@@ -215,10 +222,12 @@ extension RootSessionCoordinator {
             return RootSessionCoordinator(
                 authenticator: authenticator,
                 biometricAuthenticator: FakeBiometricAuthenticator(availability: .available(.faceID)),
-                sessionStore: InMemoryLocalSessionStore(hasSession: true),
-                secretStore: InMemoryReentrySecretStore(exists: true),
-                preferenceStore: InMemoryBiometricPreferenceStore(initialValue: true),
-                verificationStore: InMemorySessionVerificationStore(storedDate: .now),
+                stores: SessionStores(
+                    sessionStore: InMemoryLocalSessionStore(hasSession: true),
+                    secretStore: InMemoryReentrySecretStore(exists: true),
+                    preferenceStore: InMemoryBiometricPreferenceStore(initialValue: true),
+                    verificationStore: InMemorySessionVerificationStore(storedDate: .now)
+                ),
                 connectivityMonitor: StubConnectivityMonitor(isOnline: true),
                 skipsBackgroundVerification: true
             )
@@ -228,10 +237,12 @@ extension RootSessionCoordinator {
             return RootSessionCoordinator(
                 authenticator: authenticator,
                 biometricAuthenticator: FakeBiometricAuthenticator(availability: .unavailable(.noBiometryEnrolled)),
-                sessionStore: InMemoryLocalSessionStore(hasSession: true),
-                secretStore: InMemoryReentrySecretStore(exists: false),
-                preferenceStore: InMemoryBiometricPreferenceStore(initialValue: false),
-                verificationStore: InMemorySessionVerificationStore(storedDate: .now),
+                stores: SessionStores(
+                    sessionStore: InMemoryLocalSessionStore(hasSession: true),
+                    secretStore: InMemoryReentrySecretStore(exists: false),
+                    preferenceStore: InMemoryBiometricPreferenceStore(initialValue: false),
+                    verificationStore: InMemorySessionVerificationStore(storedDate: .now)
+                ),
                 connectivityMonitor: StubConnectivityMonitor(isOnline: true),
                 skipsBackgroundVerification: true
             )
@@ -254,10 +265,12 @@ extension RootSessionCoordinator {
         return RootSessionCoordinator(
             authenticator: authenticator,
             biometricAuthenticator: LABiometricAuthenticator(),
-            sessionStore: KeychainLocalSessionStore(),
-            secretStore: KeychainReentrySecretStore(),
-            preferenceStore: UserDefaultsBiometricPreferenceStore(),
-            verificationStore: KeychainSessionVerificationStore(),
+            stores: SessionStores(
+                sessionStore: KeychainLocalSessionStore(),
+                secretStore: KeychainReentrySecretStore(),
+                preferenceStore: UserDefaultsBiometricPreferenceStore(),
+                verificationStore: KeychainSessionVerificationStore()
+            ),
             connectivityMonitor: resolvedConnectivityMonitor
         )
     }

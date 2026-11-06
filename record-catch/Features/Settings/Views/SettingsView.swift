@@ -29,7 +29,7 @@ struct SettingsView: View {
     ///   - onSignOut: forwarded to `SettingsViewModel` when `viewModel` is `nil` (ADR-0022 §9).
     ///     Ignored when an explicit `viewModel` is supplied — construct that view model with its
     ///     own `onSignOut` instead.
-    init(router: SettingsRouter? = nil, viewModel: SettingsViewModel? = nil, onSignOut: @escaping () -> Void = {}) {
+    init(router: SettingsRouter? = nil, viewModel: SettingsViewModel? = nil, onSignOut: @escaping () -> Void = { /* no-op default: previews/tests that don't exercise sign-out */ }) {
         _viewModel = State(initialValue: viewModel ?? SettingsViewModel(router: router, onSignOut: onSignOut))
     }
 

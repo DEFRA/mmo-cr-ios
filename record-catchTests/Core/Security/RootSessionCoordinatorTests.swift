@@ -24,10 +24,12 @@ final class RootSessionCoordinatorTests: XCTestCase {
         return RootSessionCoordinator(
             authenticator: resolvedAuthenticator,
             biometricAuthenticator: biometricAuthenticator,
-            sessionStore: sessionStore,
-            secretStore: secretStore,
-            preferenceStore: preferenceStore,
-            verificationStore: verificationStore,
+            stores: SessionStores(
+                sessionStore: sessionStore,
+                secretStore: secretStore,
+                preferenceStore: preferenceStore,
+                verificationStore: verificationStore
+            ),
             connectivityMonitor: resolvedConnectivityMonitor,
             offlineAccessPolicy: offlineAccessPolicy,
             skipsBackgroundVerification: skipsBackgroundVerification

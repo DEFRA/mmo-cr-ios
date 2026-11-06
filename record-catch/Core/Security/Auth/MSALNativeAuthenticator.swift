@@ -194,9 +194,12 @@ extension MSALNativeAuthenticator {
 final class NotConfiguredAuthenticator: Authenticating {
     let hasCachedAccount = false
 
-    func signIn(email: String, password: String) async -> SignInOutcome { .notConfigured }
+    func signIn(email _: String, password _: String) async -> SignInOutcome { .notConfigured }
     func restoreSession() async -> RestoreSessionOutcome { .noAccount }
-    func signOut() async {}
+    func signOut() async {
+        // No-op: sign-in is never configured for this stage (ADR-0022 §6), so there is never a
+        // session to sign out of.
+    }
 }
 
 // MARK: - MSAL delegate → async bridges
@@ -229,10 +232,10 @@ private final class SignInResultDelegate: NSObject, SignInStartDelegate, SignInP
     func onSignInCompleted(result: MSALNativeAuthUserAccountResult) { finish(.completed(result)) }
 
     func onSignInCodeRequired(
-        newState: SignInCodeRequiredState,
-        sentTo: String,
-        channelTargetType: MSALNativeAuthChannelType,
-        codeLength: Int
+        newState _: SignInCodeRequiredState,
+        sentTo _: String,
+        channelTargetType _: MSALNativeAuthChannelType,
+        codeLength _: Int
     ) {
         finish(.codeRequired)
     }
@@ -241,17 +244,17 @@ private final class SignInResultDelegate: NSObject, SignInStartDelegate, SignInP
         finish(.passwordRequired(newState))
     }
 
-    func onSignInAwaitingMFA(authMethods: [MSALAuthMethod], newState: AwaitingMFAState) {
+    func onSignInAwaitingMFA(authMethods _: [MSALAuthMethod], newState _: AwaitingMFAState) {
         finish(.unsupported)
     }
 
-    func onSignInStrongAuthMethodRegistration(authMethods: [MSALAuthMethod], newState: RegisterStrongAuthState) {
+    func onSignInStrongAuthMethodRegistration(authMethods _: [MSALAuthMethod], newState _: RegisterStrongAuthState) {
         finish(.unsupported)
     }
 
     func onSignInStartError(error: SignInStartError) { finish(.failed(error)) }
 
-    func onSignInPasswordRequiredError(error: PasswordRequiredError, newState: SignInPasswordRequiredState?) {
+    func onSignInPasswordRequiredError(error: PasswordRequiredError, newState _: SignInPasswordRequiredState?) {
         finish(.failed(error))
     }
 }

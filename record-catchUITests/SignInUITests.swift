@@ -55,9 +55,13 @@ final class SignInUITests: XCTestCase {
 
         app.buttons[ID.signIn].tap()
 
+        // An empty form never reaches the authenticator (ADR-0022 §3/§8): it fails local
+        // validation first, so "Sign in" stays on screen with inline errors rather than
+        // navigating anywhere. This mirrors `test_signInButton_navigatesToHome_withFilledForm`'s
+        // real, validated path below.
         XCTAssertTrue(
-            element(app, ID.homeCreateRecord).waitForExistence(timeout: 5),
-            "Tapping Sign in should navigate to Home even with an empty form"
+            element(app, ID.trouble).exists,
+            "An empty form should stay on the Sign In screen rather than navigate to Home"
         )
     }
 
@@ -84,6 +88,11 @@ final class SignInUITests: XCTestCase {
     func test_signInButton_navigatesToHome_withFilledForm() {
         let app = XCUIApplication()
         app.forwardReferenceDataAPIToken()
+        // Routes real sign-in through `FakeAuthenticator.makeUITestStub()` (ADR-0022 §10) instead
+        // of the real Entra tenant: any email outside its three reserved test addresses succeeds
+        // immediately, so this exercises the real validate → authenticate → navigate path
+        // end-to-end without a live network dependency.
+        app.launchArguments += ["-uiTestAuthStub"]
         app.launch()
 
         // Type a valid-shaped email + password to demonstrate the form still

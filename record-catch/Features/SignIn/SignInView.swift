@@ -31,7 +31,7 @@ struct SignInView: View {
     ///   explicitly.
     init(
         authenticator: any Authenticating,
-        onSignIn: @escaping (AuthenticatedAccount) -> Void = { _ in }
+        onSignIn: @escaping (AuthenticatedAccount) -> Void = { _ in /* no-op default: previews/tests that don't care about the destination */ }
     ) {
         _viewModel = State(initialValue: SignInViewModel(authenticator: authenticator, onSignedIn: onSignIn))
     }

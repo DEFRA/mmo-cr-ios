@@ -35,7 +35,7 @@ final class FakeAuthenticator: Authenticating {
         self.signInDelayNanoseconds = signInDelayNanoseconds
     }
 
-    func signIn(email: String, password: String) async -> SignInOutcome {
+    func signIn(email _: String, password _: String) async -> SignInOutcome {
         signInCallCount += 1
         if signInDelayNanoseconds > 0 {
             try? await Task.sleep(nanoseconds: signInDelayNanoseconds)
@@ -87,7 +87,7 @@ final class UITestStubAuthenticator: Authenticating {
 
     private(set) var hasCachedAccount = false
 
-    func signIn(email: String, password: String) async -> SignInOutcome {
+    func signIn(email: String, password _: String) async -> SignInOutcome {
         let normalised = SignInValidation.normalisedEmail(email)
         switch normalised {
         case StubEmail.invalidCredentials:

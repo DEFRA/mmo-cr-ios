@@ -268,11 +268,11 @@ final class CatchRecordUITests: XCTestCase {
         app.buttons[ID.departureContinue].tap()
 
         // Return date screen. Departure was accepted unchanged (defaults to today), so the only
-        // legal return date is also today — the range collapses to a single day and the picker
-        // renders in `.compact` style instead of `.wheel` (see `TripDatePicker`: a `.wheel`
-        // `DatePicker` with a single-day range is an unstable UIKit configuration that can
-        // hang/crash on-device the moment it's touched). It stays the same native `DatePicker`
-        // control, just a different style — there is no separate fallback state to assert.
+        // legal return date is also today — the range collapses to a single day and
+        // `TripDatePicker` renders a single-row `.wheel` `Picker` (not `DatePicker`'s compound
+        // day/month/year wheel, which is an unstable UIKit configuration with a zero-scrollable-row
+        // column — see ADR-0017's 2026-10-12/2026-11-03 addenda) under the same accessibility
+        // identifier, so there is no separate fallback state to assert here.
         XCTAssertTrue(element(app, ID.returnHeading).waitForExistence(timeout: 5))
         XCTAssertTrue(element(app, ID.returnPicker).exists)
         app.buttons[ID.returnContinue].tap()
@@ -319,13 +319,21 @@ final class CatchRecordUITests: XCTestCase {
         element(app, "CatchRecord.confirmSamePort.option.no").tap()
 
         // Picking a favourite port on the departure/return screens submits and routes on
-        // immediately — there is no "Save and continue" button on either screen.
+        // immediately — there is no "Save and continue" button on either screen. The radio
+        // options themselves aren't drawn until `SelectPortViewModel.loadFavourites()` (an async
+        // `.task`) finishes, which can run a beat after the static heading text appears — so each
+        // option is waited on explicitly rather than assumed to exist alongside its heading, to
+        // avoid a race against that load.
         XCTAssertTrue(element(app, "CatchRecord.selectPort.departure.heading").waitForExistence(timeout: 5))
-        element(app, "CatchRecord.selectPort.departure.option.newlyn").tap()
+        let departureNewlynOption = element(app, "CatchRecord.selectPort.departure.option.newlyn")
+        XCTAssertTrue(departureNewlynOption.waitForExistence(timeout: 5))
+        departureNewlynOption.tap()
 
         // Return select screen.
         XCTAssertTrue(element(app, "CatchRecord.selectPort.return.heading").waitForExistence(timeout: 5))
-        element(app, "CatchRecord.selectPort.return.option.newlyn").tap()
+        let returnNewlynOption = element(app, "CatchRecord.selectPort.return.option.newlyn")
+        XCTAssertTrue(returnNewlynOption.waitForExistence(timeout: 5))
+        returnNewlynOption.tap()
 
         // With no favourite gears yet, enters the gear sub-journey at the Add-gear screen.
         XCTAssertTrue(element(app, "CatchRecord.addGear.heading").waitForExistence(timeout: 5))

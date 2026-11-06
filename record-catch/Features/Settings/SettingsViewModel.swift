@@ -188,12 +188,15 @@ final class SettingsViewModel {
         showSignOutConfirmation = false
     }
 
-    /// Confirms "Sign out" from the dialog. **Inert** — no session exists yet, so there is
-    /// nothing to sign out of; only dismisses the dialog.
-    /// - Note: Inert pending authentication (ADR pending) — wire real sign-out once it exists.
-    func confirmSignOut() {
+    /// Confirms "Sign out" from the dialog. Dismisses the dialog and clears the on-device
+    /// favourites (ports, gears, species — see `FavouritesClearing`, ADR-0023), since favourites
+    /// belong to the signed-in user and must not leak to whoever uses the app next. Otherwise
+    /// **inert** — no backend session/auth exists yet, so there is nothing else to sign out of.
+    /// - Note: Inert pending authentication (ADR pending) — wire the rest of real sign-out once it
+    ///   exists.
+    func confirmSignOut(favouritesClearing: FavouritesClearing) {
         showSignOutConfirmation = false
-        // Intentionally no further action: no session exists to sign out of yet (see note above).
+        try? favouritesClearing.clearAllFavourites()
     }
 
     /// Reached via the Gear used row's "Change" link.

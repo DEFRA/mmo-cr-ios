@@ -67,7 +67,12 @@ final class ValidationStringCatalogIntegrityTests: XCTestCase {
         "catchRecord.tripDate.adjustedForAgeLimit.tag",
         "catchRecord.tripDate.adjustedForAgeLimit.message",
         "catchRecord.submissionSaved.heading",
+        "catchRecord.submissionSaved.referenceLabel",
+        "catchRecord.submissionSaved.sendHeading",
         "catchRecord.submissionSaved.body",
+        "catchRecord.submissionSaved.checkRecordsLink",
+        "catchRecord.submissionSaved.checkRecordsBody",
+        "catchRecord.submissionSaved.warning",
         "catchRecord.submissionSaved.viewRecords"
     ]
 

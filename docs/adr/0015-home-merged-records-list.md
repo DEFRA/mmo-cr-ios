@@ -32,9 +32,10 @@ protocol RecordsProviding {
 }
 ```
 
-`MergingRecordsRepository` is the production implementation: it reads local Unsent drafts from
-`CatchRecordDraftStoring.allUnsentDrafts()` (ADR-0014) and stub server records from
-`ServerRecordsProviding.serverRecords()` (`StubServerRecordsProvider`, a fixed, always-succeeding
+`MergingRecordsRepository` is the production implementation: it reads local drafts from
+`CatchRecordDraftStoring.allRecords()` (ADR-0014, amended 2026-11 — every local draft, Unsent **and**
+locally-submitted, since a submitted draft is retained rather than deleted) and stub server records
+from `ServerRecordsProviding.serverRecords()` (`StubServerRecordsProvider`, a fixed, always-succeeding
 fixture set — submitted/amended/late), then merges and orders them. `ServerRecordsProviding` is
 kept as its **own** protocol (rather than folded into `RecordsProviding`) so a real backend can
 replace only the server half later without touching the local-drafts path — the same seam-per-data-
@@ -95,6 +96,16 @@ fixed rows, "20 Nov 2020" / ACHILLES / J.Smith). Tapping a Submitted/Amended/Lat
 (`CatchRecordRouting.entryRoute(for:)` only resolves an entry route for `.unsent`) — the future
 journey for reviewing/amending an already-submitted record is explicitly deferred to a later ADR,
 as agreed.
+
+### 6. Amendment (2026-11) — a locally-submitted draft stays in the merged list
+
+Bugfix, detailed fully in ADR-0014's 2026-11 amendment: a completed catch record was vanishing from
+Home because the local draft was deleted on successful submission (ADR-0014 decision #6) and the
+stub server (decision above) never returns it either. `allRecords()` now replaces
+`allUnsentDrafts()` as this repository's local-side read, so a draft flagged submitted
+(`UnsentDraftSummary.isSubmitted`) still contributes a row — rendered via `RecordsMerging.row(for:)`
+as `.submitted`, with `localID: nil` (not resumable/deletable) and its already-captured trip end
+date, rather than disappearing or reverting to the "—" placeholder.
 
 ## Consequences
 

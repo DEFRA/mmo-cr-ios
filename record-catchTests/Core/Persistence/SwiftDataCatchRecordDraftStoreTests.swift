@@ -172,4 +172,69 @@ final class SwiftDataCatchRecordDraftStoreTests: XCTestCase {
         XCTAssertEqual(summaries.first?.checkpoint, .vessel)
         XCTAssertFalse(summaries.first?.isComplete ?? true)
     }
+
+    // MARK: - markSubmitted / allRecords (a submitted draft is retained, not deleted — see
+    // CheckYourAnswersViewModel and ADR-0014/0015)
+
+    func test_markSubmitted_excludesTheDraftFromAllUnsentDrafts() async throws {
+        let store = try makeStore()
+        let draft = CatchRecordDraft()
+        draft.vessel = "ACHILLES"
+        try await store.save(draft)
+
+        try await store.markSubmitted(localID: draft.localID)
+
+        let summaries = try await store.allUnsentDrafts()
+        XCTAssertTrue(summaries.isEmpty)
+    }
+
+    func test_markSubmitted_forUnknownLocalID_isANoOp() async throws {
+        let store = try makeStore()
+        try await store.markSubmitted(localID: UUID()) // should not throw
+        let records = try await store.allRecords()
+        XCTAssertTrue(records.isEmpty)
+    }
+
+    func test_markSubmitted_keepsTheDraftLoadable_andIncludedInAllRecords() async throws {
+        let store = try makeStore()
+        let draft = CatchRecordDraft()
+        draft.vessel = "ACHILLES"
+        draft.returnDate = Date()
+        try await store.save(draft)
+
+        try await store.markSubmitted(localID: draft.localID)
+
+        let loaded = try await store.loadDraft(localID: draft.localID)
+        XCTAssertNotNil(loaded, "a submitted draft must be retained, not deleted, so it keeps showing on Home")
+
+        let records = try await store.allRecords()
+        XCTAssertEqual(records.count, 1)
+        XCTAssertEqual(records.first?.vessel, "ACHILLES")
+        XCTAssertTrue(records.first?.isSubmitted ?? false)
+    }
+
+    func test_allRecords_includesBothUnsentAndSubmittedDrafts_newestFirst() async throws {
+        let store = try makeStore()
+        let unsent = CatchRecordDraft()
+        unsent.vessel = "ACHILLES"
+        try await store.save(unsent)
+
+        try await Task.sleep(nanoseconds: 5_000_000) // ensures a distinct lastEditedAt
+
+        let submitted = CatchRecordDraft()
+        submitted.vessel = "HERCULES"
+        try await store.save(submitted)
+        try await store.markSubmitted(localID: submitted.localID)
+
+        let records = try await store.allRecords()
+
+        XCTAssertEqual(records.map(\.vessel), ["HERCULES", "ACHILLES"])
+        XCTAssertEqual(records.map(\.isSubmitted), [true, false])
+    }
+
+    func test_allRecords_whenEmpty_returnsEmptyArray() async throws {
+        let store = try makeStore()
+        let records = try await store.allRecords()
+        XCTAssertTrue(records.isEmpty)
+    }
 }

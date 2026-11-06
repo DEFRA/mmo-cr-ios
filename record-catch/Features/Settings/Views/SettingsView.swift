@@ -4,18 +4,20 @@
 //
 //  Phase 2 bilingual Settings screen (see docs/design-specs/settings.md): analytics-
 //  consent toggle (UI-only/stubbed — no analytics SDK), an account/menu link list, and
-//  the "Gear used" row. "Sign out" shows a confirmation dialog before dismissing —
-//  confirming remains an inert seam (see SettingsViewModel) since no session/auth
-//  exists yet. Every other link destination is also a deliberately inert seam — no
-//  navigation, auth or networking here.
+//  the "Gear used" row. "Sign out" shows a confirmation dialog, then clears the on-device
+//  favourites (ADR-0023) — the rest of sign-out (ending a backend session) remains an
+//  inert seam (see SettingsViewModel) since no session/auth exists yet. Every other link
+//  destination is also a deliberately inert seam — no navigation, auth or networking here.
 //
 
 import SwiftUI
+import SwiftData
 
 struct SettingsView: View {
 
     @Environment(AppLanguageStore.self) private var languageStore
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.modelContext) private var modelContext
     @State private var viewModel: SettingsViewModel
 
     /// - Parameters:
@@ -42,7 +44,11 @@ struct SettingsView: View {
             titleVisibility: .visible
         ) {
             Button(languageStore.localized("settings.signOut.confirm.confirm"), role: .destructive) {
-                viewModel.confirmSignOut()
+                // Resolved here (not a `SettingsViewModel` default) since the real
+                // `SwiftDataFavouritesClearing` needs this view's `modelContext`, which isn't
+                // available yet at `SettingsView.init` — mirrors `CatchRecordHostView`'s deferred
+                // `draftStore`/`favouritePorts` resolution (see ADR-0023).
+                viewModel.confirmSignOut(favouritesClearing: SwiftDataFavouritesClearing(modelContext: modelContext))
             }
             .accessibilityIdentifier("Settings.signOutConfirm.confirm")
 

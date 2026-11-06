@@ -12,7 +12,8 @@ import SwiftData
 struct RecordCatchApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            CatchRecordEntity.self
+            CatchRecordEntity.self,
+            FavouriteEntity.self
         ])
         // Protects on-device catch-record data at rest (vessel, dates, ports, gear, species — see
         // ADR-0014, DEFRA data-at-rest requirement): the store is only accessible after the user

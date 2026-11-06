@@ -2,9 +2,10 @@ import Foundation
 
 /// The user's saved (favourite) ports.
 ///
-/// API-shaped and **per-user** (not per-vessel) — see ADR-0004. Offline-first: the local list is
-/// the source of truth for the "Which port did you leave from/return to?" screens. Stubbed for now
-/// with an in-memory store; a future ADR covers the real Favourites API and on-device persistence.
+/// API-shaped and **per-user, not per-vessel or per-trip** (see ADR-0004, amended by ADR-0023): a
+/// port added to favourites belongs to the signed-in user and persists across every future trip.
+/// Offline-first: the on-device `SwiftDataFavouritePortsProvider` is the source of truth for the
+/// "Which port did you leave from/return to?" screens (see `FavouriteEntity`).
 nonisolated protocol FavouritePortsProviding: Sendable {
     /// The user's favourite ports, ordered for display.
     func favouritePorts() async throws -> [PortOption]
@@ -12,10 +13,11 @@ nonisolated protocol FavouritePortsProviding: Sendable {
     func addFavourite(_ port: PortOption) async throws
 }
 
-/// In-memory, UI-only favourites store.
+/// In-memory, UI-only favourites store — used by previews and unit/UI tests that don't need real
+/// persistence. Production uses `SwiftDataFavouritePortsProvider` instead (see ADR-0023).
 ///
 /// A `final class` (reference type) so a favourite added on the Add-port screen is visible to the
-/// select screen the user returns to within a journey. Not persisted to disk in this phase.
+/// select screen the user returns to within a journey.
 nonisolated final class StubFavouritePortsProvider: FavouritePortsProviding, @unchecked Sendable {
 
     private let lock = NSLock()

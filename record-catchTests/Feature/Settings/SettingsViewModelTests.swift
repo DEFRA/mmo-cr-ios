@@ -102,18 +102,30 @@ final class SettingsViewModelTests: XCTestCase {
         XCTAssertEqual(sut.gearUsed, "Seine nets")
     }
 
-    func test_confirmSignOut_dismissesDialog_remainsInert() {
+    func test_confirmSignOut_dismissesDialog_remainsInertAsideFromFavourites() {
         let store = InMemoryAnalyticsPreferenceStore(initialValue: true)
         let sut = SettingsViewModel(preferenceStore: store, gearUsed: "Seine nets")
         sut.signOutTapped()
 
-        sut.confirmSignOut()
+        sut.confirmSignOut(favouritesClearing: NoOpFavouritesClearing())
 
-        // Inert: still no session/auth exists, so confirming has no side effect beyond
-        // dismissing the dialog — analytics preference and gear used are unaffected.
+        // Inert aside from clearing favourites (see ADR-0023): still no backend session/auth
+        // exists, so confirming has no other side effect — analytics preference and gear used
+        // are unaffected.
         XCTAssertFalse(sut.showSignOutConfirmation)
         XCTAssertTrue(sut.analyticsEnabled)
         XCTAssertEqual(sut.gearUsed, "Seine nets")
+    }
+
+    func test_confirmSignOut_clearsFavourites() {
+        let store = InMemoryAnalyticsPreferenceStore(initialValue: true)
+        let sut = SettingsViewModel(preferenceStore: store)
+        sut.signOutTapped()
+        let clearing = SpyFavouritesClearing()
+
+        sut.confirmSignOut(favouritesClearing: clearing)
+
+        XCTAssertEqual(clearing.clearCallCount, 1)
     }
 
     func test_myAccountTapped_pushesManageAccountRoute() {
@@ -289,5 +301,16 @@ private final class SpyAnalyticsPreferenceStore: AnalyticsPreferenceStoring, @un
     func setAnalyticsEnabled(_ enabled: Bool) {
         setCallCount += 1
         self.enabled = enabled
+    }
+}
+
+/// Records how many times `clearAllFavourites` is called, so
+/// `test_confirmSignOut_clearsFavourites` can assert it without a real `ModelContext`.
+@MainActor
+private final class SpyFavouritesClearing: FavouritesClearing {
+    private(set) var clearCallCount = 0
+
+    func clearAllFavourites() throws {
+        clearCallCount += 1
     }
 }

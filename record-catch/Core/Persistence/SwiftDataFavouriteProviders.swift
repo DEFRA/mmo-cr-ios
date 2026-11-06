@@ -127,5 +127,7 @@ struct SwiftDataFavouritesClearing: FavouritesClearing {
 /// No-op fake for previews/tests that don't care about sign-out clearing favourites.
 @MainActor
 struct NoOpFavouritesClearing: FavouritesClearing {
-    func clearAllFavourites() throws {}
+    func clearAllFavourites() throws {
+        // Intentionally empty: this fake has no favourites to clear (see type doc comment).
+    }
 }

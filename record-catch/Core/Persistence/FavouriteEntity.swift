@@ -64,7 +64,7 @@ nonisolated enum FavouriteStore {
     static func items<Item: Decodable>(
         kind: FavouriteKind,
         modelContext: ModelContext,
-        as type: Item.Type
+        as _: Item.Type
     ) throws -> [Item] {
         let kindRawValue = kind.rawValue
         let descriptor = FetchDescriptor<FavouriteEntity>(

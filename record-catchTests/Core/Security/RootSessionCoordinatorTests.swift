@@ -9,7 +9,7 @@ import XCTest
 final class RootSessionCoordinatorTests: XCTestCase {
 
     private func makeSut(
-        authenticator: any Authenticating? = nil,
+        authenticator: (any Authenticating)? = nil,
         biometricAuthenticator: BiometricAuthenticating = FakeBiometricAuthenticator(),
         sessionStore: LocalSessionStoring = InMemoryLocalSessionStore(hasSession: false),
         secretStore: ReentrySecretStoring = InMemoryReentrySecretStore(exists: false),

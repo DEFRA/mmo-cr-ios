@@ -5,7 +5,7 @@ import XCTest
 final class SignInViewModelTests: XCTestCase {
 
     private func makeSut(
-        authenticator: any Authenticating? = nil,
+        authenticator: (any Authenticating)? = nil,
         onSignedIn: @escaping (AuthenticatedAccount) -> Void = { _ in }
     ) -> SignInViewModel {
         SignInViewModel(authenticator: authenticator ?? FakeAuthenticator(), onSignedIn: onSignedIn)

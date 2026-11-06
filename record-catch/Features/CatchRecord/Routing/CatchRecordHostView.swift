@@ -183,7 +183,8 @@ struct CatchRecordHostView: View {
             vesselAndTripDestination(for: route)
         case .addPort, .confirmSamePort, .selectPort, .selectGear, .addGear, .gearMeasurements:
             portAndGearDestination(for: route)
-        case .catchLocation, .catchLocationManualEntry, .recordSpeciesWeights, .addSpecies, .removeSpecies:
+        case .catchLocation, .catchLocationNearestAreas, .catchLocationManualEntry,
+             .recordSpeciesWeights, .addSpecies, .removeSpecies:
             speciesDestination(for: route)
         case .landingStorage, .landingStorageSpecies, .checkYourAnswers,
              .submissionSuccess, .submissionSaved:
@@ -303,6 +304,15 @@ struct CatchRecordHostView: View {
         switch route {
         case .catchLocation(let gear, let vessel, let referenceNumber):
             CatchLocationView(
+                gear: gear,
+                vessel: vessel,
+                referenceNumber: referenceNumber,
+                router: router,
+                favouriteSpecies: favouriteSpecies,
+                draft: draft
+            )
+        case .catchLocationNearestAreas(let gear, let vessel, let referenceNumber):
+            CatchLocationNearestAreasView(
                 gear: gear,
                 vessel: vessel,
                 referenceNumber: referenceNumber,

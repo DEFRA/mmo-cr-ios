@@ -137,6 +137,49 @@ deviation-register requirement; followed (not silently overridden), for governan
 - The screenshot shows a "Not landed: Yes" row; this app's "Species not landed" section omits a
   redundant yes/no row (it is only shown at all once there is something not landed).
 
+## Screen — Select the statistical sub area (`CatchRecord.catchLocationNearestAreas.*`)
+
+Added after this spec was first written, from a supplied Figma screenshot (see the deviation
+register below). Interposed between the catch-location map's "Other" button and the existing
+manual type-to-search screen (`CatchLocationManualEntry/`): tapping "Other" on the map now opens
+this radio-button screen first, offering a faster pick than typing a code, with its own "Other"
+option reaching the manual screen for when the correct area still isn't listed.
+
+1. Caption/reference number header (`.referenceNumber`), as on every other screen.
+2. H1 — "Select the statistical sub area where the majority of your catch was caught using
+   `<gear>`?" (`.heading`, `%@` = the gear's description with measurements, matching
+   `catchLocation.heading`'s placeholder).
+3. The map screen's existing three hint paragraphs, reused verbatim (`catchLocation.hint.nearest`,
+   `.hint.select`, `.hint.other`).
+4. `RadioGroup` (`.radioGroup`) — one option per statistical sub area nearest the trip's departure
+   port (`.option.<code>`, up to 9, nearest first — `BundledNearestSubrectangleProvider`), followed
+   by "Other" as the final option in the **same** list (`.option.other`, reusing
+   `catchLocation.otherButton`'s "Other"/"Arall" copy).
+5. `PrimaryButton` "Save and continue" (`.saveContinue`).
+6. Continue with a listed area selected → writes it into this gear's `GearCatch.statisticalArea`
+   and enters the species sub-journey, identical to tapping that area on the map. Continue with
+   **"Other"** selected → `router.push(.catchLocationManualEntry(...))`. Continue with **nothing**
+   selected → inline error (`.error`, `catchRecord.nearestAreas.validation.none`) and no navigation.
+7. The trip's departure port is always known by the time this screen is reachable — there is no
+   journey path into the catch-location sub-journey without first selecting a departure port — so
+   the nearest-areas lookup always has a coordinate to rank against in practice. It still degrades
+   to offering only "Other" (rather than crashing) if that invariant is ever broken, or if the
+   bundled lookup itself fails.
+
+### Deviation register — nearest-areas screen vs the supplied Figma screenshot
+
+Recorded per the [figma-design instructions](../../.github/instructions/figma-design.instructions.md)
+deviation-register requirement; followed (not silently overridden), for governance to log:
+
+- The heading ends in "?", written as an instruction rather than a question ("Select the
+  statistical sub area where…caught using `<gear>`?"). GOV.UK Design System style would either drop
+  the trailing "?" or rephrase as a genuine question ("Where was…?"); the screenshot's exact wording
+  was kept as-is rather than corrected.
+- The screenshot lists "Other" as the final row in the same radio list with no separating line. The
+  GOV.UK Design System Radios pattern normally shows an "or" divider before a conceptually distinct
+  option like "Other" (https://design-system.service.gov.uk/components/radios/); the screenshot's
+  layout (no divider) was followed instead.
+
 ## States (per screen)
 
 

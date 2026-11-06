@@ -2,17 +2,22 @@ import Foundation
 
 /// View model for the Settings screen (see docs/design-specs/settings.md).
 ///
-/// UI-only for this phase: the analytics toggle is backed by a local preference only (no
-/// analytics SDK, no networking), "Gear used" reflects a locally-known value with an
+/// UI-only for most of this screen: the analytics toggle is backed by a local preference only
+/// (no analytics SDK, no networking), "Gear used" reflects a locally-known value with an
 /// authored empty state. "My account" pushes the real "Manage your account" screen via
-/// `SettingsRouter` (see docs/adr/0007-settings-tab-navigation.md); every other link/action
-/// below remains an inert seam with no destination or side effect wired up yet.
+/// `SettingsRouter` (see docs/adr/0007-settings-tab-navigation.md). "Sign out" is real
+/// (ADR-0022 §9) — it calls through to `RootSessionCoordinator.handleSignOut()`. Every other
+/// link/action below remains an inert seam with no destination or side effect wired up yet.
 @MainActor
 @Observable
 final class SettingsViewModel {
 
     private let preferenceStore: AnalyticsPreferenceStoring
     private let router: SettingsRouter
+    /// Calls `RootSessionCoordinator.handleSignOut()` (ADR-0022 §9) once the user confirms
+    /// "Sign out". Defaults to a no-op for previews/tests that don't care about the app-root
+    /// transition.
+    private let onSignOut: () -> Void
 
     /// Backed by `AnalyticsPreferenceStoring` — every write is persisted immediately.
     ///
@@ -65,12 +70,16 @@ final class SettingsViewModel {
     init(
         router: SettingsRouter? = nil,
         preferenceStore: AnalyticsPreferenceStoring = UserDefaultsAnalyticsPreferenceStore(),
-        gearUsed: String? = nil
+        gearUsed: String? = nil,
+        onSignOut: @escaping () -> Void = {
+            // No-op default: previews/tests that don't exercise sign-out.
+        }
     ) {
         self.router = router ?? SettingsRouter()
         self.preferenceStore = preferenceStore
         self.analyticsEnabled = preferenceStore.isAnalyticsEnabled()
         self.gearUsed = gearUsed
+        self.onSignOut = onSignOut
         #if DEBUG || ENABLE_DEBUG_REFERENCE_DATA_TOOL
         self.debugReferenceDataClient = Self.makeDefaultDebugReferenceDataClient()
         #endif
@@ -83,12 +92,16 @@ final class SettingsViewModel {
         router: SettingsRouter? = nil,
         preferenceStore: AnalyticsPreferenceStoring = UserDefaultsAnalyticsPreferenceStore(),
         gearUsed: String? = nil,
+        onSignOut: @escaping () -> Void = {
+            // No-op default: previews/tests that don't exercise sign-out.
+        },
         debugReferenceDataClient: ReferenceDataFetching
     ) {
         self.router = router ?? SettingsRouter()
         self.preferenceStore = preferenceStore
         self.analyticsEnabled = preferenceStore.isAnalyticsEnabled()
         self.gearUsed = gearUsed
+        self.onSignOut = onSignOut
         self.debugReferenceDataClient = debugReferenceDataClient
     }
 
@@ -175,10 +188,7 @@ final class SettingsViewModel {
     // no-op seam so the view has something concrete to call, and so wiring the real
     // destination later is a one-line change in exactly one place.
 
-    /// Reached via the "Sign out" link. Presents a confirmation dialog before anything
-    /// happens — the dialog's own confirm action (`confirmSignOut()`) remains **inert**,
-    /// since no session exists yet, so this must not falsely imply an action occurred.
-    /// - Note: Inert pending authentication (ADR pending) — wire real sign-out once it exists.
+    /// Reached via the "Sign out" link. Presents a confirmation dialog before anything happens.
     func signOutTapped() {
         showSignOutConfirmation = true
     }
@@ -188,15 +198,16 @@ final class SettingsViewModel {
         showSignOutConfirmation = false
     }
 
-    /// Confirms "Sign out" from the dialog. Dismisses the dialog and clears the on-device
-    /// favourites (ports, gears, species — see `FavouritesClearing`, ADR-0023), since favourites
-    /// belong to the signed-in user and must not leak to whoever uses the app next. Otherwise
-    /// **inert** — no backend session/auth exists yet, so there is nothing else to sign out of.
-    /// - Note: Inert pending authentication (ADR pending) — wire the rest of real sign-out once it
-    ///   exists.
+    /// Confirms "Sign out" from the dialog. Dismisses the dialog, clears the on-device
+    /// favourites (ports, gears, species — see `FavouritesClearing`, ADR-0023) since favourites
+    /// belong to the signed-in user and must not leak to whoever uses the app next, and calls
+    /// through to `RootSessionCoordinator.handleSignOut()` (ADR-0022 §9), which signs out of
+    /// MSAL, clears the local session/re-entry state, and returns the app root to the Sign In
+    /// screen.
     func confirmSignOut(favouritesClearing: FavouritesClearing) {
         showSignOutConfirmation = false
         try? favouritesClearing.clearAllFavourites()
+        onSignOut()
     }
 
     /// Reached via the Gear used row's "Change" link.

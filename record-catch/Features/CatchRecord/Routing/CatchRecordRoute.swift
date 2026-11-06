@@ -50,13 +50,22 @@ enum CatchRecordRoute: Hashable {
     case gearMeasurements(gear: GearOption, vessel: String, referenceNumber: String)
     /// Pick the statistical area where most of the catch was caught using a given gear, from a map.
     /// Carries the gear (for the "using <gear>" heading), the vessel and the display-only reference
-    /// number, all threaded onward unchanged.
+    /// number, all threaded onward unchanged. The map's "Other" button pushes
+    /// `catchLocationNearestAreas` rather than `catchLocationManualEntry` directly (see below).
     case catchLocation(gear: GearOption, vessel: String, referenceNumber: String)
+    /// "Select the statistical sub area…" — a radio-button list of the (up to 9) statistical sub
+    /// areas nearest the trip's departure port, plus "Other", reached from `catchLocation`'s
+    /// "Other" button overlaid on the map (built from a supplied Figma design — see
+    /// `docs/design-specs/create-catch-record.md`). Picking a listed area continues into the same
+    /// species sub-journey as tapping the map directly; picking "Other" pushes
+    /// `catchLocationManualEntry` to type the code in instead. Carries the same gear/vessel/
+    /// reference number, threaded onward unchanged.
+    case catchLocationNearestAreas(gear: GearOption, vessel: String, referenceNumber: String)
     /// Manually enter the statistical sub area by typing a code (search dropdown), rather than
-    /// tapping the map. Reached from `catchLocation`'s "Other" button, overlaid on the map, for
-    /// when the correct area either isn't visible or isn't easy to tap accurately. Carries the
-    /// same gear/vessel/reference number and, on save, continues into the same species
-    /// sub-journey as picking on the map.
+    /// picking from the map or the nearest-areas list. Reached from `catchLocationNearestAreas`'s
+    /// "Other" option, for when the correct area either isn't listed or the user prefers to type
+    /// it. Carries the same gear/vessel/reference number and, on save, continues into the same
+    /// species sub-journey as picking on the map.
     case catchLocationManualEntry(gear: GearOption, vessel: String, referenceNumber: String)
     /// Record the species caught and their live weights, from the user's favourite species
     /// (per-species checkboxes with reveal-able weight fields). Shown when the user already has

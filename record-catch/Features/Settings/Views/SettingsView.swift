@@ -26,8 +26,17 @@ struct SettingsView: View {
     ///     always supplies the tab's real, shared instance so "My account" pushes onto the
     ///     visible `NavigationStack`.
     ///   - viewModel: injectable view model, used by previews/tests to seed preferences/gear used.
-    init(router: SettingsRouter? = nil, viewModel: SettingsViewModel? = nil) {
-        _viewModel = State(initialValue: viewModel ?? SettingsViewModel(router: router))
+    ///   - onSignOut: forwarded to `SettingsViewModel` when `viewModel` is `nil` (ADR-0022 §9).
+    ///     Ignored when an explicit `viewModel` is supplied — construct that view model with its
+    ///     own `onSignOut` instead.
+    init(
+        router: SettingsRouter? = nil,
+        viewModel: SettingsViewModel? = nil,
+        onSignOut: @escaping () -> Void = {
+            // No-op default: previews/tests that don't exercise sign-out.
+        }
+    ) {
+        _viewModel = State(initialValue: viewModel ?? SettingsViewModel(router: router, onSignOut: onSignOut))
     }
 
     var body: some View {

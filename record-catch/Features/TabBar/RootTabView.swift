@@ -34,7 +34,9 @@ struct RootTabView: View {
     init(
         initialSettingsRoute: SettingsRoute? = nil,
         homeRecordsProvider: RecordsProviding? = nil,
-        onSignOut: @escaping () -> Void = { /* no-op default: previews/tests that don't exercise sign-out */ }
+        onSignOut: @escaping () -> Void = {
+            // No-op default: previews/tests that don't exercise sign-out.
+        }
     ) {
         let router = SettingsRouter()
         if let initialSettingsRoute {

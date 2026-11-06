@@ -36,7 +36,9 @@ final class SignInViewModel {
     ///   constructed as one. Callers (`SignInView.init`, tests) always supply one explicitly.
     init(
         authenticator: any Authenticating,
-        onSignedIn: @escaping (AuthenticatedAccount) -> Void = { _ in /* no-op default: previews/tests that don't care about the destination */ }
+        onSignedIn: @escaping (AuthenticatedAccount) -> Void = { _ in
+            // No-op default: previews/tests that don't care about the destination.
+        }
     ) {
         self.authenticator = authenticator
         self.onSignedIn = onSignedIn

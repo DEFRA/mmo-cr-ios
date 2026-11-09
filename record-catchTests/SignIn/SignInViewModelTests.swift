@@ -207,4 +207,44 @@ final class SignInViewModelTests: XCTestCase {
         XCTAssertNil(sut.emailFieldError)
         XCTAssertNil(sut.passwordFieldError)
     }
+
+    // MARK: - showFormErrorSummary
+
+    func test_showFormErrorSummary_isFalse_forValidationOnlyFailure() async {
+        // `.missingOrInvalidFields` is rendered as inline field errors, not the form-level summary.
+        let sut = makeSut()
+
+        await sut.submit()
+
+        XCTAssertEqual(sut.formError, .missingOrInvalidFields)
+        XCTAssertFalse(sut.showFormErrorSummary)
+    }
+
+    func test_showFormErrorSummary_isTrue_forBackendError() async {
+        let sut = makeSut(authenticator: FakeAuthenticator(signInOutcome: .invalidCredentials))
+        sut.email = "a@b.com"
+        sut.password = "wrong"
+
+        await sut.submit()
+
+        XCTAssertTrue(sut.showFormErrorSummary)
+    }
+
+    func test_showFormErrorSummary_isFalse_whenNoFormError() {
+        let sut = makeSut()
+        XCTAssertFalse(sut.showFormErrorSummary)
+    }
+
+    // MARK: - Default `onSignedIn` (no destination supplied)
+
+    func test_submit_withDefaultOnSignedIn_doesNotCrash_onSuccessfulSignIn() async {
+        let account = AuthenticatedAccount(username: "a@b.com", identifier: "id-1")
+        let sut = SignInViewModel(authenticator: FakeAuthenticator(signInOutcome: .success(account)))
+        sut.email = "a@b.com"
+        sut.password = "TestPassword123"
+
+        await sut.submit()
+
+        XCTAssertNil(sut.formError)
+    }
 }

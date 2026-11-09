@@ -127,7 +127,17 @@ toggle as **not yet real** pending this ADR.
 - `NSFaceIDUsageDescription` is added for the first time in this codebase.
 - **Standing obligation:** when real backend auth lands, revisit this design per §7.
 
+## Addendum (2026-11): §7's standing obligation is partially answered
+
+ADR-0022 (Entra External ID native authentication) replaces the unconditional sign-in stub with
+real authentication and adds a 7-day offline grace period evaluated against a genuine Entra
+session, not an unconditional local marker. The biometric re-entry gate described above is
+unchanged and still runs on top of that session. Wrapping the re-entry secret itself around the
+real refresh token (rather than today's opaque locally-generated value) remains outstanding and is
+carried forward as a standing obligation in ADR-0022's Consequences.
+
 ## References
+
 
 - Apple, *Logging a User into Your App with Face ID or Touch ID* —
   https://developer.apple.com/documentation/localauthentication/logging-a-user-into-your-app-with-face-id-or-touch-id

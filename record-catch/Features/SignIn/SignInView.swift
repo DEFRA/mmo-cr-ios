@@ -1,8 +1,9 @@
 //  SignInView.swift
 //  record-catch
 //
-//  UI-only bilingual Sign In screen. Deliberately does NOT use the shared `ViewTemplate` — see
-//  the comment at the top of `body` below (also means no offline banner here, see ADR-0019).
+//  Bilingual Sign In screen (ADR-0022): real Entra authentication via `SignInViewModel`.
+//  Deliberately does NOT use the shared `ViewTemplate` — see the comment at the top of `body`
+//  below (also means no offline banner here, see ADR-0019).
 //
 
 import SwiftUI
@@ -10,18 +11,32 @@ import SwiftUI
 struct SignInView: View {
 
     @Environment(AppLanguageStore.self) private var languageStore
-    @State private var viewModel = SignInViewModel()
+    @State private var viewModel: SignInViewModel
+    /// Moves VoiceOver focus to the first error after a failed submit (WCAG 2.2 AA — errors must
+    /// be perceivable and easy to locate).
+    @AccessibilityFocusState private var focusedField: Field?
 
-    /// Called when the user taps "Sign in". DEMO-ONLY BYPASS: there is no real
-    /// authentication yet, so this fires unconditionally — regardless of what
-    /// (if anything) is entered in the form — to let the journey continue to
-    /// Home. Field/credential validation above remains in place purely to
-    /// demonstrate the error-state UI; it does not gate this callback.
-    /// TODO: replace with real OAuth2/OIDC sign-in (Keychain-backed) before
-    /// production — see security instructions.
-    /// No-op default: previews/tests that render the form without a real destination can omit
-    /// this; the app root always supplies a handler that continues to Home.
-    var onSignIn: () -> Void = {}
+    private enum Field: Hashable {
+        case email
+        case password
+        case formError
+    }
+
+    /// Called once sign-in succeeds. `RootSessionCoordinator.handleSignIn` is the real app-root
+    /// handler; previews/tests that don't care about the destination can omit it.
+    ///
+    /// - Parameter authenticator: No default — Swift default-argument expressions are not
+    ///   actor-isolated, so a `@MainActor`-isolated fake (e.g. `FakeAuthenticator()`) cannot be
+    ///   constructed as one. Callers (`RecordCatchApp`, previews, tests) always supply one
+    ///   explicitly.
+    init(
+        authenticator: any Authenticating,
+        onSignIn: @escaping (AuthenticatedAccount) -> Void = { _ in
+            // No-op default: previews/tests that don't care about the destination.
+        }
+    ) {
+        _viewModel = State(initialValue: SignInViewModel(authenticator: authenticator, onSignedIn: onSignIn))
+    }
 
     var body: some View {
         // The Sign In design has no GOV.UK header bar and no footer — just a
@@ -54,8 +69,8 @@ struct SignInView: View {
     @ViewBuilder
     private var content: some View {
         VStack(alignment: .leading, spacing: AppSpacing.large) {
-            if viewModel.showInvalidCredentials {
-                credentialErrorSummary
+            if viewModel.showFormErrorSummary, let formError = viewModel.formError, let key = formError.localizationKey {
+                formErrorSummary(key: key)
             }
 
             // DEFRA crown logo, centred above the heading (per design).
@@ -75,21 +90,41 @@ struct SignInView: View {
             emailSection
             passwordSection
 
-            PrimaryButton(title: languageStore.localized("signIn.button")) {
-                viewModel.submit()
-                // Demo bypass: always continue to Home, regardless of validation.
-                onSignIn()
+            PrimaryButton(
+                title: languageStore.localized("signIn.button"),
+                isLoading: viewModel.isSubmitting,
+                loadingAccessibilityLabel: languageStore.localized("signIn.a11y.signingIn"),
+                accessibilityHintText: languageStore.localized("signIn.a11y.hint")
+            ) {
+                Task { await submit() }
             }
             .accessibilityIdentifier("SignIn.signInButton")
 
             troubleSection
         }
+        .onChange(of: viewModel.formError) { _, newValue in
+            guard newValue != nil, newValue != .missingOrInvalidFields else { return }
+            focusedField = .formError
+        }
+        .onChange(of: viewModel.emailFieldError) { _, newValue in
+            guard newValue != nil else { return }
+            focusedField = .email
+        }
     }
 
-    // MARK: - Credential error summary
+    private func submit() async {
+        await viewModel.submit()
+        // Move focus to the password error if the email was valid but the password wasn't —
+        // `onChange(of: emailFieldError)` above only fires when the *email* field has an error.
+        if viewModel.emailFieldError == nil, viewModel.passwordFieldError != nil {
+            focusedField = .password
+        }
+    }
 
-    private var credentialErrorSummary: some View {
-        ErrorLabel(key: "signIn.error.credentials")
+    // MARK: - Form error summary
+
+    private func formErrorSummary(key: String) -> some View {
+        ErrorLabel(key: key)
             .padding(AppSpacing.medium)
             .frame(maxWidth: .infinity, alignment: .leading)
             .overlay(
@@ -97,10 +132,11 @@ struct SignInView: View {
             )
             .accessibilityElement(children: .combine)
             .accessibilityLabel(
-                "\(languageStore.localized("a11y.errorPrefix")) \(languageStore.localized("signIn.error.credentials"))"
+                "\(languageStore.localized("a11y.errorPrefix")) \(languageStore.localized(key))"
             )
             .accessibilityAddTraits(.isStaticText)
             .accessibilityIdentifier("SignIn.credentialError")
+            .accessibilityFocused($focusedField, equals: .formError)
     }
 
     // MARK: - Email
@@ -116,7 +152,9 @@ struct SignInView: View {
                 labelColor: AppColors.textSecondary,
                 text: emailBinding
             )
+            .disabled(viewModel.isSubmitting)
             .accessibilityIdentifier("SignIn.emailField")
+            .accessibilityFocused($focusedField, equals: .email)
 
             if let error = viewModel.emailFieldError {
                 errorRow(key: error.localizationKey, identifier: "SignIn.emailError")
@@ -129,7 +167,7 @@ struct SignInView: View {
             get: { viewModel.email },
             set: {
                 viewModel.email = $0
-                viewModel.clearCredentialError()
+                viewModel.clearFormError()
             }
         )
     }
@@ -150,6 +188,8 @@ struct SignInView: View {
                 labelColor: AppColors.textSecondary,
                 text: passwordBinding
             )
+            .disabled(viewModel.isSubmitting)
+            .accessibilityFocused($focusedField, equals: .password)
 
             if let error = viewModel.passwordFieldError {
                 errorRow(key: error.localizationKey, identifier: "SignIn.passwordError")
@@ -162,7 +202,7 @@ struct SignInView: View {
             get: { viewModel.password },
             set: {
                 viewModel.password = $0
-                viewModel.clearCredentialError()
+                viewModel.clearFormError()
             }
         )
     }
@@ -188,7 +228,7 @@ struct SignInView: View {
     /// the inert link used for "Forgotten your password?" above. Tapping it reveals guidance for
     /// the two routes into the app: a vessel owner is invited automatically when their vessel is
     /// added, while a skipper/agent must be added by their vessel owner. It remains inert beyond
-    /// expanding/collapsing — there is no account-creation flow in this UI-only phase.
+    /// expanding/collapsing — there is no account-creation flow in this phase (AC9).
     private var createAccountSection: some View {
         ExpandableHelpSection(
             title: languageStore.localized("signIn.link.createAccount"),
@@ -211,10 +251,11 @@ struct SignInView: View {
         )
     }
 
+    /// "Forgotten your password?" — an inert link-styled button. Self-service password reset is
+    /// deferred to a separate ticket (ADR-0022 §8, AC6); this screen never navigates anywhere.
     private func linkButton(key: String, identifier: String) -> some View {
-        // Intentionally inert in this UI-only phase — navigates nowhere yet.
         Button {
-            // No destination yet (future phase).
+            // Intentionally inert — see the doc comment above (ADR-0022 §8).
         } label: {
             LocalizedText(key)
                 .font(AppTypography.body)
@@ -241,7 +282,7 @@ struct SignInView: View {
 /// Reusable icon + localized error message pair, rendered in `errorRed`.
 ///
 /// Encapsulates the duplicated icon + `errorRed` error-text pattern used by the
-/// inline field errors and the credential summary. Copy is rendered via
+/// inline field errors and the form error summary. Copy is rendered via
 /// `LocalizedText` so it carries the correct language identifier for VoiceOver.
 private struct ErrorLabel: View {
     let key: String
@@ -259,6 +300,6 @@ private struct ErrorLabel: View {
 }
 
 #Preview {
-    SignInView()
+    SignInView(authenticator: FakeAuthenticator())
         .environment(AppLanguageStore.preview)
 }

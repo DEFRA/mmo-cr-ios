@@ -8,6 +8,20 @@
       "log": true,
       "tracking": false,
       "description": "Base URL of the catch recording backend API for this stage."
+    },
+    "ENTRA_CLIENT_ID": {
+      "type": "string",
+      "required": false,
+      "log": true,
+      "tracking": false,
+      "description": "Application (client) ID of the Microsoft Entra External ID app registration for this stage (see ADR-0022). Required: false until real per-stage values are supplied by the Entra tenant team \u2014 revisit then."
+    },
+    "ENTRA_TENANT_SUBDOMAIN": {
+      "type": "string",
+      "required": false,
+      "log": true,
+      "tracking": false,
+      "description": "Subdomain of the Microsoft Entra External ID (CIAM) tenant for this stage, e.g. \"contoso\" for contoso.ciamlogin.com (see ADR-0022). Required: false until real per-stage values are supplied \u2014 revisit then."
     }
   }
 }

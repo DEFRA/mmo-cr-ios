@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		1C334B4BF28A438CB25EA808 /* MSAL in Frameworks */ = {isa = PBXBuildFile; productRef = B1D632E638284F39A3E02479 /* MSAL */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		DA6ABEED2FFE87DD00B7A0AB /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -100,8 +104,6 @@
 				Features/SignIn/Localisation/LocalizedBundle.swift,
 				Features/SignIn/Localisation/LocalizedText.swift,
 				Features/SignIn/Logic/SignInValidation.swift,
-				Features/SignIn/SignInView.swift,
-				Features/SignIn/SignInViewModel.swift,
 			);
 			target = DA6ABEEB2FFE87DD00B7A0AB /* record-catchTests */;
 		};
@@ -142,6 +144,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1C334B4BF28A438CB25EA808 /* MSAL in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -211,6 +214,9 @@
 				DA6ABEDF2FFE87DC00B7A0AB /* record-catch */,
 			);
 			name = "record-catch";
+			packageProductDependencies = (
+				B1D632E638284F39A3E02479 /* MSAL */,
+			);
 			productName = "record-catch";
 			productReference = DA6ABEDD2FFE87DC00B7A0AB /* record-catch.app */;
 			productType = "com.apple.product-type.application";
@@ -289,6 +295,9 @@
 			);
 			mainGroup = DA6ABED42FFE87DC00B7A0AB;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				53106ED988CB4648A198525E /* XCRemoteSwiftPackageReference "microsoft-authentication-library-for-objc" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = DA6ABEDE2FFE87DC00B7A0AB /* Products */;
 			projectDirPath = "";
@@ -513,7 +522,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 24;
+				CURRENT_PROJECT_VERSION = 25;
 				DEVELOPMENT_TEAM = XBP2KL858T;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
@@ -551,7 +560,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 24;
+				CURRENT_PROJECT_VERSION = 25;
 				DEVELOPMENT_TEAM = XBP2KL858T;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
@@ -703,6 +712,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		53106ED988CB4648A198525E /* XCRemoteSwiftPackageReference "microsoft-authentication-library-for-objc" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/AzureAD/microsoft-authentication-library-for-objc";
+			requirement = {
+				kind = exactVersion;
+				version = 2.17.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		B1D632E638284F39A3E02479 /* MSAL */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 53106ED988CB4648A198525E /* XCRemoteSwiftPackageReference "microsoft-authentication-library-for-objc" */;
+			productName = MSAL;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = DA6ABED52FFE87DC00B7A0AB /* Project object */;
 }

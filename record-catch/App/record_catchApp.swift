@@ -42,19 +42,25 @@ struct RecordCatchApp: App {
     @State private var languageStore = AppLanguageStore()
     @State private var tabRouter = AppTabRouter(selection: Self.seedTabSelection)
 
-    // Local session / offline biometric re-entry (ADR-0009): a device-local "session" persists
-    // across relaunches so the app can offer sign-in / app-lock / home without a backend session
-    // (no real authentication exists yet). All of that composition-root wiring and decision logic
-    // lives in `RootSessionCoordinator`, which is unit-tested in its own right.
-    @State private var sessionCoordinator = RootSessionCoordinator.make()
+    // Connectivity monitoring (ADR-0019): a single app-wide signal behind the
+    // `ConnectivityMonitoring` seam, injected via `\.connectivityMonitor` (not `.environment(_:)`)
+    // because the real and `-uiTestOffline` stub are different concrete types.
+    @State private var connectivityMonitor: any ConnectivityMonitoring
+
+    // Local session / offline biometric re-entry (ADR-0009), now backed by real Entra
+    // authentication with a 7-day offline grace period (ADR-0022). All of that composition-root
+    // wiring and decision logic lives in `RootSessionCoordinator`, which is unit-tested in its own
+    // right. Built in `init()` (not a `@State` default expression) so it can share the *same*
+    // `connectivityMonitor` instance constructed just above, rather than standing up a second
+    // `NWPathMonitor`.
+    @State private var sessionCoordinator: RootSessionCoordinator
     @Environment(\.scenePhase) private var scenePhase
 
-    // Connectivity monitoring (ADR-0019): a single app-wide signal behind the
-    // `ConnectivityMonitoring` seam, injected via `\.connectivityMonitor` (not
-    // `.environment(_:)`) because the real and `-uiTestOffline` stub are different concrete
-    // types. Built once here so a future offline-mutation sync engine can observe the same
-    // instance instead of standing up a second `NWPathMonitor`.
-    @State private var connectivityMonitor = Self.makeConnectivityMonitor()
+    init() {
+        let monitor = Self.makeConnectivityMonitor()
+        _connectivityMonitor = State(initialValue: monitor)
+        _sessionCoordinator = State(initialValue: RootSessionCoordinator.make(connectivityMonitor: monitor))
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -73,10 +79,17 @@ struct RecordCatchApp: App {
                 // invisible. Forcing light appearance keeps the whole app consistent until/unless
                 // a Dark Mode variant of the design system is designed and an ADR records it.
                 .preferredColorScheme(.light)
+                .task {
+                    // Silent session check at launch (ADR-0022 §5) — never blocks the UI; a
+                    // no-op unless a local session already exists (and skipped entirely for
+                    // `-uiTest*` launches, see `RootSessionCoordinator.skipsBackgroundVerification`).
+                    await sessionCoordinator.verifySessionInBackground()
+                }
                 .onChange(of: scenePhase) { oldPhase, newPhase in
-                    // Re-lock on return to foreground after backgrounding (ADR-0009 §4). Only
-                    // relevant once the user has actually reached Home this launch.
-                    guard newPhase == .active, oldPhase == .background, sessionCoordinator.phase == .home else { return }
+                    // Re-check on return to foreground after backgrounding (ADR-0009 §4 /
+                    // ADR-0022 §5). Not relevant from the sign-in screen itself — there is
+                    // nothing to re-verify or re-lock yet.
+                    guard newPhase == .active, oldPhase == .background, sessionCoordinator.phase != .signIn else { return }
                     sessionCoordinator.refreshPhase()
                 }
         }
@@ -118,7 +131,7 @@ struct RecordCatchApp: App {
         UITestRootView {
             switch sessionCoordinator.phase {
             case .home:
-                RootTabView()
+                RootTabView(onSignOut: sessionCoordinator.handleSignOut)
             case .appLock:
                 AppLockView(
                     viewModel: sessionCoordinator.makeAppLockViewModel(
@@ -126,7 +139,7 @@ struct RecordCatchApp: App {
                     )
                 )
             case .signIn:
-                SignInView(onSignIn: sessionCoordinator.handleSignIn)
+                sessionCoordinator.makeSignInView()
             }
         }
     }

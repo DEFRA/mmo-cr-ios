@@ -90,6 +90,19 @@ struct UITestRootView<ProductionRoot: View>: View {
                 initialRoute: .selectGear(vessel: "ACHILLES", referenceNumber: "A1234520260727150815"),
                 favouriteGears: selectGearFavouriteGears
             )
+        } else if launchArguments.contains(.catchRecordCatchLocationNearestAreas) {
+            // Seeds straight to the "Select the statistical sub area…" nearest-areas screen
+            // reached from the catch-location map's "Other" button, with a departure port (so the
+            // bundled, offline nearest-areas lookup has a real coordinate to rank against) for UI
+            // testing its radio list/"Other" option/validation without driving the map by hand.
+            CatchRecordHostView(
+                initialRoute: .catchLocationNearestAreas(
+                    gear: .seineNets,
+                    vessel: "ACHILLES",
+                    referenceNumber: "A1234520260727150815"
+                ),
+                draft: Self.seedCatchLocationNearestAreasDraft
+            )
         } else if launchArguments.contains(.catchRecordCatchLocationManualEntry) {
             // Seeds straight to the manual "Enter the statistical sub area…" screen reached from
             // the catch-location map's "Other" button, for UI testing its search/validation
@@ -197,6 +210,20 @@ struct UITestRootView<ProductionRoot: View>: View {
                 sortDate: Date(timeIntervalSince1970: TimeInterval(7 - index))
             )
         }
+    }
+
+    /// Draft with a known departure port (Plymouth) used to seed
+    /// `-uiTestCatchRecordCatchLocationNearestAreas`, so the bundled, offline nearest-areas lookup
+    /// (`BundledNearestSubrectangleProvider`) has a real coordinate to rank the sea-overlapping
+    /// subrectangle layer against, producing a deterministic, non-empty radio list.
+    @MainActor
+    private static var seedCatchLocationNearestAreasDraft: CatchRecordDraft {
+        let draft = CatchRecordDraft()
+        draft.departurePort = PortOption(
+            name: "Plymouth",
+            coordinate: PortCoordinate(latitude: 50.3660, longitude: -4.1427)
+        )
+        return draft
     }
 
     /// Fully-populated `CatchRecordDraft` used to seed `-uiTestCatchRecordCheckYourAnswers`, so the

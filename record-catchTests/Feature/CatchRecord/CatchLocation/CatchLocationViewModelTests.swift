@@ -130,17 +130,17 @@ final class CatchLocationViewModelTests: XCTestCase {
         XCTAssertNil(sut.departurePort)
     }
 
-    // MARK: - Manual entry ("Other" button)
+    // MARK: - "Other" button → nearest-areas screen
 
-    func test_enterManualEntry_pushesManualEntryRoute() {
+    func test_enterOtherAreas_pushesNearestAreasRoute() {
         let router = CatchRecordRouter()
         let sut = makeSUT(router: router)
 
-        sut.enterManualEntry()
+        sut.enterOtherAreas()
 
         XCTAssertEqual(
             router.path,
-            [.catchLocationManualEntry(gear: .seineNets, vessel: vessel, referenceNumber: referenceNumber)]
+            [.catchLocationNearestAreas(gear: .seineNets, vessel: vessel, referenceNumber: referenceNumber)]
         )
     }
 

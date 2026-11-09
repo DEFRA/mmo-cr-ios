@@ -6,7 +6,8 @@ import SwiftUI
 /// Renders the shared journey chrome (caption, reference number, heading, hints) then the
 /// `OfflineMapView` map component for area selection; its cartographic style intentionally need
 /// not match the design mock. Tapping a subrectangle submits and routes on immediately — there is
-/// no separate "Save and continue" step.
+/// no separate "Save and continue" step. The overlaid "Other" button opens
+/// `CatchLocationNearestAreasView` instead (see `otherButton`).
 struct CatchLocationView: View {
 
     @Environment(AppLanguageStore.self) private var languageStore
@@ -127,15 +128,18 @@ struct CatchLocationView: View {
         }
     }
 
-    /// Floating button overlaid on the bottom-left corner of the map, offering a manual,
-    /// type-to-search alternative (`CatchLocationManualEntryView`) to tapping an area directly —
-    /// for when the correct subrectangle either isn't visible at the current zoom or is awkward to
-    /// tap accurately. No Figma design was supplied for this control, so it is built entirely from
-    /// existing DesignSystem tokens (no bespoke deviation): an opaque, high-contrast pill that
-    /// meets the WCAG 2.2 44×44pt minimum target size sitting on top of the map.
+    /// Floating button overlaid on the bottom-left corner of the map, offering an alternative to
+    /// tapping an area directly — for when the correct subrectangle either isn't visible at the
+    /// current zoom or is awkward to tap accurately. Opens `CatchLocationNearestAreasView` (a
+    /// radio-button list of the areas nearest the departure port, plus its own "Other" option
+    /// reaching the manual type-to-search screen — see the supplied Figma design,
+    /// `docs/design-specs/create-catch-record.md`). No Figma design was supplied for this button
+    /// itself, so it is built entirely from existing DesignSystem tokens (no bespoke deviation):
+    /// an opaque, high-contrast pill that meets the WCAG 2.2 44×44pt minimum target size sitting on
+    /// top of the map.
     private var otherButton: some View {
         Button {
-            viewModel.enterManualEntry()
+            viewModel.enterOtherAreas()
         } label: {
             Text(languageStore.localized("catchRecord.catchLocation.otherButton"))
                 .font(AppTypography.button)

@@ -98,8 +98,11 @@ Home ──(Create new)───────────────────
                                   SelectGear ◄─────────────────────────────────────────────────────────┘
                                         │
                                         ▼
-                                 CatchLocation (map)
-                                        │
+                                 CatchLocation (map) ──(Other)──► CatchLocationNearestAreas
+                                        │                              │        │
+                                        │                     (area)──┘   (Other)──► CatchLocationManualEntry
+                                        │                              │                       │
+                                        ▼                              ▼                       ▼
                        has favourite species? ──No──► AddSpecies ──► RecordSpeciesWeights
                                         │Yes                                   │
                                         ▼                                     │
@@ -138,6 +141,7 @@ namespaced `CatchRecord.<screenId>.*` throughout (e.g. `CatchRecord.selectVessel
 | 9 | `SelectGear/` | `.selectGear(...)` | Multi-select checkboxes of favourite gears, plus "Add another gear". Writes `draft.gear`. | `.catchLocation` |
 | 10 | `GearMeasurements/` | `.gearMeasurements(gear:...)` | Whole-number measurement entry for a gear (e.g. mesh size for seine nets); saves the gear (with values) to favourites. | `.selectGear` |
 | 11 | `CatchLocation/` | `.catchLocation(gear:...)` | Pick the statistical area on a map (`SeaMapView`). Writes `draft.statisticalArea`. | species sub-journey |
+| 11a | `CatchLocationNearestAreas/` | `.catchLocationNearestAreas(gear:...)` | Reached from the map's "Other" button: a radio-button list of the (up to 9) statistical sub areas nearest the departure port, plus "Other" (built from a supplied Figma screenshot — see the design spec). | listed area → species sub-journey; "Other" → `.catchLocationManualEntry` |
 | 12 | `AddSpecies/` | `.addSpecies(...returnPhase:)` | Type-to-search a species; shown when there are **no favourite species**. `returnPhase` records where to return (only the weights screen now the Species Summary screen has been removed; the `.summary` case is retained but unused). | back to `returnPhase` screen |
 | 13 | `RecordSpeciesWeights/` | `.recordSpeciesWeights(gear:...)` | Tick favourite species and enter live weights (above minimum always shown; below-minimum/legally-discarded are reveal-able optional fields). Includes an "Add a species" link and a **dummy "Remove species"** link (not yet implemented). Writes `draft.speciesCaught`. Weight validation is deferred — free text for now. | `.landingStorage` |
 | 14 | `LandingStorage/` | `.landingStorage(...)` | Yes/No — any catch not landed straight away (bait/keep pots)? | Yes → `.landingStorageSpecies`; No → `.checkYourAnswers` |
@@ -199,11 +203,25 @@ into `draft.gear` (single-gear support in this phase).
 Renders the `OfflineMapView`/`OfflineMapCoordinator` (see `Features/Map/`) so the user taps a
 statistical subzone. `CatchLocationValidation.errorKey(for:)` requires a non-nil selection before
 continuing — this still governs the *map* screen only. Its type-to-search sibling
-(`CatchLocationManualEntry/`, reached via the map's "Other" button) has its own two-rule
+(`CatchLocationManualEntry/`, reached via `CatchLocationNearestAreas`' own "Other" option) has its own two-rule
 `CatchLocationManualEntryValidation.message(query:selectedCode:)` instead, distinguishing a blank
 search field from one typed-but-unselected (mirrors `AddPortValidation`/`AddGearValidation`). On
 success, fetches favourite species and pushes the pure `CatchRecordRouting.speciesEntryRoute`
 decision (mirrors port/gear entry).
+
+### 11a. Select the statistical sub area (`CatchLocationNearestAreas/`)
+
+Reached from `CatchLocationView`'s "Other" button (built from a supplied Figma screenshot — see
+the design spec's deviation register). A radio-button list of the statistical sub areas nearest
+the trip's departure port (`BundledNearestSubrectangleProvider`, offline, bundled data — up to 9,
+nearest first), with "Other" as the final option in the same list. Picking a listed area behaves
+exactly like tapping it on the map (writes `GearCatch.statisticalArea`, enters the species
+sub-journey); picking "Other" pushes `CatchLocationManualEntry` instead.
+`CatchLocationNearestAreasValidation.errorKey(for:)` requires a selection (an area **or** "Other")
+before continuing. The departure port is always known by the time this screen is reachable (no
+journey path reaches catch-location without first selecting one), so the lookup always has a
+coordinate in practice; it still degrades to offering only "Other" rather than crashing if that
+invariant or the bundled lookup itself ever fails.
 
 ### 12–13. Add species / Record species weights
 

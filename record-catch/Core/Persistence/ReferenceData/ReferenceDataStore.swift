@@ -23,6 +23,15 @@ nonisolated enum ReferenceDataKind: String, Sendable, CaseIterable {
     case vessels
 }
 
+/// The raw-blob reference datasets this store persists (see ADR-0024 "Map data") — unlike
+/// `ReferenceDataKind`'s item-shaped datasets, each is a single opaque blob with no per-item
+/// identity. `map-ports` is deliberately **not** a case here: per the live manifest's documented
+/// behaviour, it is always derived from `ports` and never independently persisted or listed.
+nonisolated enum ReferenceBlobKind: String, Sendable, CaseIterable {
+    case mapLand = "map-land"
+    case mapStatisticalAreas = "map-statistical-areas"
+}
+
 /// Background actor over the shared `ModelContainer`'s reference-data entities. Every method is
 /// `async` (actor-isolated) so callers never need their own `ModelContext` — see
 /// `ReferenceDataStoreProvider.shared` for how call sites outside the sync pipeline (the cached
@@ -85,6 +94,9 @@ actor ReferenceDataStore {
         for kind in ReferenceDataKind.allCases where try hasData(for: kind) {
             return true
         }
+        for kind in ReferenceBlobKind.allCases where try hasBlob(for: kind) {
+            return true
+        }
         return false
     }
 
@@ -122,6 +134,86 @@ actor ReferenceDataStore {
                 sortName: item.sortName,
                 payload: item.payload
             ))
+        }
+
+        let existingState = try modelContext.fetch(
+            FetchDescriptor<ReferenceDatasetStateEntity>(predicate: #Predicate { $0.dataset == rawValue })
+        ).first
+
+        if let existingState {
+            existingState.collectionId = state.collectionId
+            existingState.version = state.version
+            existingState.schemaVersion = state.schemaVersion
+            existingState.itemCount = state.itemCount
+            existingState.lastModified = state.lastModified
+            existingState.syncedAt = state.syncedAt
+            existingState.payloadFormatVersion = state.payloadFormatVersion
+        } else {
+            modelContext.insert(ReferenceDatasetStateEntity(
+                dataset: rawValue,
+                collectionId: state.collectionId,
+                version: state.version,
+                schemaVersion: state.schemaVersion,
+                itemCount: state.itemCount,
+                lastModified: state.lastModified,
+                syncedAt: state.syncedAt,
+                payloadFormatVersion: state.payloadFormatVersion
+            ))
+        }
+
+        try modelContext.save()
+    }
+
+    // MARK: - Blob datasets (map-land / map-statistical-areas — see ADR-0024 "Map data")
+
+    /// A blob dataset's current locally-synced state, or `nil` if it has never been synced.
+    /// Reuses `StateSnapshot`/`ReferenceDatasetStateEntity` — the state row's shape (version/
+    /// collectionId/schemaVersion/syncedAt/payloadFormatVersion) is identical for an item or a
+    /// blob dataset; only `itemCount` is always `nil` for a blob (the manifest's blob entries
+    /// carry `featureCount`/`sizeBytes` instead, which this connector does not track).
+    func blobState(for dataset: ReferenceBlobKind) throws -> StateSnapshot? {
+        let rawValue = dataset.rawValue
+        let descriptor = FetchDescriptor<ReferenceDatasetStateEntity>(
+            predicate: #Predicate { $0.dataset == rawValue }
+        )
+        guard let entity = try modelContext.fetch(descriptor).first else { return nil }
+        return StateSnapshot(
+            collectionId: entity.collectionId,
+            version: entity.version,
+            schemaVersion: entity.schemaVersion,
+            itemCount: entity.itemCount,
+            lastModified: entity.lastModified,
+            syncedAt: entity.syncedAt,
+            payloadFormatVersion: entity.payloadFormatVersion
+        )
+    }
+
+    /// Whether `dataset` has ever synced successfully.
+    func hasBlob(for dataset: ReferenceBlobKind) throws -> Bool {
+        let rawValue = dataset.rawValue
+        var descriptor = FetchDescriptor<ReferenceBlobEntity>(predicate: #Predicate { $0.dataset == rawValue })
+        descriptor.fetchLimit = 1
+        return try !modelContext.fetch(descriptor).isEmpty
+    }
+
+    /// `dataset`'s persisted raw bytes, or `nil` if it has never been synced.
+    func blob(for dataset: ReferenceBlobKind) throws -> Data? {
+        let rawValue = dataset.rawValue
+        let descriptor = FetchDescriptor<ReferenceBlobEntity>(predicate: #Predicate { $0.dataset == rawValue })
+        return try modelContext.fetch(descriptor).first?.payload
+    }
+
+    /// Replaces a blob dataset's bytes and its state in a single save — the blob equivalent of
+    /// `replace(dataset:items:state:)` above (see ADR-0024 "Atomic replace"/"Map data").
+    func replaceBlob(dataset: ReferenceBlobKind, payload: Data, state: StateSnapshot) throws {
+        let rawValue = dataset.rawValue
+
+        if let existingBlob = try modelContext.fetch(
+            FetchDescriptor<ReferenceBlobEntity>(predicate: #Predicate { $0.dataset == rawValue })
+        ).first {
+            existingBlob.payload = payload
+        } else {
+            modelContext.insert(ReferenceBlobEntity(dataset: rawValue, payload: payload))
         }
 
         let existingState = try modelContext.fetch(

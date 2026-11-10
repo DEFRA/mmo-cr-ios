@@ -15,7 +15,8 @@ struct RecordCatchApp: App {
             CatchRecordEntity.self,
             FavouriteEntity.self,
             ReferenceItemEntity.self,
-            ReferenceDatasetStateEntity.self
+            ReferenceDatasetStateEntity.self,
+            ReferenceBlobEntity.self
         ])
         // Protects on-device catch-record data at rest (vessel, dates, ports, gear, species — see
         // ADR-0014, DEFRA data-at-rest requirement): the store is only accessible after the user

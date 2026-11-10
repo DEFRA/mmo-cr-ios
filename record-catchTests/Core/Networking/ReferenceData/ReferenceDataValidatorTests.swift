@@ -201,4 +201,34 @@ final class ReferenceDataValidatorTests: XCTestCase {
             activeTo: nil
         ))
     }
+
+    // MARK: validateBlob (map-land / map-statistical-areas — see ADR-0024 "Map data")
+
+    func test_validateBlob_succeeds_forWellFormedJSON() throws {
+        let data = Data(#"{"type":"FeatureCollection","features":[]}"#.utf8)
+        try ReferenceDataValidator.validateBlob(dataset: "map-land", data: data)
+    }
+
+    func test_validateBlob_throwsEmptyDataset_whenDataIsEmpty() {
+        XCTAssertThrowsError(try ReferenceDataValidator.validateBlob(dataset: "map-land", data: Data())) {
+            XCTAssertEqual($0 as? ReferenceDataValidationError, .emptyDataset(dataset: "map-land"))
+        }
+    }
+
+    func test_validateBlob_throwsMalformedBlob_forNonJSONData() {
+        let data = Data("not json at all".utf8)
+        XCTAssertThrowsError(try ReferenceDataValidator.validateBlob(dataset: "map-land", data: data)) {
+            XCTAssertEqual($0 as? ReferenceDataValidationError, .malformedBlob(dataset: "map-land"))
+        }
+    }
+
+    func test_validateBlob_throwsResponseTooLarge_overCap() {
+        let data = Data(repeating: 0x20, count: ReferenceDataValidator.maximumResponseSizeBytes + 1)
+        XCTAssertThrowsError(try ReferenceDataValidator.validateBlob(dataset: "map-land", data: data)) {
+            XCTAssertEqual(
+                $0 as? ReferenceDataValidationError,
+                .responseTooLarge(dataset: "map-land", sizeBytes: data.count)
+            )
+        }
+    }
 }

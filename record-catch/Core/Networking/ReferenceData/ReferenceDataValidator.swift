@@ -164,4 +164,20 @@ nonisolated enum ReferenceDataValidator {
             }
         }
     }
+
+    /// Sanity checks for a raw blob dataset (`map-land`/`map-statistical-areas` — see ADR-0024
+    /// "Map data"): non-empty, within the shared size cap, and well-formed JSON (GeoJSON is JSON,
+    /// so this is a cheap defence against a truncated or unparsable response slipping through as a
+    /// 2xx). No deeper GeoJSON-specific validation is performed: this connector stores the blob
+    /// opaquely and does not parse or precompute it — that remains explicitly out of scope (see
+    /// ADR-0024 "Map data").
+    static func validateBlob(dataset: String, data: Data) throws {
+        guard !data.isEmpty else {
+            throw ReferenceDataValidationError.emptyDataset(dataset: dataset)
+        }
+        try validateResponseSize(dataset: dataset, sizeBytes: data.count)
+        guard (try? JSONSerialization.jsonObject(with: data)) != nil else {
+            throw ReferenceDataValidationError.malformedBlob(dataset: dataset)
+        }
+    }
 }

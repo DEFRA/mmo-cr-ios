@@ -42,6 +42,13 @@ nonisolated protocol ReferenceDataFetching: Sendable {
     /// labels to resolve a gear's measurement ids against.
     func fetchGears() async throws -> [GearOption]
     func fetchManifest() async throws -> ReferenceDataManifest
+    /// Fetches the raw bytes at `urlString` — a blob dataset's (`map-land`/`map-statistical-areas`
+    /// — see ADR—0024 "Map data") per-dataset download location, taken verbatim from that
+    /// dataset's `ReferenceDataManifestEntry.url`. Unlike every other dataset in this protocol,
+    /// blob datasets have no fixed `/reference-data/{dataset}` route to request instead — the
+    /// manifest's `url` is the *only* way to know where to fetch one from. An absolute `urlString`
+    /// is used as-is; a scheme-less value is resolved against the configured API base URL.
+    func fetchBlob(urlString: String) async throws -> Data
     /// Pings `GET {baseURL}/health`. Succeeds (returns) on any 2xx response and throws `APIError`
     /// otherwise — see `makeReferenceDataHealthRequest`'s doc comment for why no response body is
     /// decoded or modelled.
@@ -171,6 +178,29 @@ nonisolated struct RemoteReferenceDataClient: ReferenceDataFetching {
         return try await send(request, fallbackPath: "manifest") { data in
             try self.decoder.decode(ReferenceDataManifest.self, from: data)
         }
+    }
+
+    /// See `ReferenceDataFetching.fetchBlob(urlString:)`'s doc comment. Resolves `urlString`
+    /// against `configuration.baseURL` when it has no scheme of its own; throws
+    /// `APIError.invalidConfiguration` if the result still isn't a valid URL (a malformed manifest
+    /// `url` field — never silently fetches nothing).
+    func fetchBlob(urlString: String) async throws -> Data {
+        guard let url = Self.resolveBlobURL(urlString, baseURL: configuration.baseURL) else {
+            throw APIError.invalidConfiguration
+        }
+        let token = await resolvedToken()
+        let request = makeReferenceDataBlobRequest(url: url, bearerToken: token)
+        return try await send(request, fallbackPath: url.path) { $0 }
+    }
+
+    /// Absolute URLs (the expected shape of a manifest entry's `url` field) are used as-is; a
+    /// scheme-less value is resolved against `baseURL` instead, so a relative path still works if
+    /// the live API ever starts sending one.
+    private static func resolveBlobURL(_ urlString: String, baseURL: URL) -> URL? {
+        if let url = URL(string: urlString), url.scheme != nil {
+            return url
+        }
+        return URL(string: urlString, relativeTo: baseURL)?.absoluteURL
     }
 
     func checkHealth() async throws {
@@ -306,6 +336,9 @@ nonisolated struct StubReferenceDataClient: ReferenceDataFetching {
     var portItem: PortOption?
     var gears: [GearOption] = []
     var manifest: ReferenceDataManifest?
+    /// Keyed by the exact `urlString` passed to `fetchBlob(urlString:)` — mirrors a manifest
+    /// entry's `url` field. See ADR-0024 "Map data".
+    var blobsByURLString: [String: Data] = [:]
     var error: APIError?
 
     // Relies on Swift's synthesised memberwise initializer (every stored property above has a
@@ -356,6 +389,12 @@ nonisolated struct StubReferenceDataClient: ReferenceDataFetching {
         throw APIError.response(status: 503, details: nil)
     }
 
+    func fetchBlob(urlString: String) async throws -> Data {
+        if let error { throw error }
+        if let data = blobsByURLString[urlString] { return data }
+        throw APIError.response(status: 404, details: nil)
+    }
+
     func checkHealth() async throws {
         if let error { throw error }
     }
@@ -375,5 +414,6 @@ nonisolated struct FailingReferenceDataClient: ReferenceDataFetching {
     func fetchPort(id _: String) async throws -> PortOption { throw APIError.invalidConfiguration }
     func fetchGears() async throws -> [GearOption] { throw APIError.invalidConfiguration }
     func fetchManifest() async throws -> ReferenceDataManifest { throw APIError.invalidConfiguration }
+    func fetchBlob(urlString _: String) async throws -> Data { throw APIError.invalidConfiguration }
     func checkHealth() async throws { throw APIError.invalidConfiguration }
 }

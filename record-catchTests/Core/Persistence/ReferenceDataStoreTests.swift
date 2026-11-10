@@ -14,7 +14,7 @@ final class ReferenceDataStoreTests: XCTestCase {
 
     private func makeStore() throws -> ReferenceDataStore {
         let container = try ModelContainer(
-            for: ReferenceItemEntity.self, ReferenceDatasetStateEntity.self,
+            for: ReferenceItemEntity.self, ReferenceDatasetStateEntity.self, ReferenceBlobEntity.self,
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
         return ReferenceDataStore(modelContainer: container)
@@ -145,5 +145,104 @@ final class ReferenceDataStoreTests: XCTestCase {
 
         let ports = try await sut.items(for: .ports)
         XCTAssertEqual(ports.map { String(data: $0, encoding: .utf8) }, ["Plymouth"])
+    }
+
+    // MARK: - Blob datasets (map-land / map-statistical-areas — see ADR-0024 "Map data")
+
+    func test_blobState_returnsNil_beforeAnySync() async throws {
+        let sut = try makeStore()
+
+        let state = try await sut.blobState(for: .mapLand)
+
+        XCTAssertNil(state)
+    }
+
+    func test_hasBlob_isFalse_beforeAnySync() async throws {
+        let sut = try makeStore()
+
+        let hasBlob = try await sut.hasBlob(for: .mapLand)
+        XCTAssertFalse(hasBlob)
+    }
+
+    func test_blob_returnsNil_beforeAnySync() async throws {
+        let sut = try makeStore()
+
+        let blob = try await sut.blob(for: .mapLand)
+        XCTAssertNil(blob)
+    }
+
+    func test_replaceBlob_persistsPayload_retrievableByBlob() async throws {
+        let sut = try makeStore()
+        let payload = Data(#"{"type":"FeatureCollection","features":[]}"#.utf8)
+
+        try await sut.replaceBlob(dataset: .mapLand, payload: payload, state: makeState())
+
+        let fetched = try await sut.blob(for: .mapLand)
+        XCTAssertEqual(fetched, payload)
+    }
+
+    func test_replaceBlob_persistsState_retrievableByBlobState() async throws {
+        let sut = try makeStore()
+        let state = makeState(collectionId: "c1", version: "v2", itemCount: nil)
+
+        try await sut.replaceBlob(dataset: .mapStatisticalAreas, payload: Data("{}".utf8), state: state)
+
+        let fetched = try await sut.blobState(for: .mapStatisticalAreas)
+        XCTAssertEqual(fetched, state)
+    }
+
+    func test_replaceBlob_setsHasBlob_andHasAnyData_true() async throws {
+        let sut = try makeStore()
+
+        try await sut.replaceBlob(dataset: .mapLand, payload: Data("{}".utf8), state: makeState())
+
+        let hasMapLandBlob = try await sut.hasBlob(for: .mapLand)
+        let hasAnyData = try await sut.hasAnyData()
+        let hasStatisticalAreasBlob = try await sut.hasBlob(for: .mapStatisticalAreas)
+        XCTAssertTrue(hasMapLandBlob)
+        XCTAssertTrue(hasAnyData)
+        XCTAssertFalse(hasStatisticalAreasBlob, "Only the replaced dataset should report data")
+    }
+
+    func test_replaceBlob_calledTwice_overwritesPayload_notJustAppends() async throws {
+        let sut = try makeStore()
+        try await sut.replaceBlob(dataset: .mapLand, payload: Data("first".utf8), state: makeState())
+
+        try await sut.replaceBlob(dataset: .mapLand, payload: Data("second".utf8), state: makeState())
+
+        let fetched = try await sut.blob(for: .mapLand)
+        XCTAssertEqual(fetched, Data("second".utf8))
+    }
+
+    func test_replaceBlob_calledTwice_updatesState_ratherThanDuplicatingTheRow() async throws {
+        let sut = try makeStore()
+        try await sut.replaceBlob(dataset: .mapLand, payload: Data("{}".utf8), state: makeState(version: "v1"))
+
+        try await sut.replaceBlob(dataset: .mapLand, payload: Data("{}".utf8), state: makeState(version: "v2"))
+
+        let state = try await sut.blobState(for: .mapLand)
+        XCTAssertEqual(state?.version, "v2")
+    }
+
+    func test_replaceBlob_forOneDataset_doesNotAffectAnother() async throws {
+        let sut = try makeStore()
+        try await sut.replaceBlob(dataset: .mapLand, payload: Data("land".utf8), state: makeState())
+
+        try await sut.replaceBlob(dataset: .mapStatisticalAreas, payload: Data("areas".utf8), state: makeState())
+
+        let land = try await sut.blob(for: .mapLand)
+        XCTAssertEqual(land, Data("land".utf8))
+    }
+
+    func test_itemDatasetAndBlobDataset_areIndependent() async throws {
+        let sut = try makeStore()
+        try await sut.replace(dataset: .ports, items: makeItems(["Plymouth"]), state: makeState())
+
+        try await sut.replaceBlob(dataset: .mapLand, payload: Data("{}".utf8), state: makeState())
+
+        let ports = try await sut.items(for: .ports)
+        let mapLand = try await sut.blob(for: .mapLand)
+        XCTAssertEqual(ports.count, 1)
+        XCTAssertNotNil(mapLand)
     }
 }

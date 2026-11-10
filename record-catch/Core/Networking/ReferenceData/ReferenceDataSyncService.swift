@@ -69,10 +69,13 @@ actor ReferenceDataSyncService {
         (try? await store.hasAnyData()) ?? false
     }
 
-    /// Fetches the manifest, then fetches+validates+persists every changed dataset concurrently.
-    /// Never throws: a manifest failure means every dataset reports `.failed` (there is nothing
-    /// to compare against, so none can be skipped as "unchanged"); a per-dataset failure never
-    /// stops the others.
+    /// Fetches the manifest, then fetches+validates+persists every changed dataset concurrently —
+    /// both the item-shaped datasets (`ReferenceDataKind`) and the raw-blob datasets
+    /// (`ReferenceBlobKind` — see ADR-0024 "Map data"). Never throws: a manifest failure means
+    /// every item dataset reports `.failed` (there is nothing to compare against, so none can be
+    /// skipped as "unchanged") while every blob dataset reports `.unchanged` (a blob dataset has
+    /// no fixed fallback route to blindly refetch from — see `syncBlobDataset`); a per-dataset
+    /// failure never stops the others.
     func sync() async -> ReferenceDataSyncReport {
         let manifest: ReferenceDataManifest?
         do {
@@ -90,15 +93,29 @@ actor ReferenceDataSyncService {
         }
 
         var report = ReferenceDataSyncReport()
-        await withTaskGroup(of: (ReferenceDataKind, DatasetSyncResult).self) { group in
+        await withTaskGroup(of: (String, DatasetSyncResult).self) { group in
             for kind in ReferenceDataKind.allCases {
                 let manifestEntry = manifest?.datasets.first { $0.dataset == kind.rawValue }
+                let manifestFetched = manifest != nil
                 group.addTask { [self] in
-                    (kind, await self.syncDataset(kind, manifestEntry: manifestEntry, manifestFetched: manifest != nil))
+                    let result = await self.syncDataset(
+                        kind, manifestEntry: manifestEntry, manifestFetched: manifestFetched
+                    )
+                    return (kind.rawValue, result)
                 }
             }
-            for await (kind, result) in group {
-                report.results[kind.rawValue] = result
+            for kind in ReferenceBlobKind.allCases {
+                let manifestEntry = manifest?.datasets.first { $0.dataset == kind.rawValue }
+                let manifestFetched = manifest != nil
+                group.addTask { [self] in
+                    let result = await self.syncBlobDataset(
+                        kind, manifestEntry: manifestEntry, manifestFetched: manifestFetched
+                    )
+                    return (kind.rawValue, result)
+                }
+            }
+            for await (key, result) in group {
+                report.results[key] = result
             }
         }
         return report
@@ -155,6 +172,62 @@ actor ReferenceDataSyncService {
                 payloadFormatVersion: Self.payloadFormatVersion
             )
             try await store.replace(dataset: kind, items: items, state: state)
+            return .updated
+        } catch {
+            let reason = Self.describe(error)
+            logger.log(NetworkLogEntry(
+                method: "GET",
+                path: kind.rawValue,
+                statusCode: nil,
+                durationSeconds: 0,
+                errorCode: "sync_dataset_failed:\(reason)"
+            ))
+            return .failed(reason: reason)
+        }
+    }
+
+    // MARK: - Blob datasets (map-land / map-statistical-areas — see ADR-0024 "Map data")
+
+    /// Decides whether `kind`'s blob needs refetching, and if so fetches, validates and persists
+    /// it. Deliberately more conservative than `syncDataset` above: a blob dataset has **no**
+    /// fixed `/reference-data/{dataset}` route to fall back to — the manifest's `url` field is the
+    /// *only* way to know where to fetch it, so when that entry is absent this run (the manifest
+    /// failed outright, or this backend/environment simply doesn't serve the dataset yet), the
+    /// existing on-device blob (if any) is left untouched and reported `.unchanged` rather than
+    /// `.failed` — an absent entry is not itself evidence of a server-side problem.
+    private func syncBlobDataset(
+        _ kind: ReferenceBlobKind,
+        manifestEntry: ReferenceDataManifestEntry?,
+        manifestFetched: Bool
+    ) async -> DatasetSyncResult {
+        guard manifestFetched, let manifestEntry else {
+            return .unchanged
+        }
+
+        let existingState = try? await store.blobState(for: kind)
+        if let existingState, unchanged(existingState, matches: manifestEntry) {
+            return .unchanged
+        }
+        return await fetchValidateAndStoreBlob(kind, manifestEntry: manifestEntry)
+    }
+
+    private func fetchValidateAndStoreBlob(
+        _ kind: ReferenceBlobKind,
+        manifestEntry: ReferenceDataManifestEntry
+    ) async -> DatasetSyncResult {
+        do {
+            let data = try await client.fetchBlob(urlString: manifestEntry.url)
+            try ReferenceDataValidator.validateBlob(dataset: kind.rawValue, data: data)
+            let state = ReferenceDataStore.StateSnapshot(
+                collectionId: manifestEntry.collectionId,
+                version: manifestEntry.version,
+                schemaVersion: manifestEntry.schemaVersion,
+                itemCount: manifestEntry.itemCount,
+                lastModified: manifestEntry.lastModified,
+                syncedAt: Date(),
+                payloadFormatVersion: Self.payloadFormatVersion
+            )
+            try await store.replaceBlob(dataset: kind, payload: data, state: state)
             return .updated
         } catch {
             let reason = Self.describe(error)

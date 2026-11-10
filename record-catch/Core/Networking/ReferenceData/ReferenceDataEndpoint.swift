@@ -156,6 +156,27 @@ nonisolated func makeReferenceDataHealthRequest(
     return makeGETRequest(url: url, bearerToken: bearerToken, requestId: requestId)
 }
 
+/// Builds the `URLRequest` for a raw blob-dataset download (`map-land`/`map-statistical-areas` —
+/// see ADR-0024 "Map data"). Unlike every other route in this file, `url` is **not** assembled
+/// from `baseURL` + fixed path segments here: the manifest's own per-dataset `url` field is the
+/// only way to know where to fetch a blob dataset from, and resolving it (absolute as-is, or
+/// against `baseURL` when scheme-less) is `RemoteReferenceDataClient.fetchBlob(urlString:)`'s
+/// job, **before** this function is called. This function only attaches the shared headers/auth,
+/// identically to every other route here.
+///
+/// - Parameters:
+///   - url: The already-resolved, absolute URL to fetch.
+///   - bearerToken: As above.
+///   - requestId: As above.
+/// - Returns: A fully-formed `GET` request with an `Accept: application/json` header.
+nonisolated func makeReferenceDataBlobRequest(
+    url: URL,
+    bearerToken: String?,
+    requestId: String = UUID().uuidString
+) -> URLRequest {
+    makeGETRequest(url: url, bearerToken: bearerToken, requestId: requestId)
+}
+
 /// The fixed root path segments shared by every reference-data route in this file (all except
 /// the plain `/health` liveness probe, which is deliberately not nested under this root).
 private enum ReferenceDataPath {

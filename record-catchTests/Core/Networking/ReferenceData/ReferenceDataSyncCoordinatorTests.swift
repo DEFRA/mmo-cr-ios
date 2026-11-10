@@ -53,6 +53,10 @@ private final class FakeReferenceDataFetching: ReferenceDataFetching, @unchecked
         lock.withLock { _fetchManifestCallCount += 1 }
         return try manifestResult.get()
     }
+    /// Never exercised by these coordinator-level tests (the default manifest's `datasets` is
+    /// empty, so `ReferenceDataSyncService` never calls this for a blob dataset — see
+    /// `syncBlobDataset`'s "no manifest entry" path) — present only to satisfy the protocol.
+    func fetchBlob(urlString _: String) async throws -> Data { throw APIError.response(status: 404, details: nil) }
     func checkHealth() async throws {}
 }
 
@@ -61,7 +65,7 @@ final class ReferenceDataSyncCoordinatorTests: XCTestCase {
 
     private func makeStore() throws -> ReferenceDataStore {
         let container = try ModelContainer(
-            for: ReferenceItemEntity.self, ReferenceDatasetStateEntity.self,
+            for: ReferenceItemEntity.self, ReferenceDatasetStateEntity.self, ReferenceBlobEntity.self,
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
         return ReferenceDataStore(modelContainer: container)

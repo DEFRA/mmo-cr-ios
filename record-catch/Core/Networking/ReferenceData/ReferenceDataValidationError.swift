@@ -43,4 +43,7 @@ nonisolated enum ReferenceDataValidationError: Error, Sendable, Equatable {
     /// A gear's `requiredMeasurementIds`/`variableMeasurementIds` referenced a measurement id
     /// absent from the mobile response's `measurements` catalogue.
     case unresolvedGearMeasurement(gearCode: String, measurementId: String)
+    /// A blob dataset's (`map-land`/`map-statistical-areas` — see ADR-0024 "Map data") response
+    /// body wasn't valid JSON — rejected before persisting rather than storing an unparsable blob.
+    case malformedBlob(dataset: String)
 }

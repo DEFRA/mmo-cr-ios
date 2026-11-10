@@ -129,6 +129,41 @@ the app bundle as a fallback. If a sync has never succeeded, `SyncErrorBanner`/t
 "not yet downloaded" empty state (future work — see Known gaps) says so plainly rather than silently
 falling back to stale bundled data a user might not expect in a live fishing-trip context.
 
+### Map data (blob datasets)
+
+`map-land`/`map-statistical-areas` are synced by the same pipeline but are **opaque blobs**, not
+item collections, and this ADR deliberately stops at "fetch and store the raw bytes" — not parsing
+GeoJSON or feeding `PrecomputedMapLoader`/`MapLandLoader`/`SubrectangleLoader`'s existing
+bundle-based rendering pipeline, which is unchanged and untouched by this work. Wiring the stored
+blobs into map rendering (replacing or supplementing the bundled `.geojson`/precomputed `.plist`
+assets) is explicit future work.
+
+- **`ReferenceBlobEntity`** — a third `@Model`, one row per blob dataset (`dataset` unique key +
+  `payload: Data` marked `@Attribute(.externalStorage)`, since a GeoJSON blob can run to several
+  MB and SwiftData should not inline that into the main database file). `ReferenceDataStore` gained
+  parallel `blobState(for:)`/`hasBlob(for:)`/`blob(for:)`/`replaceBlob(dataset:payload:state:)`
+  methods, reusing the same `StateSnapshot` shape as item datasets (`itemCount` is always `nil` for
+  a blob, matching the manifest's documented `featureCount`/`sizeBytes` fields for these datasets).
+- **No fixed route.** Every item dataset has a fixed `GET /reference-data/{dataset}` fallback route
+  it can blindly refetch even with no manifest entry. A blob dataset does not — its only known
+  location is the manifest entry's own `url` field. `ReferenceDataEndpoint.makeReferenceDataBlobRequest`
+  therefore takes an already-resolved `URL` rather than building one from `baseURL` + fixed path
+  segments, and `RemoteReferenceDataClient.fetchBlob(urlString:)` resolves that string against
+  `configuration.baseURL` only when it has no scheme of its own.
+- **Absent manifest entry → `.unchanged`, not `.failed`.** Because there is no fallback route,
+  `ReferenceDataSyncService.syncBlobDataset` treats "the manifest fetch failed, or the manifest
+  simply doesn't list this dataset yet" as `.unchanged` rather than attempting a blind retry or
+  reporting a failure — a backend that hasn't shipped `map-land`/`map-statistical-areas` yet must
+  not make every sync attempt look broken.
+- **Shallow validation only.** `ReferenceDataValidator.validateBlob` checks non-empty, within the
+  existing response-size cap, and that the bytes are syntactically valid JSON
+  (`JSONSerialization.jsonObject`) — it does not validate GeoJSON semantics. This matches the
+  explicit scope boundary: store the manifest-described bytes opaquely; precomputation/parsing is a
+  separate, future change.
+- **Independent of `map-ports`.** The manifest documents a `map-ports` entry that is always derived
+  from the `ports` item dataset rather than being independently fetchable, so `ReferenceBlobKind`
+  deliberately only has two cases (`mapLand`, `mapStatisticalAreas`) and does not include it.
+
 ## Known gaps (flagged, not hidden)
 
 - **Production bearer token.** `AuthTokenProviding` still has no Keychain/MSAL-backed production
@@ -151,7 +186,8 @@ falling back to stale bundled data a user might not expect in a live fishing-tri
   any further sync-pipeline work.
 - Every dataset failure is independently retryable and never corrupts or partially replaces existing
   data.
-- The reference-data layer adds `ReferenceItemEntity`/`ReferenceDatasetStateEntity` to the shared
-  `ModelContainer`, increasing on-device storage slightly (bounded — each dataset is at most a few
-  hundred items) but keeping Core/Persistence as the single source of truth for offline data, per
-  `swift-swiftui.instructions.md`.
+- The reference-data layer adds `ReferenceItemEntity`/`ReferenceDatasetStateEntity`/`ReferenceBlobEntity`
+  to the shared `ModelContainer`, increasing on-device storage slightly (bounded for item datasets —
+  each is at most a few hundred items; the two blob datasets are larger but stored via
+  `@Attribute(.externalStorage)`) but keeping Core/Persistence as the single source of truth for
+  offline data, per `swift-swiftui.instructions.md`.

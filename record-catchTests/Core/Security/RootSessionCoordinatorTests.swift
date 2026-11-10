@@ -17,7 +17,8 @@ final class RootSessionCoordinatorTests: XCTestCase {
         verificationStore: SessionVerificationStoring = InMemorySessionVerificationStore(),
         connectivityMonitor: (any record_catch.ConnectivityMonitoring)? = nil,
         offlineAccessPolicy: OfflineAccessPolicy = .gracePeriod(days: 7),
-        skipsBackgroundVerification: Bool = true
+        skipsBackgroundVerification: Bool = true,
+        isUITesting: Bool = false
     ) -> RootSessionCoordinator {
         let resolvedAuthenticator: any Authenticating = authenticator ?? FakeAuthenticator()
         let resolvedConnectivityMonitor: any record_catch.ConnectivityMonitoring = connectivityMonitor ?? record_catch.StubConnectivityMonitor(isOnline: true)
@@ -32,7 +33,8 @@ final class RootSessionCoordinatorTests: XCTestCase {
             ),
             connectivityMonitor: resolvedConnectivityMonitor,
             offlineAccessPolicy: offlineAccessPolicy,
-            skipsBackgroundVerification: skipsBackgroundVerification
+            skipsBackgroundVerification: skipsBackgroundVerification,
+            isUITesting: isUITesting
         )
     }
 
@@ -217,13 +219,21 @@ final class RootSessionCoordinatorTests: XCTestCase {
 
     // MARK: - handleSignIn(_:)
 
-    func test_handleSignIn_beginsLocalSessionAndMovesToHome() {
+    func test_handleSignIn_beginsLocalSessionAndMovesToPreparingData() {
         let sessionStore = InMemoryLocalSessionStore(hasSession: false)
         let sut = makeSut(sessionStore: sessionStore)
 
         sut.handleSignIn(AuthenticatedAccount(username: "a@b.com", identifier: "id"))
 
         XCTAssertTrue(sessionStore.hasLocalSession())
+        XCTAssertEqual(sut.phase, .preparingData)
+    }
+
+    func test_handleSignIn_movesStraightToHome_whenUITesting() {
+        let sut = makeSut(isUITesting: true)
+
+        sut.handleSignIn(AuthenticatedAccount(username: "a@b.com", identifier: "id"))
+
         XCTAssertEqual(sut.phase, .home)
     }
 
@@ -295,10 +305,40 @@ final class RootSessionCoordinatorTests: XCTestCase {
         XCTAssertEqual(authenticator.signOutCallCount, 1)
     }
 
+    // MARK: - completeDataPreparation() (ADR-0024 "Data before Home")
+
+    func test_completeDataPreparation_movesPhaseToHome_fromPreparingData() {
+        let sut = makeSut()
+        sut.handleSignIn(AuthenticatedAccount(username: "a@b.com", identifier: "id"))
+        XCTAssertEqual(sut.phase, .preparingData)
+
+        sut.completeDataPreparation()
+
+        XCTAssertEqual(sut.phase, .home)
+    }
+
+    func test_completeDataPreparation_isNoOp_fromAnyOtherPhase() {
+        let sut = makeSut(sessionStore: InMemoryLocalSessionStore(hasSession: false))
+        XCTAssertEqual(sut.phase, .signIn)
+
+        sut.completeDataPreparation()
+
+        XCTAssertEqual(sut.phase, .signIn)
+    }
+
     // MARK: - makeAppLockViewModel(unlockReason:)
 
-    func test_makeAppLockViewModel_onUnlocked_movesPhaseToHome() {
+    func test_makeAppLockViewModel_onUnlocked_movesPhaseToPreparingData() {
         let sut = makeSut()
+        let viewModel = sut.makeAppLockViewModel(unlockReason: "test reason")
+
+        viewModel.onUnlocked()
+
+        XCTAssertEqual(sut.phase, .preparingData)
+    }
+
+    func test_makeAppLockViewModel_onUnlocked_movesStraightToHome_whenUITesting() {
+        let sut = makeSut(isUITesting: true)
         let viewModel = sut.makeAppLockViewModel(unlockReason: "test reason")
 
         viewModel.onUnlocked()
@@ -317,7 +357,7 @@ final class RootSessionCoordinatorTests: XCTestCase {
 
     // MARK: - makeSignInView()
 
-    func test_makeSignInView_onSignIn_movesPhaseToHome() {
+    func test_makeSignInView_onSignIn_movesPhaseToPreparingData() {
         let sut = makeSut()
         let signInView = sut.makeSignInView()
 
@@ -326,7 +366,7 @@ final class RootSessionCoordinatorTests: XCTestCase {
         _ = signInView
         sut.handleSignIn(AuthenticatedAccount(username: "a@b.com", identifier: "id"))
 
-        XCTAssertEqual(sut.phase, .home)
+        XCTAssertEqual(sut.phase, .preparingData)
     }
 
     // MARK: - make(launchArguments:) factory

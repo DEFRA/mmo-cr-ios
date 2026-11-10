@@ -111,6 +111,31 @@ actor ReferenceDataStore {
         return try modelContext.fetch(descriptor).map(\.payload)
     }
 
+    /// Every persisted item for `dataset`, alphabetised by `sortName`, decoded as `T` — the type
+    /// the sync pipeline encoded it as (e.g. `PortOption`/`SpeciesOption`/`GearOption` — see
+    /// `ReferenceDataSyncService.fetchAndValidate`). A row that fails to decode (e.g. a stale
+    /// payload left by an app version this device has since been downgraded from, outside the
+    /// `payloadFormatVersion` bump this connector otherwise relies on) is skipped rather than
+    /// failing the whole read, and logged via `NetworkLogger` so it's visible without surfacing
+    /// personal data.
+    func decodedItems<T: Decodable>(for dataset: ReferenceDataKind, as _: T.Type) throws -> [T] {
+        let decoder = JSONDecoder()
+        return try items(for: dataset).compactMap { payload in
+            do {
+                return try decoder.decode(T.self, from: payload)
+            } catch {
+                NetworkLogger().log(NetworkLogEntry(
+                    method: "DECODE",
+                    path: dataset.rawValue,
+                    statusCode: nil,
+                    durationSeconds: 0,
+                    errorCode: "decode_failed:\(T.self)"
+                ))
+                return nil
+            }
+        }
+    }
+
     /// Replaces every persisted item for `dataset` and its state in a single save (see ADR-0024
     /// "Atomic replace"): delete the old rows, insert the new ones, update/create the state row,
     /// then one `modelContext.save()`. Nothing is written to disk until that final call, so a

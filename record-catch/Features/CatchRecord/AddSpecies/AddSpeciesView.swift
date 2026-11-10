@@ -17,6 +17,7 @@ struct AddSpeciesView: View {
         returnPhase: SpeciesReturnPhase,
         context: AddSpeciesContext,
         router: CatchRecordRouter,
+        speciesSearch: SpeciesSearchProviding = StubSpeciesSearchProvider(),
         favouriteSpecies: FavouriteSpeciesProviding
     ) {
         _viewModel = State(wrappedValue: AddSpeciesViewModel(
@@ -28,6 +29,7 @@ struct AddSpeciesView: View {
                 context: context
             ),
             router: router,
+            speciesSearch: speciesSearch,
             favouriteSpecies: favouriteSpecies
         ))
     }

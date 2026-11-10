@@ -16,6 +16,7 @@ struct AddPortView: View {
         referenceNumber: String,
         returnPhase: SelectPortPhase?,
         router: CatchRecordRouter,
+        portSearch: PortSearchProviding = BundledPortSearchProvider(),
         favouritePorts: FavouritePortsProviding
     ) {
         _viewModel = State(wrappedValue: AddPortViewModel(
@@ -23,6 +24,7 @@ struct AddPortView: View {
             referenceNumber: referenceNumber,
             returnPhase: returnPhase,
             router: router,
+            portSearch: portSearch,
             favouritePorts: favouritePorts
         ))
     }

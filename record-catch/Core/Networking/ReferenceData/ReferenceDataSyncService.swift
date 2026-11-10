@@ -69,6 +69,16 @@ actor ReferenceDataSyncService {
         (try? await store.hasAnyData()) ?? false
     }
 
+    /// Whether every dataset in `kinds` already has at least one item synced — used by the
+    /// coordinator to gate the move from sign-in/unlock to Home on the datasets a picker actually
+    /// needs (see ADR-0024 "Data before Home").
+    func hasData(for kinds: [ReferenceDataKind]) async -> Bool {
+        for kind in kinds where (try? await store.hasData(for: kind)) != true {
+            return false
+        }
+        return true
+    }
+
     /// Fetches the manifest, then fetches+validates+persists every changed dataset concurrently —
     /// both the item-shaped datasets (`ReferenceDataKind`) and the raw-blob datasets
     /// (`ReferenceBlobKind` — see ADR-0024 "Map data"). Never throws: a manifest failure means

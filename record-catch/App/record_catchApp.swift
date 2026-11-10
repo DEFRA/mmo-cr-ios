@@ -118,12 +118,6 @@ struct RecordCatchApp: App {
                     guard newPhase == .active, oldPhase == .background else { return }
                     referenceDataSyncCoordinator.notifyForeground()
                 }
-                .onChange(of: sessionCoordinator.phase) { _, newPhase in
-                    // Reaching Home — a fresh sign-in or an unlock with an existing session —
-                    // bypasses the sync throttle (ADR-0024 "Triggers").
-                    guard newPhase == .home else { return }
-                    referenceDataSyncCoordinator.notifyReachedHome()
-                }
                 .onChange(of: connectivityMonitor.isOnline) { wasOnline, isOnline in
                     guard isOnline, !wasOnline else { return }
                     referenceDataSyncCoordinator.notifyConnectivityRestored()
@@ -173,6 +167,19 @@ struct RecordCatchApp: App {
                     // in-flight state must not leak into the next session.
                     referenceDataSyncCoordinator.resetForSignOut()
                 })
+            case .preparingData:
+                // Blocks Home behind a successful reference-data sync (ADR-0024 "Data before
+                // Home") — no picker is reachable until ports/species/gears are present.
+                DataPreparationView(
+                    viewModel: DataPreparationViewModel(
+                        coordinator: referenceDataSyncCoordinator,
+                        onReady: sessionCoordinator.completeDataPreparation,
+                        onSignOut: {
+                            sessionCoordinator.handleSignOut()
+                            referenceDataSyncCoordinator.resetForSignOut()
+                        }
+                    )
+                )
             case .appLock:
                 AppLockView(
                     viewModel: sessionCoordinator.makeAppLockViewModel(

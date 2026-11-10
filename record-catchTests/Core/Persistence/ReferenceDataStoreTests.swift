@@ -147,6 +147,46 @@ final class ReferenceDataStoreTests: XCTestCase {
         XCTAssertEqual(ports.map { String(data: $0, encoding: .utf8) }, ["Plymouth"])
     }
 
+    // MARK: - decodedItems(for:as:) (ADR-0024 "Consumers")
+
+    private func makePortPayloads(_ ports: [PortOption]) -> [ReferenceDataStore.ItemPayload] {
+        let encoder = JSONEncoder()
+        return ports.map {
+            ReferenceDataStore.ItemPayload(itemID: $0.id, sortName: $0.name, payload: try! encoder.encode($0))
+        }
+    }
+
+    func test_decodedItems_returnsEmpty_beforeAnySync() async throws {
+        let sut = try makeStore()
+
+        let ports: [PortOption] = try await sut.decodedItems(for: .ports, as: PortOption.self)
+
+        XCTAssertTrue(ports.isEmpty)
+    }
+
+    func test_decodedItems_decodesEveryPersistedItem_alphabetisedBySortName() async throws {
+        let sut = try makeStore()
+        let plymouth = PortOption(id: "1", name: "Plymouth")
+        let aberdeen = PortOption(id: "2", name: "Aberdeen")
+        try await sut.replace(dataset: .ports, items: makePortPayloads([plymouth, aberdeen]), state: makeState())
+
+        let decoded: [PortOption] = try await sut.decodedItems(for: .ports, as: PortOption.self)
+
+        XCTAssertEqual(decoded, [aberdeen, plymouth])
+    }
+
+    func test_decodedItems_skipsARowThatFailsToDecode_ratherThanFailingTheWholeRead() async throws {
+        let sut = try makeStore()
+        let plymouth = PortOption(id: "1", name: "Plymouth")
+        var payloads = makePortPayloads([plymouth])
+        payloads.append(ReferenceDataStore.ItemPayload(itemID: "bad", sortName: "Zzz", payload: Data("not json".utf8)))
+        try await sut.replace(dataset: .ports, items: payloads, state: makeState())
+
+        let decoded: [PortOption] = try await sut.decodedItems(for: .ports, as: PortOption.self)
+
+        XCTAssertEqual(decoded, [plymouth])
+    }
+
     // MARK: - Blob datasets (map-land / map-statistical-areas — see ADR-0024 "Map data")
 
     func test_blobState_returnsNil_beforeAnySync() async throws {

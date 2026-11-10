@@ -30,6 +30,12 @@ final class ReferenceDataSyncCoordinator: ReferenceDataSyncStatusObserving {
     /// Minimum time between two non-bypassing sync attempts (see ADR-0024 "Triggers").
     static let throttleInterval: TimeInterval = 15 * 60
 
+    /// Datasets that must have at least one synced item before Home can be shown (see ADR-0024
+    /// "Data before Home"): ports/species/gears only. Vessels are deliberately excluded — no
+    /// picker reads them yet — and so are the map blob datasets, since they aren't required by
+    /// any wired feature and the backend may not serve them yet.
+    static let requiredKinds: [ReferenceDataKind] = [.ports, .species, .gears]
+
     private(set) var status: ReferenceDataSyncStatus = .idle
 
     private let service: ReferenceDataSyncService
@@ -38,6 +44,7 @@ final class ReferenceDataSyncCoordinator: ReferenceDataSyncStatusObserving {
     private let isUITesting: Bool
     private var lastSyncStartedAt: Date?
     private var isSyncing = false
+    private var inFlightSync: Task<Void, Never>?
 
     init(
         service: ReferenceDataSyncService,
@@ -50,6 +57,11 @@ final class ReferenceDataSyncCoordinator: ReferenceDataSyncStatusObserving {
         self.now = now
         self.isUITesting = isUITesting
     }
+
+    /// Whether the device currently has a network path — exposed so `DataPreparationViewModel`
+    /// can choose its offline-specific message without needing its own `ConnectivityMonitoring`
+    /// reference.
+    var isDeviceOnline: Bool { isOnline() }
 
     /// Call when the root session reaches `.home` (a fresh sign-in, or a launch/unlock with an
     /// existing session) — bypasses the throttle.
@@ -90,23 +102,50 @@ final class ReferenceDataSyncCoordinator: ReferenceDataSyncStatusObserving {
         status = .idle
     }
 
-    private func attemptSync(bypassThrottle: Bool) {
-        guard !isUITesting, !isSyncing, isOnline() else { return }
+    /// Whether every dataset in `requiredKinds` already has at least one synced item on this
+    /// device.
+    func hasRequiredData() async -> Bool {
+        await service.hasData(for: Self.requiredKinds)
+    }
+
+    /// Attempts a sync (bypassing the throttle, like `retry()`), waits for it to finish or for
+    /// `timeout` to elapse, then reports whether every required dataset now has data. Used by
+    /// `DataPreparationViewModel` to gate the move from sign-in/unlock to Home (see ADR-0024 "Data
+    /// before Home"). Never actually syncs during `-uiTest*` launches — defensive, since the root
+    /// session skips the `.preparingData` phase entirely in that case (see
+    /// `RootSessionCoordinator`), so this method is not the primary UI-test seam.
+    func prepareRequiredData(timeout: TimeInterval = 20) async -> Bool {
+        guard !isUITesting else { return true }
+        if let task = attemptSync(bypassThrottle: true) {
+            await Self.wait(for: task, timeout: timeout)
+        } else if isSyncing, let inFlightSync {
+            // A sync from another trigger (e.g. a foreground re-entry) is already running —
+            // wait for that one instead of starting a second, redundant sync.
+            await Self.wait(for: inFlightSync, timeout: timeout)
+        }
+        return await hasRequiredData()
+    }
+
+    @discardableResult
+    private func attemptSync(bypassThrottle: Bool) -> Task<Void, Never>? {
+        guard !isUITesting, !isSyncing, isOnline() else { return nil }
         if !bypassThrottle, let lastSyncStartedAt, now().timeIntervalSince(lastSyncStartedAt) < Self.throttleInterval {
-            return
+            return nil
         }
 
         isSyncing = true
         lastSyncStartedAt = now()
         status = .syncing
 
-        Task { [weak self] in
+        let task = Task { [weak self] in
             guard let self else { return }
             let report = await service.sync()
             await MainActor.run {
                 self.handle(report: report)
             }
         }
+        inFlightSync = task
+        return task
     }
 
     private func handle(report: ReferenceDataSyncReport) {
@@ -121,6 +160,19 @@ final class ReferenceDataSyncCoordinator: ReferenceDataSyncStatusObserving {
             await MainActor.run {
                 self.status = .failed(hasLocalData: hasLocalData)
             }
+        }
+    }
+
+    /// Waits for `task` to finish, or for `timeout` seconds to elapse — whichever comes first.
+    /// `task` itself is not forcibly stopped if the timeout wins the race (there is no
+    /// cooperative cancellation point mid network-request today), but the caller stops waiting
+    /// and re-checks actual on-device state instead of blocking indefinitely.
+    private static func wait(for task: Task<Void, Never>, timeout: TimeInterval) async {
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask { await task.value }
+            group.addTask { try? await Task.sleep(nanoseconds: UInt64(max(timeout, 0) * 1_000_000_000)) }
+            await group.next()
+            group.cancelAll()
         }
     }
 }

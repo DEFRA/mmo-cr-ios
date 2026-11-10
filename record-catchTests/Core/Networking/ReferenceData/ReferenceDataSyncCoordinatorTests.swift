@@ -237,4 +237,85 @@ final class ReferenceDataSyncCoordinatorTests: XCTestCase {
 
         XCTAssertEqual(sut.status, .idle)
     }
+
+    // MARK: isDeviceOnline
+
+    func test_isDeviceOnline_reflectsTheInjectedIsOnlineClosure() throws {
+        let (onlineSut, _) = try makeSUT(isOnline: true)
+        let (offlineSut, _) = try makeSUT(isOnline: false)
+
+        XCTAssertTrue(onlineSut.isDeviceOnline)
+        XCTAssertFalse(offlineSut.isDeviceOnline)
+    }
+
+    // MARK: hasRequiredData() (ADR-0024 "Data before Home")
+
+    func test_hasRequiredData_isFalse_beforeAnySync() async throws {
+        let (sut, _) = try makeSUT()
+
+        let result = await sut.hasRequiredData()
+
+        XCTAssertFalse(result)
+    }
+
+    func test_hasRequiredData_isTrue_afterASuccessfulSyncOfPortsSpeciesAndGears() async throws {
+        let (sut, client) = try makeSUT()
+        sut.notifyReachedHome()
+        await waitUntil { sut.status == .idle && client.fetchManifestCallCount > 0 }
+
+        let result = await sut.hasRequiredData()
+
+        XCTAssertTrue(result)
+    }
+
+    // MARK: prepareRequiredData(timeout:) (ADR-0024 "Data before Home")
+
+    func test_prepareRequiredData_whenOnlineAndSyncSucceeds_returnsTrue() async throws {
+        let (sut, _) = try makeSUT()
+
+        let result = await sut.prepareRequiredData(timeout: 5)
+
+        XCTAssertTrue(result)
+    }
+
+    func test_prepareRequiredData_whenOffline_returnsFalse_withoutAttemptingASync() async throws {
+        let (sut, client) = try makeSUT(isOnline: false)
+
+        let result = await sut.prepareRequiredData(timeout: 5)
+
+        XCTAssertFalse(result)
+        XCTAssertEqual(client.fetchManifestCallCount, 0)
+    }
+
+    func test_prepareRequiredData_whenEveryFetchFails_returnsFalse() async throws {
+        let (sut, client) = try makeSUT()
+        client.manifestResult = .failure(APIError.response(status: 503, details: nil))
+        client.allFetchesFail = true
+
+        let result = await sut.prepareRequiredData(timeout: 5)
+
+        XCTAssertFalse(result)
+    }
+
+    func test_prepareRequiredData_duringUITesting_returnsTrue_withoutAttemptingASync() async throws {
+        let (sut, client) = try makeSUT(isUITesting: true)
+
+        let result = await sut.prepareRequiredData(timeout: 5)
+
+        XCTAssertTrue(result)
+        XCTAssertEqual(client.fetchManifestCallCount, 0)
+    }
+
+    func test_prepareRequiredData_whenASyncIsAlreadyInFlight_waitsForItInsteadOfStartingASecondOne() async throws {
+        let (sut, client) = try makeSUT()
+        // Starts a sync via a different trigger first (mirrors a foreground re-entry racing with
+        // `DataPreparationViewModel.prepare()`), then immediately calls `prepareRequiredData` —
+        // it should wait for the in-flight sync rather than attempting a second, redundant one.
+        sut.notifyReachedHome()
+
+        let result = await sut.prepareRequiredData(timeout: 5)
+
+        XCTAssertTrue(result)
+        XCTAssertEqual(client.fetchManifestCallCount, 1)
+    }
 }

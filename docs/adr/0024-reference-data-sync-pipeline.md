@@ -114,6 +114,68 @@ pointless. Only the coordinator's throttle/in-flight state is reset
 (`ReferenceDataSyncCoordinator.resetForSignOut()`), so the next sign-in's `notifyReachedHome()` is
 never suppressed by a stale throttle timestamp from the previous session.
 
+### Data before Home (gating Home behind a successful sync)
+
+A fresh sign-in or an app-lock unlock no longer moves straight to Home. `RootSessionCoordinator`
+gained a `.preparingData` phase, shown between `.appLock`/`.signIn` and `.home`:
+`handleSignIn`/`makeAppLockViewModel`'s `onUnlocked` now set `phase = .preparingData` (not `.home`),
+and the new `completeDataPreparation()` moves `.preparingData → .home` once the required data is
+present. **No picker is reachable before that** — the entire Home tab bar, and therefore every
+catch-record journey, sits behind this gate.
+
+`DataPreparationView`/`DataPreparationViewModel` drive the gate: on appearing, the view model calls
+`ReferenceDataSyncCoordinator.prepareRequiredData(timeout:)`, which bypasses the usual 15-minute
+throttle (reusing an already-in-flight sync via a new `inFlightSync` task reference if one is
+racing in from another trigger, rather than starting a redundant second one), waits up to 20
+seconds for it to finish, and reports whether `ReferenceDataSyncCoordinator.requiredKinds` —
+**`[.ports, .species, .gears]` only** — are all present on-device
+(`ReferenceDataSyncService.hasData(for:)`). **Vessels are deliberately excluded**: no picker consumes
+synced vessel data yet (see Consumers below), so gating on it would block Home for no benefit.
+
+On success the user proceeds straight to Home. On failure (offline, or a sync that ran but still
+lacks the required data) the screen shows a WCAG 2.2 4.1.3-announced failure state with a "Try
+again" action (re-runs `prepare()`) and a "Sign out" action — mirroring `AppLockView`'s layout and
+`SyncErrorBanner`'s accessibility pattern. The view model depends on the narrow `@MainActor`
+`ReferenceDataPreparing` protocol (`isDeviceOnline`/`prepareRequiredData(timeout:)`), which
+`ReferenceDataSyncCoordinator` conforms to via an extension — the same seam shape as
+`ReferenceDataSyncStatusObserving` for `SyncErrorBanner` — so the view model is unit-testable
+without a real sync/persistence/network stack.
+
+**UI tests never depend on this.** `RootSessionCoordinator.isUITesting` (default
+`LaunchArguments.current.isUITesting`) makes `handleSignIn`/`onUnlocked` skip `.preparingData`
+entirely for any `-uiTest*` launch, and `prepareRequiredData` short-circuits to `true` the same way —
+consistent with every other sync trigger already being a no-op during UI testing. In practice this
+rarely even matters: `UITestRootView` substitutes its own seeded view before `sessionCoordinator.phase`
+is ever consulted for the large majority of `-uiTest*` launches.
+
+### Consumers: Synced*SearchProvider (pickers read synced data)
+
+`ReferenceDataStore` gained `decodedItems<T: Decodable>(for:as:)`, which reads the same JSON rows
+`sync()` wrote and decodes each into the exact domain type the sync service persisted (`PortOption`/
+`SpeciesOption`/`GearOption` — no DTO/wire-shape mapping needed, since `fetchAndValidate` already
+encodes domain types, not wire envelopes). A row that fails to decode is skipped and logged via
+`NetworkLogger` rather than failing the whole read.
+
+Three new production providers in `Features/Common/Data/` — `SyncedPortSearchProvider`,
+`SyncedSpeciesSearchProvider`, `SyncedGearSearchProvider` — conform to the existing
+`PortSearchProviding`/`SpeciesSearchProviding`/`GearSearchProviding` protocols exactly as the
+bundled/stub providers they replace, reusing each provider's existing pure `static func filtered(...)`
+helper rather than duplicating matching logic. Ports/species filter out `isActive == false`; gears
+has no `isActive` field, so every synced gear is returned. Each takes a
+`store: ReferenceDataStore? = ReferenceDataStoreProvider.shared` default and returns `[]` if the
+store is `nil` (e.g. before `RecordCatchApp.init()` has set the shared instance).
+
+`CatchRecordHostView` resolves `portSearch`/`gearSearch`/`speciesSearch` via the same
+injected-or-computed pattern already used for `favouritePorts`/`favouriteGears`/`favouriteSpecies`:
+an explicit `init` override wins; otherwise a `-uiTest*` launch falls back to the bundled/stub
+providers (so UI tests keep their existing fixed, seeded catalogues), and production resolves to the
+new Synced providers. `AddPortView`/`AddSpeciesView` gained matching `portSearch`/`speciesSearch`
+init parameters (defaulting to the bundled/stub provider, so every other call site — including
+previews — is unaffected) to carry the override through.
+
+**Vessels remain out of scope** for this change: no picker yet reads synced vessel data, so
+`SyncedVesselSearchProvider` does not exist and `requiredKinds` above excludes `.vessels`.
+
 ### No migrations / payload-format version
 
 This connector does not support SwiftData schema migrations for `ReferenceItemEntity.payload`'s
@@ -166,24 +228,36 @@ assets) is explicit future work.
 
 ## Known gaps (flagged, not hidden)
 
-- **Production bearer token.** `AuthTokenProviding` still has no Keychain/MSAL-backed production
-  implementation (ADR-0018 §5's "pending real auth" gap is not closed by this ADR).
-  `ReferenceDataSyncCoordinator.make(store:connectivityMonitor:)` resolves to `NilAuthTokenProvider`
-  (always `nil`) outside `DEBUG`/`ENABLE_DEBUG_REFERENCE_DATA_TOOL`. If the live API requires a
-  token, every sync attempt reports `.failed` uniformly — a safe, visible degradation, not silent
-  data loss or a crash — but this must be closed before relying on this pipeline with real users.
-  Track as a follow-up once ADR-0022's Entra integration exposes a reference-data-scoped token.
-- **No dedicated "not yet downloaded" full-screen state.** `SyncErrorBanner` covers every screen
-  uniformly; a richer per-screen empty state (e.g. inside the port/species/gear pickers themselves)
-  is not built in this change.
+- **Production bearer token (now release-blocking, not just a gap).** `AuthTokenProviding` still
+  has no Keychain/MSAL-backed production implementation (ADR-0018 §5's "pending real auth" gap is
+  not closed by this ADR). `ReferenceDataSyncCoordinator.make(store:connectivityMonitor:)` resolves
+  to `NilAuthTokenProvider` (always `nil`) outside `DEBUG`/`ENABLE_DEBUG_REFERENCE_DATA_TOOL`. Now
+  that Home is gated behind a successful sync ("Data before Home" above), a production build with no
+  token will show `DataPreparationView`'s failure state indefinitely — a safe, visible degradation,
+  never silent data loss or a crash, but one that blocks every user from reaching Home at all. **This
+  must be closed before shipping to real users** — track as a follow-up once ADR-0022's Entra
+  integration exposes a reference-data-scoped token.
+- **No dedicated "not yet downloaded" full-screen state for individual pickers.**
+  `SyncErrorBanner` still covers every other screen uniformly; the port/species/gear pickers
+  themselves have no bespoke empty state beyond `DataPreparationView`'s app-wide gate (which only
+  covers the very first sync after sign-in/unlock, not a later failure once Home has been reached).
+- **Vessel reference data has no consumer.** `SyncedVesselSearchProvider` does not exist and
+  `ReferenceDataSyncCoordinator.requiredKinds` excludes `.vessels` — vessels still come from whatever
+  pre-existing fixture/bundled source the vessel picker already used. Revisit once a vessel picker
+  is wired to read synced data.
 - **Native-app exception.** As with every feature in this app, built against the already-recorded
   native-iOS exception to DEFRA's mobile app standards (see copilot-instructions.md §2).
 
 ## Consequences
 
-- Ports/species/gears/vessels pickers can move off bundled/in-memory fixtures onto
-  `ReferenceDataStoreProvider.shared`-backed cached providers in a follow-up change, without needing
-  any further sync-pipeline work.
+- Ports/species/gears pickers now read `ReferenceDataStoreProvider.shared`-backed
+  `Synced*SearchProvider`s in production (see "Consumers" above) instead of bundled/in-memory
+  fixtures; vessels remain on their pre-existing fixture pending a consumer. UI tests keep the
+  bundled/stub providers unconditionally, so existing XCUITest fixtures/assertions are unaffected.
+- Home is now unreachable until a sync has produced ports/species/gears data at least once per
+  device (see "Data before Home" above) — a deliberate tightening of the offline-first promise from
+  "works offline once synced" to "cannot reach Home before the first successful sync", which is an
+  explicit DEFRA requirement for this change, not an incidental side effect.
 - Every dataset failure is independently retryable and never corrupts or partially replaces existing
   data.
 - The reference-data layer adds `ReferenceItemEntity`/`ReferenceDatasetStateEntity`/`ReferenceBlobEntity`

@@ -13,7 +13,9 @@ struct RecordCatchApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             CatchRecordEntity.self,
-            FavouriteEntity.self
+            FavouriteEntity.self,
+            ReferenceItemEntity.self,
+            ReferenceDatasetStateEntity.self
         ])
         // Protects on-device catch-record data at rest (vessel, dates, ports, gear, species — see
         // ADR-0014, DEFRA data-at-rest requirement): the store is only accessible after the user
@@ -56,10 +58,25 @@ struct RecordCatchApp: App {
     @State private var sessionCoordinator: RootSessionCoordinator
     @Environment(\.scenePhase) private var scenePhase
 
+    // Reference-data background sync (ADR-0024): owns *when* ports/species/gears/vessels refresh
+    // from the API and the UI-facing status `SyncErrorBanner` renders. Shares this launch's
+    // `connectivityMonitor` instance (see the comment on `connectivityMonitor` above) rather than
+    // constructing a second one.
+    @State private var referenceDataSyncCoordinator: ReferenceDataSyncCoordinator
+
     init() {
         let monitor = Self.makeConnectivityMonitor()
         _connectivityMonitor = State(initialValue: monitor)
         _sessionCoordinator = State(initialValue: RootSessionCoordinator.make(connectivityMonitor: monitor))
+
+        // Bootstraps `ReferenceDataStoreProvider.shared` (used by the cached reference-data search
+        // providers elsewhere in the app) before anything can read it — see that type's doc
+        // comment for the "set once in init(), read many times" contract this relies on.
+        ReferenceDataStoreProvider.bootstrap(modelContainer: sharedModelContainer)
+        _referenceDataSyncCoordinator = State(initialValue: ReferenceDataSyncCoordinator.make(
+            store: ReferenceDataStore(modelContainer: sharedModelContainer),
+            connectivityMonitor: monitor
+        ))
     }
 
     var body: some Scene {
@@ -70,6 +87,7 @@ struct RecordCatchApp: App {
                 .environment(tabRouter)
                 .environment(\.locale, languageStore.language.locale)
                 .environment(\.connectivityMonitor, connectivityMonitor)
+                .environment(\.referenceDataSyncStatus, referenceDataSyncCoordinator)
                 // The design system (`AppColors`) mirrors the GOV.UK Design System, which is
                 // light-only: every colour (backgrounds, borders, text) is a fixed literal
                 // rather than a Dark Mode-adaptive one. Without forcing `.light` here, controls
@@ -91,6 +109,23 @@ struct RecordCatchApp: App {
                     // nothing to re-verify or re-lock yet.
                     guard newPhase == .active, oldPhase == .background, sessionCoordinator.phase != .signIn else { return }
                     sessionCoordinator.refreshPhase()
+                }
+                .onChange(of: scenePhase) { oldPhase, newPhase in
+                    // Reference-data foreground trigger (ADR-0024 "Triggers") — independent of the
+                    // session re-check above, since a sync attempt is appropriate even while
+                    // staying signed in to the app-lock/home phases.
+                    guard newPhase == .active, oldPhase == .background else { return }
+                    referenceDataSyncCoordinator.notifyForeground()
+                }
+                .onChange(of: sessionCoordinator.phase) { _, newPhase in
+                    // Reaching Home — a fresh sign-in or an unlock with an existing session —
+                    // bypasses the sync throttle (ADR-0024 "Triggers").
+                    guard newPhase == .home else { return }
+                    referenceDataSyncCoordinator.notifyReachedHome()
+                }
+                .onChange(of: connectivityMonitor.isOnline) { wasOnline, isOnline in
+                    guard isOnline, !wasOnline else { return }
+                    referenceDataSyncCoordinator.notifyConnectivityRestored()
                 }
         }
         .modelContainer(sharedModelContainer)
@@ -131,7 +166,12 @@ struct RecordCatchApp: App {
         UITestRootView {
             switch sessionCoordinator.phase {
             case .home:
-                RootTabView(onSignOut: sessionCoordinator.handleSignOut)
+                RootTabView(onSignOut: {
+                    sessionCoordinator.handleSignOut()
+                    // Reference data itself is kept (see ADR-0024 "Sign-out"), but throttle/
+                    // in-flight state must not leak into the next session.
+                    referenceDataSyncCoordinator.resetForSignOut()
+                })
             case .appLock:
                 AppLockView(
                     viewModel: sessionCoordinator.makeAppLockViewModel(

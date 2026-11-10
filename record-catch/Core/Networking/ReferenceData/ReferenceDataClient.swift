@@ -6,8 +6,10 @@
 //  implementation, composed from `HTTPPerforming` + `APIConfiguration` + `AuthTokenProviding` so it
 //  is unit-testable with an in-memory `StubHTTPClient` and requires no live network in the test
 //  suite (testing.instructions.md). `StubReferenceDataClient` is a fixture-backed double for
-//  future call sites/tests. **Neither is wired into `AppEnvironment` or any view model in this
-//  change** — this is the connector only (see ADR-0018 for the exact scope boundary).
+//  future call sites/tests. Wired into the app via `ReferenceDataSyncCoordinator.make(store:
+//  connectivityMonitor:)` (see ADR-0024) — `RecordCatchApp` constructs one `RemoteReferenceDataClient`
+//  per launch and hands it to `ReferenceDataSyncService`; no view model talks to this protocol
+//  directly.
 //
 //  The live API has two distinct routes/response shapes for the dataset routes (verified by
 //  direct probing of the running backend — see ADR-0018's correction note): a **collection**
@@ -357,4 +359,21 @@ nonisolated struct StubReferenceDataClient: ReferenceDataFetching {
     func checkHealth() async throws {
         if let error { throw error }
     }
+}
+
+/// Always-failing double used by `ReferenceDataSyncCoordinator.make(store:connectivityMonitor:)`
+/// when this launch's `APIConfiguration()` itself throws (a misconfigured `Info.plist` —
+/// see ADR-0020 §2) — there is no valid base URL to build a `RemoteReferenceDataClient` with. Every
+/// method throws `APIError.invalidConfiguration` so `ReferenceDataSyncService.sync()` reports every
+/// dataset as `.failed` uniformly (surfacing `SyncErrorBanner`) instead of crashing app launch.
+nonisolated struct FailingReferenceDataClient: ReferenceDataFetching {
+    func fetchVessels() async throws -> [VesselOption] { throw APIError.invalidConfiguration }
+    func fetchVessel(id _: String) async throws -> VesselOption { throw APIError.invalidConfiguration }
+    func fetchSpecies() async throws -> [SpeciesOption] { throw APIError.invalidConfiguration }
+    func fetchSpecies(id _: String) async throws -> SpeciesOption { throw APIError.invalidConfiguration }
+    func fetchPorts() async throws -> [PortOption] { throw APIError.invalidConfiguration }
+    func fetchPort(id _: String) async throws -> PortOption { throw APIError.invalidConfiguration }
+    func fetchGears() async throws -> [GearOption] { throw APIError.invalidConfiguration }
+    func fetchManifest() async throws -> ReferenceDataManifest { throw APIError.invalidConfiguration }
+    func checkHealth() async throws { throw APIError.invalidConfiguration }
 }

@@ -32,6 +32,13 @@ nonisolated protocol ReferenceDataFetching: Sendable {
     func fetchSpecies(id: String) async throws -> SpeciesOption
     func fetchPorts() async throws -> [PortOption]
     func fetchPort(id: String) async throws -> PortOption
+    /// Fetches `GET {baseURL}/api/v1/reference-data/gears?view=mobile` and maps every item into a
+    /// `GearOption` (see ADR-0018 addendum "gears dataset"). Unlike every other dataset here, this
+    /// sends `?view=mobile` rather than the canonical view — see `ReferenceDataEndpoint.swift`'s
+    /// file-level doc comment for why. There is deliberately no `fetchGear(id:)`: the live API's
+    /// single-item route returns a bare item with no `measurements` catalogue, so it carries no
+    /// labels to resolve a gear's measurement ids against.
+    func fetchGears() async throws -> [GearOption]
     func fetchManifest() async throws -> ReferenceDataManifest
     /// Pings `GET {baseURL}/health`. Succeeds (returns) on any 2xx response and throws `APIError`
     /// otherwise — see `makeReferenceDataHealthRequest`'s doc comment for why no response body is
@@ -93,6 +100,47 @@ nonisolated struct RemoteReferenceDataClient: ReferenceDataFetching {
     func fetchPort(id: String) async throws -> PortOption {
         let dto: PortDTO = try await fetchItem(.ports, itemId: id)
         return PortOption(dto: dto)
+    }
+
+    func fetchGears() async throws -> [GearOption] {
+        let token = await resolvedToken()
+        let request = makeReferenceDataRequest(
+            baseURL: configuration.baseURL,
+            dataset: .gears,
+            bearerToken: token,
+            view: "mobile"
+        )
+        let response: GearsMobileResponseDTO = try await send(
+            request,
+            fallbackPath: ReferenceDataset.gears.rawValue
+        ) { data in
+            try self.decoder.decode(GearsMobileResponseDTO.self, from: data)
+        }
+
+        let measurementsById = Dictionary(
+            uniqueKeysWithValues: (response.measurements ?? []).map { ($0.id, $0) }
+        )
+        var droppedMeasurementIds: [String] = []
+        let gears = response.items.map { dto -> GearOption in
+            let (gear, dropped) = GearOption.make(dto: dto, measurementsById: measurementsById)
+            droppedMeasurementIds.append(contentsOf: dropped)
+            return gear
+        }
+
+        if !droppedMeasurementIds.isEmpty {
+            // Non-sensitive diagnostic only (a count plus the API's own opaque measurement ids,
+            // never gear/user content) — see `GearOption.make(dto:measurementsById:)`'s doc
+            // comment for why this can happen and why it doesn't fail the whole fetch.
+            logger.log(NetworkLogEntry(
+                method: "GET",
+                path: ReferenceDataset.gears.rawValue,
+                statusCode: 200,
+                durationSeconds: 0,
+                errorCode: "gear_measurement_ids_unresolved:\(droppedMeasurementIds.count)"
+            ))
+        }
+
+        return gears
     }
 
     func fetchManifest() async throws -> ReferenceDataManifest {
@@ -234,6 +282,7 @@ nonisolated struct StubReferenceDataClient: ReferenceDataFetching {
     var speciesItem: SpeciesOption?
     var ports: [PortOption] = []
     var portItem: PortOption?
+    var gears: [GearOption] = []
     var manifest: ReferenceDataManifest?
     var error: APIError?
 
@@ -272,6 +321,11 @@ nonisolated struct StubReferenceDataClient: ReferenceDataFetching {
         if let error { throw error }
         if let portItem { return portItem }
         throw APIError.response(status: 404, details: nil)
+    }
+
+    func fetchGears() async throws -> [GearOption] {
+        if let error { throw error }
+        return gears
     }
 
     func fetchManifest() async throws -> ReferenceDataManifest {

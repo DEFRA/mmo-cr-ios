@@ -5,13 +5,17 @@
 //  Pure URLRequest construction for the reference-data API (see ADR-0018 §2/§5). Deliberately
 //  side-effect-free (no I/O) so request-building is unit-testable without any network.
 //
-//  Neither dataset route sends a `view` query parameter — the connector deliberately uses the
+//  Vessels/species/ports send **no** query parameter at all — the connector deliberately uses the
 //  API's default **canonical** view rather than `?view=mobile` (see ADR-0018's correction note
-//  and `VesselDTO`/`VesselOption`, which model the canonical shape). More generally, **no route
-//  built here ever sends a query parameter of any kind**: the app fetches every dataset in full,
-//  and the backend only engages pagination once a query key *other than* `view` is present (see
-//  the ADR-0018 addendum "Fetch-all, no query parameters") — sending one later without also
-//  sending `offset`/`limit` would silently truncate results to the backend's default page size.
+//  and `VesselDTO`/`VesselOption`, which model the canonical shape). `gears` is the one deliberate
+//  exception: it sends `?view=mobile` because only that view's response carries the
+//  `measurements` catalogue needed to resolve a gear's measurement ids into labelled
+//  `GearMeasurement`s (see the ADR-0018 addendum "gears dataset" and `GearsMobileResponseDTO`).
+//  More generally, **no route built here ever sends a query parameter other than `view`**: the
+//  app fetches every dataset in full, and the backend only engages pagination once a query key
+//  *other than* `view` is present (see the ADR-0018 addendum "Fetch-all, no query parameters") —
+//  sending one later without also sending `offset`/`limit` would silently truncate results to the
+//  backend's default page size.
 //
 //  `makeReferenceDataHealthRequest` builds `GET {baseURL}/health`, the one route in this file that
 //  is **not** under `/api/v1/reference-data` — it's the service root's plain liveness probe, added
@@ -32,6 +36,10 @@ nonisolated enum ReferenceDataset: String, Sendable {
     case vessels
     case species
     case ports
+    /// Sent with `?view=mobile` (see `makeReferenceDataRequest(view:)`) — the one dataset that
+    /// deliberately does not use the canonical view, because only the mobile view's response
+    /// carries the `measurements` catalogue a gear's measurement ids resolve against.
+    case gears
 }
 
 /// Builds the `URLRequest` for `GET {baseURL}/api/v1/reference-data/{dataset}` — the
@@ -46,6 +54,11 @@ nonisolated enum ReferenceDataset: String, Sendable {
 ///   - bearerToken: When non-`nil`, attached as `Authorization: Bearer <token>`. When `nil`, the
 ///     request carries **no** `Authorization` header at all (never an empty/placeholder one) —
 ///     see ADR-0018 §5.
+///   - view: When non-`nil`, sent as `?view=<value>` — the **one** query parameter this connector
+///     ever sends (see the file-level doc comment). `nil` for every dataset except `gears`, which
+///     passes `"mobile"` (see the ADR-0018 addendum "gears dataset"). Confirmed against the live
+///     API that sending `view` alone does not engage pagination — only a query key *other than*
+///     `view` does.
 ///   - requestId: Correlation id sent as `x-cdp-request-id`, echoed by the backend as the error
 ///     envelope's `traceId` (see ADR-0018 addendum "Correlation id"). Defaults to a fresh `UUID`
 ///     per call; tests inject a fixed value to assert on it.
@@ -54,9 +67,14 @@ nonisolated func makeReferenceDataRequest(
     baseURL: URL,
     dataset: ReferenceDataset,
     bearerToken: String?,
+    view: String? = nil,
     requestId: String = UUID().uuidString
 ) -> URLRequest {
-    let url = makeReferenceDataURL(baseURL: baseURL, pathSegments: ReferenceDataPath.apiRoot + [dataset.rawValue])
+    let url = makeReferenceDataURL(
+        baseURL: baseURL,
+        pathSegments: ReferenceDataPath.apiRoot + [dataset.rawValue],
+        view: view
+    )
     return makeGETRequest(url: url, bearerToken: bearerToken, requestId: requestId)
 }
 
@@ -153,13 +171,20 @@ private enum ReferenceDataPath {
 ///   - pathSegments: The path components to append, in order, e.g. `["api", "v1",
 ///     "reference-data", "manifest"]`. Each segment is appended independently, matching the
 ///     previous `URLComponents.path +=` behaviour.
-/// - Returns: `baseURL` with `pathSegments` appended to its path, or `baseURL` unchanged if
-///   `URLComponents` fails to produce a URL (only possible for an already-malformed base URL,
-///   which `APIConfiguration` has validated by construction — see the call sites above).
-private func makeReferenceDataURL(baseURL: URL, pathSegments: [String]) -> URL {
+///   - view: When non-`nil`, appended as the request's **only** query item (`?view=<value>`) —
+///     see `makeReferenceDataRequest(view:)`'s doc comment. `nil` for every route that doesn't
+///     pass it explicitly, which is every route except the `gears` dataset request.
+/// - Returns: `baseURL` with `pathSegments` appended to its path (and `view` appended as a query
+///   item, if provided), or `baseURL` unchanged if `URLComponents` fails to produce a URL (only
+///   possible for an already-malformed base URL, which `APIConfiguration` has validated by
+///   construction — see the call sites above).
+private func makeReferenceDataURL(baseURL: URL, pathSegments: [String], view: String? = nil) -> URL {
     var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)
     let suffix = pathSegments.map { "/\($0)" }.joined()
     components?.path += suffix
+    if let view {
+        components?.queryItems = [URLQueryItem(name: "view", value: view)]
+    }
     return components?.url ?? baseURL
 }
 

@@ -651,6 +651,112 @@ writes a flat `APIBaseURL` key.
   `APIBaseURL`, keeping the DEBUG-only `http` allowance; the tests that inject `APIBaseURL` move to the same key.
   This follow-up has been applied: `APIConfiguration` and its tests now use `MMOCRAppConfig`/`API_BASE_URL`.
 
+## Addendum (2026-11): fourth dataset — `gears` (`?view=mobile`), and a manifest `itemCount` fix
+
+Direct probing of the live CDP dev reference-data API (the same approach used to correct the
+earlier collection-route/`view` mistakes above) surfaced two findings for the `gears` dataset and
+the manifest, addressed together as a connector-only change (no view model/persistence wiring —
+same scope boundary as every other dataset in this ADR).
+
+### `gears` deliberately requests `?view=mobile` — the one exception to "canonical always"
+
+Every other dataset in this ADR (`vessels`, `species`, `ports`) deliberately omits `view` to get
+the canonical shape (see the "uses the canonical view, not `view=mobile`" correction above). The
+live `gears` dataset breaks that pattern on its own terms: only its `?view=mobile` response carries
+a top-level `measurements` catalogue — the labelled definitions (`id`, `code`, `label`, `unit`,
+`minimumValue`/`maximumValue`) that a gear item's `requiredMeasurementIds`/`variableMeasurementIds`
+resolve against. The canonical view does not expose this catalogue at all, so there is no canonical
+shape that lets the app turn a gear's measurement ids into anything displayable — `view=mobile` is
+not an optimisation here, it is the only response that is usable.
+
+This is implemented as an explicit `view: String?` parameter on `makeReferenceDataRequest` (default
+`nil`, so every other call site is unaffected) rather than a special-cased URL builder, and
+confirmed against the live API that sending `view` **alone** does not trip the "any query key other
+than `view` engages pagination" trap recorded in the "Fetch-all, no query parameters" addendum
+above — that invariant is unchanged and still enforced for every other call.
+
+Because the mobile gears response's shape (bare item + sibling `measurements` array) doesn't fit
+the shared `ReferenceDataEnvelope<Item>`, `gears` gets its own response type,
+`GearsMobileResponseDTO`, rather than forcing an envelope mismatch. There is deliberately no
+`fetchGear(id:)` single-item method: the live single-item route returns a bare item with no
+`measurements` sibling, so there is nothing to resolve a measurement id against on that route.
+
+`GearOption.make(dto:measurementsById:)` maps a `GearMobileDTO` into the existing `GearOption`
+domain type (ADR-0012's bundled catalogue), keyed by the API's own `code` field (e.g. `"TBB"`) —
+**not** its GUID, which is instead carried as the new optional `referenceId` field — so favourites
+keyed on the gear code are unaffected by this connector existing alongside the bundled catalogue. A
+measurement id with no matching entry in the response's `measurements` catalogue is **dropped**
+rather than failing the whole gear or crashing; the dropped ids are returned to the caller so
+`RemoteReferenceDataClient.fetchGears()` can log a non-sensitive count/id diagnostic (no gear/user
+content) rather than silently losing a question.
+
+**Known, tracked gap — measurement labels are not yet localised.** `GearMeasurement.labelKey` is
+set to the API's own `label` text **verbatim** when sourced from this connector, not a String
+Catalog key: the API supplies no Welsh translation yet, and some labels are long free-text
+sentences rather than short keys. This has no user-facing impact today because no screen renders a
+`GearOption` sourced from this connector yet — every gear screen still uses the bundled ADR-0012
+catalogue (`GearOption.all`) — but mapping these labels to proper, accessible, localised String
+Catalog entries is required **before** this connector's `fetchGears()` is wired into any view model,
+per accessibility.instructions.md and the WCAG 2.2 AA requirement that no non-negotiable override
+be silently deferred past that point.
+
+### Manifest `itemCount` is not present on every entry — now optional
+
+The live manifest's two GeoJSON map entries (`map-land`, `map-statistical-areas`) omit `itemCount`
+entirely — they instead carry `featureCount`/`sizeBytes`, fields this connector does not model
+(consistent with the GeoJSON map layers being explicitly parked, not consumed, per the "Parked"
+section above). The connector's local fixture had (incorrectly) given every entry, including these
+two, a populated `itemCount`, which meant this gap went unnoticed until checked directly against
+the live manifest. `ReferenceDataManifestEntry.itemCount` is now `Int?` rather than a non-optional
+`Int`, so a manifest entry missing the field decodes with `itemCount == nil` instead of failing the
+whole manifest. This mirrors the existing precedent for optional-but-sometimes-absent fields
+elsewhere in this ADR (e.g. `PortOption`'s `code`/`countryCode`/`isActive`) rather than introducing
+a new pattern.
+
+### Open questions for product/backend — mapped as provided, not reconciled
+
+Per an explicit product decision, this connector maps the live `gears` API **as the backend
+provides it**, rather than silently reconciling it against the app's bundled ADR-0012 catalogue.
+The differences below are deliberately **followed, not hidden** (see
+`figma-design.instructions.md`'s deviation-register principle, applied here to an API rather than a
+design) and must be resolved with the backend/product team before any screen is wired to
+`fetchGears()` in place of `GearOption.all`:
+
+- **No required/variable split in the mobile view.** `requiredMeasurementIds` is empty for every
+  gear in the live dev response; `required` is `false` on every `applicableCharacteristics` entry
+  in the canonical view too. The canonical view's `fixed` flag (true for 93 of 104 characteristic
+  links) is a plausible proxy — it broadly lines up with ADR-0012's existing `requiredMeasurements`
+  (mesh size, number of beams/trawl nets/dredges) — but it is **not exposed on the mobile view** at
+  all, and the mobile view is the only one with labelled measurements. Recommendation: ask the
+  backend to add the equivalent of `fixed` to the mobile view's `requiredMeasurementIds`/
+  `variableMeasurementIds` split, rather than the app inferring it by cross-referencing two views.
+- **Per-trip-only questions have no clean equivalent in the API's measurement set.** ADR-0012's
+  variable measurements for counts captured per trip (times shot, hooks/nets/pots hauled vs left,
+  rods and lines) don't map cleanly onto the API's measurement catalogue (`GM`, `ME`, `GN`, `MT`,
+  `QG`, `HE`, `NL`, `NN`, `NI`) — some app questions (e.g. "hooks hauled" vs "hooks left" as two
+  values) don't exist as two distinct API measurements for every relevant gear, while the API
+  exposes `fixed:true` characteristics the app does not currently ask about at all (e.g. GM length,
+  HE height, MT model, NL net length, QG quantity).
+- **Decimal vs whole-number capture.** The mobile view's measurement `kind` is always `"number"`
+  with no `minimumValue`/`maximumValue` populated in the live dev data, so there is no API signal
+  for whether a given measurement should be captured as an integer (as several ADR-0012 questions
+  are today) or a decimal.
+- **Catalogue membership differs.** The live API includes gear codes ADR-0012 deliberately removed
+  or renamed (`NK`, `RG`, and a duplicate `PS1` folded into `PS`) — adopting the API's gear list
+  as-is would reintroduce these without a product decision on whether they should be selectable.
+- **Favourites refresh strategy is undecided.** Once a screen is wired to `fetchGears()`, favourites
+  are keyed by `GearOption.id` (the API's `code`), so an existing favourite survives a gear's
+  metadata changing upstream — but there is no agreed policy yet for detecting a gear code that
+  disappears from the API, or for how often the app should refetch versus rely on the manifest's
+  `gears` entry version as a change signal.
+- **Label localisation** — covered above, repeated here because it blocks screen adoption: labels
+  arrive as raw API text, not String Catalog keys, so Welsh/localised rendering does not yet exist
+  for API-sourced gear measurement labels.
+
+None of these block this connector-only change — no screen or view model depends on `fetchGears()`
+yet — but they must be resolved (ideally with the Delivery Architecture/backend team) before
+`GearOption.all` is replaced or supplemented with this connector's output.
+
 ## References
 
 - Apple, *NSAllowsLocalNetworking / `NSExceptionDomains`* —

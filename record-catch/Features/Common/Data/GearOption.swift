@@ -19,17 +19,41 @@ nonisolated struct GearOption: Identifiable, Hashable, Sendable, Codable {
     let requiredMeasurements: [GearMeasurement]
     /// Per-trip measurements, captured on the select-gear screen (values `nil` until captured).
     let variableMeasurements: [GearMeasurement]
+    /// The reference-data API's own GUID for this gear, when sourced from
+    /// `GearOption.make(dto:measurementsById:)` (see ADR-0018 addendum "gears dataset"). `nil` for
+    /// every other source (the bundled ADR-0012 catalogue, hand-built test/demo values) — kept as
+    /// an **optional** type (not a non-optional default) so previously-persisted favourites that
+    /// predate this field still decode via the synthesized `Codable` conformance, matching
+    /// `PortOption`'s established pattern for the same situation.
+    let referenceId: String?
+    /// The API's stable category code (e.g. `"TRAWL_NETS"`), when sourced from `init(dto:)`. `nil`
+    /// for every other source.
+    let categoryCode: String?
+    /// The API's display name for the category (e.g. `"Trawl nets"`), when sourced from
+    /// `init(dto:)`. `nil` for every other source.
+    let categoryName: String?
+    /// Whether this gear is used in pairs (e.g. pair trawls, two-boat purse seine), when sourced
+    /// from `init(dto:)`. `nil` for every other source.
+    let isPairFishing: Bool?
 
     init(
         id: String,
         name: String,
         requiredMeasurements: [GearMeasurement] = [],
-        variableMeasurements: [GearMeasurement] = []
+        variableMeasurements: [GearMeasurement] = [],
+        referenceId: String? = nil,
+        categoryCode: String? = nil,
+        categoryName: String? = nil,
+        isPairFishing: Bool? = nil
     ) {
         self.id = id
         self.name = name
         self.requiredMeasurements = requiredMeasurements
         self.variableMeasurements = variableMeasurements
+        self.referenceId = referenceId
+        self.categoryCode = categoryCode
+        self.categoryName = categoryName
+        self.isPairFishing = isPairFishing
     }
 
     /// Convenience for ad hoc/test gears, where the name is also the stable identifier.
@@ -52,7 +76,11 @@ nonisolated struct GearOption: Identifiable, Hashable, Sendable, Codable {
             id: id,
             name: name,
             requiredMeasurements: measurements,
-            variableMeasurements: variableMeasurements
+            variableMeasurements: variableMeasurements,
+            referenceId: referenceId,
+            categoryCode: categoryCode,
+            categoryName: categoryName,
+            isPairFishing: isPairFishing
         )
     }
 
@@ -62,7 +90,11 @@ nonisolated struct GearOption: Identifiable, Hashable, Sendable, Codable {
             id: id,
             name: name,
             requiredMeasurements: requiredMeasurements,
-            variableMeasurements: measurements
+            variableMeasurements: measurements,
+            referenceId: referenceId,
+            categoryCode: categoryCode,
+            categoryName: categoryName,
+            isPairFishing: isPairFishing
         )
     }
 
@@ -96,20 +128,32 @@ nonisolated struct GearOption: Identifiable, Hashable, Sendable, Codable {
 /// whole numbers").
 nonisolated struct GearMeasurement: Identifiable, Hashable, Sendable, Codable {
     let id: String
-    /// String Catalog key for the field label (e.g. "Mesh size (mm)").
+    /// String Catalog key for the field label (e.g. "Mesh size (mm)") for the bundled ADR-0012
+    /// catalogue. When sourced from `GearOption.make(dto:measurementsById:)`, this instead holds
+    /// the API's own (unlocalised, English-only) `label` text verbatim — see that function's doc
+    /// comment and the ADR-0018 addendum "gears dataset" for why labels aren't yet mapped to the
+    /// String Catalog.
     let labelKey: String
     /// The whole-number value the user entered, or `nil` if not yet captured.
     let value: Int?
+    /// The reference-data API's own short code for this measurement (e.g. `"ME"` for mesh size),
+    /// when sourced from `GearOption.make(dto:measurementsById:)`. `nil` for every other source.
+    let apiCode: String?
+    /// The API's unit for this measurement (e.g. `"mm"`, `"m"`, `"count"`), when sourced from
+    /// `GearOption.make(dto:measurementsById:)`. `nil` for every other source.
+    let unit: String?
 
-    init(id: String, labelKey: String, value: Int? = nil) {
+    init(id: String, labelKey: String, value: Int? = nil, apiCode: String? = nil, unit: String? = nil) {
         self.id = id
         self.labelKey = labelKey
         self.value = value
+        self.apiCode = apiCode
+        self.unit = unit
     }
 
     /// Returns a copy of this measurement with the given value.
     func withValue(_ value: Int?) -> GearMeasurement {
-        GearMeasurement(id: id, labelKey: labelKey, value: value)
+        GearMeasurement(id: id, labelKey: labelKey, value: value, apiCode: apiCode, unit: unit)
     }
 
     /// String Catalog key for this measurement's short, parenthetical description (e.g. "mesh size
@@ -208,4 +252,63 @@ extension GearOption {
         GearOption(id: "PS2", name: "Two boat operated purse seine", requiredMeasurements: [.meshSize], variableMeasurements: [.timesShot]),
         GearOption(id: "LA", name: "Without purse lines (lampara)", requiredMeasurements: [.meshSize], variableMeasurements: [.timesShot])
     ]
+}
+
+extension GearOption {
+    /// Maps a `?view=mobile` gears-response item (`GearMobileDTO`) into the domain type (see
+    /// ADR-0018 addendum "gears dataset"). `measurementsById` is the response's top-level
+    /// `measurements` catalogue, keyed by id, that `dto.requiredMeasurementIds`/
+    /// `variableMeasurementIds` resolve against.
+    ///
+    /// `id` is the API's `code` (the stable FAO gear code, e.g. `"TBB"`) — **not** the API's GUID
+    /// (kept separately as `referenceId`) — so favourites keyed on the gear code (ADR-0012) are
+    /// unaffected by moving from the bundled catalogue to this live connector.
+    ///
+    /// A measurement id with no matching entry in `measurementsById` is **dropped** rather than
+    /// failing the whole gear — returned via `droppedMeasurementIds` (duplicated across required/
+    /// variable if an id appears in both) so the caller can log how many were unresolved and their
+    /// raw ids, with no personal data, rather than silently losing a question or crashing. This is
+    /// not expected in practice (every id in the live dev response resolves), but the API gives no
+    /// contractual guarantee every id always will.
+    ///
+    /// `GearMeasurement.labelKey` is set to the API's own `label` text **verbatim** — not a String
+    /// Catalog key — since the API supplies no Welsh translation yet and some labels run to ~200
+    /// characters (ADR-0018 addendum). This is a deliberate, tracked gap: no screen renders a
+    /// `GearOption` sourced from this connector yet (`GearOption.all`, the bundled ADR-0012
+    /// catalogue, still backs every gear screen), so there is no user-facing/accessibility impact
+    /// today, but mapping these labels to proper, localised String Catalog entries is required
+    /// before this connector's gears feed any screen.
+    static func make(
+        dto: GearMobileDTO,
+        measurementsById: [String: GearMeasurementDefinitionDTO]
+    ) -> (gear: GearOption, droppedMeasurementIds: [String]) {
+        var droppedMeasurementIds: [String] = []
+
+        func resolve(_ measurementIds: [String]?) -> [GearMeasurement] {
+            (measurementIds ?? []).compactMap { measurementId in
+                guard let definition = measurementsById[measurementId] else {
+                    droppedMeasurementIds.append(measurementId)
+                    return nil
+                }
+                return GearMeasurement(
+                    id: definition.id,
+                    labelKey: definition.label,
+                    apiCode: definition.code,
+                    unit: definition.unit
+                )
+            }
+        }
+
+        let gear = GearOption(
+            id: dto.code,
+            name: dto.name,
+            requiredMeasurements: resolve(dto.requiredMeasurementIds),
+            variableMeasurements: resolve(dto.variableMeasurementIds),
+            referenceId: dto.id,
+            categoryCode: dto.category?.code,
+            categoryName: dto.category?.name,
+            isPairFishing: dto.pairFishing
+        )
+        return (gear, droppedMeasurementIds)
+    }
 }

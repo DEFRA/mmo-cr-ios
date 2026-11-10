@@ -73,3 +73,60 @@ nonisolated struct PortDTO: Decodable, Sendable {
     let coordinate: PortCoordinate?
     let active: Bool?
 }
+
+/// A gear's category, nested inside a `?view=mobile` gear item (see ADR-0018 addendum "gears
+/// dataset"). All three fields are plain text so a category the app hasn't seen yet still decodes.
+nonisolated struct GearCategoryDTO: Decodable, Sendable {
+    let id: String?
+    let code: String?
+    let name: String?
+}
+
+/// One entry in a `?view=mobile` gears response's top-level `measurements` catalogue — the
+/// labelled definition a gear's `requiredMeasurementIds`/`variableMeasurementIds` resolve against
+/// (see `GearsMobileResponseDTO`). `kind` and `unit` are kept as plain text (not an enum) so a
+/// value the app hasn't seen yet still decodes rather than failing the whole response.
+nonisolated struct GearMeasurementDefinitionDTO: Decodable, Sendable {
+    let id: String
+    let code: String?
+    let label: String
+    let kind: String?
+    let unit: String?
+    let minimumValue: Double?
+    let maximumValue: Double?
+}
+
+/// Wire shape for a single item in the `gears` dataset's `?view=mobile` response (see ADR-0018
+/// addendum "gears dataset"). Only `id`, `code` and `name` are required; every other field may be
+/// omitted or `null` to match the real API. Deliberately **not** the canonical-view shape — the
+/// mobile view is the one this connector requests for `gears`, because only it carries the
+/// `measurements` catalogue (see `GearsMobileResponseDTO`) needed to turn
+/// `requiredMeasurementIds`/`variableMeasurementIds` into labelled `GearMeasurement`s.
+nonisolated struct GearMobileDTO: Decodable, Sendable {
+    let id: String
+    let code: String
+    let name: String
+    let category: GearCategoryDTO?
+    let pairFishing: Bool?
+    let requiredMeasurementIds: [String]?
+    let variableMeasurementIds: [String]?
+}
+
+/// Response envelope for `GET {baseURL}/api/v1/reference-data/gears?view=mobile` (see ADR-0018
+/// addendum "gears dataset"). **Not** `ReferenceDataEnvelope<GearMobileDTO>`: the mobile gears
+/// response additionally carries a top-level `measurements` catalogue that the shared envelope
+/// has no field for, so `gears` gets its own response type rather than forcing the shared shape.
+nonisolated struct GearsMobileResponseDTO: Decodable, Sendable {
+    let dataset: String
+    let collectionId: String
+    let schemaVersion: String
+    let version: String
+    let view: String
+    let total: Int
+    let items: [GearMobileDTO]
+    /// The labelled measurement definitions every item's measurement ids resolve against.
+    /// Optional (not a non-optional `[]` default) so a response that omits it entirely still
+    /// decodes — every item then maps with empty measurement lists (see
+    /// `GearOption.make(dto:measurementsById:)`).
+    let measurements: [GearMeasurementDefinitionDTO]?
+}

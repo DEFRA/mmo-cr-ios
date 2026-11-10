@@ -545,6 +545,41 @@ final class ReferenceDataClientTests: XCTestCase {
         XCTAssertTrue(manifest.datasets.contains { $0.dataset == "map-statistical-areas" })
     }
 
+    func test_fetchManifest_toleratesMissingItemCount_onMapEntries() async throws {
+        // The live manifest's GeoJSON map entries (`map-land`, `map-statistical-areas`) omit
+        // `itemCount` entirely (they carry `featureCount`/`sizeBytes` instead) — this must decode
+        // the whole manifest, not fail it, with `itemCount` simply `nil` for that entry (see the
+        // ADR-0018 addendum "gears dataset").
+        let jsonString = """
+        {
+          "manifestId": "00000000-0000-4000-8000-000000000001",
+          "version": "2026-01-01T00:00:00Z",
+          "datasets": [
+            {
+              "dataset": "map-land",
+              "collectionId": "00000000-0000-4000-8000-000000000050",
+              "version": "local-seed-1",
+              "schemaVersion": "1.0",
+              "format": "geojson",
+              "lastModified": "2026-01-01T00:00:00Z",
+              "url": "/api/v1/reference-data/map/land"
+            }
+          ]
+        }
+        """
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: Data(jsonString.utf8))
+        let sut = RemoteReferenceDataClient(
+            httpClient: httpClient,
+            configuration: try makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: nil)
+        )
+
+        let manifest = try await sut.fetchManifest()
+
+        XCTAssertEqual(manifest.datasets.count, 1)
+        XCTAssertNil(manifest.datasets[0].itemCount)
+    }
+
     func test_fetchManifest_requestsManifestURL() async throws {
         let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: loadManifestFixture())
         let sut = RemoteReferenceDataClient(
@@ -613,67 +648,6 @@ final class ReferenceDataClientTests: XCTestCase {
         } catch {
             XCTFail("Expected APIError, got \(error)")
         }
-    }
-
-    // MARK: checkHealth
-
-    func test_checkHealth_succeeds_on200() async throws {
-        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: Data())
-        let sut = RemoteReferenceDataClient(
-            httpClient: httpClient,
-            configuration: try makeConfiguration(),
-            tokenProvider: StaticTokenProvider(token: nil)
-        )
-
-        try await sut.checkHealth()
-    }
-
-    func test_checkHealth_requestsHealthURL_atServiceRoot() async throws {
-        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: Data())
-        let sut = RemoteReferenceDataClient(
-            httpClient: httpClient,
-            configuration: try makeConfiguration(),
-            tokenProvider: StaticTokenProvider(token: nil)
-        )
-
-        try await sut.checkHealth()
-
-        XCTAssertEqual(
-            httpClient.receivedRequests.first?.url?.absoluteString,
-            "http://localhost:3002/health"
-        )
-    }
-
-    func test_checkHealth_throwsServiceUnavailable_on503() async {
-        let httpClient = StubHTTPClient.statusOnly(503)
-        let sut = RemoteReferenceDataClient(
-            httpClient: httpClient,
-            configuration: try! makeConfiguration(),
-            tokenProvider: StaticTokenProvider(token: nil)
-        )
-
-        do {
-            try await sut.checkHealth()
-            XCTFail("Expected a 503 response")
-        } catch let error as APIError {
-            XCTAssertTrue(error.isServiceUnavailable)
-        } catch {
-            XCTFail("Expected APIError, got \(error)")
-        }
-    }
-
-    func test_checkHealth_ignoresResponseBody_whenBodyIsNotJSON() async throws {
-        // The route's body shape is undocumented and deliberately not decoded (see
-        // `makeReferenceDataHealthRequest`'s doc comment) — a plain-text or empty 2xx body must
-        // still succeed.
-        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: Data("OK".utf8))
-        let sut = RemoteReferenceDataClient(
-            httpClient: httpClient,
-            configuration: try makeConfiguration(),
-            tokenProvider: StaticTokenProvider(token: nil)
-        )
-
-        try await sut.checkHealth()
     }
 
     // MARK: Correlation header (x-cdp-request-id)

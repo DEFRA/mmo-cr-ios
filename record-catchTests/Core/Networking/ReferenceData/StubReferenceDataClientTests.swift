@@ -219,6 +219,38 @@ final class StubReferenceDataClientTests: XCTestCase {
         }
     }
 
+    // MARK: fetchGears
+
+    func test_fetchGears_returnsConfiguredGears() async throws {
+        let gear = GearOption(id: "TBB", name: "Beam trawl")
+        let sut = StubReferenceDataClient(gears: [gear])
+
+        let result = try await sut.fetchGears()
+
+        XCTAssertEqual(result, [gear])
+    }
+
+    func test_fetchGears_throwsConfiguredError() async {
+        let sut = StubReferenceDataClient(error: .response(status: 401, details: nil))
+
+        do {
+            _ = try await sut.fetchGears()
+            XCTFail("Expected an error")
+        } catch let error as APIError {
+            XCTAssertEqual(error, .response(status: 401, details: nil))
+        } catch {
+            XCTFail("Expected APIError, got \(error)")
+        }
+    }
+
+    func test_init_defaults_toEmptyGearsAndNoError() async throws {
+        let sut = StubReferenceDataClient()
+
+        let result = try await sut.fetchGears()
+
+        XCTAssertTrue(result.isEmpty)
+    }
+
     // MARK: fetchManifest
 
     func test_fetchManifest_returnsConfiguredManifest() async throws {

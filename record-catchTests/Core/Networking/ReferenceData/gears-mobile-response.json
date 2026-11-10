@@ -1,0 +1,79 @@
+{
+  "dataset": "gears",
+  "collectionId": "00000000-0000-4000-8000-000000000020",
+  "schemaVersion": "1.0",
+  "version": "local-seed-1",
+  "view": "mobile",
+  "total": 3,
+  "items": [
+    {
+      "id": "10000000-0000-4000-8000-000000000001",
+      "code": "TBB",
+      "name": "Beam trawl",
+      "category": {
+        "id": "20000000-0000-4000-8000-000000000001",
+        "code": "TRAWL_NETS",
+        "name": "Trawl nets"
+      },
+      "pairFishing": false,
+      "requiredMeasurementIds": ["mesh-size", "number-of-beams"],
+      "variableMeasurementIds": ["times-shot"]
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000002",
+      "code": "PTB",
+      "name": "Bottom pair trawl",
+      "category": {
+        "id": "20000000-0000-4000-8000-000000000001",
+        "code": "TRAWL_NETS",
+        "name": "Trawl nets"
+      },
+      "pairFishing": true,
+      "requiredMeasurementIds": ["mesh-size", "number-of-trawl-nets"],
+      "variableMeasurementIds": ["times-shot"]
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000003",
+      "code": "HMD",
+      "name": "Mechanised dredges"
+    }
+  ],
+  "measurements": [
+    {
+      "id": "mesh-size",
+      "code": "ME",
+      "label": "Mesh size (mm)",
+      "kind": "required",
+      "unit": "mm",
+      "minimumValue": 1,
+      "maximumValue": 500
+    },
+    {
+      "id": "number-of-beams",
+      "code": "NB",
+      "label": "Number of beams",
+      "kind": "required",
+      "unit": "count",
+      "minimumValue": 1,
+      "maximumValue": null
+    },
+    {
+      "id": "number-of-trawl-nets",
+      "code": "NT",
+      "label": "Number of trawl nets",
+      "kind": "required",
+      "unit": "count",
+      "minimumValue": 1,
+      "maximumValue": null
+    },
+    {
+      "id": "times-shot",
+      "code": "TS",
+      "label": "Number of times the gear was shot",
+      "kind": "variable",
+      "unit": "count",
+      "minimumValue": 0,
+      "maximumValue": null
+    }
+  ]
+}

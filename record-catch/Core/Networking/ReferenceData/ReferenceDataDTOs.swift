@@ -127,6 +127,36 @@ nonisolated struct GearsMobileResponseDTO: Decodable, Sendable {
     /// The labelled measurement definitions every item's measurement ids resolve against.
     /// Optional (not a non-optional `[]` default) so a response that omits it entirely still
     /// decodes — every item then maps with empty measurement lists (see
-    /// `GearOption.make(dto:measurementsById:)`).
+    /// `GearOption.make(canonical:mobile:measurementsById:vesselLengthBand:)`).
     let measurements: [GearMeasurementDefinitionDTO]?
+}
+
+/// One link between a gear and a measurement in the **canonical** (default) view's
+/// `applicableCharacteristics` array (see ADR-0024 "Gears from two requests"). `fixed` is the
+/// field this connector treats as "required, captured once when the gear is added to
+/// favourites" — the live API's own `required` flag is `false` on every link, so it is not
+/// modelled here at all (ADR-0024 records this as a backend-data oddity, not a connector bug).
+/// `vesselLengthApplicability` lists the vessel-length bands (e.g. `"under-10m"`, `"10-to-12m"`,
+/// `"over-12m"`) this measurement applies to; the app currently only asks for the `"under-10m"`
+/// band (ADR-0024 "Vessel-length scope").
+nonisolated struct GearCharacteristicDTO: Decodable, Sendable {
+    let id: String?
+    let characteristicId: String
+    let fixed: Bool
+    let required: Bool?
+    let vesselLengthApplicability: [String]?
+}
+
+/// Wire shape for a single item in the `gears` dataset's **canonical** (default, no `view`
+/// query parameter) response — see ADR-0024 "Gears from two requests". Fetched *alongside* the
+/// `?view=mobile` response (`GearMobileDTO`) because only this canonical shape carries
+/// `applicableCharacteristics.fixed`, the required/per-trip split this connector relies on.
+nonisolated struct GearCanonicalDTO: Decodable, Sendable {
+    let id: String
+    let code: String
+    let name: String
+    let categoryId: String?
+    let pairFishing: Bool?
+    let applicableCharacteristics: [GearCharacteristicDTO]?
+    let active: Bool?
 }

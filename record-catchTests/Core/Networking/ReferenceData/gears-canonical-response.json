@@ -1,0 +1,46 @@
+{
+  "dataset": "gears",
+  "collectionId": "00000000-0000-4000-8000-000000000020",
+  "schemaVersion": "1.0",
+  "version": "local-seed-1",
+  "view": "canonical",
+  "total": 3,
+  "items": [
+    {
+      "id": "10000000-0000-4000-8000-000000000001",
+      "code": "TBB",
+      "name": "Beam trawl",
+      "categoryId": "20000000-0000-4000-8000-000000000001",
+      "pairFishing": false,
+      "applicableCharacteristics": [
+        { "id": "c1", "characteristicId": "mesh-size", "fixed": true, "required": false, "vesselLengthApplicability": ["under-10m", "10-to-12m"] },
+        { "id": "c2", "characteristicId": "number-of-beams", "fixed": true, "required": false, "vesselLengthApplicability": ["under-10m"] },
+        { "id": "c3", "characteristicId": "times-shot", "fixed": false, "required": false, "vesselLengthApplicability": ["under-10m", "over-12m"] }
+      ],
+      "active": true
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000002",
+      "code": "PTB",
+      "name": "Bottom pair trawl",
+      "categoryId": "20000000-0000-4000-8000-000000000001",
+      "pairFishing": true,
+      "applicableCharacteristics": [
+        { "id": "c4", "characteristicId": "mesh-size", "fixed": true, "required": false, "vesselLengthApplicability": ["under-10m"] },
+        { "id": "c5", "characteristicId": "number-of-trawl-nets", "fixed": true, "required": false, "vesselLengthApplicability": ["under-10m"] },
+        { "id": "c6", "characteristicId": "times-shot", "fixed": false, "required": false, "vesselLengthApplicability": ["under-10m"] },
+        { "id": "c7", "characteristicId": "number-of-beams", "fixed": true, "required": false, "vesselLengthApplicability": ["10-to-12m"] }
+      ],
+      "active": true
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000003",
+      "code": "HMD",
+      "name": "Mechanised dredges",
+      "categoryId": null,
+      "pairFishing": null,
+      "applicableCharacteristics": [],
+      "active": true
+    }
+  ]
+}

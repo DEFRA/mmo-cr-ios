@@ -102,7 +102,55 @@ nonisolated struct RemoteReferenceDataClient: ReferenceDataFetching {
         return PortOption(dto: dto)
     }
 
+    /// Fetches `gears` by requesting **both** the canonical (default) view and the `?view=mobile`
+    /// view concurrently and joining them (see ADR-0024 "Gears from two requests" — a temporary
+    /// backend-data limitation, not the connector's preferred design): only the canonical view's
+    /// `applicableCharacteristics.fixed` says which measurements are required vs per-trip, and
+    /// only the mobile view's `measurements` catalogue gives those measurements a label/unit.
+    ///
+    /// - Throws: `ReferenceDataValidationError.gearViewsMismatch` if the two responses disagree on
+    ///   `version`/`collectionId`/the set of gear codes present (ADR-0024 "Validation" — a sign the
+    ///   two requests landed on different data generations); `.unresolvedGearMeasurement` if any
+    ///   gear references a measurement id missing from the mobile catalogue. Either rejects the
+    ///   whole `gears` update, keeping the existing on-device snapshot.
     func fetchGears() async throws -> [GearOption] {
+        async let canonicalTask: ReferenceDataEnvelope<GearCanonicalDTO> = fetch(.gears)
+        async let mobileTask: GearsMobileResponseDTO = fetchGearsMobile()
+        let (canonical, mobile) = try await (canonicalTask, mobileTask)
+
+        guard canonical.version == mobile.version, canonical.collectionId == mobile.collectionId else {
+            throw ReferenceDataValidationError.gearViewsMismatch(
+                reason: "version/collectionId differs between the canonical and mobile gears responses"
+            )
+        }
+        let canonicalCodes = Set(canonical.items.map(\.code))
+        let mobileCodes = Set(mobile.items.map(\.code))
+        guard canonicalCodes == mobileCodes else {
+            throw ReferenceDataValidationError.gearViewsMismatch(
+                reason: "gear codes differ between the canonical and mobile gears responses"
+            )
+        }
+
+        let mobileByCode = Dictionary(uniqueKeysWithValues: mobile.items.map { ($0.code, $0) })
+        let measurementsById = Dictionary(
+            uniqueKeysWithValues: (mobile.measurements ?? []).map { ($0.id, $0) }
+        )
+
+        return try canonical.items.map { canonicalItem in
+            // Safe to force-unwrap: `mobileByCode` is keyed from `mobileCodes`, already asserted
+            // equal to `canonicalCodes` above.
+            guard let mobileItem = mobileByCode[canonicalItem.code] else {
+                throw ReferenceDataValidationError.gearViewsMismatch(
+                    reason: "gear \(canonicalItem.code) present in the canonical response but not the mobile one"
+                )
+            }
+            return try GearOption.make(canonical: canonicalItem, mobile: mobileItem, measurementsById: measurementsById)
+        }
+    }
+
+    /// Fetches and decodes the `?view=mobile` gears response alone — a private helper so
+    /// `fetchGears()` above can run it concurrently with the canonical-view fetch via `async let`.
+    private func fetchGearsMobile() async throws -> GearsMobileResponseDTO {
         let token = await resolvedToken()
         let request = makeReferenceDataRequest(
             baseURL: configuration.baseURL,
@@ -110,37 +158,9 @@ nonisolated struct RemoteReferenceDataClient: ReferenceDataFetching {
             bearerToken: token,
             view: "mobile"
         )
-        let response: GearsMobileResponseDTO = try await send(
-            request,
-            fallbackPath: ReferenceDataset.gears.rawValue
-        ) { data in
+        return try await send(request, fallbackPath: ReferenceDataset.gears.rawValue) { data in
             try self.decoder.decode(GearsMobileResponseDTO.self, from: data)
         }
-
-        let measurementsById = Dictionary(
-            uniqueKeysWithValues: (response.measurements ?? []).map { ($0.id, $0) }
-        )
-        var droppedMeasurementIds: [String] = []
-        let gears = response.items.map { dto -> GearOption in
-            let (gear, dropped) = GearOption.make(dto: dto, measurementsById: measurementsById)
-            droppedMeasurementIds.append(contentsOf: dropped)
-            return gear
-        }
-
-        if !droppedMeasurementIds.isEmpty {
-            // Non-sensitive diagnostic only (a count plus the API's own opaque measurement ids,
-            // never gear/user content) — see `GearOption.make(dto:measurementsById:)`'s doc
-            // comment for why this can happen and why it doesn't fail the whole fetch.
-            logger.log(NetworkLogEntry(
-                method: "GET",
-                path: ReferenceDataset.gears.rawValue,
-                statusCode: 200,
-                durationSeconds: 0,
-                errorCode: "gear_measurement_ids_unresolved:\(droppedMeasurementIds.count)"
-            ))
-        }
-
-        return gears
     }
 
     func fetchManifest() async throws -> ReferenceDataManifest {

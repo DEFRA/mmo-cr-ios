@@ -39,6 +39,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Core/Networking/ConnectivityMonitoring.swift,
+				Core/Networking/ReferenceData/ReferenceDataSyncStatusEnvironment.swift,
 				Features/Common/Components/Disclosure/ExpandableHelpSection.swift,
 				Features/Common/Components/Form/PrimaryButton.swift,
 				Features/Common/Components/Form/RadioOption.swift,
@@ -56,6 +57,7 @@
 				Features/Common/Views/AccessibilityAnnouncer.swift,
 				Features/Common/Views/HeaderNavigating.swift,
 				Features/Common/Views/ScrollViewProxyEnvironment.swift,
+				Features/Common/Views/SyncErrorBanner.swift,
 				Features/Common/Views/ViewFooter.swift,
 				Features/Common/Views/ViewHeader.swift,
 				Features/Common/Views/ViewTemplate.swift,

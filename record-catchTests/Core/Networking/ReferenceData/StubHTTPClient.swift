@@ -40,3 +40,39 @@ final class StubHTTPClient: HTTPPerforming, @unchecked Sendable {
         return try result.get()
     }
 }
+
+/// Routes a successful JSON response based on whether the request's URL carries `?view=mobile` —
+/// needed to test `RemoteReferenceDataClient.fetchGears()`, which fires the canonical and
+/// `?view=mobile` requests **concurrently** via `async let` (see ADR-0024 "Gears from two
+/// requests"), so a single-response `StubHTTPClient` can't distinguish them. Always responds with
+/// `200`. `receivedRequests` is protected by a lock since `send(_:)` is called concurrently from
+/// two tasks — an unsynchronized array append here would be a data race in the test double, not
+/// the production code under test.
+final class RoutingStubHTTPClient: HTTPPerforming, @unchecked Sendable {
+    private let mobileJSON: Data
+    private let canonicalJSON: Data
+    private let lock = NSLock()
+    private var _receivedRequests: [URLRequest] = []
+
+    var receivedRequests: [URLRequest] {
+        lock.withLock { _receivedRequests }
+    }
+
+    init(canonicalJSON: Data, mobileJSON: Data) {
+        self.canonicalJSON = canonicalJSON
+        self.mobileJSON = mobileJSON
+    }
+
+    func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+        lock.withLock { _receivedRequests.append(request) }
+        let isMobileView = request.url?.query?.contains("view=mobile") ?? false
+        let data = isMobileView ? mobileJSON : canonicalJSON
+        let response = HTTPURLResponse(
+            url: request.url ?? URL(string: "https://example.invalid")!,
+            statusCode: 200,
+            httpVersion: nil,
+            headerFields: nil
+        )!
+        return (data, response)
+    }
+}

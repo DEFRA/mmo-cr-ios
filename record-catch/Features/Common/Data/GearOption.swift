@@ -20,7 +20,8 @@ nonisolated struct GearOption: Identifiable, Hashable, Sendable, Codable {
     /// Per-trip measurements, captured on the select-gear screen (values `nil` until captured).
     let variableMeasurements: [GearMeasurement]
     /// The reference-data API's own GUID for this gear, when sourced from
-    /// `GearOption.make(dto:measurementsById:)` (see ADR-0018 addendum "gears dataset"). `nil` for
+    /// `GearOption.make(canonical:mobile:measurementsById:vesselLengthBand:)` (see ADR-0024 "Gears
+    /// from two requests"). `nil` for
     /// every other source (the bundled ADR-0012 catalogue, hand-built test/demo values) — kept as
     /// an **optional** type (not a non-optional default) so previously-persisted favourites that
     /// predate this field still decode via the synthesized `Codable` conformance, matching
@@ -129,7 +130,8 @@ nonisolated struct GearOption: Identifiable, Hashable, Sendable, Codable {
 nonisolated struct GearMeasurement: Identifiable, Hashable, Sendable, Codable {
     let id: String
     /// String Catalog key for the field label (e.g. "Mesh size (mm)") for the bundled ADR-0012
-    /// catalogue. When sourced from `GearOption.make(dto:measurementsById:)`, this instead holds
+    /// catalogue. When sourced from `GearOption.make(canonical:mobile:measurementsById:vesselLengthBand:)`,
+    /// this instead holds
     /// the API's own (unlocalised, English-only) `label` text verbatim — see that function's doc
     /// comment and the ADR-0018 addendum "gears dataset" for why labels aren't yet mapped to the
     /// String Catalog.
@@ -137,10 +139,12 @@ nonisolated struct GearMeasurement: Identifiable, Hashable, Sendable, Codable {
     /// The whole-number value the user entered, or `nil` if not yet captured.
     let value: Int?
     /// The reference-data API's own short code for this measurement (e.g. `"ME"` for mesh size),
-    /// when sourced from `GearOption.make(dto:measurementsById:)`. `nil` for every other source.
+    /// when sourced from `GearOption.make(canonical:mobile:measurementsById:vesselLengthBand:)`.
+    /// `nil` for every other source.
     let apiCode: String?
     /// The API's unit for this measurement (e.g. `"mm"`, `"m"`, `"count"`), when sourced from
-    /// `GearOption.make(dto:measurementsById:)`. `nil` for every other source.
+    /// `GearOption.make(canonical:mobile:measurementsById:vesselLengthBand:)`. `nil` for every
+    /// other source.
     let unit: String?
 
     init(id: String, labelKey: String, value: Int? = nil, apiCode: String? = nil, unit: String? = nil) {
@@ -255,60 +259,72 @@ extension GearOption {
 }
 
 extension GearOption {
-    /// Maps a `?view=mobile` gears-response item (`GearMobileDTO`) into the domain type (see
-    /// ADR-0018 addendum "gears dataset"). `measurementsById` is the response's top-level
-    /// `measurements` catalogue, keyed by id, that `dto.requiredMeasurementIds`/
-    /// `variableMeasurementIds` resolve against.
+    /// The only vessel-length band the app currently asks gear questions for (see ADR-0024
+    /// "Vessel-length scope"): every vessel is treated as under 10m for now, regardless of its
+    /// real `lengthOverallMetres`. The live API's `applicableCharacteristics.vesselLengthApplicability`
+    /// carries other bands (`"10-to-12m"`, `"over-12m"`) that this connector deliberately ignores
+    /// until per-vessel banding is built — revisit this constant, not the join logic below, when
+    /// that happens.
+    static let currentVesselLengthBand = "under-10m"
+
+    /// Joins a gear's **canonical**-view record (`GearCanonicalDTO`, the source of the
+    /// required/per-trip split via `applicableCharacteristics.fixed`) with its **mobile**-view
+    /// record (`GearMobileDTO`, the source of category/pair-fishing display fields) and the
+    /// mobile response's `measurements` catalogue (the source of labels/units) — see ADR-0024
+    /// "Gears from two requests".
     ///
     /// `id` is the API's `code` (the stable FAO gear code, e.g. `"TBB"`) — **not** the API's GUID
     /// (kept separately as `referenceId`) — so favourites keyed on the gear code (ADR-0012) are
-    /// unaffected by moving from the bundled catalogue to this live connector.
+    /// unaffected by this connector.
     ///
-    /// A measurement id with no matching entry in `measurementsById` is **dropped** rather than
-    /// failing the whole gear — returned via `droppedMeasurementIds` (duplicated across required/
-    /// variable if an id appears in both) so the caller can log how many were unresolved and their
-    /// raw ids, with no personal data, rather than silently losing a question or crashing. This is
-    /// not expected in practice (every id in the live dev response resolves), but the API gives no
-    /// contractual guarantee every id always will.
+    /// Only characteristics whose `vesselLengthApplicability` includes `vesselLengthBand`
+    /// (default `currentVesselLengthBand`) are kept; `fixed: true` becomes a required (per-
+    /// favourite) measurement, `fixed: false` becomes a variable (per-trip) one. A gear with no
+    /// characteristic applicable to that band (e.g. every hook-and-line/pot gear under 10m, per
+    /// ADR-0024) defines neither list — `AddGearViewModel.submit()` already saves such a gear
+    /// straight to favourites, skipping the now-empty measurements screen.
     ///
-    /// `GearMeasurement.labelKey` is set to the API's own `label` text **verbatim** — not a String
-    /// Catalog key — since the API supplies no Welsh translation yet and some labels run to ~200
-    /// characters (ADR-0018 addendum). This is a deliberate, tracked gap: no screen renders a
-    /// `GearOption` sourced from this connector yet (`GearOption.all`, the bundled ADR-0012
-    /// catalogue, still backs every gear screen), so there is no user-facing/accessibility impact
-    /// today, but mapping these labels to proper, localised String Catalog entries is required
-    /// before this connector's gears feed any screen.
+    /// - Throws: `ReferenceDataValidationError.unresolvedGearMeasurement` if a kept characteristic
+    ///   references a measurement id absent from `measurementsById` — this is strict (ADR-0024
+    ///   "Validation"): the whole gear is rejected rather than silently dropping the question, so
+    ///   a bad response can never persist to the favourite catalogue.
     static func make(
-        dto: GearMobileDTO,
-        measurementsById: [String: GearMeasurementDefinitionDTO]
-    ) -> (gear: GearOption, droppedMeasurementIds: [String]) {
-        var droppedMeasurementIds: [String] = []
-
-        func resolve(_ measurementIds: [String]?) -> [GearMeasurement] {
-            (measurementIds ?? []).compactMap { measurementId in
-                guard let definition = measurementsById[measurementId] else {
-                    droppedMeasurementIds.append(measurementId)
-                    return nil
-                }
-                return GearMeasurement(
-                    id: definition.id,
-                    labelKey: definition.label,
-                    apiCode: definition.code,
-                    unit: definition.unit
-                )
-            }
+        canonical: GearCanonicalDTO,
+        mobile: GearMobileDTO,
+        measurementsById: [String: GearMeasurementDefinitionDTO],
+        vesselLengthBand: String = currentVesselLengthBand
+    ) throws -> GearOption {
+        let applicable = (canonical.applicableCharacteristics ?? []).filter {
+            ($0.vesselLengthApplicability ?? []).contains(vesselLengthBand)
         }
 
-        let gear = GearOption(
-            id: dto.code,
-            name: dto.name,
-            requiredMeasurements: resolve(dto.requiredMeasurementIds),
-            variableMeasurements: resolve(dto.variableMeasurementIds),
-            referenceId: dto.id,
-            categoryCode: dto.category?.code,
-            categoryName: dto.category?.name,
-            isPairFishing: dto.pairFishing
+        func measurement(for characteristic: GearCharacteristicDTO) throws -> GearMeasurement {
+            guard let definition = measurementsById[characteristic.characteristicId] else {
+                throw ReferenceDataValidationError.unresolvedGearMeasurement(
+                    gearCode: canonical.code,
+                    measurementId: characteristic.characteristicId
+                )
+            }
+            return GearMeasurement(
+                id: definition.id,
+                labelKey: definition.label,
+                apiCode: definition.code,
+                unit: definition.unit
+            )
+        }
+
+        let requiredMeasurements = try applicable.filter(\.fixed).map(measurement(for:))
+        let variableMeasurements = try applicable.filter { !$0.fixed }.map(measurement(for:))
+
+        return GearOption(
+            id: canonical.code,
+            name: canonical.name,
+            requiredMeasurements: requiredMeasurements,
+            variableMeasurements: variableMeasurements,
+            referenceId: canonical.id,
+            categoryCode: mobile.category?.code,
+            categoryName: mobile.category?.name,
+            isPairFishing: mobile.pairFishing ?? canonical.pairFishing
         )
-        return (gear, droppedMeasurementIds)
     }
 }

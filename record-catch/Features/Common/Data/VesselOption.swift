@@ -37,6 +37,13 @@ nonisolated struct VesselOption: Identifiable, Hashable, Sendable, Codable {
     let activeFrom: String?
     let activeTo: String?
 
+    /// The vessel's RSS (Registry of Shipping and Seamen) number, used by
+    /// `CatchRecordReferenceGenerator` to build the catch record reference the moment a vessel is
+    /// selected (see ADR-0026). An alias of `registrationNumber` — the reference-data API's
+    /// canonical view does not expose a separately-named "RSS number" field, and
+    /// `registrationNumber` is the confirmed match for it.
+    var rssNumber: String? { registrationNumber }
+
     /// Maps the wire DTO into the domain type, flattening `identifiers` and deriving
     /// `displayName` when the API omits `namePln`: `"NAME EXTERNAL_MARK"` when an `externalMark`
     /// is present, falling back to `name` alone otherwise.

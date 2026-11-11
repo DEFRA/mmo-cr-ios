@@ -103,6 +103,7 @@ final class SwiftDataCatchRecordDraftStore: CatchRecordDraftStoring {
         if let existing = try modelContext.fetch(descriptor).first {
             existing.payload = payloadData
             existing.vessel = draft.vessel
+            existing.catchRecordReference = draft.catchRecordReference
             existing.tripEndDate = draft.returnDate
             existing.lastEditedAt = Date()
             existing.checkpointRawValue = draft.checkpoint.rawValue
@@ -111,6 +112,7 @@ final class SwiftDataCatchRecordDraftStore: CatchRecordDraftStoring {
                 localID: localID,
                 lastEditedAt: Date(),
                 vessel: draft.vessel,
+                catchRecordReference: draft.catchRecordReference,
                 tripEndDate: draft.returnDate,
                 payload: payloadData,
                 checkpointRawValue: draft.checkpoint.rawValue

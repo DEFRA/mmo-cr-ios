@@ -15,11 +15,16 @@ final class FakeAuthenticator: Authenticating {
     var signInOutcome: SignInOutcome
     /// Outcome returned by `restoreSession()`.
     var restoreSessionOutcome: RestoreSessionOutcome
+    /// A fixed token returned by `accessToken()` whenever `hasCachedAccount` is `true`; `nil`
+    /// simulates the Catch Recording Service's scope not being configured for this stage, or any
+    /// other silent-token-acquisition failure (see `Authenticating.accessToken()`).
+    var accessTokenResult: String?
     /// An artificial delay before `signIn` resolves, so callers can exercise the EC1
     /// loading/anti-double-submit state deterministically.
     var signInDelayNanoseconds: UInt64
     private(set) var signInCallCount = 0
     private(set) var signOutCallCount = 0
+    private(set) var accessTokenCallCount = 0
 
     var hasCachedAccount: Bool
 
@@ -27,11 +32,13 @@ final class FakeAuthenticator: Authenticating {
         signInOutcome: SignInOutcome = .success(AuthenticatedAccount(username: "test@example.com", identifier: "fake-id")),
         restoreSessionOutcome: RestoreSessionOutcome = .noAccount,
         hasCachedAccount: Bool = false,
+        accessTokenResult: String? = nil,
         signInDelayNanoseconds: UInt64 = 0
     ) {
         self.signInOutcome = signInOutcome
         self.restoreSessionOutcome = restoreSessionOutcome
         self.hasCachedAccount = hasCachedAccount
+        self.accessTokenResult = accessTokenResult
         self.signInDelayNanoseconds = signInDelayNanoseconds
     }
 
@@ -54,6 +61,12 @@ final class FakeAuthenticator: Authenticating {
     func signOut() async {
         signOutCallCount += 1
         hasCachedAccount = false
+    }
+
+    func accessToken() async -> String? {
+        accessTokenCallCount += 1
+        guard hasCachedAccount else { return nil }
+        return accessTokenResult
     }
 }
 
@@ -111,4 +124,9 @@ final class UITestStubAuthenticator: Authenticating {
     func signOut() async {
         hasCachedAccount = false
     }
+
+    /// UI tests never exercise real network calls, so there is no "Catch Recording Service scope"
+    /// to simulate here — always `nil` (mirrors the stub's "no live network" scope, see this
+    /// type's own doc comment).
+    func accessToken() async -> String? { nil }
 }

@@ -25,6 +25,11 @@ final class CatchRecordEntity {
     var isSubmitted: Bool
     /// Denormalised for cheap Home-row rendering (see the note above). `nil` until captured.
     var vessel: String?
+    /// Denormalised copy of `CatchRecordDraftPayload.catchRecordReference` (see ADR-0026) — the
+    /// client-generated catch record reference, created once a vessel is confirmed. `nil` for any
+    /// row persisted before this field existed (mirrors `checkpointRawValue` below); such a draft
+    /// is given a reference the next time it is resumed (see `DraftActionViewModel.resumeDraft()`).
+    var catchRecordReference: String?
     /// Denormalised for cheap Home-row rendering. `nil` until captured.
     var tripEndDate: Date?
     /// JSON-encoded `CatchRecordDraftPayload` — the full-fidelity, resumable snapshot of the draft.
@@ -43,6 +48,7 @@ final class CatchRecordEntity {
         lastEditedAt: Date,
         isSubmitted: Bool = false,
         vessel: String?,
+        catchRecordReference: String? = nil,
         tripEndDate: Date?,
         payload: Data,
         checkpointRawValue: Int? = nil
@@ -51,6 +57,7 @@ final class CatchRecordEntity {
         self.lastEditedAt = lastEditedAt
         self.isSubmitted = isSubmitted
         self.vessel = vessel
+        self.catchRecordReference = catchRecordReference
         self.tripEndDate = tripEndDate
         self.payload = payload
         self.checkpointRawValue = checkpointRawValue

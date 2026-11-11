@@ -14,14 +14,28 @@
       "required": false,
       "log": true,
       "tracking": false,
-      "description": "Application (client) ID of the Microsoft Entra External ID app registration for this stage (see ADR-0022). Required: false until real per-stage values are supplied by the Entra tenant team \u2014 revisit then."
+      "description": "Application (client) ID of the Microsoft Entra External ID app registration for this stage (see ADR-0022). Required: false until real per-stage values are supplied by the Entra tenant team — revisit then."
     },
     "ENTRA_TENANT_SUBDOMAIN": {
       "type": "string",
       "required": false,
       "log": true,
       "tracking": false,
-      "description": "Subdomain of the Microsoft Entra External ID (CIAM) tenant for this stage, e.g. \"contoso\" for contoso.ciamlogin.com (see ADR-0022). Required: false until real per-stage values are supplied \u2014 revisit then."
+      "description": "Subdomain of the Microsoft Entra External ID (CIAM) tenant for this stage, e.g. \"contoso\" for contoso.ciamlogin.com (see ADR-0022). Required: false until real per-stage values are supplied — revisit then."
+    },
+    "CATCH_RECORD_API_BASE_URL": {
+      "type": "url",
+      "required": false,
+      "log": true,
+      "tracking": false,
+      "description": "Base URL of the Catch Recording Service (catch-record lifecycle + vessel favourites API, see ADR-0025) for this stage. Required: false until the backend team confirms a real per-stage address — revisit then. Deliberately a separate key from API_BASE_URL (the reference-data service's own address)."
+    },
+    "ENTRA_API_SCOPE": {
+      "type": "string",
+      "required": false,
+      "log": true,
+      "tracking": false,
+      "description": "The Entra External ID scope (API permission) the app requests to call the Catch Recording Service, e.g. \"api://<catch-record-service-app-id>/catch-recording.write\" (see ADR-0022 addendum, ADR-0025). Required: false until the Entra tenant team registers the service and supplies a real scope — revisit then."
     }
   }
 }

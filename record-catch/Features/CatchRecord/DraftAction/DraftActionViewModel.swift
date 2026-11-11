@@ -28,6 +28,10 @@ final class DraftActionViewModel {
     /// Used to resolve the correct gear-entry route (`CatchRecordRouting.gearEntryRoute`) when
     /// resuming from `.ports`.
     private let favouriteGears: FavouriteGearProviding
+    /// Used to look up the resumed vessel's RSS number when a persisted draft predates
+    /// `catchRecordReference` (ADR-0026) and needs one generated on resume.
+    private let vesselProvider: VesselProviding
+    private let referenceGenerator: CatchRecordReferenceGenerator
     /// Injected so the late-submission check in `resumeRoute()` is deterministic in tests rather
     /// than depending on the wall clock — mirrors `TripDateViewModel`.
     private let now: () -> Date
@@ -39,6 +43,8 @@ final class DraftActionViewModel {
         draftStore: CatchRecordDraftStoring = InMemoryCatchRecordDraftStore(),
         favouritePorts: FavouritePortsProviding = StubFavouritePortsProvider(),
         favouriteGears: FavouriteGearProviding = StubFavouriteGearProvider(),
+        vesselProvider: VesselProviding = StaticVesselProvider(),
+        referenceGenerator: CatchRecordReferenceGenerator = CatchRecordReferenceGenerator(),
         now: @escaping () -> Date = Date.init
     ) {
         self.row = row
@@ -47,6 +53,8 @@ final class DraftActionViewModel {
         self.draftStore = draftStore
         self.favouritePorts = favouritePorts
         self.favouriteGears = favouriteGears
+        self.vesselProvider = vesselProvider
+        self.referenceGenerator = referenceGenerator
         self.now = now
     }
 
@@ -79,7 +87,20 @@ final class DraftActionViewModel {
         if let localID = row.localID, let payload = try? await draftStore.loadDraft(localID: localID) {
             draft.apply(payload)
         }
+        // A persisted draft from before `catchRecordReference` existed (ADR-0026) has `nil` here —
+        // generate one now, from the already-captured vessel's RSS number, so this draft (and any
+        // route built below) carries a stable reference from this point on. Falls back silently
+        // (stays `nil`, and `resumeRoute()` uses `placeholderReferenceNumber`) if the vessel's RSS
+        // number isn't known — never blocks resuming the journey.
+        if draft.catchRecordReference == nil, let vessel = draft.vessel {
+            draft.catchRecordReference = generateReference(forVesselNamed: vessel)
+        }
         router.push(await resumeRoute())
+    }
+
+    private func generateReference(forVesselNamed vesselName: String) -> String? {
+        guard let rssNumber = vesselProvider.rssNumber(forVesselNamed: vesselName) else { return nil }
+        return try? referenceGenerator.generate(rssNumber: rssNumber)
     }
 
     /// Resolves the route to enter the journey at, given how far the resumed draft's
@@ -87,7 +108,7 @@ final class DraftActionViewModel {
     /// the forward journey already uses, so the has-favourites branching stays correct here too.
     private func resumeRoute() async -> CatchRecordRoute {
         let vessel = draft.vessel ?? ""
-        let referenceNumber = SelectVesselViewModel.placeholderReferenceNumber
+        let referenceNumber = draft.catchRecordReference ?? SelectVesselViewModel.placeholderReferenceNumber
         switch draft.checkpoint {
         case .vessel:
             // A persisted draft only ever exists once the vessel step has been committed (see

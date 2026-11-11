@@ -26,6 +26,9 @@ final class MSALNativeAuthenticator: Authenticating {
 
     private let application: MSALNativeAuthPublicClientApplication?
     private let connectivityMonitor: ConnectivityMonitoring
+    /// The Catch Recording Service's API scope (ADR-0022 addendum, ADR-0025), when configured for
+    /// this stage. `nil` until the Entra tenant team registers the service.
+    private let catchRecordAPIScope: String?
     private var cachedUserAccount: MSALNativeAuthUserAccountResult?
 
     var hasCachedAccount: Bool {
@@ -38,6 +41,7 @@ final class MSALNativeAuthenticator: Authenticating {
     ///   method below returns `.serviceUnavailable` rather than crashing.
     init(configuration: EntraConfiguration, connectivityMonitor: ConnectivityMonitoring) {
         self.connectivityMonitor = connectivityMonitor
+        self.catchRecordAPIScope = configuration.catchRecordAPIScope
 
         // MSAL's own logging callback is never set, so no MSAL log output — including the
         // PII-masked-by-default messages — ever reaches the console or any log store (ADR-0022
@@ -166,6 +170,35 @@ final class MSALNativeAuthenticator: Authenticating {
         cachedUserAccount = nil
     }
 
+    // MARK: - Catch Recording Service access token (ADR-0022 addendum, ADR-0025)
+
+    /// Resolves a bearer token scoped to `catchRecordAPIScope`, for use by
+    /// `MSALAccessTokenProvider` (`Core/Networking/MSALAccessTokenProvider.swift`). See the
+    /// `Authenticating.accessToken()` doc comment for the full contract — in particular, this never
+    /// throws and degrades to `nil` for every failure mode.
+    func accessToken() async -> String? {
+        guard let application, let catchRecordAPIScope else { return nil }
+        guard let userAccount = cachedUserAccount ?? application.getNativeAuthUserAccount() else { return nil }
+        cachedUserAccount = userAccount
+        guard connectivityMonitor.isOnline else { return nil }
+
+        let parameters = MSALNativeAuthGetAccessTokenParameters()
+        parameters.scopes = [catchRecordAPIScope]
+        let delegate = TokenResultDelegate()
+        let result = await delegate.run { userAccount.getAccessToken(parameters: parameters, delegate: $0) }
+
+        switch result {
+        case .success(let tokenResult):
+            return tokenResult.accessToken
+        case .failure:
+            // Never logs the detailed failure reason here (unlike `map(_:)` for sign-in): a
+            // missing protected-API token is an expected, routine outcome (e.g. the scope isn't
+            // consented/registered yet — ADR-0025), not a credential-revealing or otherwise
+            // diagnostically-interesting failure.
+            return nil
+        }
+    }
+
     // MARK: - Helpers
 
     private static func makeAccount(_ account: MSALAccount) -> AuthenticatedAccount {
@@ -253,6 +286,7 @@ final class NotConfiguredAuthenticator: Authenticating {
         // No-op: sign-in is never configured for this stage (ADR-0022 §6), so there is never a
         // session to sign out of.
     }
+    func accessToken() async -> String? { nil }
 }
 
 // MARK: - MSAL delegate → async bridges

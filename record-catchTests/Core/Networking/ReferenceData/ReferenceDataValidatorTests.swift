@@ -133,6 +133,13 @@ final class ReferenceDataValidatorTests: XCTestCase {
         }
     }
 
+    func test_validateVessels_throwsInvalidItem_forBlankId() {
+        let vessel = VesselOption(id: " ", name: "ACHILLES")
+        XCTAssertThrowsError(try ReferenceDataValidator.validateVessels([vessel])) {
+            XCTAssertEqual($0 as? ReferenceDataValidationError, .invalidItem(dataset: "vessels", identifier: " ", reason: "blank id"))
+        }
+    }
+
     // MARK: validateGears
 
     func test_validateGears_succeeds_forWellFormedGears() throws {
@@ -146,6 +153,26 @@ final class ReferenceDataValidatorTests: XCTestCase {
             XCTAssertEqual(
                 $0 as? ReferenceDataValidationError,
                 .invalidItem(dataset: "gears", identifier: "TBB", reason: "blank measurement label")
+            )
+        }
+    }
+
+    func test_validateGears_throwsInvalidItem_forBlankId() {
+        let gear = GearOption(id: " ", name: "Beam trawl")
+        XCTAssertThrowsError(try ReferenceDataValidator.validateGears([gear])) {
+            XCTAssertEqual(
+                $0 as? ReferenceDataValidationError,
+                .invalidItem(dataset: "gears", identifier: " ", reason: "blank id")
+            )
+        }
+    }
+
+    func test_validateGears_throwsInvalidItem_forBlankName() {
+        let gear = GearOption(id: "TBB", name: " ")
+        XCTAssertThrowsError(try ReferenceDataValidator.validateGears([gear])) {
+            XCTAssertEqual(
+                $0 as? ReferenceDataValidationError,
+                .invalidItem(dataset: "gears", identifier: "TBB", reason: "blank name")
             )
         }
     }

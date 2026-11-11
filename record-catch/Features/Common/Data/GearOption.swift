@@ -37,24 +37,48 @@ nonisolated struct GearOption: Identifiable, Hashable, Sendable, Codable {
     /// from `init(dto:)`. `nil` for every other source.
     let isPairFishing: Bool?
 
+    /// Groups this gear's optional, API-sourced-only fields (`referenceId`/`categoryCode`/
+    /// `categoryName`/`isPairFishing`) so the designated initializer stays within Sonar's
+    /// `swift:S107` parameter-count limit (7) — this is a pure regrouping of constructor
+    /// arguments; the four fields remain flat stored properties on `GearOption` itself (and keep
+    /// their existing `Codable` keys) so previously-persisted favourites still decode unchanged.
+    struct APIMetadata: Hashable, Sendable {
+        let referenceId: String?
+        let categoryCode: String?
+        let categoryName: String?
+        let isPairFishing: Bool?
+
+        /// No API metadata — the bundled ADR-0012 catalogue and hand-built test/demo gears.
+        static let none = APIMetadata(referenceId: nil, categoryCode: nil, categoryName: nil, isPairFishing: nil)
+
+        init(
+            referenceId: String? = nil,
+            categoryCode: String? = nil,
+            categoryName: String? = nil,
+            isPairFishing: Bool? = nil
+        ) {
+            self.referenceId = referenceId
+            self.categoryCode = categoryCode
+            self.categoryName = categoryName
+            self.isPairFishing = isPairFishing
+        }
+    }
+
     init(
         id: String,
         name: String,
         requiredMeasurements: [GearMeasurement] = [],
         variableMeasurements: [GearMeasurement] = [],
-        referenceId: String? = nil,
-        categoryCode: String? = nil,
-        categoryName: String? = nil,
-        isPairFishing: Bool? = nil
+        apiMetadata: APIMetadata = .none
     ) {
         self.id = id
         self.name = name
         self.requiredMeasurements = requiredMeasurements
         self.variableMeasurements = variableMeasurements
-        self.referenceId = referenceId
-        self.categoryCode = categoryCode
-        self.categoryName = categoryName
-        self.isPairFishing = isPairFishing
+        self.referenceId = apiMetadata.referenceId
+        self.categoryCode = apiMetadata.categoryCode
+        self.categoryName = apiMetadata.categoryName
+        self.isPairFishing = apiMetadata.isPairFishing
     }
 
     /// Convenience for ad hoc/test gears, where the name is also the stable identifier.
@@ -71,6 +95,17 @@ nonisolated struct GearOption: Identifiable, Hashable, Sendable, Codable {
         )
     }
 
+    /// This gear's current API metadata, bundled back up for `withRequiredMeasurements(_:)`/
+    /// `withVariableMeasurements(_:)` to pass straight through unchanged.
+    private var apiMetadata: APIMetadata {
+        APIMetadata(
+            referenceId: referenceId,
+            categoryCode: categoryCode,
+            categoryName: categoryName,
+            isPairFishing: isPairFishing
+        )
+    }
+
     /// Returns a copy of this gear with the given required (per-favourite) measurements attached.
     func withRequiredMeasurements(_ measurements: [GearMeasurement]) -> GearOption {
         GearOption(
@@ -78,10 +113,7 @@ nonisolated struct GearOption: Identifiable, Hashable, Sendable, Codable {
             name: name,
             requiredMeasurements: measurements,
             variableMeasurements: variableMeasurements,
-            referenceId: referenceId,
-            categoryCode: categoryCode,
-            categoryName: categoryName,
-            isPairFishing: isPairFishing
+            apiMetadata: apiMetadata
         )
     }
 
@@ -92,10 +124,7 @@ nonisolated struct GearOption: Identifiable, Hashable, Sendable, Codable {
             name: name,
             requiredMeasurements: requiredMeasurements,
             variableMeasurements: measurements,
-            referenceId: referenceId,
-            categoryCode: categoryCode,
-            categoryName: categoryName,
-            isPairFishing: isPairFishing
+            apiMetadata: apiMetadata
         )
     }
 
@@ -321,10 +350,12 @@ extension GearOption {
             name: canonical.name,
             requiredMeasurements: requiredMeasurements,
             variableMeasurements: variableMeasurements,
-            referenceId: canonical.id,
-            categoryCode: mobile.category?.code,
-            categoryName: mobile.category?.name,
-            isPairFishing: mobile.pairFishing ?? canonical.pairFishing
+            apiMetadata: APIMetadata(
+                referenceId: canonical.id,
+                categoryCode: mobile.category?.code,
+                categoryName: mobile.category?.name,
+                isPairFishing: mobile.pairFishing ?? canonical.pairFishing
+            )
         )
     }
 }

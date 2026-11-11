@@ -318,4 +318,34 @@ final class ReferenceDataSyncCoordinatorTests: XCTestCase {
         XCTAssertTrue(result)
         XCTAssertEqual(client.fetchManifestCallCount, 1)
     }
+
+    // MARK: Factory
+
+    /// Covers `ReferenceDataSyncCoordinator.make(store:connectivityMonitor:)` (see ADR-0020 §2's
+    /// "misconfigured Info.plist" gap): the test bundle's `Info.plist` has no `MMOCRAppConfig`
+    /// entry, so `APIConfiguration()` always throws here, exercising the `FailingReferenceDataClient`
+    /// fallback branch — the one this factory exists to provide a safe degradation for. The
+    /// resulting coordinator must still be fully usable (idle status, reflects the injected
+    /// connectivity monitor) rather than crashing app launch.
+    @MainActor
+    func test_make_whenAPIConfigurationThrows_returnsAUsableCoordinator_backedByFailingClient() throws {
+        let store = try makeStore()
+        let monitor = record_catch.StubConnectivityMonitor(isOnline: true)
+
+        let sut = ReferenceDataSyncCoordinator.make(store: store, connectivityMonitor: monitor)
+
+        XCTAssertEqual(sut.status, .idle)
+        XCTAssertTrue(sut.isDeviceOnline)
+    }
+
+    @MainActor
+    func test_make_reflectsConnectivityMonitorGoingOffline() throws {
+        let store = try makeStore()
+        let monitor = record_catch.StubConnectivityMonitor(isOnline: true)
+
+        let sut = ReferenceDataSyncCoordinator.make(store: store, connectivityMonitor: monitor)
+        monitor.isOnline = false
+
+        XCTAssertFalse(sut.isDeviceOnline)
+    }
 }

@@ -176,13 +176,7 @@ actor ReferenceDataStore {
         } else {
             modelContext.insert(ReferenceDatasetStateEntity(
                 dataset: rawValue,
-                collectionId: state.collectionId,
-                version: state.version,
-                schemaVersion: state.schemaVersion,
-                itemCount: state.itemCount,
-                lastModified: state.lastModified,
-                syncedAt: state.syncedAt,
-                payloadFormatVersion: state.payloadFormatVersion
+                state: state
             ))
         }
 
@@ -256,13 +250,7 @@ actor ReferenceDataStore {
         } else {
             modelContext.insert(ReferenceDatasetStateEntity(
                 dataset: rawValue,
-                collectionId: state.collectionId,
-                version: state.version,
-                schemaVersion: state.schemaVersion,
-                itemCount: state.itemCount,
-                lastModified: state.lastModified,
-                syncedAt: state.syncedAt,
-                payloadFormatVersion: state.payloadFormatVersion
+                state: state
             ))
         }
 

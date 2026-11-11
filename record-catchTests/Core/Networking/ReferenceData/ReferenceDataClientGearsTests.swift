@@ -218,7 +218,7 @@ final class ReferenceDataClientGearsTests: XCTestCase {
 
         let gears = try await sut.fetchGears()
 
-        XCTAssertEqual(gears, [GearOption(id: "HMD", name: "Mechanised dredges", referenceId: "1")])
+        XCTAssertEqual(gears, [GearOption(id: "HMD", name: "Mechanised dredges", apiMetadata: .init(referenceId: "1"))])
     }
 
     func test_fetchGears_throwsDecoding_onMalformedJSON() async {

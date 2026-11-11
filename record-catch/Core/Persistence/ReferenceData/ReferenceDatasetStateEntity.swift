@@ -40,23 +40,18 @@ final class ReferenceDatasetStateEntity {
     /// unchanged — this connector does not support schema migrations (ADR-0024 "No migrations").
     var payloadFormatVersion: Int
 
-    init(
-        dataset: String,
-        collectionId: String,
-        version: String,
-        schemaVersion: String,
-        itemCount: Int?,
-        lastModified: String,
-        syncedAt: Date,
-        payloadFormatVersion: Int
-    ) {
+    /// Takes the already-grouped `ReferenceDataStore.StateSnapshot` (rather than one parameter per
+    /// field) to stay within Sonar's `swift:S107` parameter-count limit — `StateSnapshot` is this
+    /// same entity's own field set minus `dataset`, so this is a pure regrouping with no behaviour
+    /// change; see `ReferenceDataStore.replace(dataset:items:state:)`/`replaceBlob(dataset:payload:state:)`.
+    init(dataset: String, state: ReferenceDataStore.StateSnapshot) {
         self.dataset = dataset
-        self.collectionId = collectionId
-        self.version = version
-        self.schemaVersion = schemaVersion
-        self.itemCount = itemCount
-        self.lastModified = lastModified
-        self.syncedAt = syncedAt
-        self.payloadFormatVersion = payloadFormatVersion
+        self.collectionId = state.collectionId
+        self.version = state.version
+        self.schemaVersion = state.schemaVersion
+        self.itemCount = state.itemCount
+        self.lastModified = state.lastModified
+        self.syncedAt = state.syncedAt
+        self.payloadFormatVersion = state.payloadFormatVersion
     }
 }

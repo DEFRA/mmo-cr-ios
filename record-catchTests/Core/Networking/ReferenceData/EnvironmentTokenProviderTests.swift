@@ -35,3 +35,17 @@ final class EnvironmentTokenProviderTests: XCTestCase {
         XCTAssertNil(token)
     }
 }
+
+/// Covers the production placeholder `AuthTokenProviding` (see that type's doc comment and
+/// ADR-0024 "Known gap — production bearer token"). Security-critical path — 100% coverage target
+/// per testing.instructions.md.
+final class NilAuthTokenProviderTests: XCTestCase {
+
+    func test_bearerToken_alwaysReturnsNil() async throws {
+        let sut = NilAuthTokenProvider()
+
+        let token = try await sut.bearerToken()
+
+        XCTAssertNil(token)
+    }
+}

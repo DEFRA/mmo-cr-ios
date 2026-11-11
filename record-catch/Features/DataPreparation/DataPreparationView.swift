@@ -172,7 +172,7 @@ private final class PreviewReferenceDataPreparing: ReferenceDataPreparing {
         self.isDeviceOnline = isDeviceOnline
     }
 
-    func prepareRequiredData(timeout: TimeInterval) async -> Bool {
+    func prepareRequiredData(timeout _: TimeInterval) async -> Bool {
         prepareResult
     }
 }

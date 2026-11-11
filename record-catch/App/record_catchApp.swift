@@ -113,13 +113,17 @@ struct RecordCatchApp: App {
                 }
                 .onChange(of: scenePhase) { oldPhase, newPhase in
                     // Reference-data foreground trigger (ADR-0024 "Triggers") — independent of the
-                    // session re-check above, since a sync attempt is appropriate even while
-                    // staying signed in to the app-lock/home phases.
-                    guard newPhase == .active, oldPhase == .background else { return }
+                    // session re-check above, since a sync attempt is appropriate while staying
+                    // signed in to the data-preparation/home phases. Must never fire from
+                    // `.signIn`/`.appLock`: the user has not (yet, or currently) completed
+                    // authentication for this app session, so no reference-data network request
+                    // should be attempted before `.preparingData`/`.home` is reached (DEFRA Secure
+                    // by Design — data is not fetched ahead of authentication).
+                    guard newPhase == .active, oldPhase == .background, isPastSignIn else { return }
                     referenceDataSyncCoordinator.notifyForeground()
                 }
                 .onChange(of: connectivityMonitor.isOnline) { wasOnline, isOnline in
-                    guard isOnline, !wasOnline else { return }
+                    guard isOnline, !wasOnline, isPastSignIn else { return }
                     referenceDataSyncCoordinator.notifyConnectivityRestored()
                 }
         }
@@ -151,6 +155,20 @@ struct RecordCatchApp: App {
         let monitor = NetworkConnectivityMonitor()
         monitor.start()
         return monitor
+    }
+
+    /// Whether the session has progressed past sign-in/unlock to the point where fetching
+    /// reference data is appropriate (`.preparingData`/`.home`). `false` for `.signIn` (no
+    /// authenticated session yet) and `.appLock` (a session exists, but this app instance has not
+    /// been unlocked yet) — reference-data sync must never be attempted from either screen (DEFRA
+    /// Secure by Design: no data fetch ahead of authentication). The initial, throttle-bypassing
+    /// sync once `.preparingData` is reached is already driven by `DataPreparationView`'s `.task`;
+    /// this guards only the *subsequent* foreground/connectivity-restored triggers.
+    private var isPastSignIn: Bool {
+        switch sessionCoordinator.phase {
+        case .preparingData, .home: return true
+        case .signIn, .appLock: return false
+        }
     }
 
     /// The real app root: sign-in / app-lock / home, per `sessionCoordinator.phase`. Wrapped in

@@ -28,6 +28,20 @@ struct CatchRecordHostView: View {
     /// Injectable override for the journey-scoped favourite species store — see
     /// `injectedFavouritePorts` above (mirrors it exactly).
     private let injectedFavouriteSpecies: FavouriteSpeciesProviding?
+    /// Injectable override for the Add-port screen's port search provider. Defaults to `nil`, in
+    /// which case `SyncedPortSearchProvider` (reads the on-device reference-data sync store — see
+    /// ADR-0024 "Consumers") is used in production. UI tests get the real, bundled
+    /// `BundledPortSearchProvider` instead — the sync pipeline never runs during a `-uiTest*`
+    /// launch, so the synced store would otherwise be empty and every port search would return no
+    /// results (breaking e.g. `CatchRecordUITests`' "Newlyn" search).
+    private let injectedPortSearch: PortSearchProviding?
+    /// Injectable override for the Add-gear screen's gear search provider — see
+    /// `injectedPortSearch` above (mirrors it exactly; UI tests fall back to `StubGearSearchProvider`).
+    private let injectedGearSearch: GearSearchProviding?
+    /// Injectable override for the Add-species screen's species search provider — see
+    /// `injectedPortSearch` above (mirrors it exactly; UI tests fall back to
+    /// `StubSpeciesSearchProvider`).
+    private let injectedSpeciesSearch: SpeciesSearchProviding?
     /// Shared, journey-scoped draft accumulating the in-progress catch record (vessel, dates,
     /// ports, gear and species) so it is available to every screen in the stack without re-deriving
     /// it from route payloads. Offline-first, local source of truth — persisted on-device after
@@ -66,6 +80,24 @@ struct CatchRecordHostView: View {
         injectedFavouriteSpecies ?? SwiftDataFavouriteSpeciesProvider(modelContext: modelContext)
     }
 
+    /// The port search provider for this journey — the injected override (tests/previews), the
+    /// real bundled fixture for `-uiTest*` launches, or `SyncedPortSearchProvider` in production
+    /// (see `injectedPortSearch`).
+    private var portSearch: PortSearchProviding {
+        if let injectedPortSearch { return injectedPortSearch }
+        return LaunchArguments.current.isUITesting ? BundledPortSearchProvider() : SyncedPortSearchProvider()
+    }
+    /// The gear search provider for this journey — see `portSearch` above (mirrors it exactly).
+    private var gearSearch: GearSearchProviding {
+        if let injectedGearSearch { return injectedGearSearch }
+        return LaunchArguments.current.isUITesting ? StubGearSearchProvider() : SyncedGearSearchProvider()
+    }
+    /// The species search provider for this journey — see `portSearch` above (mirrors it exactly).
+    private var speciesSearch: SpeciesSearchProviding {
+        if let injectedSpeciesSearch { return injectedSpeciesSearch }
+        return LaunchArguments.current.isUITesting ? StubSpeciesSearchProvider() : SyncedSpeciesSearchProvider()
+    }
+
     /// Debounced autosave for in-progress, not-yet-routed edits (see `DraftAutosaver`,
     /// BR-SUB-008/AC14). Created once, lazily, the first time it is needed - `modelContext` (via
     /// `draftStore`) is not available until the view resolves its environment, i.e. not yet at
@@ -102,6 +134,9 @@ struct CatchRecordHostView: View {
         favouritePorts: FavouritePortsProviding? = nil,
         favouriteGears: FavouriteGearProviding? = nil,
         favouriteSpecies: FavouriteSpeciesProviding? = nil,
+        portSearch: PortSearchProviding? = nil,
+        gearSearch: GearSearchProviding? = nil,
+        speciesSearch: SpeciesSearchProviding? = nil,
         draft: CatchRecordDraft? = nil,
         draftStore: CatchRecordDraftStoring? = nil,
         recordsProvider: RecordsProviding? = nil
@@ -114,6 +149,9 @@ struct CatchRecordHostView: View {
         injectedFavouritePorts = favouritePorts
         injectedFavouriteGears = favouriteGears
         injectedFavouriteSpecies = favouriteSpecies
+        injectedPortSearch = portSearch
+        injectedGearSearch = gearSearch
+        injectedSpeciesSearch = speciesSearch
         _draft = State(wrappedValue: draft ?? CatchRecordDraft())
         injectedDraftStore = draftStore
         injectedRecordsProvider = recordsProvider
@@ -248,6 +286,7 @@ struct CatchRecordHostView: View {
                 referenceNumber: referenceNumber,
                 returnPhase: returnPhase,
                 router: router,
+                portSearch: portSearch,
                 favouritePorts: favouritePorts
             )
         case .confirmSamePort(let vessel, let referenceNumber, let port):
@@ -282,6 +321,7 @@ struct CatchRecordHostView: View {
                 vessel: vessel,
                 referenceNumber: referenceNumber,
                 router: router,
+                gearSearch: gearSearch,
                 favouriteGears: favouriteGears
             )
         case .gearMeasurements(let gear, let vessel, let referenceNumber):
@@ -346,6 +386,7 @@ struct CatchRecordHostView: View {
                 returnPhase: returnPhase,
                 context: context,
                 router: router,
+                speciesSearch: speciesSearch,
                 favouriteSpecies: favouriteSpecies
             )
         case .removeSpecies(let gear, let vessel, let referenceNumber):

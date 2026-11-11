@@ -56,6 +56,11 @@ final class MSALNativeAuthenticator: Authenticating {
                 config.cacheConfig.keychainSharingGroup = bundleID
             }
             self.application = try MSALNativeAuthPublicClientApplication(nativeAuthConfiguration: config)
+            // Tenant subdomain is public (non-secret) app-registration metadata — never the
+            // client ID or any token — so it is safe to confirm at debug level.
+            Self.logger.debug(
+                "MSAL Native Auth application initialised (tenant subdomain: \(configuration.tenantSubdomain, privacy: .public))"
+            )
         } catch {
             Self.logger.error("Failed to initialise MSAL Native Auth application")
             self.application = nil
@@ -65,8 +70,16 @@ final class MSALNativeAuthenticator: Authenticating {
     // MARK: - Sign in
 
     func signIn(email: String, password: String) async -> SignInOutcome {
-        guard let application else { return .serviceUnavailable }
-        guard connectivityMonitor.isOnline else { return .network }
+        Self.logger.debug("Sign-in requested")
+
+        guard let application else {
+            Self.logger.error("Sign-in blocked: MSAL application failed to initialise — check ENTRA_CLIENT_ID/ENTRA_TENANT_SUBDOMAIN")
+            return .serviceUnavailable
+        }
+        guard connectivityMonitor.isOnline else {
+            Self.logger.notice("Sign-in blocked: device reports no connectivity")
+            return .network
+        }
 
         let parameters = MSALNativeAuthSignInParameters(username: email)
         parameters.password = password
@@ -77,10 +90,13 @@ final class MSALNativeAuthenticator: Authenticating {
         // Mirrors the PoC: if MSAL still asks for the password, submit the one already entered
         // once more before giving up.
         if case .passwordRequired(let state) = step {
+            Self.logger.debug("MSAL requested the password again; resubmitting once")
             step = await delegate.run { state.submitPassword(password: password, delegate: $0) }
         }
 
-        return handle(step)
+        let outcome = handle(step)
+        Self.logger.debug("Sign-in finished with outcome: \(Self.describe(outcome), privacy: .public)")
+        return outcome
     }
 
     private func handle(_ step: SignInStep) -> SignInOutcome {
@@ -91,22 +107,42 @@ final class MSALNativeAuthenticator: Authenticating {
         case .codeRequired, .passwordRequired, .unsupported:
             // Email-OTP / repeated password prompts / MFA are not supported by this screen
             // (ADR-0022 §1/§8) — treated as a service-level failure, never as a credential leak.
+            Self.logger.notice("Sign-in step unsupported by this screen (OTP/repeated-password/MFA) — reporting serviceUnavailable")
             return .serviceUnavailable
         case .failed(let error):
             return map(error)
         }
     }
 
+    /// Logs only the outcome *kind* — never the wrapped `AuthenticatedAccount` (which carries a
+    /// username/identifier) — so this stays safe to log at debug level.
+    private static func describe(_ outcome: SignInOutcome) -> String {
+        switch outcome {
+        case .success: return "success"
+        case .invalidCredentials: return "invalidCredentials"
+        case .network: return "network"
+        case .serviceUnavailable: return "serviceUnavailable"
+        case .notConfigured: return "notConfigured"
+        }
+    }
+
     // MARK: - Silent session restore
 
     func restoreSession() async -> RestoreSessionOutcome {
-        guard let application else { return .reauthenticationRequired }
+        guard let application else {
+            Self.logger.notice("Restore session skipped: MSAL application not initialised")
+            return .reauthenticationRequired
+        }
         guard let userAccount = cachedUserAccount ?? application.getNativeAuthUserAccount() else {
+            Self.logger.debug("Restore session: no cached account on this device")
             return .noAccount
         }
         cachedUserAccount = userAccount
 
-        guard connectivityMonitor.isOnline else { return .network }
+        guard connectivityMonitor.isOnline else {
+            Self.logger.notice("Restore session blocked: device reports no connectivity")
+            return .network
+        }
 
         let parameters = MSALNativeAuthGetAccessTokenParameters()
         let delegate = TokenResultDelegate()
@@ -114,8 +150,10 @@ final class MSALNativeAuthenticator: Authenticating {
 
         switch result {
         case .success:
+            Self.logger.debug("Restore session succeeded (silent token refresh)")
             return .success(Self.makeAccount(userAccount.account))
         case .failure:
+            Self.logger.notice("Restore session failed: refresh token expired/revoked — reauthentication required")
             return .reauthenticationRequired
         }
     }
@@ -192,10 +230,25 @@ extension MSALNativeAuthenticator {
 /// no fallback to another backend/tenant.
 @MainActor
 final class NotConfiguredAuthenticator: Authenticating {
+    private static let logger = Logger(subsystem: "uk.gov.defra.record-catch", category: "auth")
+
     let hasCachedAccount = false
 
-    func signIn(email _: String, password _: String) async -> SignInOutcome { .notConfigured }
-    func restoreSession() async -> RestoreSessionOutcome { .noAccount }
+    func signIn(email _: String, password _: String) async -> SignInOutcome {
+        // The most common reason a developer "can't sign in" locally: ENTRA_CLIENT_ID /
+        // ENTRA_TENANT_SUBDOMAIN are unset or malformed for this stage, which is expected and
+        // optional per Config/Local.xcconfig.example (ADR-0022 §6) — but worth surfacing loudly.
+        Self.logger.error(
+            "Sign-in attempted but Entra is not configured for this build — set CR_APP_CFG_ENTRA_CLIENT_ID / CR_APP_CFG_ENTRA_TENANT_SUBDOMAIN (see Config/Local.xcconfig.example)"
+        )
+        return .notConfigured
+    }
+
+    func restoreSession() async -> RestoreSessionOutcome {
+        Self.logger.debug("Restore session skipped: Entra is not configured for this build")
+        return .noAccount
+    }
+
     func signOut() async {
         // No-op: sign-in is never configured for this stage (ADR-0022 §6), so there is never a
         // session to sign out of.

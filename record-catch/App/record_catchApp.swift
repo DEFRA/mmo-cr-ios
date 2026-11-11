@@ -13,7 +13,10 @@ struct RecordCatchApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             CatchRecordEntity.self,
-            FavouriteEntity.self
+            FavouriteEntity.self,
+            ReferenceItemEntity.self,
+            ReferenceDatasetStateEntity.self,
+            ReferenceBlobEntity.self
         ])
         // Protects on-device catch-record data at rest (vessel, dates, ports, gear, species — see
         // ADR-0014, DEFRA data-at-rest requirement): the store is only accessible after the user
@@ -56,10 +59,25 @@ struct RecordCatchApp: App {
     @State private var sessionCoordinator: RootSessionCoordinator
     @Environment(\.scenePhase) private var scenePhase
 
+    // Reference-data background sync (ADR-0024): owns *when* ports/species/gears/vessels refresh
+    // from the API and the UI-facing status `SyncErrorBanner` renders. Shares this launch's
+    // `connectivityMonitor` instance (see the comment on `connectivityMonitor` above) rather than
+    // constructing a second one.
+    @State private var referenceDataSyncCoordinator: ReferenceDataSyncCoordinator
+
     init() {
         let monitor = Self.makeConnectivityMonitor()
         _connectivityMonitor = State(initialValue: monitor)
         _sessionCoordinator = State(initialValue: RootSessionCoordinator.make(connectivityMonitor: monitor))
+
+        // Bootstraps `ReferenceDataStoreProvider.shared` (used by the cached reference-data search
+        // providers elsewhere in the app) before anything can read it — see that type's doc
+        // comment for the "set once in init(), read many times" contract this relies on.
+        ReferenceDataStoreProvider.bootstrap(modelContainer: sharedModelContainer)
+        _referenceDataSyncCoordinator = State(initialValue: ReferenceDataSyncCoordinator.make(
+            store: ReferenceDataStore(modelContainer: sharedModelContainer),
+            connectivityMonitor: monitor
+        ))
     }
 
     var body: some Scene {
@@ -70,6 +88,7 @@ struct RecordCatchApp: App {
                 .environment(tabRouter)
                 .environment(\.locale, languageStore.language.locale)
                 .environment(\.connectivityMonitor, connectivityMonitor)
+                .environment(\.referenceDataSyncStatus, referenceDataSyncCoordinator)
                 // The design system (`AppColors`) mirrors the GOV.UK Design System, which is
                 // light-only: every colour (backgrounds, borders, text) is a fixed literal
                 // rather than a Dark Mode-adaptive one. Without forcing `.light` here, controls
@@ -91,6 +110,21 @@ struct RecordCatchApp: App {
                     // nothing to re-verify or re-lock yet.
                     guard newPhase == .active, oldPhase == .background, sessionCoordinator.phase != .signIn else { return }
                     sessionCoordinator.refreshPhase()
+                }
+                .onChange(of: scenePhase) { oldPhase, newPhase in
+                    // Reference-data foreground trigger (ADR-0024 "Triggers") — independent of the
+                    // session re-check above, since a sync attempt is appropriate while staying
+                    // signed in to the data-preparation/home phases. Must never fire from
+                    // `.signIn`/`.appLock`: the user has not (yet, or currently) completed
+                    // authentication for this app session, so no reference-data network request
+                    // should be attempted before `.preparingData`/`.home` is reached (DEFRA Secure
+                    // by Design — data is not fetched ahead of authentication).
+                    guard newPhase == .active, oldPhase == .background, isPastSignIn else { return }
+                    referenceDataSyncCoordinator.notifyForeground()
+                }
+                .onChange(of: connectivityMonitor.isOnline) { wasOnline, isOnline in
+                    guard isOnline, !wasOnline, isPastSignIn else { return }
+                    referenceDataSyncCoordinator.notifyConnectivityRestored()
                 }
         }
         .modelContainer(sharedModelContainer)
@@ -123,6 +157,20 @@ struct RecordCatchApp: App {
         return monitor
     }
 
+    /// Whether the session has progressed past sign-in/unlock to the point where fetching
+    /// reference data is appropriate (`.preparingData`/`.home`). `false` for `.signIn` (no
+    /// authenticated session yet) and `.appLock` (a session exists, but this app instance has not
+    /// been unlocked yet) — reference-data sync must never be attempted from either screen (DEFRA
+    /// Secure by Design: no data fetch ahead of authentication). The initial, throttle-bypassing
+    /// sync once `.preparingData` is reached is already driven by `DataPreparationView`'s `.task`;
+    /// this guards only the *subsequent* foreground/connectivity-restored triggers.
+    private var isPastSignIn: Bool {
+        switch sessionCoordinator.phase {
+        case .preparingData, .home: return true
+        case .signIn, .appLock: return false
+        }
+    }
+
     /// The real app root: sign-in / app-lock / home, per `sessionCoordinator.phase`. Wrapped in
     /// `UITestRootView`, which substitutes a UI-test-seeded screen instead when a recognised
     /// `-uiTest*` launch argument is present.
@@ -131,7 +179,25 @@ struct RecordCatchApp: App {
         UITestRootView {
             switch sessionCoordinator.phase {
             case .home:
-                RootTabView(onSignOut: sessionCoordinator.handleSignOut)
+                RootTabView(onSignOut: {
+                    sessionCoordinator.handleSignOut()
+                    // Reference data itself is kept (see ADR-0024 "Sign-out"), but throttle/
+                    // in-flight state must not leak into the next session.
+                    referenceDataSyncCoordinator.resetForSignOut()
+                })
+            case .preparingData:
+                // Blocks Home behind a successful reference-data sync (ADR-0024 "Data before
+                // Home") — no picker is reachable until ports/species/gears are present.
+                DataPreparationView(
+                    viewModel: DataPreparationViewModel(
+                        coordinator: referenceDataSyncCoordinator,
+                        onReady: sessionCoordinator.completeDataPreparation,
+                        onSignOut: {
+                            sessionCoordinator.handleSignOut()
+                            referenceDataSyncCoordinator.resetForSignOut()
+                        }
+                    )
+                )
             case .appLock:
                 AppLockView(
                     viewModel: sessionCoordinator.makeAppLockViewModel(

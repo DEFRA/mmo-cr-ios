@@ -41,3 +41,15 @@ nonisolated struct EnvironmentTokenProvider: AuthTokenProviding {
     }
 }
 #endif
+
+/// Production placeholder until a real Keychain/MSAL-backed `AuthTokenProviding` lands (see this
+/// file's doc comment and ADR-0024 "Known gap — production bearer token"): always returns `nil`,
+/// so every reference-data request is sent without an `Authorization` header. If the live API
+/// requires one, every `ReferenceDataSyncService.sync()` attempt reports `.failed` for every
+/// dataset — a safe, visible degradation (`SyncErrorBanner`) rather than a crash or a silently
+/// wrong token. Compiled unconditionally (unlike `EnvironmentTokenProvider`) so Release builds
+/// have *some* concrete, non-debug-only `AuthTokenProviding` to construct `RemoteReferenceDataClient`
+/// with.
+nonisolated struct NilAuthTokenProvider: AuthTokenProviding {
+    func bearerToken() async throws -> String? { nil }
+}

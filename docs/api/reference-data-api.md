@@ -171,9 +171,13 @@ an envelope and not a dataset in its own right:
 ```
 
 `ReferenceDataFetching.fetchManifest()` decodes this into `ReferenceDataManifest`. Entries for
-datasets the app doesn't model yet (`gears`, `map-land`, `map-statistical-areas`, `map-ports`)
-decode harmlessly — `dataset`/`format` are plain `String`, not `ReferenceDataset`. Unlike every
-other route, the manifest request sets `cachePolicy = .reloadIgnoringLocalCacheData`: the API
+datasets the app doesn't model with a concrete DTO yet (`map-land`, `map-statistical-areas`,
+`map-ports`) decode harmlessly — `dataset`/`format` are plain `String`, not `ReferenceDataset`.
+`itemCount` is `Int?`, **not** a non-optional `Int`: the live manifest's two GeoJSON map entries
+(`map-land`, `map-statistical-areas`) omit it entirely (they carry `featureCount`/`sizeBytes`
+instead), so an entry missing `itemCount` decodes with it simply `nil` rather than failing the
+whole manifest — see the ADR-0018 addendum "gears dataset, and a manifest `itemCount` fix". Unlike
+every other route, the manifest request sets `cachePolicy = .reloadIgnoringLocalCacheData`: the API
 serves it with `Cache-Control: max-age=3600`, which would otherwise let `URLCache` silently serve
 an hour-old manifest and defeat its purpose as a change-detection signal. See the ADR-0018
 addendum "Manifest" and "`URLCache` position".
@@ -316,6 +320,61 @@ sourced only from `init(dto:)`: `code`, `countryCode` and `isActive` (mapped fro
 `countryCode`/`isActive` keys at all — still decodes successfully via the synthesised `Codable`
 conformance, with those fields simply `nil`. See the ADR-0018 addendum for why this is the opposite
 trade-off to `SpeciesOption`'s "no migration path" decision, and why it was necessary here.
+
+## Gears dataset (`?view=mobile`)
+
+The `gears` dataset (`ReferenceDataset.gears`) is the one dataset this connector requests with
+`?view=mobile` rather than the canonical view used by every dataset above — see the ADR-0018
+addendum "gears dataset" for why (only the mobile view carries the `measurements` catalogue a
+gear's measurement ids resolve against). Collection route only — there is no `fetchGear(id:)`,
+because the live single-item route returns a bare item with no `measurements` sibling to resolve
+against:
+
+```
+GET {baseURL}/api/v1/reference-data/gears?view=mobile
+Header: Authorization: Bearer <token>   (omitted entirely when no token is configured)
+```
+
+```json
+{
+  "dataset": "gears",
+  "collectionId": "00000000-0000-4000-8000-000000000020",
+  "schemaVersion": "1.0",
+  "version": "local-seed-1",
+  "view": "mobile",
+  "total": 1,
+  "items": [
+    {
+      "id": "10000000-0000-4000-8000-000000000001",
+      "code": "TBB",
+      "name": "Beam trawl",
+      "category": { "id": "20000000-0000-4000-8000-000000000001", "code": "TRAWL_NETS", "name": "Trawl nets" },
+      "pairFishing": false,
+      "requiredMeasurementIds": ["mesh-size", "number-of-beams"],
+      "variableMeasurementIds": ["times-shot"]
+    }
+  ],
+  "measurements": [
+    { "id": "mesh-size", "code": "ME", "label": "Mesh size (mm)", "kind": "required", "unit": "mm" }
+  ]
+}
+```
+
+Only `id`, `code` and `name` are required on a gear item; `category`, `pairFishing` and both
+measurement-id arrays may be omitted or `null` (e.g. "Mechanised dredges" defines neither
+measurement list). The response's shape doesn't fit the shared `ReferenceDataEnvelope<Item>` — it
+carries a sibling top-level `measurements` catalogue the envelope has no field for — so it decodes
+into its own type, `GearsMobileResponseDTO`, instead.
+
+`GearOption.make(dto:measurementsById:)` maps each item into the existing `GearOption` domain type
+(ADR-0012's bundled catalogue), keyed by the API's `code` (e.g. `"TBB"`) — not its GUID, which is
+carried separately as the new `referenceId` field — so favourites keyed on the gear code are
+unaffected. Each measurement id in `requiredMeasurementIds`/`variableMeasurementIds` resolves
+against the response's top-level `measurements` array; an id with no matching entry is **dropped**
+(not a fetch failure) and reported back so the caller can log a non-sensitive diagnostic. See the
+ADR-0018 addendum for the full rationale, including the tracked gap that measurement labels are not
+yet localised (plain API text, not a String Catalog key) — acceptable only because no screen yet
+renders a `GearOption` sourced from this connector.
 
 ## Configuration
 

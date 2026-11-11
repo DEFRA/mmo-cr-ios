@@ -14,13 +14,16 @@ import Foundation
 /// One dataset's entry in the active manifest. `dataset` and `format` are kept as plain `String`
 /// (not `ReferenceDataset`) so entries for datasets the app doesn't model yet (`gears`,
 /// `map-land`, `map-statistical-areas`) decode harmlessly instead of failing the whole manifest.
+/// `itemCount` is optional (not a non-optional `Int`): the live manifest's two GeoJSON map entries
+/// (`map-land`, `map-statistical-areas`) carry `featureCount`/`sizeBytes` instead and omit
+/// `itemCount` entirely — see the ADR-0018 addendum "gears dataset" for how this was found.
 nonisolated struct ReferenceDataManifestEntry: Decodable, Equatable, Sendable {
     let dataset: String
     let collectionId: String
     let version: String
     let schemaVersion: String
     let format: String
-    let itemCount: Int
+    let itemCount: Int?
     let lastModified: String
     let url: String
 }

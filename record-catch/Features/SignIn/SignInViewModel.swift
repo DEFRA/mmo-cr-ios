@@ -8,10 +8,15 @@
 //
 
 import Foundation
+import os
 
 @MainActor
 @Observable
 final class SignInViewModel {
+
+    /// Never logs `email`/`password` values — only form/outcome state (security.instructions.md:
+    /// never log secrets or personal data).
+    private static let logger = Logger(subsystem: "uk.gov.defra.record-catch", category: "signIn")
 
     var email: String = ""
     var password: String = ""
@@ -69,17 +74,24 @@ final class SignInViewModel {
     /// Validates, then — only if the form is valid — calls the authenticator. Ignored while a
     /// request is already in flight, so repeated taps submit at most one request (EC1, ES1–ES4).
     func submit() async {
-        guard !isSubmitting else { return }
+        guard !isSubmitting else {
+            Self.logger.debug("Submit ignored: a sign-in request is already in flight")
+            return
+        }
         didAttemptSubmit = true
 
         let normalisedEmail = SignInValidation.normalisedEmail(email)
         let outcome = SignInValidation.formError(email: email, password: password)
         formError = outcome
-        guard outcome == .none else { return }
+        guard outcome == .none else {
+            Self.logger.debug("Submit blocked: form has missing/invalid fields")
+            return
+        }
 
         isSubmitting = true
         defer { isSubmitting = false }
 
+        Self.logger.debug("Submitting sign-in request")
         let result = await authenticator.signIn(email: normalisedEmail, password: password)
         // The password is cleared after every attempt, success or failure (security.instructions.md:
         // never retain a credential longer than needed to submit it).
@@ -87,15 +99,20 @@ final class SignInViewModel {
 
         switch result {
         case .success(let account):
+            Self.logger.debug("Sign-in succeeded")
             formError = nil
             onSignedIn(account)
         case .invalidCredentials:
+            Self.logger.notice("Sign-in failed: invalid credentials")
             formError = .invalidCredentials
         case .network:
+            Self.logger.notice("Sign-in failed: no network connectivity")
             formError = .network
         case .serviceUnavailable:
+            Self.logger.notice("Sign-in failed: service unavailable")
             formError = .serviceUnavailable
         case .notConfigured:
+            Self.logger.error("Sign-in failed: Entra is not configured for this build")
             formError = .notConfigured
         }
     }

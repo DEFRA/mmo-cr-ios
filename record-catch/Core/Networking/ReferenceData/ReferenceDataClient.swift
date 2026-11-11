@@ -6,8 +6,10 @@
 //  implementation, composed from `HTTPPerforming` + `APIConfiguration` + `AuthTokenProviding` so it
 //  is unit-testable with an in-memory `StubHTTPClient` and requires no live network in the test
 //  suite (testing.instructions.md). `StubReferenceDataClient` is a fixture-backed double for
-//  future call sites/tests. **Neither is wired into `AppEnvironment` or any view model in this
-//  change** — this is the connector only (see ADR-0018 for the exact scope boundary).
+//  future call sites/tests. Wired into the app via `ReferenceDataSyncCoordinator.make(store:
+//  connectivityMonitor:)` (see ADR-0024) — `RecordCatchApp` constructs one `RemoteReferenceDataClient`
+//  per launch and hands it to `ReferenceDataSyncService`; no view model talks to this protocol
+//  directly.
 //
 //  The live API has two distinct routes/response shapes for the dataset routes (verified by
 //  direct probing of the running backend — see ADR-0018's correction note): a **collection**
@@ -32,7 +34,21 @@ nonisolated protocol ReferenceDataFetching: Sendable {
     func fetchSpecies(id: String) async throws -> SpeciesOption
     func fetchPorts() async throws -> [PortOption]
     func fetchPort(id: String) async throws -> PortOption
+    /// Fetches `GET {baseURL}/api/v1/reference-data/gears?view=mobile` and maps every item into a
+    /// `GearOption` (see ADR-0018 addendum "gears dataset"). Unlike every other dataset here, this
+    /// sends `?view=mobile` rather than the canonical view — see `ReferenceDataEndpoint.swift`'s
+    /// file-level doc comment for why. There is deliberately no `fetchGear(id:)`: the live API's
+    /// single-item route returns a bare item with no `measurements` catalogue, so it carries no
+    /// labels to resolve a gear's measurement ids against.
+    func fetchGears() async throws -> [GearOption]
     func fetchManifest() async throws -> ReferenceDataManifest
+    /// Fetches the raw bytes at `urlString` — a blob dataset's (`map-land`/`map-statistical-areas`
+    /// — see ADR—0024 "Map data") per-dataset download location, taken verbatim from that
+    /// dataset's `ReferenceDataManifestEntry.url`. Unlike every other dataset in this protocol,
+    /// blob datasets have no fixed `/reference-data/{dataset}` route to request instead — the
+    /// manifest's `url` is the *only* way to know where to fetch one from. An absolute `urlString`
+    /// is used as-is; a scheme-less value is resolved against the configured API base URL.
+    func fetchBlob(urlString: String) async throws -> Data
     /// Pings `GET {baseURL}/health`. Succeeds (returns) on any 2xx response and throws `APIError`
     /// otherwise — see `makeReferenceDataHealthRequest`'s doc comment for why no response body is
     /// decoded or modelled.
@@ -95,12 +111,96 @@ nonisolated struct RemoteReferenceDataClient: ReferenceDataFetching {
         return PortOption(dto: dto)
     }
 
+    /// Fetches `gears` by requesting **both** the canonical (default) view and the `?view=mobile`
+    /// view concurrently and joining them (see ADR-0024 "Gears from two requests" — a temporary
+    /// backend-data limitation, not the connector's preferred design): only the canonical view's
+    /// `applicableCharacteristics.fixed` says which measurements are required vs per-trip, and
+    /// only the mobile view's `measurements` catalogue gives those measurements a label/unit.
+    ///
+    /// - Throws: `ReferenceDataValidationError.gearViewsMismatch` if the two responses disagree on
+    ///   `version`/`collectionId`/the set of gear codes present (ADR-0024 "Validation" — a sign the
+    ///   two requests landed on different data generations); `.unresolvedGearMeasurement` if any
+    ///   gear references a measurement id missing from the mobile catalogue. Either rejects the
+    ///   whole `gears` update, keeping the existing on-device snapshot.
+    func fetchGears() async throws -> [GearOption] {
+        async let canonicalTask: ReferenceDataEnvelope<GearCanonicalDTO> = fetch(.gears)
+        async let mobileTask: GearsMobileResponseDTO = fetchGearsMobile()
+        let (canonical, mobile) = try await (canonicalTask, mobileTask)
+
+        guard canonical.version == mobile.version, canonical.collectionId == mobile.collectionId else {
+            throw ReferenceDataValidationError.gearViewsMismatch(
+                reason: "version/collectionId differs between the canonical and mobile gears responses"
+            )
+        }
+        let canonicalCodes = Set(canonical.items.map(\.code))
+        let mobileCodes = Set(mobile.items.map(\.code))
+        guard canonicalCodes == mobileCodes else {
+            throw ReferenceDataValidationError.gearViewsMismatch(
+                reason: "gear codes differ between the canonical and mobile gears responses"
+            )
+        }
+
+        let mobileByCode = Dictionary(uniqueKeysWithValues: mobile.items.map { ($0.code, $0) })
+        let measurementsById = Dictionary(
+            uniqueKeysWithValues: (mobile.measurements ?? []).map { ($0.id, $0) }
+        )
+
+        return try canonical.items.map { canonicalItem in
+            // Safe to force-unwrap: `mobileByCode` is keyed from `mobileCodes`, already asserted
+            // equal to `canonicalCodes` above.
+            guard let mobileItem = mobileByCode[canonicalItem.code] else {
+                throw ReferenceDataValidationError.gearViewsMismatch(
+                    reason: "gear \(canonicalItem.code) present in the canonical response but not the mobile one"
+                )
+            }
+            return try GearOption.make(canonical: canonicalItem, mobile: mobileItem, measurementsById: measurementsById)
+        }
+    }
+
+    /// Fetches and decodes the `?view=mobile` gears response alone — a private helper so
+    /// `fetchGears()` above can run it concurrently with the canonical-view fetch via `async let`.
+    private func fetchGearsMobile() async throws -> GearsMobileResponseDTO {
+        let token = await resolvedToken()
+        let request = makeReferenceDataRequest(
+            baseURL: configuration.baseURL,
+            dataset: .gears,
+            bearerToken: token,
+            view: "mobile"
+        )
+        return try await send(request, fallbackPath: ReferenceDataset.gears.rawValue) { data in
+            try self.decoder.decode(GearsMobileResponseDTO.self, from: data)
+        }
+    }
+
     func fetchManifest() async throws -> ReferenceDataManifest {
         let token = await resolvedToken()
         let request = makeReferenceDataManifestRequest(baseURL: configuration.baseURL, bearerToken: token)
         return try await send(request, fallbackPath: "manifest") { data in
             try self.decoder.decode(ReferenceDataManifest.self, from: data)
         }
+    }
+
+    /// See `ReferenceDataFetching.fetchBlob(urlString:)`'s doc comment. Resolves `urlString`
+    /// against `configuration.baseURL` when it has no scheme of its own; throws
+    /// `APIError.invalidConfiguration` if the result still isn't a valid URL (a malformed manifest
+    /// `url` field — never silently fetches nothing).
+    func fetchBlob(urlString: String) async throws -> Data {
+        guard let url = Self.resolveBlobURL(urlString, baseURL: configuration.baseURL) else {
+            throw APIError.invalidConfiguration
+        }
+        let token = await resolvedToken()
+        let request = makeReferenceDataBlobRequest(url: url, bearerToken: token)
+        return try await send(request, fallbackPath: url.path) { $0 }
+    }
+
+    /// Absolute URLs (the expected shape of a manifest entry's `url` field) are used as-is; a
+    /// scheme-less value is resolved against `baseURL` instead, so a relative path still works if
+    /// the live API ever starts sending one.
+    private static func resolveBlobURL(_ urlString: String, baseURL: URL) -> URL? {
+        if let url = URL(string: urlString), url.scheme != nil {
+            return url
+        }
+        return URL(string: urlString, relativeTo: baseURL)?.absoluteURL
     }
 
     func checkHealth() async throws {
@@ -234,7 +334,11 @@ nonisolated struct StubReferenceDataClient: ReferenceDataFetching {
     var speciesItem: SpeciesOption?
     var ports: [PortOption] = []
     var portItem: PortOption?
+    var gears: [GearOption] = []
     var manifest: ReferenceDataManifest?
+    /// Keyed by the exact `urlString` passed to `fetchBlob(urlString:)` — mirrors a manifest
+    /// entry's `url` field. See ADR-0024 "Map data".
+    var blobsByURLString: [String: Data] = [:]
     var error: APIError?
 
     // Relies on Swift's synthesised memberwise initializer (every stored property above has a
@@ -274,13 +378,42 @@ nonisolated struct StubReferenceDataClient: ReferenceDataFetching {
         throw APIError.response(status: 404, details: nil)
     }
 
+    func fetchGears() async throws -> [GearOption] {
+        if let error { throw error }
+        return gears
+    }
+
     func fetchManifest() async throws -> ReferenceDataManifest {
         if let error { throw error }
         if let manifest { return manifest }
         throw APIError.response(status: 503, details: nil)
     }
 
+    func fetchBlob(urlString: String) async throws -> Data {
+        if let error { throw error }
+        if let data = blobsByURLString[urlString] { return data }
+        throw APIError.response(status: 404, details: nil)
+    }
+
     func checkHealth() async throws {
         if let error { throw error }
     }
+}
+
+/// Always-failing double used by `ReferenceDataSyncCoordinator.make(store:connectivityMonitor:)`
+/// when this launch's `APIConfiguration()` itself throws (a misconfigured `Info.plist` —
+/// see ADR-0020 §2) — there is no valid base URL to build a `RemoteReferenceDataClient` with. Every
+/// method throws `APIError.invalidConfiguration` so `ReferenceDataSyncService.sync()` reports every
+/// dataset as `.failed` uniformly (surfacing `SyncErrorBanner`) instead of crashing app launch.
+nonisolated struct FailingReferenceDataClient: ReferenceDataFetching {
+    func fetchVessels() async throws -> [VesselOption] { throw APIError.invalidConfiguration }
+    func fetchVessel(id _: String) async throws -> VesselOption { throw APIError.invalidConfiguration }
+    func fetchSpecies() async throws -> [SpeciesOption] { throw APIError.invalidConfiguration }
+    func fetchSpecies(id _: String) async throws -> SpeciesOption { throw APIError.invalidConfiguration }
+    func fetchPorts() async throws -> [PortOption] { throw APIError.invalidConfiguration }
+    func fetchPort(id _: String) async throws -> PortOption { throw APIError.invalidConfiguration }
+    func fetchGears() async throws -> [GearOption] { throw APIError.invalidConfiguration }
+    func fetchManifest() async throws -> ReferenceDataManifest { throw APIError.invalidConfiguration }
+    func fetchBlob(urlString _: String) async throws -> Data { throw APIError.invalidConfiguration }
+    func checkHealth() async throws { throw APIError.invalidConfiguration }
 }

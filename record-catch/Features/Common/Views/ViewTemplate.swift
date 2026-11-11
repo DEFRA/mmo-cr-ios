@@ -33,6 +33,10 @@ struct ViewTemplate<Content: View>: View {
             // visible while the user scrolls the page content (see ADR-0019). Renders nothing at
             // all while the device is online.
             OfflineBanner()
+            // Pinned below the offline banner (see ADR-0024 "Error UI") — renders nothing unless
+            // the most recent reference-data sync failed, and nothing at all while offline (that
+            // case is already covered by `OfflineBanner` above).
+            SyncErrorBanner()
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: AppSpacing.large) {

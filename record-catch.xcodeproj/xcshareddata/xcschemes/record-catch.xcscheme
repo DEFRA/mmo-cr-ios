@@ -78,7 +78,7 @@
       <EnvironmentVariables>
          <EnvironmentVariable
             key = "REFERENCE_DATA_API_TOKEN"
-            value = ""
+            value = "read-token"
             isEnabled = "YES">
          </EnvironmentVariable>
       </EnvironmentVariables>

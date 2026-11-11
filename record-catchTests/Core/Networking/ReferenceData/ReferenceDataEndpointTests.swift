@@ -182,6 +182,72 @@ final class ReferenceDataEndpointTests: XCTestCase {
         )
     }
 
+    // MARK: Gears dataset (`?view=mobile`)
+
+    func test_makeRequest_buildsExpectedURL_forGearsDataset_withoutView() {
+        // Without an explicit `view:`, the gears collection route is identical in shape to every
+        // other dataset — no query parameter at all.
+        let request = makeReferenceDataRequest(
+            baseURL: baseURL,
+            dataset: .gears,
+            bearerToken: nil
+        )
+
+        XCTAssertEqual(
+            request.url?.absoluteString,
+            "http://localhost:3002/api/v1/reference-data/gears"
+        )
+        XCTAssertNil(request.url?.query)
+    }
+
+    func test_makeRequest_appendsMobileViewQueryParameter_forGearsDataset() {
+        // `gears` is the one dataset this connector requests with `?view=mobile` — see
+        // `ReferenceDataEndpoint.swift`'s file-level doc comment and the ADR-0018 addendum "gears
+        // dataset" for why only that view carries the `measurements` catalogue.
+        let request = makeReferenceDataRequest(
+            baseURL: baseURL,
+            dataset: .gears,
+            bearerToken: nil,
+            view: "mobile"
+        )
+
+        XCTAssertEqual(
+            request.url?.absoluteString,
+            "http://localhost:3002/api/v1/reference-data/gears?view=mobile"
+        )
+    }
+
+    func test_makeRequest_withView_setsAcceptHeader() {
+        let request = makeReferenceDataRequest(
+            baseURL: baseURL,
+            dataset: .gears,
+            bearerToken: nil,
+            view: "mobile"
+        )
+
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Accept"), "application/json")
+    }
+
+    func test_makeRequest_withView_setsAuthorizationHeader_whenTokenProvided() {
+        let request = makeReferenceDataRequest(
+            baseURL: baseURL,
+            dataset: .gears,
+            bearerToken: "secret-token",
+            view: "mobile"
+        )
+
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer secret-token")
+    }
+
+    func test_makeRequest_doesNotAppendViewQueryParameter_forVesselsSpeciesAndPorts() {
+        // `view` is opt-in per call; vessels/species/ports never pass it, so they must keep
+        // sending zero query parameters (the existing canonical-view behaviour).
+        for dataset: ReferenceDataset in [.vessels, .species, .ports] {
+            let request = makeReferenceDataRequest(baseURL: baseURL, dataset: dataset, bearerToken: nil)
+            XCTAssertNil(request.url?.query, "\(dataset) must carry no query string when view is not provided")
+        }
+    }
+
     // MARK: Health route
 
     func test_makeHealthRequest_buildsExpectedURLAndMethod() {
@@ -400,5 +466,20 @@ final class ReferenceDataEndpointTests: XCTestCase {
         )
 
         XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer read-token")
+    }
+
+    func test_makeRequest_preservesBasePathPrefix_forGearsDatasetWithMobileView() {
+        let request = makeReferenceDataRequest(
+            baseURL: prefixedBaseURL,
+            dataset: .gears,
+            bearerToken: nil,
+            view: "mobile"
+        )
+
+        XCTAssertEqual(
+            request.url?.absoluteString,
+            "https://mmo-cr-catch-recording-service.api.dev.cdp-int.defra.cloud"
+                + "/reference-data-service/api/v1/reference-data/gears?view=mobile"
+        )
     }
 }

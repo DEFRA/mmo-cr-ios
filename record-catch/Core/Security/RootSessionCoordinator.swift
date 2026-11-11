@@ -13,10 +13,15 @@
 
 import Foundation
 
-/// Which of sign-in / app-lock / home the app root should show (ADR-0009).
+/// Which of sign-in / app-lock / preparing-data / home the app root should show (ADR-0009,
+/// ADR-0024 "Data before Home").
 enum RootPhase: Equatable {
     case signIn
     case appLock
+    /// Between a successful sign-in/unlock and Home: a reference-data sync must complete and the
+    /// required datasets (ports/species/gears) must be present on-device before any picker can be
+    /// reached — see `completeDataPreparation()` and `DataPreparationViewModel`.
+    case preparingData
     case home
 }
 
@@ -49,6 +54,10 @@ final class RootSessionCoordinator {
     /// which would otherwise incorrectly bounce every UI test that seeds a local session straight
     /// to sign-in.
     private let skipsBackgroundVerification: Bool
+    /// `true` for every `-uiTest*` launch: a sign-in/unlock moves straight to `.home`, skipping
+    /// `.preparingData` entirely (ADR-0024 "Data before Home") — no XCUITest run should ever
+    /// depend on live network access to the reference-data API to reach Home.
+    private let isUITesting: Bool
 
     init(
         authenticator: any Authenticating,
@@ -56,7 +65,8 @@ final class RootSessionCoordinator {
         stores: SessionStores,
         connectivityMonitor: ConnectivityMonitoring,
         offlineAccessPolicy: OfflineAccessPolicy = .current,
-        skipsBackgroundVerification: Bool = false
+        skipsBackgroundVerification: Bool = false,
+        isUITesting: Bool = LaunchArguments.current.isUITesting
     ) {
         self.authenticator = authenticator
         self.biometricAuthenticator = biometricAuthenticator
@@ -67,6 +77,7 @@ final class RootSessionCoordinator {
         self.connectivityMonitor = connectivityMonitor
         self.offlineAccessPolicy = offlineAccessPolicy
         self.skipsBackgroundVerification = skipsBackgroundVerification
+        self.isUITesting = isUITesting
         self.phase = Self.computeLocalPhase(
             biometricAuthenticator: biometricAuthenticator,
             sessionStore: sessionStore,
@@ -117,14 +128,17 @@ final class RootSessionCoordinator {
 
     /// Runs after a successful sign-in: begins the local session, records the verification time,
     /// and — if the user has previously opted in to Face ID re-entry — re-provisions the secret
-    /// defensively (idempotent — a no-op if one is already provisioned).
+    /// defensively (idempotent — a no-op if one is already provisioned). Moves to `.preparingData`
+    /// (ADR-0024 "Data before Home") rather than straight to `.home`, except for `-uiTest*`
+    /// launches, which skip it — no XCUITest run should ever depend on live network access to the
+    /// reference-data API to reach Home.
     func handleSignIn(_: AuthenticatedAccount) {
         try? sessionStore.beginSession()
         try? verificationStore.markVerified(.now)
         if preferenceStore.isFaceIDEnabled() {
             try? secretStore.provisionSecret()
         }
-        phase = .home
+        phase = isUITesting ? .home : .preparingData
     }
 
     /// Signs out (ADR-0022 §9): clears MSAL's cache, the local session marker, the biometric
@@ -138,6 +152,8 @@ final class RootSessionCoordinator {
     }
 
     /// Builds a fully-configured `AppLockViewModel` for the app-lock branch of the app root.
+    /// Unlocking moves to `.preparingData` (see `handleSignIn`'s doc comment — the same
+    /// UI-test-skip rule applies here).
     func makeAppLockViewModel(unlockReason: String) -> AppLockViewModel {
         let viewModel = AppLockViewModel(
             biometricAuthenticator: biometricAuthenticator,
@@ -146,9 +162,19 @@ final class RootSessionCoordinator {
             preferenceStore: preferenceStore,
             unlockReason: unlockReason
         )
-        viewModel.onUnlocked = { [weak self] in self?.phase = .home }
+        viewModel.onUnlocked = { [weak self] in
+            guard let self else { return }
+            self.phase = self.isUITesting ? .home : .preparingData
+        }
         viewModel.onFallbackToSignIn = { [weak self] in self?.phase = .signIn }
         return viewModel
+    }
+
+    /// Moves from `.preparingData` to `.home` once the required reference data is present (see
+    /// `DataPreparationViewModel`/ADR-0024 "Data before Home"). A no-op from any other phase.
+    func completeDataPreparation() {
+        guard phase == .preparingData else { return }
+        phase = .home
     }
 
     /// Builds a `SignInViewModel`-backed `SignInView` sharing this coordinator's authenticator.
@@ -229,7 +255,8 @@ extension RootSessionCoordinator {
                     verificationStore: InMemorySessionVerificationStore(storedDate: .now)
                 ),
                 connectivityMonitor: StubConnectivityMonitor(isOnline: true),
-                skipsBackgroundVerification: true
+                skipsBackgroundVerification: true,
+                isUITesting: launchArguments.isUITesting
             )
         }
 
@@ -244,7 +271,8 @@ extension RootSessionCoordinator {
                     verificationStore: InMemorySessionVerificationStore(storedDate: .now)
                 ),
                 connectivityMonitor: StubConnectivityMonitor(isOnline: true),
-                skipsBackgroundVerification: true
+                skipsBackgroundVerification: true,
+                isUITesting: launchArguments.isUITesting
             )
         }
 
@@ -271,7 +299,8 @@ extension RootSessionCoordinator {
                 preferenceStore: UserDefaultsBiometricPreferenceStore(),
                 verificationStore: KeychainSessionVerificationStore()
             ),
-            connectivityMonitor: resolvedConnectivityMonitor
+            connectivityMonitor: resolvedConnectivityMonitor,
+            isUITesting: launchArguments.isUITesting
         )
     }
 }

@@ -6,8 +6,8 @@
 //  docs/design-specs/offline-banner.md): present with the correct tag + message when the
 //  `-uiTestOffline` seam forces the device offline, absent entirely when online, present across
 //  more than one `ViewTemplate` screen (proving the `ViewTemplate`-level wiring, not a one-off),
-//  and absent on Sign In (Q2 — Sign In / App Lock do not use `ViewTemplate` and are intentionally
-//  excluded).
+//  and absent (replaced by `OfflineAuthPanel`, see ADR-0027 §7) on Sign In (Q2 — Sign In / App
+//  Lock do not use `ViewTemplate` and are intentionally excluded from the post-auth banner).
 //
 
 import XCTest
@@ -72,12 +72,15 @@ final class OfflineBannerUITests: XCTestCase {
     @MainActor
     func test_banner_onSignInScreen_isNotShown_evenWhenOffline() {
         // Sign In and App Lock deliberately do not use `ViewTemplate` (see
-        // `SignInView.swift`/`AppLockView.swift`), so the banner must never appear there
+        // `SignInView.swift`/`AppLockView.swift`), so the post-auth banner must never appear there
         // regardless of connectivity — confirms the Q2 decision is actually honoured, not just
-        // assumed because no code touches those screens.
+        // assumed because no code touches those screens. ADR-0027 §7 covers Sign In with a
+        // *different*, full-screen `OfflineAuthPanel` instead (asserted below), which is why this
+        // waits on the panel rather than `SignIn.heading` — the panel is a `fullScreenCover` and
+        // hides the screen underneath it from the accessibility tree while offline.
         let app = launch(["-uiTestOffline"])
 
-        XCTAssertTrue(app.staticTexts["SignIn.heading"].waitForExistence(timeout: 5))
+        XCTAssertTrue(element(app, "OfflineAuthPanel").waitForExistence(timeout: 5))
         XCTAssertFalse(element(app, ID.banner).exists)
     }
 }

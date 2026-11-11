@@ -193,6 +193,16 @@ outcomes by the email entered (`invalid@…` → invalid credentials, `offline@�
   copilot-instructions.md). Populating the real `CR_APP_CFG_ENTRA_*` Environment variables and any
   Match/entitlement changes are DevOps/Entra-tenant-team work, out of scope for this ADR.
 
+## Addendum (2026-11, ADR-0027)
+
+Self-service password reset is now built — see ADR-0027. Two changes to this ADR's decisions:
+
+- **§1**: `challengeTypes` changes from `[.password]` to `[.OOB, .password]`, since password reset
+  requires the emailed one-time-code challenge type. Sign-in's own behaviour is unaffected (an
+  unexpected `codeRequired` step already mapped to `.serviceUnavailable`).
+- **§8**: "Forgotten your password?" is no longer an inert link; it opens the password-reset
+  journey described in ADR-0027.
+
 ## References
 
 - `entra-id-poc/TECHNICAL-DOCUMENTATION.md` (this repository's sibling PoC), §§2–10.

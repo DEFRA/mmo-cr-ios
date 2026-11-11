@@ -121,6 +121,14 @@ for a button" research finding behind the GOV.UK Tag refresh does not directly t
 deviation should be logged with Delivery Architecture
 (`delivery.architecture@defra.gov.uk`) per the standard governance process; it is not hidden.
 
+## Addendum (2026-11, ADR-0027)
+
+The "Sign In screen never shows offline UI" exception noted elsewhere in this ADR is narrowed by
+ADR-0027 §7: now that Sign In and the new self-service password-reset journey perform real network
+requests (ADR-0022, ADR-0027), a full-screen `OfflineAuthPanel` is shown on both while offline,
+with a "Sign in" action that returns to (or stays on) the Sign In screen. The existing top-of-content
+`OfflineBanner` is unchanged for every screen reached after authentication.
+
 ## Consequences
 
 - A single, app-wide `ConnectivityMonitoring` instance is the one source of truth for "is the

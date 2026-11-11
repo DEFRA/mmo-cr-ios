@@ -68,6 +68,7 @@ final class SignInUITests: XCTestCase {
     @MainActor
     func test_languageToggle_changesVisibleCopy() {
         let app = XCUIApplication()
+        app.launchArguments += ["-uiTestResetLanguage"]
         app.forwardReferenceDataAPIToken()
         app.launch()
 
@@ -116,7 +117,10 @@ final class SignInUITests: XCTestCase {
     }
 
     @MainActor
-    func test_helpLinks_existAndAreInert() {
+    func test_forgottenPasswordLink_opensPasswordResetJourney() {
+        // "Forgotten your password?" now opens the self-service reset journey (ADR-0027,
+        // supersedes ADR-0022 §8's inert link) — see `ForgottenPasswordUITests` for full coverage
+        // of that journey.
         let app = XCUIApplication()
         app.forwardReferenceDataAPIToken()
         app.launch()
@@ -125,14 +129,31 @@ final class SignInUITests: XCTestCase {
         XCTAssertTrue(forgotten.waitForExistence(timeout: 5))
         forgotten.tap()
 
-        // Inert: still on the Sign In screen after tapping.
+        XCTAssertTrue(
+            app.staticTexts["PasswordReset.heading"].waitForExistence(timeout: 5),
+            "Tapping 'Forgotten your password?' should open the Reset your password screen"
+        )
+    }
+
+    @MainActor
+    func test_createAccountLink_remainsInert() {
+        // "Create an account" stays a disclosure-only link (AC9 of the forgotten-password ticket
+        // leaves account creation out of scope) — separate from the forgotten-password link above.
+        let app = XCUIApplication()
+        app.forwardReferenceDataAPIToken()
+        app.launch()
+
+        let createAccount = app.buttons[ID.createAccount]
+        XCTAssertTrue(createAccount.waitForExistence(timeout: 5))
+        createAccount.tap()
+
         XCTAssertTrue(app.staticTexts[ID.heading].exists)
-        XCTAssertTrue(app.buttons[ID.createAccount].exists)
     }
 
     @MainActor
     func test_createAccountLink_expandsAndCollapsesHelpContent() {
         let app = XCUIApplication()
+        app.launchArguments += ["-uiTestResetLanguage"]
         app.forwardReferenceDataAPIToken()
         app.launch()
 

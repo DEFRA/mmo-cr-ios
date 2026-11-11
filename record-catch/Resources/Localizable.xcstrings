@@ -5049,6 +5049,726 @@
         }
       }
     },
+    "passwordReset.a11y.saving": {
+      "comment": "VoiceOver label while the 'Save new password' button is loading.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Wrthi'n cadw"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saving"
+          }
+        }
+      }
+    },
+    "passwordReset.a11y.sending": {
+      "comment": "VoiceOver label while the 'Send reset code' button is loading.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Wrthi'n anfon"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sending"
+          }
+        }
+      }
+    },
+    "passwordReset.a11y.verifying": {
+      "comment": "VoiceOver label while the 'Continue' button on the reset-code screen is loading.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Wrthi'n dilysu"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verifying"
+          }
+        }
+      }
+    },
+    "passwordReset.code.error.empty": {
+      "comment": "Inline error when the reset-code field is blank on submit (AC6).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Rhowch y cod ailosod"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter the reset code"
+          }
+        }
+      }
+    },
+    "passwordReset.code.error.expired": {
+      "comment": "Inline error when the entered reset code has expired (AC8).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Mae'r cod ailosod hwn wedi dod i ben. Dewiswch 'Anfon cod newydd' i gael un newydd _(needs_review)_"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This reset code has expired. Select 'Send a new code' to get a new one"
+          }
+        }
+      }
+    },
+    "passwordReset.code.error.invalid": {
+      "comment": "Inline error when the entered reset code is incorrect (AC7).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Mae'r cod ailosod a roddwyd gennych yn anghywir. Gwiriwch y cod a rhowch gynnig arall arni _(needs_review)_"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The reset code you entered is incorrect. Check the code and try again"
+          }
+        }
+      }
+    },
+    "passwordReset.code.label": {
+      "comment": "Reset code field label (AC5).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cod ailosod"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset code"
+          }
+        }
+      }
+    },
+    "passwordReset.complete.heading": {
+      "comment": "Confirmation screen heading once the password has been reset (AC17).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Mae eich cyfrinair wedi'i ailosod"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your password has been reset"
+          }
+        }
+      }
+    },
+    "passwordReset.confirmPassword.error.empty": {
+      "comment": "Inline error when the confirm-password field is blank on submit (AC15).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Rhowch eich cyfrinair newydd eto"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter your new password again"
+          }
+        }
+      }
+    },
+    "passwordReset.confirmPassword.error.mismatch": {
+      "comment": "Inline error when 'Confirm new password' does not match 'New password' (AC14).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Nid yw'r cyfrineiriau a roddwyd gennych yn cyd-fynd _(needs_review)_"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The passwords you entered do not match"
+          }
+        }
+      }
+    },
+    "passwordReset.confirmPassword.label": {
+      "comment": "Confirm new password field label (AC11).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cadarnhau'r cyfrinair newydd"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirm new password"
+          }
+        }
+      }
+    },
+    "passwordReset.continue.a11y.hint": {
+      "comment": "Accessibility hint for the 'Continue' button on the reset-code screen.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Yn dilysu'ch cod ailosod"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Validates your reset code"
+          }
+        }
+      }
+    },
+    "passwordReset.continue.button": {
+      "comment": "'Continue' button on the 'Enter your reset code' screen (AC5/AC10).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Parhau"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue"
+          }
+        }
+      }
+    },
+    "passwordReset.createPassword.heading": {
+      "comment": "'Create a new password' screen heading (AC11).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Creu cyfrinair newydd"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create a new password"
+          }
+        }
+      }
+    },
+    "passwordReset.email.error.empty": {
+      "comment": "Inline error when the email field is blank on submit (AC2).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Rhowch eich cyfeiriad e-bost"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter your email address"
+          }
+        }
+      }
+    },
+    "passwordReset.email.error.invalid": {
+      "comment": "Inline error when the email field is non-empty but not a valid email format (AC2).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Rhowch gyfeiriad e-bost dilys"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a valid email address"
+          }
+        }
+      }
+    },
+    "passwordReset.email.hint": {
+      "comment": "Hint under the email field, deliberately generic so the app never confirms or denies an account exists for the entered address (AC3 security note, ADR-0027 §3).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Os oes cyfrif yn bodoli ar gyfer y cyfeiriad e-bost hwn, byddwn yn anfon cod ailosod."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If an account exists for this email address, we'll send a reset code."
+          }
+        }
+      }
+    },
+    "passwordReset.email.label": {
+      "comment": "Email address field label on the 'Reset your password' screen (AC1).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cyfeiriad e-bost"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Email address"
+          }
+        }
+      }
+    },
+    "passwordReset.enterCode.guidance": {
+      "comment": "Guidance on the 'Enter your reset code' screen (AC5).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Rhowch y cod a anfonwyd atoch i'ch cyfeiriad e-bost."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter the code we sent to your email address."
+          }
+        }
+      }
+    },
+    "passwordReset.enterCode.heading": {
+      "comment": "'Enter your reset code' screen heading (AC5).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Rhowch eich cod ailosod"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter your reset code"
+          }
+        }
+      }
+    },
+    "passwordReset.error.service": {
+      "comment": "Provisional form-level error covering no network connectivity, an Entra/MSAL service failure, and the 'not configured' placeholder state across every password-reset step (ADR-0027, mirrors signIn.error.service). NEEDS CONTENT REVIEW before release.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Mae'n ddrwg gennym, mae problem gyda'r gwasanaeth. Rhowch gynnig arall arni yn nes ymlaen _(needs_review)_"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sorry, there is a problem with the service. Try again later"
+          }
+        }
+      }
+    },
+    "passwordReset.error.sessionExpired": {
+      "comment": "Shown on the 'Create a new password' screen when the reset session/continuation token is no longer valid (e.g. the app was relaunched mid-journey) -- ADR-0027 §5.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Mae'ch sesiwn wedi dod i ben. Dechreuwch eto o 'Ailosod eich cyfrinair' _(needs_review)_"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your session has expired. Start again from 'Reset your password'"
+          }
+        }
+      }
+    },
+    "passwordReset.newPassword.error.empty": {
+      "comment": "Inline error when the new-password field is blank on submit (AC15).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Rhowch gyfrinair newydd"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a new password"
+          }
+        }
+      }
+    },
+    "passwordReset.newPassword.error.requirements": {
+      "comment": "Inline error when the new password does not meet the length/character-class requirements (AC13). NEEDS CONTENT REVIEW alongside the hint above.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Rhaid i'ch cyfrinair fod o leiaf 8 nod a chynnwys 3 o'r canlynol: priflythrennau, llythrennau bach, rhifau a symbolau _(needs_review)_"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your password must be at least 8 characters and include 3 of the following: uppercase letters, lowercase letters, numbers and symbols"
+          }
+        }
+      }
+    },
+    "passwordReset.newPassword.error.tooLong": {
+      "comment": "Inline error when the new password exceeds Entra's maximum length (256 characters).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Rhaid i'ch cyfrinair fod yn 256 nod neu lai _(needs_review)_"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your password must be 256 characters or fewer"
+          }
+        }
+      }
+    },
+    "passwordReset.newPassword.hint": {
+      "comment": "Password requirement guidance under the new-password field. NEEDS CONTENT REVIEW: Entra's real policy requires 8-256 characters and 3 of 4 character classes (upper/lower/number/symbol) -- ADR-0027 §6 -- this copy should be confirmed with product/content design before release.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Rhaid i'ch cyfrinair fod o leiaf 8 nod a chynnwys 3 o'r canlynol: priflythrennau, llythrennau bach, rhifau a symbolau _(needs_review)_"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your password must be at least 8 characters and include 3 of the following: uppercase letters, lowercase letters, numbers and symbols"
+          }
+        }
+      }
+    },
+    "passwordReset.newPassword.label": {
+      "comment": "New password field label (AC11).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cyfrinair newydd"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New password"
+          }
+        }
+      }
+    },
+    "passwordReset.offline.message": {
+      "comment": "Offline panel body message (AC18).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cysylltwch â'r rhyngrwyd a rhowch gynnig arall arni."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connect to the internet and try again."
+          }
+        }
+      }
+    },
+    "passwordReset.offline.title": {
+      "comment": "Offline panel heading shown on Sign In / the password-reset journey while the device has no connectivity (AC18, ADR-0027 §7).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Rydych All-lein"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You are offline"
+          }
+        }
+      }
+    },
+    "passwordReset.password.a11y.hide": {
+      "comment": "Accessibility label for the 'Hide' password toggle when the password is currently visible.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cuddio'r cyfrinair"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hide password"
+          }
+        }
+      }
+    },
+    "passwordReset.password.a11y.show": {
+      "comment": "Accessibility label for the 'Show' password toggle when the password is currently masked.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Dangos y cyfrinair"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show password"
+          }
+        }
+      }
+    },
+    "passwordReset.password.hide": {
+      "comment": "'Hide' text button masking a visible password field (AC12).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cuddio"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hide"
+          }
+        }
+      }
+    },
+    "passwordReset.password.show": {
+      "comment": "'Show' text button revealing a masked password field (AC12, ADR-0027 §9 deviation #2 -- a text button, not the app's usual eye icon).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Dangos"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show"
+          }
+        }
+      }
+    },
+    "passwordReset.reset.guidance": {
+      "comment": "Guidance on the 'Reset your password' screen (AC1).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Rhowch y cyfeiriad e-bost rydych yn ei ddefnyddio i fewngofnodi."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter the email address you use to sign in."
+          }
+        }
+      }
+    },
+    "passwordReset.reset.heading": {
+      "comment": "'Reset your password' screen heading (AC1, ADR-0027).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ailosod eich cyfrinair"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset your password"
+          }
+        }
+      }
+    },
+    "passwordReset.savePassword.a11y.hint": {
+      "comment": "Accessibility hint for the 'Save new password' button.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Yn cadw'ch cyfrinair newydd"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saves your new password"
+          }
+        }
+      }
+    },
+    "passwordReset.savePassword.button": {
+      "comment": "'Save new password' button on the 'Create a new password' screen (AC11/AC16). Fixes the supplied design's apparent typo ('Save new pasword') -- ADR-0027 §9 deviation #3.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cadw'r cyfrinair newydd"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save new password"
+          }
+        }
+      }
+    },
+    "passwordReset.sendCode.a11y.hint": {
+      "comment": "Accessibility hint for the 'Send reset code' button.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Yn gofyn am god ailosod cyfrinair drwy e-bost"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Requests a password reset code by email"
+          }
+        }
+      }
+    },
+    "passwordReset.sendCode.button": {
+      "comment": "'Send reset code' button on the 'Reset your password' screen (AC1/AC3).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Anfon cod ailosod"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send reset code"
+          }
+        }
+      }
+    },
+    "passwordReset.sendNewCode.button": {
+      "comment": "'Send a new code' button on the 'Enter your reset code' screen (AC9).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Anfon cod newydd"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send a new code"
+          }
+        }
+      }
+    },
     "referenceData.sync.failed.message": {
       "comment": "Message shown in SyncErrorBanner when a reference-data sync failed but the app already has data from a previous successful sync.",
       "extractionState": "manual",

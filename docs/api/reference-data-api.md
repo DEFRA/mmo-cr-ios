@@ -100,13 +100,15 @@ either route, for any dataset**, so it always receives the canonical shape — w
 The API also offers a reduced `?view=mobile` shape per dataset (for vessels: flat
 `pln`/`cfr`/`displayName` fields, no `identifiers` object; for species: flat `id`/`faoCode`/
 `scientificName`/`displayName`, no `commonNames`/`localNames` arrays; ports have not been checked
-against a `view=mobile` shape — only canonical has been verified). The app does **not** use
-`view=mobile` for any dataset: the canonical view is a superset, so taking it avoids losing
-fields (vessels: `uvi`, `mmsi`, `ircs`, `typeCode`, `status`, the active date range; species:
-`commonNames`/`localNames` beyond the single GBR entry the mobile `displayName` already picks, and
-`active`) that the mobile view omits. If you ever add `view=mobile` back for a dataset, its DTO
-must change with it — the two shapes are not interchangeable, and decoding mobile JSON with the
-canonical DTO silently yields `nil`/empty for every field the mobile shape flattens away.
+against a `view=mobile` shape — only canonical has been verified). For vessels, species and ports
+the app sends **no** `view` parameter: the canonical view is a superset, so taking it avoids
+losing fields (vessels: `uvi`, `mmsi`, `ircs`, `typeCode`, `status`, the active date range;
+species: `commonNames`/`localNames` beyond the single GBR entry the mobile `displayName` already
+picks, and `active`) that the mobile view omits. **`gears` is the one deliberate exception** — see
+"Gears dataset" below, which fetches *both* views and joins them. If you ever add `view=mobile`
+back for another dataset, its DTO must change with it — the two shapes are not interchangeable,
+and decoding mobile JSON with the canonical DTO silently yields `nil`/empty for every field the
+mobile shape flattens away.
 
 ### Error responses
 
@@ -188,8 +190,8 @@ change-detection/sync strategy, not that strategy itself.
 
 ## Query parameters: none, by design — fetch everything, every time
 
-**No request built by this connector ever sends a query parameter**, including `view` (see above)
-and including any dataset-specific filter the live API supports (`query`, `code`, `countryCode`,
+**No request built by this connector ever sends a query parameter**, other than `gears`'s
+deliberate `?view=mobile` request (see "Gears dataset" above) — and including any dataset-specific filter the live API supports (`query`, `code`, `countryCode`,
 `ids`, `sort`, `includeInactive`, or — for ports — the `latitude`/`longitude`/`radiusKm` radius
 search). This isn't an oversight: the app always wants the **entire** collection, and the backend's
 pagination behaviour makes that a load-bearing invariant, not a style choice.
@@ -321,60 +323,88 @@ sourced only from `init(dto:)`: `code`, `countryCode` and `isActive` (mapped fro
 conformance, with those fields simply `nil`. See the ADR-0018 addendum for why this is the opposite
 trade-off to `SpeciesOption`'s "no migration path" decision, and why it was necessary here.
 
-## Gears dataset (`?view=mobile`)
+## Gears dataset — the one dataset fetched twice (canonical + `?view=mobile`)
 
-The `gears` dataset (`ReferenceDataset.gears`) is the one dataset this connector requests with
-`?view=mobile` rather than the canonical view used by every dataset above — see the ADR-0018
-addendum "gears dataset" for why (only the mobile view carries the `measurements` catalogue a
-gear's measurement ids resolve against). Collection route only — there is no `fetchGear(id:)`,
-because the live single-item route returns a bare item with no `measurements` sibling to resolve
-against:
+`gears` is the one dataset `fetchGears()` does not fetch with a single request — see ADR-0024
+"Gears from two requests". **Neither view alone carries everything `GearOption` needs**, so both
+are fetched concurrently (`async let`) and joined by gear `code`:
+
+| Needed for `GearOption` | Canonical (default, no `view`) | `?view=mobile` |
+|---|---|---|
+| Required vs per-trip split (`applicableCharacteristics.fixed`) | ✅ | ❌ (always empty `requiredMeasurementIds`) |
+| Vessel-length applicability (`vesselLengthApplicability`) | ✅ | ❌ |
+| Measurement label/unit (the `measurements` catalogue) | ❌ (bare characteristic ids only) | ✅ |
+| Category name, `pairFishing` | id only | ✅ |
+
+Collection route only, for both views — there is no `fetchGear(id:)`, because the live single-item
+route returns a bare item with no `measurements` sibling to resolve labels against.
 
 ```
+GET {baseURL}/api/v1/reference-data/gears                 (canonical — no `view` parameter)
 GET {baseURL}/api/v1/reference-data/gears?view=mobile
-Header: Authorization: Bearer <token>   (omitted entirely when no token is configured)
+Header: Authorization: Bearer <token>   (omitted entirely when no token is configured, both requests)
 ```
 
 ```json
+// canonical
 {
-  "dataset": "gears",
-  "collectionId": "00000000-0000-4000-8000-000000000020",
-  "schemaVersion": "1.0",
-  "version": "local-seed-1",
-  "view": "mobile",
+  "dataset": "gears", "collectionId": "…", "schemaVersion": "1.0", "version": "gears-advanced-2",
   "total": 1,
   "items": [
     {
-      "id": "10000000-0000-4000-8000-000000000001",
-      "code": "TBB",
-      "name": "Beam trawl",
-      "category": { "id": "20000000-0000-4000-8000-000000000001", "code": "TRAWL_NETS", "name": "Trawl nets" },
-      "pairFishing": false,
-      "requiredMeasurementIds": ["mesh-size", "number-of-beams"],
-      "variableMeasurementIds": ["times-shot"]
+      "id": "F3C85F59-1196-43DA-B74B-909F7D7BE451", "code": "TBB", "name": "Beam trawl",
+      "categoryId": "…", "pairFishing": false,
+      "applicableCharacteristics": [
+        { "characteristicId": "75059cf6-a23c-5612-80e6-c7f5031c9519", "fixed": true,
+          "required": false, "vesselLengthApplicability": ["under-10m", "10-to-12m", "over-12m"] }
+      ]
     }
-  ],
-  "measurements": [
-    { "id": "mesh-size", "code": "ME", "label": "Mesh size (mm)", "kind": "required", "unit": "mm" }
   ]
 }
 ```
 
-Only `id`, `code` and `name` are required on a gear item; `category`, `pairFishing` and both
-measurement-id arrays may be omitted or `null` (e.g. "Mechanised dredges" defines neither
-measurement list). The response's shape doesn't fit the shared `ReferenceDataEnvelope<Item>` — it
-carries a sibling top-level `measurements` catalogue the envelope has no field for — so it decodes
-into its own type, `GearsMobileResponseDTO`, instead.
+```json
+// ?view=mobile
+{
+  "dataset": "gears", "collectionId": "…", "schemaVersion": "1.0", "version": "gears-advanced-2",
+  "view": "mobile", "total": 1,
+  "items": [
+    { "id": "F3C85F59-1196-43DA-B74B-909F7D7BE451", "code": "TBB", "name": "Beam trawl",
+      "category": { "id": "…", "code": "TRAWL_NETS", "name": "Trawl nets" }, "pairFishing": false }
+  ],
+  "measurements": [
+    { "id": "75059cf6-a23c-5612-80e6-c7f5031c9519", "code": "ME", "label": "Mesh size",
+      "kind": "number", "unit": "mm", "minimumValue": null, "maximumValue": null }
+  ]
+}
+```
 
-`GearOption.make(dto:measurementsById:)` maps each item into the existing `GearOption` domain type
-(ADR-0012's bundled catalogue), keyed by the API's `code` (e.g. `"TBB"`) — not its GUID, which is
-carried separately as the new `referenceId` field — so favourites keyed on the gear code are
-unaffected. Each measurement id in `requiredMeasurementIds`/`variableMeasurementIds` resolves
-against the response's top-level `measurements` array; an id with no matching entry is **dropped**
-(not a fetch failure) and reported back so the caller can log a non-sensitive diagnostic. See the
-ADR-0018 addendum for the full rationale, including the tracked gap that measurement labels are not
-yet localised (plain API text, not a String Catalog key) — acceptable only because no screen yet
-renders a `GearOption` sourced from this connector.
+Both responses decode into their own types (`GearCanonicalDTO`/`ReferenceDataEnvelope<GearCanonicalDTO>`
+and `GearMobileDTO`/`GearsMobileResponseDTO` — the mobile response doesn't fit the shared envelope,
+since it carries a sibling top-level `measurements` catalogue the envelope has no field for). Only
+`id`/`code`/`name` are required on either item shape.
+
+**Strict join, not a best-effort merge.** `fetchGears()` throws `ReferenceDataValidationError`
+rather than guessing whenever the two requests don't agree:
+
+- `.gearViewsMismatch` — the two responses' `version`/`collectionId` differ, or they don't list the
+  same set of gear codes. Either is a sign the two requests landed on different data generations.
+- `.unresolvedGearMeasurement` — a canonical characteristic's `characteristicId` has no matching
+  entry in the mobile response's `measurements` catalogue.
+
+Either rejects the **whole** `gears` update; the existing on-device snapshot is kept (see ADR-0024
+"Validation"). This replaces the previous connector-only behaviour of silently dropping an
+unresolved measurement id — now that a screen (the gear/favourites journey) actually consumes
+`GearOption`s built by this join, a partially-wrong gear must never reach it.
+
+`GearOption.make(canonical:mobile:measurementsById:vesselLengthBand:)` builds the domain type,
+keyed by the API's `code` (e.g. `"TBB"`) — not its GUID, kept separately as `apiMetadata.referenceId`
+— so favourites keyed on the gear code (ADR-0012) are unaffected. Each characteristic is kept only
+when its `vesselLengthApplicability` includes `vesselLengthBand` (defaults to
+`GearOption.currentVesselLengthBand`, currently `"under-10m"` for every vessel regardless of its
+real length — see ADR-0024 "Vessel-length scope"); `fixed: true` becomes a required (per-favourite)
+measurement, `fixed: false` becomes a variable (per-trip) one. Measurement labels are the API's
+plain English text, not yet a String Catalog key — a tracked gap (ADR-0024 "Known gaps"), not a bug.
 
 ## Configuration
 

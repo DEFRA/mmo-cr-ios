@@ -1,5 +1,17 @@
 import SwiftUI
 
+/// How the secure-field show/hide control is presented. Added for the password-reset journey
+/// (ADR-0027 §9 deviation #2), which uses a text "Show"/"Hide" button per its design rather than
+/// the eye-icon toggle every other secure field in the app uses; `.icon` is the default so every
+/// existing call site (e.g. Sign In) is unaffected.
+enum SecureToggleStyle: Equatable {
+    /// The existing SF Symbol eye/eye.slash icon toggle (default, unchanged behaviour).
+    case icon
+    /// A text button reading `show`/`hide` depending on state, with `showAccessibilityLabel` /
+    /// `hideAccessibilityLabel` as its (optionally localized) accessibility label.
+    case text(show: String, hide: String, showAccessibilityLabel: String, hideAccessibilityLabel: String)
+}
+
 struct TextInputField: View {
     let label: String
     let hint: String?
@@ -10,6 +22,7 @@ struct TextInputField: View {
     let textInputAutocapitalization: TextInputAutocapitalization
     let autocorrectionDisabled: Bool
     let secureTextContentType: UITextContentType
+    let secureToggleStyle: SecureToggleStyle
     /// Colour applied to the visible field label (above the input). Defaults to `textPrimary`,
     /// matching every existing call site's appearance; callers whose design specifies a muted
     /// label colour (e.g. Sign In — see `docs/design-specs/sign-in.md`) can override it without
@@ -38,6 +51,7 @@ struct TextInputField: View {
         textInputAutocapitalization: TextInputAutocapitalization = .sentences,
         autocorrectionDisabled: Bool = false,
         secureTextContentType: UITextContentType = .password,
+        secureToggleStyle: SecureToggleStyle = .icon,
         labelColor: Color = AppColors.textPrimary,
         text: Binding<String>,
         didAttemptSubmit: Bool = false,
@@ -52,6 +66,7 @@ struct TextInputField: View {
         self.textInputAutocapitalization = textInputAutocapitalization
         self.autocorrectionDisabled = autocorrectionDisabled
         self.secureTextContentType = secureTextContentType
+        self.secureToggleStyle = secureToggleStyle
         self.labelColor = labelColor
         _text = text
         self.didAttemptSubmit = didAttemptSubmit
@@ -160,26 +175,49 @@ struct TextInputField: View {
                 .focused($isFocused)
                 .accessibilityIdentifier("TextInputField.secureInput")
 
-            Button {
-                isSecureTextVisible.toggle()
-                // Preserve focus on the field after toggling where practical.
-                // Defer to the next runloop so the SecureField/TextField swap
-                // completes before we restore focus, which is more robust on device.
-                Task { @MainActor in
-                    isFocused = true
-                }
-            } label: {
+            secureToggleButton
+        }
+        .formInputStyle(showError: shouldShowError)
+    }
+
+    @ViewBuilder
+    private var secureToggleButton: some View {
+        Button {
+            isSecureTextVisible.toggle()
+            // Preserve focus on the field after toggling where practical.
+            // Defer to the next runloop so the SecureField/TextField swap
+            // completes before we restore focus, which is more robust on device.
+            Task { @MainActor in
+                isFocused = true
+            }
+        } label: {
+            switch secureToggleStyle {
+            case .icon:
                 Image(systemName: isSecureTextVisible ? "eye.slash" : "eye")
                     .frame(width: AppControlSize.buttonHeight, height: AppControlSize.buttonHeight)
                     .contentShape(Rectangle())
+            case .text(let show, let hide, _, _):
+                Text(isSecureTextVisible ? hide : show)
+                    .font(AppTypography.button)
+                    .foregroundStyle(AppColors.govBlue)
+                    .frame(minWidth: AppControlSize.buttonHeight, minHeight: AppControlSize.buttonHeight)
+                    .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
-            .tint(AppColors.govBlue)
-            .accessibilityLabel(Self.passwordToggleLabel(isVisible: isSecureTextVisible))
-            .accessibilityAddTraits(.isButton)
-            .accessibilityIdentifier("TextInputField.secureToggle")
         }
-        .formInputStyle(showError: shouldShowError)
+        .buttonStyle(.plain)
+        .tint(AppColors.govBlue)
+        .accessibilityLabel(toggleAccessibilityLabel)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityIdentifier("TextInputField.secureToggle")
+    }
+
+    private var toggleAccessibilityLabel: String {
+        switch secureToggleStyle {
+        case .icon:
+            return Self.passwordToggleLabel(isVisible: isSecureTextVisible)
+        case .text(_, _, let showLabel, let hideLabel):
+            return isSecureTextVisible ? hideLabel : showLabel
+        }
     }
 
     /// Returns the accessibility label for the show/hide password toggle.

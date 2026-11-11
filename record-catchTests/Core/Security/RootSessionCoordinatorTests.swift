@@ -10,6 +10,7 @@ final class RootSessionCoordinatorTests: XCTestCase {
 
     private func makeSut(
         authenticator: (any Authenticating)? = nil,
+        passwordResetter: (any PasswordResetting)? = nil,
         biometricAuthenticator: BiometricAuthenticating = FakeBiometricAuthenticator(),
         sessionStore: LocalSessionStoring = InMemoryLocalSessionStore(hasSession: false),
         secretStore: ReentrySecretStoring = InMemoryReentrySecretStore(exists: false),
@@ -21,9 +22,11 @@ final class RootSessionCoordinatorTests: XCTestCase {
         isUITesting: Bool = false
     ) -> RootSessionCoordinator {
         let resolvedAuthenticator: any Authenticating = authenticator ?? FakeAuthenticator()
+        let resolvedPasswordResetter: any PasswordResetting = passwordResetter ?? FakePasswordResetter()
         let resolvedConnectivityMonitor: any record_catch.ConnectivityMonitoring = connectivityMonitor ?? record_catch.StubConnectivityMonitor(isOnline: true)
         return RootSessionCoordinator(
             authenticator: resolvedAuthenticator,
+            passwordResetter: resolvedPasswordResetter,
             biometricAuthenticator: biometricAuthenticator,
             stores: SessionStores(
                 sessionStore: sessionStore,

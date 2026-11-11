@@ -22,8 +22,10 @@ area and `ViewFooter`. Content, top to bottom:
    Inline error below when empty after submit.
 5. **Sign in** — green `PrimaryButton` (`SignIn.signInButton`).
 6. **"Having trouble signing in?"** secondary heading (`SignIn.troubleHeading`).
-7. **"Forgotten your password?"** — an inert link-styled button (`SignIn.forgottenPasswordLink`).
-   Navigates nowhere in this phase.
+7. **"Forgotten your password?"** — opens the self-service password-reset journey
+   (`SignIn.forgottenPasswordLink`). See
+   [docs/design-specs/forgotten-password.md](forgotten-password.md) and ADR-0027 (supersedes the
+   earlier "inert link" note from ADR-0022 §8).
 8. **"Create an account"** — a GDS-style disclosure (`SignIn.createAccountLink`, reusing the shared
    `ExpandableHelpSection` component — see deviation #1 below). Tapping it expands/collapses
    guidance for the two routes into the app ("Vessel owner:" / "Skipper or agent:"); it remains

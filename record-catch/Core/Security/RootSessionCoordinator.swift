@@ -46,6 +46,8 @@ final class RootSessionCoordinator {
     /// from the *same* signed-in session/MSAL cache, rather than constructing a second
     /// authenticator. Read-only — only `RootSessionCoordinator` itself drives sign-in/sign-out.
     var sharedAuthenticator: any Authenticating { authenticator }
+    /// Self-service password reset (ADR-0027), shared with `SignInFlowView` via `makeSignInView()`.
+    private let passwordResetter: any PasswordResetting
     private let biometricAuthenticator: BiometricAuthenticating
     private let sessionStore: LocalSessionStoring
     private let secretStore: ReentrySecretStoring
@@ -66,6 +68,7 @@ final class RootSessionCoordinator {
 
     init(
         authenticator: any Authenticating,
+        passwordResetter: any PasswordResetting,
         biometricAuthenticator: BiometricAuthenticating,
         stores: SessionStores,
         connectivityMonitor: ConnectivityMonitoring,
@@ -74,6 +77,7 @@ final class RootSessionCoordinator {
         isUITesting: Bool = LaunchArguments.current.isUITesting
     ) {
         self.authenticator = authenticator
+        self.passwordResetter = passwordResetter
         self.biometricAuthenticator = biometricAuthenticator
         self.sessionStore = stores.sessionStore
         self.secretStore = stores.secretStore
@@ -182,9 +186,11 @@ final class RootSessionCoordinator {
         phase = .home
     }
 
-    /// Builds a `SignInViewModel`-backed `SignInView` sharing this coordinator's authenticator.
-    func makeSignInView() -> SignInView {
-        SignInView(authenticator: authenticator, onSignIn: { [weak self] account in
+    /// Builds a `SignInFlowView` sharing this coordinator's authenticator and password resetter
+    /// (ADR-0027 §8) — the Sign In screen plus the self-service password-reset journey pushed on
+    /// top of it.
+    func makeSignInView() -> SignInFlowView {
+        SignInFlowView(authenticator: authenticator, passwordResetter: passwordResetter, onSignIn: { [weak self] account in
             self?.handleSignIn(account)
         })
     }
@@ -248,10 +254,16 @@ extension RootSessionCoordinator {
         let authenticator: any Authenticating = launchArguments.isUITesting
             ? FakeAuthenticator.makeUITestStub()
             : MSALNativeAuthenticator.make(connectivityMonitor: resolvedConnectivityMonitor)
+        // Any `-uiTest*` launch forces the password-resetter stub too (ADR-0027, mirrors
+        // ADR-0022 §10), so no XCUITest run ever depends on network access to a real Entra tenant.
+        let passwordResetter: any PasswordResetting = launchArguments.isUITesting
+            ? UITestStubPasswordResetter()
+            : MSALNativePasswordResetter.make(connectivityMonitor: resolvedConnectivityMonitor)
 
         if launchArguments.contains(.appLockLocked) {
             return RootSessionCoordinator(
                 authenticator: authenticator,
+                passwordResetter: passwordResetter,
                 biometricAuthenticator: FakeBiometricAuthenticator(availability: .available(.faceID)),
                 stores: SessionStores(
                     sessionStore: InMemoryLocalSessionStore(hasSession: true),
@@ -268,6 +280,7 @@ extension RootSessionCoordinator {
         if launchArguments.contains(.appLockFallback) {
             return RootSessionCoordinator(
                 authenticator: authenticator,
+                passwordResetter: passwordResetter,
                 biometricAuthenticator: FakeBiometricAuthenticator(availability: .unavailable(.noBiometryEnrolled)),
                 stores: SessionStores(
                     sessionStore: InMemoryLocalSessionStore(hasSession: true),
@@ -297,6 +310,7 @@ extension RootSessionCoordinator {
         // `.signIn` on a fresh simulator run, exactly as a real first launch would.
         return RootSessionCoordinator(
             authenticator: authenticator,
+            passwordResetter: passwordResetter,
             biometricAuthenticator: LABiometricAuthenticator(),
             stores: SessionStores(
                 sessionStore: KeychainLocalSessionStore(),

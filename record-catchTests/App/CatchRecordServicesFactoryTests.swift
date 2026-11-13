@@ -40,4 +40,40 @@ final class CatchRecordServicesFactoryTests: XCTestCase {
         XCTAssertTrue(services.vesselFavourites is FailingVesselFavouritesService)
         XCTAssertTrue(services.platform is FailingCatchRecordPlatformService)
     }
+
+    func test_make_whenUITesting_returnsStubServices_regardlessOfConfiguration() async {
+        // `isUITesting: true` short-circuits before `configuration` is even consulted — proven by
+        // passing a `configuration` closure that would otherwise succeed, and still getting the
+        // `Stub*` doubles (never live network access during XCUITest — ADR-0025).
+        let services = CatchRecordServicesFactory.make(
+            authenticator: { FakeAuthenticator() },
+            isUITesting: true,
+            configuration: { try APIConfiguration(bundle: Self.configuredBundle(), key: "CATCH_RECORD_API_BASE_URL") }
+        )
+
+        XCTAssertTrue(services.catchRecords is StubCatchRecordService)
+        XCTAssertTrue(services.vesselFavourites is StubVesselFavouritesService)
+        XCTAssertTrue(services.platform is StubCatchRecordPlatformService)
+    }
+
+    func test_make_whenBaseURLConfigured_returnsRealServices() async {
+        let services = CatchRecordServicesFactory.make(
+            authenticator: { FakeAuthenticator() },
+            isUITesting: false,
+            configuration: { try APIConfiguration(bundle: Self.configuredBundle(), key: "CATCH_RECORD_API_BASE_URL") }
+        )
+
+        XCTAssertTrue(services.catchRecords is CatchRecordService)
+        XCTAssertTrue(services.vesselFavourites is VesselFavouritesService)
+        XCTAssertTrue(services.platform is CatchRecordPlatformService)
+    }
+
+    private struct FakeInfoDictionary: InfoDictionaryProviding {
+        let values: [String: Any]
+        func object(forInfoDictionaryKey key: String) -> Any? { values[key] }
+    }
+
+    private static func configuredBundle() -> InfoDictionaryProviding {
+        FakeInfoDictionary(values: ["MMOCRAppConfig": ["CATCH_RECORD_API_BASE_URL": "https://example.invalid"]])
+    }
 }

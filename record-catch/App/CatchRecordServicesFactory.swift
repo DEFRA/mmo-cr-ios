@@ -27,10 +27,17 @@ enum CatchRecordServicesFactory {
 
     /// Builds the connector's three services.
     ///
-    /// - Parameter authenticator: Resolves the app's single shared `Authenticating` instance (see
-    ///   `RootSessionCoordinator.sharedAuthenticator`) — bearer tokens are resolved from the *same*
-    ///   signed-in MSAL session every other authenticated request in the app uses, never a second,
-    ///   independent sign-in state.
+    /// - Parameters:
+    ///   - authenticator: Resolves the app's single shared `Authenticating` instance (see
+    ///     `RootSessionCoordinator.sharedAuthenticator`) — bearer tokens are resolved from the
+    ///     *same* signed-in MSAL session every other authenticated request in the app uses, never
+    ///     a second, independent sign-in state.
+    ///   - isUITesting: Defaults to `LaunchArguments.current.isUITesting`; injectable so tests can
+    ///     exercise the `Stub*` branch deterministically without relaunching the process with a
+    ///     `-uiTest*` argument (mirrors `ReferenceDataSyncCoordinator`'s own `isUITesting` seam).
+    ///   - configuration: Defaults to resolving `CATCH_RECORD_API_BASE_URL` from `Bundle.main`;
+    ///     injectable so tests can exercise the real-services branch without an actual configured
+    ///     bundle.
     /// - Returns: Real, network-backed services when `CATCH_RECORD_API_BASE_URL` is configured and
     ///   this is not a `-uiTest*` launch; `Stub*` services under `-uiTest*` (so XCUITest never
     ///   depends on live network access — mirrors `ReferenceDataSyncCoordinator.make`); `Failing*`
@@ -38,8 +45,12 @@ enum CatchRecordServicesFactory {
     ///   degradation rather than a crash — whenever the base URL is not yet configured for this
     ///   stage (see ADR-0025 "Placeholder base URL").
     @MainActor
-    static func make(authenticator: @escaping @MainActor () -> any Authenticating) -> CatchRecordServices {
-        guard !LaunchArguments.current.isUITesting else {
+    static func make(
+        authenticator: @escaping @MainActor () -> any Authenticating,
+        isUITesting: Bool = LaunchArguments.current.isUITesting,
+        configuration: (() throws -> APIConfiguration) = { try APIConfiguration(key: CatchRecordServicesFactory.baseURLConfigKey) }
+    ) -> CatchRecordServices {
+        guard !isUITesting else {
             return CatchRecordServices(
                 catchRecords: StubCatchRecordService(),
                 vesselFavourites: StubVesselFavouritesService(),
@@ -47,7 +58,7 @@ enum CatchRecordServicesFactory {
             )
         }
 
-        guard let configuration = try? APIConfiguration(key: baseURLConfigKey) else {
+        guard let resolvedConfiguration = try? configuration() else {
             return CatchRecordServices(
                 catchRecords: FailingCatchRecordService(),
                 vesselFavourites: FailingVesselFavouritesService(),
@@ -58,9 +69,9 @@ enum CatchRecordServicesFactory {
         let httpClient = URLSessionHTTPClient()
         let tokenProvider = MSALAccessTokenProvider(authenticator: authenticator)
         return CatchRecordServices(
-            catchRecords: CatchRecordService(httpClient: httpClient, configuration: configuration, tokenProvider: tokenProvider),
-            vesselFavourites: VesselFavouritesService(httpClient: httpClient, configuration: configuration, tokenProvider: tokenProvider),
-            platform: CatchRecordPlatformService(httpClient: httpClient, configuration: configuration, tokenProvider: tokenProvider)
+            catchRecords: CatchRecordService(httpClient: httpClient, configuration: resolvedConfiguration, tokenProvider: tokenProvider),
+            vesselFavourites: VesselFavouritesService(httpClient: httpClient, configuration: resolvedConfiguration, tokenProvider: tokenProvider),
+            platform: CatchRecordPlatformService(httpClient: httpClient, configuration: resolvedConfiguration, tokenProvider: tokenProvider)
         )
     }
 }

@@ -84,6 +84,28 @@ final class VesselFavouritesServiceTests: XCTestCase {
         XCTAssertTrue(httpClient.receivedRequests.isEmpty)
     }
 
+    func test_addFavouriteSpecies_sendsPOSTWithPayload() async throws {
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: Data(#"{"vesselId":"v1","favouriteSpeciesIds":["s1"]}"#.utf8))
+        let sut = try makeSUT(httpClient: httpClient)
+
+        _ = try await sut.addFavouriteSpecies(vesselId: "v1", speciesId: "s1", idempotencyKey: "idem-1")
+
+        XCTAssertEqual(httpClient.receivedRequests.first?.httpMethod, "POST")
+        let body = try XCTUnwrap(httpClient.receivedRequests.first?.httpBody)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+        XCTAssertEqual(json["speciesId"] as? String, "s1")
+        XCTAssertEqual(httpClient.receivedRequests.first?.value(forHTTPHeaderField: "Idempotency-Key"), "idem-1")
+    }
+
+    func test_removeFavouriteSpecies_sendsDELETE_succeedsOn204() async throws {
+        let httpClient = StubHTTPClient.statusOnly(204)
+        let sut = try makeSUT(httpClient: httpClient)
+
+        try await sut.removeFavouriteSpecies(vesselId: "v1", speciesId: "s1")
+
+        XCTAssertEqual(httpClient.receivedRequests.first?.httpMethod, "DELETE")
+    }
+
     func test_listFavouritePorts_decodesResponse() async throws {
         let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: Data(#"{"vesselId":"v1","favouritePortIds":["p1"]}"#.utf8))
         let sut = try makeSUT(httpClient: httpClient)
@@ -91,6 +113,18 @@ final class VesselFavouritesServiceTests: XCTestCase {
         let response = try await sut.listFavouritePorts(vesselId: "v1")
 
         XCTAssertEqual(response.favouritePortIds, ["p1"])
+    }
+
+    func test_addFavouritePort_sendsPOSTWithPayload() async throws {
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: Data(#"{"vesselId":"v1","favouritePortIds":["p1"]}"#.utf8))
+        let sut = try makeSUT(httpClient: httpClient)
+
+        _ = try await sut.addFavouritePort(vesselId: "v1", portId: "p1", idempotencyKey: nil)
+
+        XCTAssertEqual(httpClient.receivedRequests.first?.httpMethod, "POST")
+        let body = try XCTUnwrap(httpClient.receivedRequests.first?.httpBody)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+        XCTAssertEqual(json["portId"] as? String, "p1")
     }
 
     func test_removeFavouritePort_mapsConflictStatus() async throws {

@@ -60,7 +60,7 @@ nonisolated struct VesselFavouritesService: VesselFavouritesServicing {
             baseURL: configuration.baseURL,
             body: FavouriteGearPayload(gearId: gearId),
             bearerToken: token,
-            idempotencyKey: idempotencyKey,
+            metadata: CatchRecordRequestMetadata(idempotencyKey: idempotencyKey),
             encoder: encoder
         )
         return try await transport.send(request, decoder: decoder) { try self.decoder.decode(FavouriteGearsResponseDTO.self, from: $0) }
@@ -86,7 +86,7 @@ nonisolated struct VesselFavouritesService: VesselFavouritesServicing {
             baseURL: configuration.baseURL,
             body: FavouriteSpeciesPayload(speciesId: speciesId),
             bearerToken: token,
-            idempotencyKey: idempotencyKey,
+            metadata: CatchRecordRequestMetadata(idempotencyKey: idempotencyKey),
             encoder: encoder
         )
         return try await transport.send(request, decoder: decoder) { try self.decoder.decode(FavouriteSpeciesResponseDTO.self, from: $0) }
@@ -112,7 +112,7 @@ nonisolated struct VesselFavouritesService: VesselFavouritesServicing {
             baseURL: configuration.baseURL,
             body: FavouritePortPayload(portId: portId),
             bearerToken: token,
-            idempotencyKey: idempotencyKey,
+            metadata: CatchRecordRequestMetadata(idempotencyKey: idempotencyKey),
             encoder: encoder
         )
         return try await transport.send(request, decoder: decoder) { try self.decoder.decode(FavouritePortsResponseDTO.self, from: $0) }
@@ -137,12 +137,12 @@ nonisolated struct StubVesselFavouritesService: VesselFavouritesServicing {
         return gearsResponse ?? FavouriteGearsResponseDTO(vesselId: vesselId, favouriteGearIds: [])
     }
 
-    func addFavouriteGear(vesselId: String, gearId: String, idempotencyKey: String? = nil) async throws -> FavouriteGearsResponseDTO {
+    func addFavouriteGear(vesselId: String, gearId: String, idempotencyKey _: String? = nil) async throws -> FavouriteGearsResponseDTO {
         if let error { throw error }
         return gearsResponse ?? FavouriteGearsResponseDTO(vesselId: vesselId, favouriteGearIds: [gearId])
     }
 
-    func removeFavouriteGear(vesselId: String, gearId: String) async throws {
+    func removeFavouriteGear(vesselId _: String, gearId _: String) async throws {
         if let error { throw error }
     }
 
@@ -151,12 +151,12 @@ nonisolated struct StubVesselFavouritesService: VesselFavouritesServicing {
         return speciesResponse ?? FavouriteSpeciesResponseDTO(vesselId: vesselId, favouriteSpeciesIds: [])
     }
 
-    func addFavouriteSpecies(vesselId: String, speciesId: String, idempotencyKey: String? = nil) async throws -> FavouriteSpeciesResponseDTO {
+    func addFavouriteSpecies(vesselId: String, speciesId: String, idempotencyKey _: String? = nil) async throws -> FavouriteSpeciesResponseDTO {
         if let error { throw error }
         return speciesResponse ?? FavouriteSpeciesResponseDTO(vesselId: vesselId, favouriteSpeciesIds: [speciesId])
     }
 
-    func removeFavouriteSpecies(vesselId: String, speciesId: String) async throws {
+    func removeFavouriteSpecies(vesselId _: String, speciesId _: String) async throws {
         if let error { throw error }
     }
 
@@ -165,12 +165,12 @@ nonisolated struct StubVesselFavouritesService: VesselFavouritesServicing {
         return portsResponse ?? FavouritePortsResponseDTO(vesselId: vesselId, favouritePortIds: [])
     }
 
-    func addFavouritePort(vesselId: String, portId: String, idempotencyKey: String? = nil) async throws -> FavouritePortsResponseDTO {
+    func addFavouritePort(vesselId: String, portId: String, idempotencyKey _: String? = nil) async throws -> FavouritePortsResponseDTO {
         if let error { throw error }
         return portsResponse ?? FavouritePortsResponseDTO(vesselId: vesselId, favouritePortIds: [portId])
     }
 
-    func removeFavouritePort(vesselId: String, portId: String) async throws {
+    func removeFavouritePort(vesselId _: String, portId _: String) async throws {
         if let error { throw error }
     }
 }
@@ -178,13 +178,13 @@ nonisolated struct StubVesselFavouritesService: VesselFavouritesServicing {
 /// Used whenever the Catch Recording Service's base URL is not yet configured for this stage (see
 /// `CatchRecordServicesFactory`/ADR-0025).
 nonisolated struct FailingVesselFavouritesService: VesselFavouritesServicing {
-    func listFavouriteGears(vesselId: String) async throws -> FavouriteGearsResponseDTO { throw APIError.invalidConfiguration }
-    func addFavouriteGear(vesselId: String, gearId: String, idempotencyKey: String? = nil) async throws -> FavouriteGearsResponseDTO { throw APIError.invalidConfiguration }
-    func removeFavouriteGear(vesselId: String, gearId: String) async throws { throw APIError.invalidConfiguration }
-    func listFavouriteSpecies(vesselId: String) async throws -> FavouriteSpeciesResponseDTO { throw APIError.invalidConfiguration }
-    func addFavouriteSpecies(vesselId: String, speciesId: String, idempotencyKey: String? = nil) async throws -> FavouriteSpeciesResponseDTO { throw APIError.invalidConfiguration }
-    func removeFavouriteSpecies(vesselId: String, speciesId: String) async throws { throw APIError.invalidConfiguration }
-    func listFavouritePorts(vesselId: String) async throws -> FavouritePortsResponseDTO { throw APIError.invalidConfiguration }
-    func addFavouritePort(vesselId: String, portId: String, idempotencyKey: String? = nil) async throws -> FavouritePortsResponseDTO { throw APIError.invalidConfiguration }
-    func removeFavouritePort(vesselId: String, portId: String) async throws { throw APIError.invalidConfiguration }
+    func listFavouriteGears(vesselId _: String) async throws -> FavouriteGearsResponseDTO { throw APIError.invalidConfiguration }
+    func addFavouriteGear(vesselId _: String, gearId _: String, idempotencyKey _: String? = nil) async throws -> FavouriteGearsResponseDTO { throw APIError.invalidConfiguration }
+    func removeFavouriteGear(vesselId _: String, gearId _: String) async throws { throw APIError.invalidConfiguration }
+    func listFavouriteSpecies(vesselId _: String) async throws -> FavouriteSpeciesResponseDTO { throw APIError.invalidConfiguration }
+    func addFavouriteSpecies(vesselId _: String, speciesId _: String, idempotencyKey _: String? = nil) async throws -> FavouriteSpeciesResponseDTO { throw APIError.invalidConfiguration }
+    func removeFavouriteSpecies(vesselId _: String, speciesId _: String) async throws { throw APIError.invalidConfiguration }
+    func listFavouritePorts(vesselId _: String) async throws -> FavouritePortsResponseDTO { throw APIError.invalidConfiguration }
+    func addFavouritePort(vesselId _: String, portId _: String, idempotencyKey _: String? = nil) async throws -> FavouritePortsResponseDTO { throw APIError.invalidConfiguration }
+    func removeFavouritePort(vesselId _: String, portId _: String) async throws { throw APIError.invalidConfiguration }
 }

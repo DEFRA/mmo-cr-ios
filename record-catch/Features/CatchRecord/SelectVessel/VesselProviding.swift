@@ -18,7 +18,7 @@ protocol VesselProviding {
 }
 
 extension VesselProviding {
-    func rssNumber(forVesselNamed name: String) -> String? { nil }
+    func rssNumber(forVesselNamed _: String) -> String? { nil }
 }
 
 /// Static, UI-only vessel list. Stands in until a real vessel API/service exists.

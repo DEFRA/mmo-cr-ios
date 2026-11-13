@@ -111,9 +111,11 @@ final class SwiftDataCatchRecordDraftStore: CatchRecordDraftStoring {
             let entity = CatchRecordEntity(
                 localID: localID,
                 lastEditedAt: Date(),
-                vessel: draft.vessel,
-                catchRecordReference: draft.catchRecordReference,
-                tripEndDate: draft.returnDate,
+                summary: CatchRecordEntitySummary(
+                    vessel: draft.vessel,
+                    catchRecordReference: draft.catchRecordReference,
+                    tripEndDate: draft.returnDate
+                ),
                 payload: payloadData,
                 checkpointRawValue: draft.checkpoint.rawValue
             )

@@ -62,4 +62,43 @@ final class CatchRecordPlatformServiceTests: XCTestCase {
         XCTAssertEqual(items.count, 1)
         XCTAssertNil(httpClient.receivedRequests.first?.value(forHTTPHeaderField: "Authorization"))
     }
+
+    // MARK: StubCatchRecordPlatformService — fixture-backed double for future call sites/tests
+
+    func test_stub_checkHealth_succeeds_whenNoErrorConfigured() async throws {
+        let sut = StubCatchRecordPlatformService()
+        try await sut.checkHealth()
+    }
+
+    func test_stub_checkHealth_throwsConfiguredError() async {
+        let sut = StubCatchRecordPlatformService(error: .invalidConfiguration)
+        await XCTAssertThrowsErrorAsync(try await sut.checkHealth()) {
+            XCTAssertEqual($0 as? APIError, .invalidConfiguration)
+        }
+    }
+
+    func test_stub_listExampleData_returnsConfiguredData() async throws {
+        let entity = try CatchRecordTransport.makeDecoder().decode(ExampleEntity.self, from: Data(#"{"name":"demo"}"#.utf8))
+        let sut = StubCatchRecordPlatformService(exampleData: [entity])
+
+        let result = try await sut.listExampleData()
+
+        XCTAssertEqual(result, [entity])
+    }
+
+    func test_stub_listExampleData_throwsConfiguredError() async {
+        let sut = StubCatchRecordPlatformService(error: .offline)
+        await XCTAssertThrowsErrorAsync(try await sut.listExampleData()) {
+            XCTAssertEqual($0 as? APIError, .offline)
+        }
+    }
+
+    // MARK: FailingCatchRecordPlatformService — every method throws .invalidConfiguration
+
+    func test_failing_everyMethod_throwsInvalidConfiguration() async {
+        let sut = FailingCatchRecordPlatformService()
+
+        await XCTAssertThrowsErrorAsync(try await sut.checkHealth()) { XCTAssertEqual($0 as? APIError, .invalidConfiguration) }
+        await XCTAssertThrowsErrorAsync(try await sut.listExampleData()) { XCTAssertEqual($0 as? APIError, .invalidConfiguration) }
+    }
 }

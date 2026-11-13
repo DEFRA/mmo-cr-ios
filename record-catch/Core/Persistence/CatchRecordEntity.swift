@@ -47,19 +47,32 @@ final class CatchRecordEntity {
         localID: UUID,
         lastEditedAt: Date,
         isSubmitted: Bool = false,
-        vessel: String?,
-        catchRecordReference: String? = nil,
-        tripEndDate: Date?,
+        summary: CatchRecordEntitySummary = CatchRecordEntitySummary(),
         payload: Data,
         checkpointRawValue: Int? = nil
     ) {
         self.localID = localID
         self.lastEditedAt = lastEditedAt
         self.isSubmitted = isSubmitted
+        self.vessel = summary.vessel
+        self.catchRecordReference = summary.catchRecordReference
+        self.tripEndDate = summary.tripEndDate
+        self.payload = payload
+        self.checkpointRawValue = checkpointRawValue
+    }
+}
+
+/// Groups `CatchRecordEntity`'s three denormalised, cheap-to-render Home-row fields (see the
+/// entity's own doc comment) into one injectable value — keeps the initializer's parameter count
+/// under Sonar's authorised limit (`swift:S107`) while leaving each field individually settable.
+struct CatchRecordEntitySummary {
+    var vessel: String?
+    var catchRecordReference: String?
+    var tripEndDate: Date?
+
+    init(vessel: String? = nil, catchRecordReference: String? = nil, tripEndDate: Date? = nil) {
         self.vessel = vessel
         self.catchRecordReference = catchRecordReference
         self.tripEndDate = tripEndDate
-        self.payload = payload
-        self.checkpointRawValue = checkpointRawValue
     }
 }

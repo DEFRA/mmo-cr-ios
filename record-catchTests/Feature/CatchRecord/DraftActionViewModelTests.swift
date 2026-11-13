@@ -99,7 +99,7 @@ final class DraftActionViewModelTests: XCTestCase {
 
         let router = CatchRecordRouter()
         let sharedDraft = CatchRecordDraft()
-        let sut = DraftActionViewModel(row: rowWithLocalID, router: router, draft: sharedDraft, draftStore: store, vesselProvider: NoRSSVesselProvider())
+        let sut = DraftActionViewModel(row: rowWithLocalID, router: router, draft: sharedDraft, draftStore: store, referenceGeneration: DraftReferenceGeneration(vesselProvider: NoRSSVesselProvider()))
 
         await sut.resumeDraft()
 
@@ -143,8 +143,8 @@ final class DraftActionViewModelTests: XCTestCase {
             router: router,
             draft: CatchRecordDraft(),
             draftStore: store,
-            favouritePorts: StubFavouritePortsProvider(initialFavourites: [PortOption(name: "Hastings")]),
-            vesselProvider: NoRSSVesselProvider()
+            resumeRouteProviders: DraftResumeRouteProviders(favouritePorts: StubFavouritePortsProvider(initialFavourites: [PortOption(name: "Hastings")])),
+            referenceGeneration: DraftReferenceGeneration(vesselProvider: NoRSSVesselProvider())
         )
 
         await sut.resumeDraft()
@@ -171,8 +171,8 @@ final class DraftActionViewModelTests: XCTestCase {
             router: router,
             draft: CatchRecordDraft(),
             draftStore: store,
-            favouritePorts: StubFavouritePortsProvider(initialFavourites: []),
-            vesselProvider: NoRSSVesselProvider()
+            resumeRouteProviders: DraftResumeRouteProviders(favouritePorts: StubFavouritePortsProvider(initialFavourites: [])),
+            referenceGeneration: DraftReferenceGeneration(vesselProvider: NoRSSVesselProvider())
         )
 
         await sut.resumeDraft()
@@ -199,8 +199,8 @@ final class DraftActionViewModelTests: XCTestCase {
             router: router,
             draft: CatchRecordDraft(),
             draftStore: store,
-            favouriteGears: StubFavouriteGearProvider(initialFavourites: [.seineNets]),
-            vesselProvider: NoRSSVesselProvider()
+            resumeRouteProviders: DraftResumeRouteProviders(favouriteGears: StubFavouriteGearProvider(initialFavourites: [.seineNets])),
+            referenceGeneration: DraftReferenceGeneration(vesselProvider: NoRSSVesselProvider())
         )
 
         await sut.resumeDraft()
@@ -222,7 +222,7 @@ final class DraftActionViewModelTests: XCTestCase {
         let store = InMemoryCatchRecordDraftStore(seed: [localID: seededDraft.payload])
 
         let router = CatchRecordRouter()
-        let sut = DraftActionViewModel(row: rowWithLocalID, router: router, draft: CatchRecordDraft(), draftStore: store, vesselProvider: NoRSSVesselProvider())
+        let sut = DraftActionViewModel(row: rowWithLocalID, router: router, draft: CatchRecordDraft(), draftStore: store, referenceGeneration: DraftReferenceGeneration(vesselProvider: NoRSSVesselProvider()))
 
         await sut.resumeDraft()
 
@@ -240,7 +240,7 @@ final class DraftActionViewModelTests: XCTestCase {
         let store = InMemoryCatchRecordDraftStore(seed: [localID: seededDraft.payload])
 
         let router = CatchRecordRouter()
-        let sut = DraftActionViewModel(row: rowWithLocalID, router: router, draft: CatchRecordDraft(), draftStore: store, vesselProvider: NoRSSVesselProvider())
+        let sut = DraftActionViewModel(row: rowWithLocalID, router: router, draft: CatchRecordDraft(), draftStore: store, referenceGeneration: DraftReferenceGeneration(vesselProvider: NoRSSVesselProvider()))
 
         await sut.resumeDraft()
 
@@ -258,7 +258,7 @@ final class DraftActionViewModelTests: XCTestCase {
         let store = InMemoryCatchRecordDraftStore(seed: [localID: seededDraft.payload])
 
         let router = CatchRecordRouter()
-        let sut = DraftActionViewModel(row: rowWithLocalID, router: router, draft: CatchRecordDraft(), draftStore: store, vesselProvider: NoRSSVesselProvider())
+        let sut = DraftActionViewModel(row: rowWithLocalID, router: router, draft: CatchRecordDraft(), draftStore: store, referenceGeneration: DraftReferenceGeneration(vesselProvider: NoRSSVesselProvider()))
 
         await sut.resumeDraft()
 

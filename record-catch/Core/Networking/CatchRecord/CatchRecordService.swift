@@ -75,7 +75,7 @@ nonisolated struct CatchRecordService: CatchRecordServicing {
             baseURL: configuration.baseURL,
             body: payload,
             bearerToken: token,
-            idempotencyKey: idempotencyKey,
+            metadata: CatchRecordRequestMetadata(idempotencyKey: idempotencyKey),
             encoder: encoder
         )
         return try await transport.send(request, decoder: decoder) { try self.decoder.decode(StandardSaveResponseDTO.self, from: $0) }
@@ -101,7 +101,7 @@ nonisolated struct CatchRecordService: CatchRecordServicing {
             baseURL: configuration.baseURL,
             body: payload,
             bearerToken: token,
-            ifMatch: String(expectedVersion),
+            metadata: CatchRecordRequestMetadata(ifMatch: String(expectedVersion)),
             encoder: encoder
         )
         return try await transport.send(request, decoder: decoder) { try self.decoder.decode(StandardSaveResponseDTO.self, from: $0) }
@@ -115,7 +115,7 @@ nonisolated struct CatchRecordService: CatchRecordServicing {
             baseURL: configuration.baseURL,
             body: section,
             bearerToken: token,
-            ifMatch: String(expectedVersion),
+            metadata: CatchRecordRequestMetadata(ifMatch: String(expectedVersion)),
             encoder: encoder
         )
         return try await transport.send(request, decoder: decoder) { try self.decoder.decode(StandardSaveResponseDTO.self, from: $0) }
@@ -194,59 +194,59 @@ nonisolated struct StubCatchRecordService: CatchRecordServicing {
     var submissionsListResponse: SubmissionsListResponseDTO?
     var error: APIError?
 
-    func listCatchRecords(limit: Int? = nil, status: PersistedCatchRecordStatus? = nil) async throws -> CatchRecordListResponseDTO {
+    func listCatchRecords(limit _: Int? = nil, status _: PersistedCatchRecordStatus? = nil) async throws -> CatchRecordListResponseDTO {
         if let error { throw error }
         if let listResponse { return listResponse }
         throw APIError.response(status: 503, details: nil)
     }
 
-    func createDraft(vesselId: String, catchRecordReference: String? = nil, idempotencyKey: String? = nil) async throws -> StandardSaveResponseDTO {
+    func createDraft(vesselId _: String, catchRecordReference _: String? = nil, idempotencyKey _: String? = nil) async throws -> StandardSaveResponseDTO {
         if let error { throw error }
         if let saveResponse { return saveResponse }
         throw APIError.response(status: 503, details: nil)
     }
 
-    func retrieveCatchRecord(catchRecordId: String) async throws -> RetrieveCatchRecordResponseDTO {
+    func retrieveCatchRecord(catchRecordId _: String) async throws -> RetrieveCatchRecordResponseDTO {
         if let error { throw error }
         if let retrieveResponse { return retrieveResponse }
         throw APIError.response(status: 404, details: nil)
     }
 
-    func replaceCatchRecord(catchRecordId: String, expectedVersion: Int, payload: CompleteReplacementPayload) async throws -> StandardSaveResponseDTO {
+    func replaceCatchRecord(catchRecordId _: String, expectedVersion _: Int, payload _: CompleteReplacementPayload) async throws -> StandardSaveResponseDTO {
         if let error { throw error }
         if let saveResponse { return saveResponse }
         throw APIError.response(status: 503, details: nil)
     }
 
-    func saveSection(catchRecordId: String, expectedVersion: Int, section: SectionPatchPayload) async throws -> StandardSaveResponseDTO {
+    func saveSection(catchRecordId _: String, expectedVersion _: Int, section _: SectionPatchPayload) async throws -> StandardSaveResponseDTO {
         if let error { throw error }
         if let saveResponse { return saveResponse }
         throw APIError.response(status: 503, details: nil)
     }
 
-    func abandonDraft(catchRecordId: String, expectedVersion: Int) async throws {
+    func abandonDraft(catchRecordId _: String, expectedVersion _: Int) async throws {
         if let error { throw error }
     }
 
-    func history(catchRecordId: String, limit: Int? = nil) async throws -> CatchRecordHistoryResponseDTO {
+    func history(catchRecordId _: String, limit _: Int? = nil) async throws -> CatchRecordHistoryResponseDTO {
         if let error { throw error }
         if let historyResponse { return historyResponse }
         throw APIError.response(status: 404, details: nil)
     }
 
-    func submit(catchRecordId: String, expectedVersion: Int, idempotencyKey: String? = nil) async throws -> SubmissionResponseDTO {
+    func submit(catchRecordId _: String, expectedVersion _: Int, idempotencyKey _: String? = nil) async throws -> SubmissionResponseDTO {
         if let error { throw error }
         if let submissionResponse { return submissionResponse }
         throw APIError.response(status: 503, details: nil)
     }
 
-    func listSubmissions(catchRecordId: String) async throws -> SubmissionsListResponseDTO {
+    func listSubmissions(catchRecordId _: String) async throws -> SubmissionsListResponseDTO {
         if let error { throw error }
         if let submissionsListResponse { return submissionsListResponse }
         throw APIError.response(status: 404, details: nil)
     }
 
-    func startEdit(catchRecordId: String, expectedVersion: Int, idempotencyKey: String? = nil) async throws -> StandardSaveResponseDTO {
+    func startEdit(catchRecordId _: String, expectedVersion _: Int, idempotencyKey _: String? = nil) async throws -> StandardSaveResponseDTO {
         if let error { throw error }
         if let saveResponse { return saveResponse }
         throw APIError.response(status: 503, details: nil)
@@ -257,43 +257,43 @@ nonisolated struct StubCatchRecordService: CatchRecordServicing {
 /// `CatchRecordServicesFactory`/ADR-0025) — every method throws `APIError.invalidConfiguration`
 /// rather than crashing or guessing a wrong address.
 nonisolated struct FailingCatchRecordService: CatchRecordServicing {
-    func listCatchRecords(limit: Int? = nil, status: PersistedCatchRecordStatus? = nil) async throws -> CatchRecordListResponseDTO {
+    func listCatchRecords(limit _: Int? = nil, status _: PersistedCatchRecordStatus? = nil) async throws -> CatchRecordListResponseDTO {
         throw APIError.invalidConfiguration
     }
 
-    func createDraft(vesselId: String, catchRecordReference: String? = nil, idempotencyKey: String? = nil) async throws -> StandardSaveResponseDTO {
+    func createDraft(vesselId _: String, catchRecordReference _: String? = nil, idempotencyKey _: String? = nil) async throws -> StandardSaveResponseDTO {
         throw APIError.invalidConfiguration
     }
 
-    func retrieveCatchRecord(catchRecordId: String) async throws -> RetrieveCatchRecordResponseDTO {
+    func retrieveCatchRecord(catchRecordId _: String) async throws -> RetrieveCatchRecordResponseDTO {
         throw APIError.invalidConfiguration
     }
 
-    func replaceCatchRecord(catchRecordId: String, expectedVersion: Int, payload: CompleteReplacementPayload) async throws -> StandardSaveResponseDTO {
+    func replaceCatchRecord(catchRecordId _: String, expectedVersion _: Int, payload _: CompleteReplacementPayload) async throws -> StandardSaveResponseDTO {
         throw APIError.invalidConfiguration
     }
 
-    func saveSection(catchRecordId: String, expectedVersion: Int, section: SectionPatchPayload) async throws -> StandardSaveResponseDTO {
+    func saveSection(catchRecordId _: String, expectedVersion _: Int, section _: SectionPatchPayload) async throws -> StandardSaveResponseDTO {
         throw APIError.invalidConfiguration
     }
 
-    func abandonDraft(catchRecordId: String, expectedVersion: Int) async throws {
+    func abandonDraft(catchRecordId _: String, expectedVersion _: Int) async throws {
         throw APIError.invalidConfiguration
     }
 
-    func history(catchRecordId: String, limit: Int? = nil) async throws -> CatchRecordHistoryResponseDTO {
+    func history(catchRecordId _: String, limit _: Int? = nil) async throws -> CatchRecordHistoryResponseDTO {
         throw APIError.invalidConfiguration
     }
 
-    func submit(catchRecordId: String, expectedVersion: Int, idempotencyKey: String? = nil) async throws -> SubmissionResponseDTO {
+    func submit(catchRecordId _: String, expectedVersion _: Int, idempotencyKey _: String? = nil) async throws -> SubmissionResponseDTO {
         throw APIError.invalidConfiguration
     }
 
-    func listSubmissions(catchRecordId: String) async throws -> SubmissionsListResponseDTO {
+    func listSubmissions(catchRecordId _: String) async throws -> SubmissionsListResponseDTO {
         throw APIError.invalidConfiguration
     }
 
-    func startEdit(catchRecordId: String, expectedVersion: Int, idempotencyKey: String? = nil) async throws -> StandardSaveResponseDTO {
+    func startEdit(catchRecordId _: String, expectedVersion _: Int, idempotencyKey _: String? = nil) async throws -> StandardSaveResponseDTO {
         throw APIError.invalidConfiguration
     }
 }

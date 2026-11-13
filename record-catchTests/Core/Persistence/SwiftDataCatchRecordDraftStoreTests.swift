@@ -159,8 +159,7 @@ final class SwiftDataCatchRecordDraftStoreTests: XCTestCase {
         let entity = CatchRecordEntity(
             localID: UUID(),
             lastEditedAt: Date(),
-            vessel: "ACHILLES",
-            tripEndDate: nil,
+            summary: CatchRecordEntitySummary(vessel: "ACHILLES", tripEndDate: nil),
             payload: try JSONEncoder().encode(payload)
         )
         context.insert(entity)

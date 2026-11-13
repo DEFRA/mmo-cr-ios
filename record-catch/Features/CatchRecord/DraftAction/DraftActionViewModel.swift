@@ -1,5 +1,39 @@
 import Foundation
 
+/// Groups `DraftActionViewModel`'s two "resume route" lookup providers — used only to resolve
+/// `CatchRecordRouting.portEntryRoute`/`gearEntryRoute` when resuming from `.tripDates`/`.ports`
+/// (see `resumeRoute()`) — into one injectable value. Keeps the initializer's parameter count
+/// under Sonar's authorised limit (`swift:S107`) while still allowing either provider to be
+/// overridden independently in tests/previews.
+struct DraftResumeRouteProviders {
+    var favouritePorts: FavouritePortsProviding
+    var favouriteGears: FavouriteGearProviding
+
+    init(
+        favouritePorts: FavouritePortsProviding = StubFavouritePortsProvider(),
+        favouriteGears: FavouriteGearProviding = StubFavouriteGearProvider()
+    ) {
+        self.favouritePorts = favouritePorts
+        self.favouriteGears = favouriteGears
+    }
+}
+
+/// Groups `DraftActionViewModel`'s vessel-RSS lookup and catch-record-reference generator
+/// (ADR-0026) into one injectable value — see `DraftResumeRouteProviders`'s doc comment for the
+/// same rationale.
+struct DraftReferenceGeneration {
+    var vesselProvider: VesselProviding
+    var referenceGenerator: CatchRecordReferenceGenerator
+
+    init(
+        vesselProvider: VesselProviding = StaticVesselProvider(),
+        referenceGenerator: CatchRecordReferenceGenerator = CatchRecordReferenceGenerator()
+    ) {
+        self.vesselProvider = vesselProvider
+        self.referenceGenerator = referenceGenerator
+    }
+}
+
 /// View model for the Draft action screen (what to do with an existing unsent record).
 ///
 /// "Delete" requires a destructive confirmation before the router returns to Home
@@ -41,20 +75,18 @@ final class DraftActionViewModel {
         router: CatchRecordRouter,
         draft: CatchRecordDraft = CatchRecordDraft(),
         draftStore: CatchRecordDraftStoring = InMemoryCatchRecordDraftStore(),
-        favouritePorts: FavouritePortsProviding = StubFavouritePortsProvider(),
-        favouriteGears: FavouriteGearProviding = StubFavouriteGearProvider(),
-        vesselProvider: VesselProviding = StaticVesselProvider(),
-        referenceGenerator: CatchRecordReferenceGenerator = CatchRecordReferenceGenerator(),
+        resumeRouteProviders: DraftResumeRouteProviders = DraftResumeRouteProviders(),
+        referenceGeneration: DraftReferenceGeneration = DraftReferenceGeneration(),
         now: @escaping () -> Date = Date.init
     ) {
         self.row = row
         self.router = router
         self.draft = draft
         self.draftStore = draftStore
-        self.favouritePorts = favouritePorts
-        self.favouriteGears = favouriteGears
-        self.vesselProvider = vesselProvider
-        self.referenceGenerator = referenceGenerator
+        self.favouritePorts = resumeRouteProviders.favouritePorts
+        self.favouriteGears = resumeRouteProviders.favouriteGears
+        self.vesselProvider = referenceGeneration.vesselProvider
+        self.referenceGenerator = referenceGeneration.referenceGenerator
         self.now = now
     }
 

@@ -19,8 +19,10 @@ struct DraftActionView: View {
             router: router,
             draft: draft,
             draftStore: draftStore,
-            favouritePorts: favouritePorts,
-            favouriteGears: favouriteGears
+            resumeRouteProviders: DraftResumeRouteProviders(
+                favouritePorts: favouritePorts,
+                favouriteGears: favouriteGears
+            )
         ))
     }
 

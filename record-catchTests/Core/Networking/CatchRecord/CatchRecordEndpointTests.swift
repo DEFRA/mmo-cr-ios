@@ -51,7 +51,7 @@ final class CatchRecordEndpointTests: XCTestCase {
             baseURL: baseURL,
             body: CreateDraftCatchRecordPayload(vesselId: "v1"),
             bearerToken: "token",
-            idempotencyKey: "key-123",
+            metadata: CatchRecordRequestMetadata(idempotencyKey: "key-123"),
             encoder: JSONEncoder()
         )
         XCTAssertEqual(request.httpMethod, "POST")
@@ -79,7 +79,7 @@ final class CatchRecordEndpointTests: XCTestCase {
             baseURL: baseURL,
             body: payload,
             bearerToken: nil,
-            ifMatch: "3",
+            metadata: CatchRecordRequestMetadata(ifMatch: "3"),
             encoder: JSONEncoder()
         )
         XCTAssertEqual(request.httpMethod, "PUT")
@@ -92,7 +92,7 @@ final class CatchRecordEndpointTests: XCTestCase {
             baseURL: baseURL,
             body: SectionPatchPayload.pairFishing(PairFishingDTO(enabled: false)),
             bearerToken: nil,
-            ifMatch: "1",
+            metadata: CatchRecordRequestMetadata(ifMatch: "1"),
             encoder: JSONEncoder()
         )
         XCTAssertEqual(request.httpMethod, "PATCH")

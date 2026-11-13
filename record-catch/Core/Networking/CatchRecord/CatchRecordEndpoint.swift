@@ -140,13 +140,31 @@ nonisolated func makeCatchRecordRequest(
     return request
 }
 
+/// Groups the body-bearing `makeCatchRecordRequest` overload's three request-metadata values
+/// (`If-Match`, `Idempotency-Key`, and the `x-cdp-request-id` correlation id) into one injectable
+/// value — keeps that overload's parameter count under Sonar's authorised limit (`swift:S107`)
+/// while leaving each header independently overridable: callers set `ifMatch`/`idempotencyKey`
+/// only where their route requires it, and tests inject a fixed `requestId`.
+nonisolated struct CatchRecordRequestMetadata: Sendable {
+    var ifMatch: String?
+    var idempotencyKey: String?
+    var requestId: String
+
+    init(ifMatch: String? = nil, idempotencyKey: String? = nil, requestId: String = UUID().uuidString) {
+        self.ifMatch = ifMatch
+        self.idempotencyKey = idempotencyKey
+        self.requestId = requestId
+    }
+}
+
 /// Builds the `URLRequest` for a route carrying a JSON-encoded `body` (`POST`/`PUT`/`PATCH`
 /// routes).
 ///
 /// - Parameters:
-///   - idempotencyKey: Attached as `Idempotency-Key` when non-`nil` — always caller-supplied
-///     (never generated here), so a future offline-queue retry can reuse the exact same key (see
-///     ADR-0025 "Caller-supplied values").
+///   - metadata: `If-Match`/`Idempotency-Key`/correlation-id, grouped into
+///     `CatchRecordRequestMetadata` (see its own doc comment). `idempotencyKey` is always
+///     caller-supplied (never generated here), so a future offline-queue retry can reuse the exact
+///     same key (see ADR-0025 "Caller-supplied values").
 ///   - encoder: Injected so `CatchRecordService` controls the encoding strategy (e.g. ISO8601
 ///     dates) in one place.
 /// - Throws: Whatever `encoder.encode(body)` throws (an `EncodingError`) if `body` cannot be
@@ -156,14 +174,19 @@ nonisolated func makeCatchRecordRequest<Body: Encodable>(
     baseURL: URL,
     body: Body,
     bearerToken: String?,
-    ifMatch: String? = nil,
-    idempotencyKey: String? = nil,
-    requestId: String = UUID().uuidString,
+    metadata: CatchRecordRequestMetadata = CatchRecordRequestMetadata(),
     encoder: JSONEncoder
 ) throws -> URLRequest {
     var request = URLRequest(url: makeCatchRecordURL(baseURL: baseURL, route: route))
     request.httpMethod = route.httpMethod
-    applyCommonHeaders(to: &request, route: route, bearerToken: bearerToken, ifMatch: ifMatch, idempotencyKey: idempotencyKey, requestId: requestId)
+    applyCommonHeaders(
+        to: &request,
+        route: route,
+        bearerToken: bearerToken,
+        ifMatch: metadata.ifMatch,
+        idempotencyKey: metadata.idempotencyKey,
+        requestId: metadata.requestId
+    )
     request.httpBody = try encoder.encode(body)
     return request
 }

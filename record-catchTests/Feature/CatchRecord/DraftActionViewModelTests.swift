@@ -1,6 +1,14 @@
 import XCTest
 @testable import record_catch
 
+/// Used by the resume tests below that assert against `SelectVesselViewModel.placeholderReferenceNumber`
+/// — has no RSS number for any vessel, so `DraftActionViewModel.resumeDraft()`'s
+/// `generateReference(forVesselNamed:)` falls back to the placeholder rather than generating a
+/// real, wall-clock-dependent reference (ADR-0026), keeping these assertions deterministic.
+private struct NoRSSVesselProvider: VesselProviding {
+    let vessels: [String] = []
+}
+
 @MainActor
 final class DraftActionViewModelTests: XCTestCase {
 
@@ -91,7 +99,7 @@ final class DraftActionViewModelTests: XCTestCase {
 
         let router = CatchRecordRouter()
         let sharedDraft = CatchRecordDraft()
-        let sut = DraftActionViewModel(row: rowWithLocalID, router: router, draft: sharedDraft, draftStore: store)
+        let sut = DraftActionViewModel(row: rowWithLocalID, router: router, draft: sharedDraft, draftStore: store, referenceGeneration: DraftReferenceGeneration(vesselProvider: NoRSSVesselProvider()))
 
         await sut.resumeDraft()
 
@@ -135,7 +143,8 @@ final class DraftActionViewModelTests: XCTestCase {
             router: router,
             draft: CatchRecordDraft(),
             draftStore: store,
-            favouritePorts: StubFavouritePortsProvider(initialFavourites: [PortOption(name: "Hastings")])
+            resumeRouteProviders: DraftResumeRouteProviders(favouritePorts: StubFavouritePortsProvider(initialFavourites: [PortOption(name: "Hastings")])),
+            referenceGeneration: DraftReferenceGeneration(vesselProvider: NoRSSVesselProvider())
         )
 
         await sut.resumeDraft()
@@ -162,7 +171,8 @@ final class DraftActionViewModelTests: XCTestCase {
             router: router,
             draft: CatchRecordDraft(),
             draftStore: store,
-            favouritePorts: StubFavouritePortsProvider(initialFavourites: [])
+            resumeRouteProviders: DraftResumeRouteProviders(favouritePorts: StubFavouritePortsProvider(initialFavourites: [])),
+            referenceGeneration: DraftReferenceGeneration(vesselProvider: NoRSSVesselProvider())
         )
 
         await sut.resumeDraft()
@@ -189,7 +199,8 @@ final class DraftActionViewModelTests: XCTestCase {
             router: router,
             draft: CatchRecordDraft(),
             draftStore: store,
-            favouriteGears: StubFavouriteGearProvider(initialFavourites: [.seineNets])
+            resumeRouteProviders: DraftResumeRouteProviders(favouriteGears: StubFavouriteGearProvider(initialFavourites: [.seineNets])),
+            referenceGeneration: DraftReferenceGeneration(vesselProvider: NoRSSVesselProvider())
         )
 
         await sut.resumeDraft()
@@ -211,7 +222,7 @@ final class DraftActionViewModelTests: XCTestCase {
         let store = InMemoryCatchRecordDraftStore(seed: [localID: seededDraft.payload])
 
         let router = CatchRecordRouter()
-        let sut = DraftActionViewModel(row: rowWithLocalID, router: router, draft: CatchRecordDraft(), draftStore: store)
+        let sut = DraftActionViewModel(row: rowWithLocalID, router: router, draft: CatchRecordDraft(), draftStore: store, referenceGeneration: DraftReferenceGeneration(vesselProvider: NoRSSVesselProvider()))
 
         await sut.resumeDraft()
 
@@ -229,7 +240,7 @@ final class DraftActionViewModelTests: XCTestCase {
         let store = InMemoryCatchRecordDraftStore(seed: [localID: seededDraft.payload])
 
         let router = CatchRecordRouter()
-        let sut = DraftActionViewModel(row: rowWithLocalID, router: router, draft: CatchRecordDraft(), draftStore: store)
+        let sut = DraftActionViewModel(row: rowWithLocalID, router: router, draft: CatchRecordDraft(), draftStore: store, referenceGeneration: DraftReferenceGeneration(vesselProvider: NoRSSVesselProvider()))
 
         await sut.resumeDraft()
 
@@ -247,7 +258,7 @@ final class DraftActionViewModelTests: XCTestCase {
         let store = InMemoryCatchRecordDraftStore(seed: [localID: seededDraft.payload])
 
         let router = CatchRecordRouter()
-        let sut = DraftActionViewModel(row: rowWithLocalID, router: router, draft: CatchRecordDraft(), draftStore: store)
+        let sut = DraftActionViewModel(row: rowWithLocalID, router: router, draft: CatchRecordDraft(), draftStore: store, referenceGeneration: DraftReferenceGeneration(vesselProvider: NoRSSVesselProvider()))
 
         await sut.resumeDraft()
 

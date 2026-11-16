@@ -32,6 +32,11 @@ final class CatchRecordDraft {
 
     /// The vessel this catch record is for.
     var vessel: String?
+    /// The client-generated catch record reference (see `CatchRecordReferenceGenerator`,
+    /// ADR-0026), created once — the moment a vessel is confirmed on `SelectVesselViewModel.submit()`
+    /// — and carried unchanged for the rest of this draft's life, including across resume. `nil`
+    /// until a vessel has been confirmed at least once.
+    var catchRecordReference: String?
     /// The date the trip departed.
     var departureDate: Date?
     /// The date the trip returned.
@@ -94,6 +99,7 @@ final class CatchRecordDraft {
     func reset() {
         localID = UUID()
         vessel = nil
+        catchRecordReference = nil
         departureDate = nil
         returnDate = nil
         departurePort = nil
@@ -111,6 +117,7 @@ final class CatchRecordDraft {
     var payload: CatchRecordDraftPayload {
         CatchRecordDraftPayload(
             vessel: vessel,
+            catchRecordReference: catchRecordReference,
             departureDate: departureDate,
             returnDate: returnDate,
             departurePort: departurePort,
@@ -127,6 +134,7 @@ final class CatchRecordDraft {
     /// `.environment(draft)`) observes the resumed values.
     func apply(_ payload: CatchRecordDraftPayload) {
         vessel = payload.vessel
+        catchRecordReference = payload.catchRecordReference
         departureDate = payload.departureDate
         returnDate = payload.returnDate
         departurePort = payload.departurePort
@@ -170,6 +178,13 @@ nonisolated enum CatchRecordCheckpoint: Int, Codable, Comparable, Sendable {
 /// decoding has no `@MainActor` isolation requirement of its own.
 nonisolated struct CatchRecordDraftPayload: Codable, Equatable, Sendable {
     var vessel: String?
+    /// See `CatchRecordDraft.catchRecordReference`. Added after the first release of this payload
+    /// shape (mirrors `checkpoint` below) — `nil` for any already-persisted draft that predates
+    /// this field; such a draft is given a reference the next time it is resumed (see
+    /// `DraftActionViewModel.resumeDraft()`). Defaulted to `nil` (like `checkpoint` defaults to
+    /// `.vessel`) so every existing memberwise-initializer call site that predates this field
+    /// keeps compiling unchanged.
+    var catchRecordReference: String?
     var departureDate: Date?
     var returnDate: Date?
     var departurePort: PortOption?
@@ -195,6 +210,7 @@ extension CatchRecordDraftPayload {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         vessel = try container.decodeIfPresent(String.self, forKey: .vessel)
+        catchRecordReference = try container.decodeIfPresent(String.self, forKey: .catchRecordReference)
         departureDate = try container.decodeIfPresent(Date.self, forKey: .departureDate)
         returnDate = try container.decodeIfPresent(Date.self, forKey: .returnDate)
         departurePort = try container.decodeIfPresent(PortOption.self, forKey: .departurePort)

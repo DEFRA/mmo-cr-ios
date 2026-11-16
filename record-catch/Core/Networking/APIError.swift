@@ -56,6 +56,13 @@ nonisolated enum APIError: Error, Sendable, Equatable {
     /// `HTTPPerforming.swift`). `status` is therefore a genuine HTTP status in the common case,
     /// but not guaranteed to be one in these two transport-level fallback paths.
     case response(status: Int, details: APIErrorDetails?)
+    /// A client-side precondition failed before any request was sent (e.g. an out-of-range
+    /// `version`/`limit`/`submissionNumber`, an oversize payload, or a malformed idempotency key —
+    /// see the Catch Recording Service connector, ADR-0025). The associated `String` is a
+    /// non-sensitive, human-readable reason suitable for diagnostic logging — never raw request
+    /// content. Distinguished from `.response`/`.decoding` because nothing was ever sent over the
+    /// network for this failure, so it is never retryable.
+    case invalidRequest(reason: String)
 }
 
 extension APIError {
@@ -65,6 +72,13 @@ extension APIError {
     var isForbidden: Bool { statusCode == 403 }
     /// `404 Not Found`.
     var isNotFound: Bool { statusCode == 404 }
+    /// `409 Conflict` — an `If-Match`/version mismatch, a duplicate resource (e.g. a clashing
+    /// `catchRecordReference`), or an idempotency-key replay with a different request body.
+    var isConflict: Bool { statusCode == 409 }
+    /// `413 Payload Too Large` — a complete-replacement body exceeded the service's 1 MiB limit.
+    var isPayloadTooLarge: Bool { statusCode == 413 }
+    /// `422 Unprocessable Entity` — the request was well-formed but failed a business rule.
+    var isUnprocessable: Bool { statusCode == 422 }
     /// `503 Service Unavailable` — e.g. `reference_data_unavailable` or
     /// `authentication_service_unavailable`; distinguish the two via `errorCode`.
     var isServiceUnavailable: Bool { statusCode == 503 }
@@ -78,7 +92,7 @@ extension APIError {
         case let .response(status, details):
             if let retryable = details?.retryable { return retryable }
             return (500..<600).contains(status)
-        case .invalidConfiguration, .decoding:
+        case .invalidConfiguration, .decoding, .invalidRequest:
             return false
         }
     }

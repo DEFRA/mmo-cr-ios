@@ -2,7 +2,8 @@
 //  CatchRecordEndpointTests.swift
 //  record-catchTests
 //
-//  Pure request-building tests — no network. Mirrors ReferenceDataEndpointTests.swift.
+//  Pure request-building tests for the Catch Recording Service connector's 18 in-scope routes
+//  (ADR-0025) — no network. Mirrors ReferenceDataEndpointTests.swift's style.
 //
 
 import XCTest
@@ -12,176 +13,189 @@ final class CatchRecordEndpointTests: XCTestCase {
 
     private let baseURL = URL(string: "http://localhost:3002")!
 
-    private func makeReport(vessel: String? = "ACHILLES") -> CatchRecordSubmissionRequestDTO {
-        CatchRecordSubmissionRequestDTO(
-            payload: CatchRecordDraftPayload(
-                vessel: vessel,
-                departureDate: nil,
-                returnDate: nil,
-                departurePort: nil,
-                returnPort: nil,
-                gearCatches: [],
-                speciesNotLanded: []
-            )
-        )
+    // MARK: Method + path, one representative per route family
+
+    func test_health_isUnauthenticatedGET() {
+        let request = makeCatchRecordRequest(route: .health, baseURL: baseURL, bearerToken: "secret")
+        XCTAssertEqual(request.httpMethod, "GET")
+        XCTAssertEqual(request.url?.absoluteString, "http://localhost:3002/health")
+        XCTAssertNil(request.value(forHTTPHeaderField: "Authorization"))
     }
 
-    // MARK: Request shape
+    func test_listExampleData_isUnauthenticatedGET() {
+        let request = makeCatchRecordRequest(route: .listExampleData, baseURL: baseURL, bearerToken: "secret")
+        XCTAssertEqual(request.url?.absoluteString, "http://localhost:3002/example")
+        XCTAssertNil(request.value(forHTTPHeaderField: "Authorization"))
+    }
 
-    func test_makeRequest_buildsExpectedURLAndMethod() throws {
-        let request = try makeSubmitCatchRecordRequest(
+    func test_listCatchRecords_buildsLimitAndStatusQueryItems() {
+        let request = makeCatchRecordRequest(
+            route: .listCatchRecords(limit: 10, status: .draft),
             baseURL: baseURL,
-            body: makeReport(),
-            bearerToken: nil,
+            bearerToken: nil
+        )
+        let components = URLComponents(url: try! XCTUnwrap(request.url), resolvingAgainstBaseURL: false)
+        let queryItems = components?.queryItems ?? []
+        XCTAssertTrue(queryItems.contains(URLQueryItem(name: "limit", value: "10")))
+        XCTAssertTrue(queryItems.contains(URLQueryItem(name: "status", value: "DRAFT")))
+    }
+
+    func test_listCatchRecords_omitsQueryItems_whenNil() {
+        let request = makeCatchRecordRequest(route: .listCatchRecords(limit: nil, status: nil), baseURL: baseURL, bearerToken: nil)
+        XCTAssertNil(request.url?.query)
+    }
+
+    func test_createDraft_isPOST_toCatchRecordsCollection() throws {
+        let request = try makeCatchRecordRequest(
+            route: .createDraft,
+            baseURL: baseURL,
+            body: CreateDraftCatchRecordPayload(vesselId: "v1"),
+            bearerToken: "token",
+            metadata: CatchRecordRequestMetadata(idempotencyKey: "key-123"),
             encoder: JSONEncoder()
         )
+        XCTAssertEqual(request.httpMethod, "POST")
+        XCTAssertEqual(request.url?.absoluteString, "http://localhost:3002/v1/catch-records")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Idempotency-Key"), "key-123")
+    }
 
-        XCTAssertEqual(request.url?.absoluteString, "http://localhost:3002/api/v1/catch-records")
+    func test_retrieveCatchRecord_isGET_withId() {
+        let request = makeCatchRecordRequest(route: .retrieveCatchRecord(catchRecordId: "abc"), baseURL: baseURL, bearerToken: nil)
+        XCTAssertEqual(request.httpMethod, "GET")
+        XCTAssertEqual(request.url?.absoluteString, "http://localhost:3002/v1/catch-records/abc")
+    }
+
+    func test_replaceCatchRecord_isPUT_andSendsIfMatch() throws {
+        let payload = CompleteReplacementPayload(
+            vessel: VesselSnapshotDTO(id: "v", rssSnapshot: "A1", nameSnapshot: "N", externalMarkSnapshot: "E", lengthOverallMetresSnapshot: nil),
+            trip: TripDTO(startedAndFinishedToday: true, dateStarted: "2026-11-11", dateEnded: "2026-11-11", departurePort: CatchRecordPortDTO(id: "p", codeSnapshot: "C", nameSnapshot: "N"), returnPort: CatchRecordPortDTO(id: "p", codeSnapshot: "C", nameSnapshot: "N")),
+            pairFishing: PairFishingDTO(enabled: false),
+            gears: [],
+            speciesNotLanded: []
+        )
+        let request = try makeCatchRecordRequest(
+            route: .replaceCatchRecord(catchRecordId: "abc"),
+            baseURL: baseURL,
+            body: payload,
+            bearerToken: nil,
+            metadata: CatchRecordRequestMetadata(ifMatch: "3"),
+            encoder: JSONEncoder()
+        )
+        XCTAssertEqual(request.httpMethod, "PUT")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "If-Match"), "3")
+    }
+
+    func test_saveCatchRecordSection_isPATCH() throws {
+        let request = try makeCatchRecordRequest(
+            route: .saveCatchRecordSection(catchRecordId: "abc"),
+            baseURL: baseURL,
+            body: SectionPatchPayload.pairFishing(PairFishingDTO(enabled: false)),
+            bearerToken: nil,
+            metadata: CatchRecordRequestMetadata(ifMatch: "1"),
+            encoder: JSONEncoder()
+        )
+        XCTAssertEqual(request.httpMethod, "PATCH")
+    }
+
+    func test_abandonDraft_isDELETE_withIfMatchAndNoBody() {
+        let request = makeCatchRecordRequest(route: .abandonDraft(catchRecordId: "abc"), baseURL: baseURL, bearerToken: nil, ifMatch: "2")
+        XCTAssertEqual(request.httpMethod, "DELETE")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "If-Match"), "2")
+        XCTAssertNil(request.httpBody)
+    }
+
+    func test_history_buildsPathAndLimitQueryItem() {
+        let request = makeCatchRecordRequest(route: .history(catchRecordId: "abc", limit: 5), baseURL: baseURL, bearerToken: nil)
+        XCTAssertEqual(request.url?.absoluteString, "http://localhost:3002/v1/catch-records/abc/history?limit=5")
+    }
+
+    func test_submit_isPOST_toSubmissionPath_withIfMatchAndIdempotencyKey() {
+        let request = makeCatchRecordRequest(
+            route: .submit(catchRecordId: "abc"),
+            baseURL: baseURL,
+            bearerToken: nil,
+            ifMatch: "4",
+            idempotencyKey: "idem-1"
+        )
+        XCTAssertEqual(request.httpMethod, "POST")
+        XCTAssertEqual(request.url?.absoluteString, "http://localhost:3002/v1/catch-records/abc/submission")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "If-Match"), "4")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Idempotency-Key"), "idem-1")
+    }
+
+    func test_listSubmissions_isGET_toSubmissionsPath() {
+        let request = makeCatchRecordRequest(route: .listSubmissions(catchRecordId: "abc"), baseURL: baseURL, bearerToken: nil)
+        XCTAssertEqual(request.url?.absoluteString, "http://localhost:3002/v1/catch-records/abc/submissions")
+    }
+
+    func test_startEdit_isPOST_toEditStartPath() {
+        let request = makeCatchRecordRequest(route: .startEdit(catchRecordId: "abc"), baseURL: baseURL, bearerToken: nil, ifMatch: "5")
+        XCTAssertEqual(request.url?.absoluteString, "http://localhost:3002/v1/catch-records/abc/edit-start")
         XCTAssertEqual(request.httpMethod, "POST")
     }
 
-    func test_makeRequest_setsAcceptAndContentTypeHeaders() throws {
-        let request = try makeSubmitCatchRecordRequest(
+    // MARK: Vessel favourites
+
+    func test_listFavouriteGears_buildsVesselPath() {
+        let request = makeCatchRecordRequest(route: .listFavouriteGears(vesselId: "v1"), baseURL: baseURL, bearerToken: nil)
+        XCTAssertEqual(request.url?.absoluteString, "http://localhost:3002/v1/vessels/v1/favourite-gears")
+    }
+
+    func test_removeFavouriteGear_appendsGearIdSegment() {
+        let request = makeCatchRecordRequest(route: .removeFavouriteGear(vesselId: "v1", gearId: "g1"), baseURL: baseURL, bearerToken: nil)
+        XCTAssertEqual(request.httpMethod, "DELETE")
+        XCTAssertEqual(request.url?.absoluteString, "http://localhost:3002/v1/vessels/v1/favourite-gears/g1")
+    }
+
+    func test_addFavouriteSpecies_isPOST() throws {
+        let request = try makeCatchRecordRequest(
+            route: .addFavouriteSpecies(vesselId: "v1"),
             baseURL: baseURL,
-            body: makeReport(),
+            body: FavouriteSpeciesPayload(speciesId: "s1"),
             bearerToken: nil,
             encoder: JSONEncoder()
         )
+        XCTAssertEqual(request.httpMethod, "POST")
+        XCTAssertEqual(request.url?.absoluteString, "http://localhost:3002/v1/vessels/v1/favourite-species")
+    }
 
+    func test_removeFavouritePort_appendsPortIdSegment() {
+        let request = makeCatchRecordRequest(route: .removeFavouritePort(vesselId: "v1", portId: "p1"), baseURL: baseURL, bearerToken: nil)
+        XCTAssertEqual(request.url?.absoluteString, "http://localhost:3002/v1/vessels/v1/favourite-ports/p1")
+    }
+
+    // MARK: Headers shared by every route
+
+    func test_everyRoute_setsAcceptAndContentTypeHeaders() {
+        let request = makeCatchRecordRequest(route: .health, baseURL: baseURL, bearerToken: nil)
         XCTAssertEqual(request.value(forHTTPHeaderField: "Accept"), "application/json")
         XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
     }
 
-    func test_makeRequest_setsAuthorizationHeader_whenTokenProvided() throws {
-        let request = try makeSubmitCatchRecordRequest(
-            baseURL: baseURL,
-            body: makeReport(),
-            bearerToken: "secret-token",
-            encoder: JSONEncoder()
-        )
-
-        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer secret-token")
-    }
-
-    func test_makeRequest_omitsAuthorizationHeaderEntirely_whenNoToken() throws {
-        let request = try makeSubmitCatchRecordRequest(
-            baseURL: baseURL,
-            body: makeReport(),
-            bearerToken: nil,
-            encoder: JSONEncoder()
-        )
-
-        XCTAssertNil(request.value(forHTTPHeaderField: "Authorization"))
-        XCTAssertFalse(request.allHTTPHeaderFields?.keys.contains("Authorization") ?? false)
-    }
-
-    func test_makeRequest_encodesBodyAsHTTPBody() throws {
-        let request = try makeSubmitCatchRecordRequest(
-            baseURL: baseURL,
-            body: makeReport(vessel: "ACHILLES"),
-            bearerToken: nil,
-            encoder: JSONEncoder()
-        )
-
-        let body = try XCTUnwrap(request.httpBody)
-        let json = try XCTUnwrap(try JSONSerialization.jsonObject(with: body) as? [String: Any])
-        XCTAssertEqual(json["vessel"] as? String, "ACHILLES")
-    }
-
-    func test_makeRequest_usesTheProvidedEncoder_forDateEncoding() throws {
-        // A request-level JSONEncoder is injected (rather than constructed here) so
-        // CatchRecordService controls the date-encoding strategy in one place — this confirms the
-        // caller's encoder is actually the one used, not a locally-constructed default.
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        let payload = CatchRecordDraftPayload(
-            vessel: nil,
-            departureDate: Date(timeIntervalSince1970: 1_729_500_000),
-            returnDate: nil,
-            departurePort: nil,
-            returnPort: nil,
-            gearCatches: [],
-            speciesNotLanded: []
-        )
-
-        let request = try makeSubmitCatchRecordRequest(
-            baseURL: baseURL,
-            body: CatchRecordSubmissionRequestDTO(payload: payload),
-            bearerToken: nil,
-            encoder: encoder
-        )
-
-        let body = try XCTUnwrap(request.httpBody)
-        let json = try XCTUnwrap(try JSONSerialization.jsonObject(with: body) as? [String: Any])
-        XCTAssertEqual(json["departureDate"] as? String, "2024-10-21T08:40:00Z")
-    }
-
-    func test_makeRequest_throws_whenBodyCannotBeEncoded() {
-        struct UnencodableBody: Encodable {
-            func encode(to encoder: Encoder) throws {
-                throw EncodingError.invalidValue(self, .init(codingPath: [], debugDescription: "nope"))
-            }
-        }
-        let failingEncoder = JSONEncoder()
-
-        XCTAssertThrowsError(try failingEncoder.encode(UnencodableBody()))
-    }
-
-    // MARK: Correlation header (x-cdp-request-id)
-
-    func test_makeRequest_sendsProvidedCorrelationHeader() throws {
-        let request = try makeSubmitCatchRecordRequest(
-            baseURL: baseURL,
-            body: makeReport(),
-            bearerToken: nil,
-            requestId: "fixed-request-id",
-            encoder: JSONEncoder()
-        )
-
-        XCTAssertEqual(request.value(forHTTPHeaderField: "x-cdp-request-id"), "fixed-request-id")
-    }
-
-    func test_makeRequest_defaultsToANonEmptyCorrelationHeader_whenNotProvided() throws {
-        let request = try makeSubmitCatchRecordRequest(
-            baseURL: baseURL,
-            body: makeReport(),
-            bearerToken: nil,
-            encoder: JSONEncoder()
-        )
-
-        XCTAssertFalse(request.value(forHTTPHeaderField: "x-cdp-request-id")?.isEmpty ?? true)
-    }
-
-    func test_consecutiveRequests_sendDifferentCorrelationHeaders() throws {
-        let first = try makeSubmitCatchRecordRequest(baseURL: baseURL, body: makeReport(), bearerToken: nil, encoder: JSONEncoder())
-        let second = try makeSubmitCatchRecordRequest(baseURL: baseURL, body: makeReport(), bearerToken: nil, encoder: JSONEncoder())
-
+    func test_correlationHeader_defaultsToNonEmpty_andDiffersAcrossCalls() {
+        let first = makeCatchRecordRequest(route: .health, baseURL: baseURL, bearerToken: nil)
+        let second = makeCatchRecordRequest(route: .health, baseURL: baseURL, bearerToken: nil)
+        XCTAssertFalse(first.value(forHTTPHeaderField: "x-cdp-request-id")?.isEmpty ?? true)
         XCTAssertNotEqual(
             first.value(forHTTPHeaderField: "x-cdp-request-id"),
             second.value(forHTTPHeaderField: "x-cdp-request-id")
         )
     }
 
-    // MARK: Path-prefixed base URL (CDP dev environment)
+    func test_correlationHeader_usesProvidedFixedValue() {
+        let request = makeCatchRecordRequest(route: .health, baseURL: baseURL, bearerToken: nil, requestId: "fixed-id")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "x-cdp-request-id"), "fixed-id")
+    }
 
-    // Mirrors ReferenceDataEndpointTests's equivalent — the CDP dev environment's base URL carries
-    // a gateway path prefix which every route must append after, not replace.
-    private let prefixedBaseURL = URL(
-        string: "https://mmo-cr-catch-recording-service.api.dev.cdp-int.defra.cloud/catch-record-service"
-    )!
+    // MARK: Path-prefixed base URL (CDP gateway)
 
-    func test_makeRequest_preservesBasePathPrefix() throws {
-        let request = try makeSubmitCatchRecordRequest(
-            baseURL: prefixedBaseURL,
-            body: makeReport(),
-            bearerToken: nil,
-            encoder: JSONEncoder()
-        )
-
+    func test_preservesBasePathPrefix() {
+        let prefixedBaseURL = URL(string: "https://mmo-cr-catch-recording-service.api.dev.cdp-int.defra.cloud/catch-record-service")!
+        let request = makeCatchRecordRequest(route: .retrieveCatchRecord(catchRecordId: "abc"), baseURL: prefixedBaseURL, bearerToken: nil)
         XCTAssertEqual(
             request.url?.absoluteString,
-            "https://mmo-cr-catch-recording-service.api.dev.cdp-int.defra.cloud"
-                + "/catch-record-service/api/v1/catch-records"
+            "https://mmo-cr-catch-recording-service.api.dev.cdp-int.defra.cloud/catch-record-service/v1/catch-records/abc"
         )
     }
 }

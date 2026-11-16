@@ -30,10 +30,18 @@ nonisolated struct EntraConfiguration: Sendable, Equatable {
     /// Subdomain of the Microsoft Entra External ID (CIAM) tenant, e.g. "contoso" for
     /// "contoso.ciamlogin.com".
     let tenantSubdomain: String
+    /// The Entra External ID scope (API permission) for the Catch Recording Service — e.g.
+    /// `"api://<catch-record-service-app-id>/catch-recording.write"` — used by
+    /// `MSALNativeAuthenticator.accessToken()` (ADR-0022 addendum, ADR-0025). `nil` until the Entra
+    /// tenant team registers the service and supplies a real scope for this stage; a `nil` scope
+    /// never prevents sign-in/`restoreSession()` from working, since this value is only consulted
+    /// when requesting a *protected-API* token, a separate concern from authentication itself.
+    let catchRecordAPIScope: String?
 
     private static let configKey = "MMOCRAppConfig"
     private static let clientIDKey = "ENTRA_CLIENT_ID"
     private static let tenantSubdomainKey = "ENTRA_TENANT_SUBDOMAIN"
+    private static let apiScopeKey = "ENTRA_API_SCOPE"
 
     /// - Parameter bundle: Defaults to `Bundle.main`; overridable in tests via any
     ///   `InfoDictionaryProviding`.
@@ -57,6 +65,11 @@ nonisolated struct EntraConfiguration: Sendable, Equatable {
 
         self.clientID = clientID
         self.tenantSubdomain = tenantSubdomain
+
+        // Deliberately tolerant: a missing/blank API scope does not make the whole configuration
+        // `.notConfigured` — only `accessToken()` is affected, and it degrades safely to `nil`.
+        let rawAPIScope = (config[Self.apiScopeKey] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.catchRecordAPIScope = (rawAPIScope?.isEmpty == false) ? rawAPIScope : nil
     }
 
     /// A practical GUID shape check (Entra client IDs are always GUIDs). Pure so it is trivially

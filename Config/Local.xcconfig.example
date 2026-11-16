@@ -12,3 +12,8 @@ CR_APP_CFG_API_BASE_URL = http:/$()/localhost:3002
 // Leave unset to exercise the app's "not configured" sign-in state locally.
 // CR_APP_CFG_ENTRA_CLIENT_ID = <application-client-id-guid>
 // CR_APP_CFG_ENTRA_TENANT_SUBDOMAIN = <tenant-subdomain>
+
+// Catch Recording Service (ADR-0025) — placeholders only; real per-stage values are not yet
+// available. Leave unset to exercise the app's "not configured"/Failing* service fallback locally.
+// CR_APP_CFG_CATCH_RECORD_API_BASE_URL = <catch-record-service-base-url>
+// CR_APP_CFG_ENTRA_API_SCOPE = api://<catch-record-service-app-id>/catch-recording.write

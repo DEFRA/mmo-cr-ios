@@ -41,6 +41,11 @@ final class RootSessionCoordinator {
     private(set) var phase: RootPhase
 
     private let authenticator: any Authenticating
+    /// Exposes the coordinator's single shared `Authenticating` instance so
+    /// `CatchRecordServicesFactory` (ADR-0025) can resolve Catch Recording Service bearer tokens
+    /// from the *same* signed-in session/MSAL cache, rather than constructing a second
+    /// authenticator. Read-only — only `RootSessionCoordinator` itself drives sign-in/sign-out.
+    var sharedAuthenticator: any Authenticating { authenticator }
     private let biometricAuthenticator: BiometricAuthenticating
     private let sessionStore: LocalSessionStoring
     private let secretStore: ReentrySecretStoring

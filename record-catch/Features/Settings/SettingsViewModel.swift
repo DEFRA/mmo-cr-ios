@@ -163,6 +163,8 @@ final class SettingsViewModel {
         case let .response(status, details):
             let code = details?.code ?? "unknown"
             return "Fetch failed: HTTP \(status) (\(code))."
+        case let .invalidRequest(reason):
+            return "Fetch failed: invalid request (\(reason))."
         }
     }
     #endif

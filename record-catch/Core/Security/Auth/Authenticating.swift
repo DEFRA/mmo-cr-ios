@@ -61,4 +61,13 @@ protocol Authenticating: AnyObject {
 
     /// Signs out, clearing MSAL's local token cache.
     func signOut() async
+
+    /// Resolves a bearer access token, scoped to the Catch Recording Service's API permission
+    /// (ADR-0022 addendum, ADR-0025), for the cached account — or `nil` when there is no cached
+    /// account, the service's scope is not configured for this stage, or the silent token request
+    /// fails for any reason. Never throws: a missing token is a normal, expected outcome (the
+    /// service is not yet registered for every stage — see `EntraConfiguration`/ADR-0025), not an
+    /// error condition a caller must handle specially. The token itself is never cached, stored, or
+    /// logged by this app — MSAL's own Keychain cache is the only place it lives (ADR-0022 §4).
+    func accessToken() async -> String?
 }

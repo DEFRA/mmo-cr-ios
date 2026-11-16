@@ -45,6 +45,18 @@ final class RootSessionCoordinatorTests: XCTestCase {
         XCTAssertEqual(sut.phase, .signIn)
     }
 
+    // MARK: - sharedAuthenticator (ADR-0025 — Catch Recording Service token resolution)
+
+    /// `CatchRecordServicesFactory` resolves bearer tokens from this single shared instance
+    /// (via `MSALAccessTokenProvider`) rather than constructing a second, independent
+    /// authenticator — see `sharedAuthenticator`'s own doc comment.
+    func test_sharedAuthenticator_isTheSameInstancePassedToInit() {
+        let authenticator = FakeAuthenticator()
+        let sut = makeSut(authenticator: authenticator)
+
+        XCTAssertTrue(sut.sharedAuthenticator === authenticator)
+    }
+
     func test_initialPhase_isAppLock_whenSessionAndBiometricEligible() {
         let sut = makeSut(
             biometricAuthenticator: FakeBiometricAuthenticator(availability: .available(.faceID)),

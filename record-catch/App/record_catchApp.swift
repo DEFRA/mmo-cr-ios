@@ -65,10 +65,16 @@ struct RecordCatchApp: App {
     // constructing a second one.
     @State private var referenceDataSyncCoordinator: ReferenceDataSyncCoordinator
 
+    // Catch Recording Service connector (ADR-0025) — **not yet plugged into any screen**. Built
+    // here only so the connector has a real, app-wide construction path ready for whichever
+    // feature wires it in next; see `CatchRecordServicesFactory`'s doc comment for scope.
+    @State private var catchRecordServices: CatchRecordServices
+
     init() {
         let monitor = Self.makeConnectivityMonitor()
         _connectivityMonitor = State(initialValue: monitor)
-        _sessionCoordinator = State(initialValue: RootSessionCoordinator.make(connectivityMonitor: monitor))
+        let coordinator = RootSessionCoordinator.make(connectivityMonitor: monitor)
+        _sessionCoordinator = State(initialValue: coordinator)
 
         // Bootstraps `ReferenceDataStoreProvider.shared` (used by the cached reference-data search
         // providers elsewhere in the app) before anything can read it — see that type's doc
@@ -78,6 +84,7 @@ struct RecordCatchApp: App {
             store: ReferenceDataStore(modelContainer: sharedModelContainer),
             connectivityMonitor: monitor
         ))
+        _catchRecordServices = State(initialValue: CatchRecordServicesFactory.make(authenticator: { coordinator.sharedAuthenticator }))
     }
 
     var body: some Scene {

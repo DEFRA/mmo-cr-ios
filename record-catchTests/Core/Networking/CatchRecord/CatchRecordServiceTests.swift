@@ -2,19 +2,15 @@
 //  CatchRecordServiceTests.swift
 //  record-catchTests
 //
-//  Covers CatchRecordService: happy-path submission, HTTP-status/URLError -> APIError mapping, and
-//  the never-log-the-token security property. Mirrors ReferenceDataClientTests.swift/
-//  ReferenceDataClientErrorMappingTests.swift, condensed into one file since this connector has a
-//  single route.
+//  Covers `CatchRecordService`: happy-path decoding for a representative route from each HTTP
+//  method family, client-side precondition rejection (never sends a request), HTTP-status error
+//  mapping (including the Catch Recording Service's flat error envelope), and the
+//  never-log-the-token security property. Mirrors CatchRecordServiceTests' predecessor and
+//  ReferenceDataClientTests.swift's structure.
 //
 
 import XCTest
 @testable import record_catch
-
-/// Failure thrown by `ThrowingTokenProvider` below — file-scoped rather than nested to satisfy the
-/// app's max-nesting-depth lint rule (mirrors `ThrowingTokenProviderFailure` in
-/// ReferenceDataClientErrorMappingTests.swift).
-private struct CatchRecordThrowingTokenProviderFailure: Error {}
 
 final class CatchRecordServiceTests: XCTestCase {
 
@@ -23,12 +19,6 @@ final class CatchRecordServiceTests: XCTestCase {
     private struct StaticTokenProvider: AuthTokenProviding {
         let token: String?
         func bearerToken() async throws -> String? { token }
-    }
-
-    /// Simulates a token provider that fails — the connector must proceed **without** a token
-    /// rather than fail the whole request (mirrors `RemoteReferenceDataClient.resolvedToken()`).
-    private struct ThrowingTokenProvider: AuthTokenProviding {
-        func bearerToken() async throws -> String? { throw CatchRecordThrowingTokenProviderFailure() }
     }
 
     private func makeConfiguration() throws -> APIConfiguration {
@@ -43,344 +33,283 @@ final class CatchRecordServiceTests: XCTestCase {
         func object(forInfoDictionaryKey key: String) -> Any? { values[key] }
     }
 
-    private func makeReport(vessel: String? = "ACHILLES") -> CatchRecordSubmissionRequestDTO {
-        CatchRecordSubmissionRequestDTO(
-            payload: CatchRecordDraftPayload(
-                vessel: vessel,
-                departureDate: nil,
-                returnDate: nil,
-                departurePort: nil,
-                returnPort: nil,
-                gearCatches: [],
-                speciesNotLanded: []
-            )
+    private func makeSUT(httpClient: HTTPPerforming, token: String? = nil, logger: NetworkLogger = NetworkLogger()) throws -> CatchRecordService {
+        CatchRecordService(
+            httpClient: httpClient,
+            configuration: try makeConfiguration(),
+            tokenProvider: StaticTokenProvider(token: token),
+            logger: logger
         )
     }
 
-    // MARK: Happy path
-
-    func test_submitCatchReport_decodesReferenceNumber_onSuccess() async throws {
-        let httpClient = StubHTTPClient.success(
-            statusCode: 201,
-            jsonData: Data(#"{ "referenceNumber": "CR-0001" }"#.utf8)
-        )
-        let sut = CatchRecordService(
-            httpClient: httpClient,
-            configuration: try makeConfiguration(),
-            tokenProvider: StaticTokenProvider(token: nil)
-        )
-
-        let response = try await sut.submitCatchReport(makeReport())
-
-        XCTAssertEqual(response.referenceNumber, "CR-0001")
+    private let saveResponseJSON = Data("""
+    {
+      "id": "cr-1", "catchRecordReference": "A12345-11112026-100000", "status": "DRAFT",
+      "displayStatus": "Draft", "version": 1, "savedSection": null,
+      "sectionCompletion": { "trip": false, "pairFishing": false, "gears": false },
+      "progress": {
+        "hasUnsubmittedChanges": false, "numberOfSubmissions": 0,
+        "incompleteGearAssociationIds": [], "currentIncompleteGearAssociationId": null,
+        "allGearsComplete": false
+      }
     }
+    """.utf8)
 
-    func test_submitCatchReport_sendsPOSTToExpectedURL() async throws {
-        let httpClient = StubHTTPClient.success(
-            statusCode: 200,
-            jsonData: Data(#"{ "referenceNumber": "CR-0001" }"#.utf8)
-        )
-        let sut = CatchRecordService(
-            httpClient: httpClient,
-            configuration: try makeConfiguration(),
-            tokenProvider: StaticTokenProvider(token: nil)
-        )
+    // MARK: Happy path — one representative route per HTTP method
 
-        _ = try await sut.submitCatchReport(makeReport())
+    func test_createDraft_POST_decodesStandardSaveResponse() async throws {
+        let httpClient = StubHTTPClient.success(statusCode: 201, jsonData: saveResponseJSON)
+        let sut = try makeSUT(httpClient: httpClient)
 
+        let response = try await sut.createDraft(vesselId: "v1", catchRecordReference: "A12345-11112026-100000", idempotencyKey: nil)
+
+        XCTAssertEqual(response.id, "cr-1")
         XCTAssertEqual(httpClient.receivedRequests.first?.httpMethod, "POST")
-        XCTAssertEqual(
-            httpClient.receivedRequests.first?.url?.absoluteString,
-            "http://localhost:3002/api/v1/catch-records"
-        )
     }
 
-    func test_submitCatchReport_encodesDatesAsISO8601_notTheDefaultReferenceDateEncoding() async throws {
-        // The connector must not inherit `Date`'s default Codable encoding (seconds since the 2001
-        // reference date) — that's only acceptable for the on-device draft store, never a wire API.
-        let httpClient = StubHTTPClient.success(
-            statusCode: 200,
-            jsonData: Data(#"{ "referenceNumber": "CR-0001" }"#.utf8)
-        )
-        let sut = CatchRecordService(
-            httpClient: httpClient,
-            configuration: try makeConfiguration(),
-            tokenProvider: StaticTokenProvider(token: nil)
-        )
-        let payload = CatchRecordDraftPayload(
-            vessel: nil,
-            departureDate: Date(timeIntervalSince1970: 1_729_500_000),
-            returnDate: nil,
-            departurePort: nil,
-            returnPort: nil,
-            gearCatches: [],
+    func test_listCatchRecords_GET_decodesListResponse() async throws {
+        let json = Data(#"{"items":[],"limit":20,"count":0}"#.utf8)
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: json)
+        let sut = try makeSUT(httpClient: httpClient)
+
+        let response = try await sut.listCatchRecords(limit: 20, status: nil)
+
+        XCTAssertEqual(response.count, 0)
+    }
+
+    func test_replaceCatchRecord_PUT_sendsIfMatchAndDecodesResponse() async throws {
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: saveResponseJSON)
+        let sut = try makeSUT(httpClient: httpClient)
+        let payload = CompleteReplacementPayload(
+            vessel: VesselSnapshotDTO(id: "v", rssSnapshot: "A1", nameSnapshot: "N", externalMarkSnapshot: "E", lengthOverallMetresSnapshot: nil),
+            trip: TripDTO(startedAndFinishedToday: true, dateStarted: "2026-11-11", dateEnded: "2026-11-11", departurePort: CatchRecordPortDTO(id: "p", codeSnapshot: "C", nameSnapshot: "N"), returnPort: CatchRecordPortDTO(id: "p", codeSnapshot: "C", nameSnapshot: "N")),
+            pairFishing: PairFishingDTO(enabled: false),
+            gears: [],
             speciesNotLanded: []
         )
 
-        _ = try await sut.submitCatchReport(CatchRecordSubmissionRequestDTO(payload: payload))
+        _ = try await sut.replaceCatchRecord(catchRecordId: "cr-1", expectedVersion: 3, payload: payload)
 
-        let body = try XCTUnwrap(httpClient.receivedRequests.first?.httpBody)
-        let json = try XCTUnwrap(try JSONSerialization.jsonObject(with: body) as? [String: Any])
-        XCTAssertEqual(json["departureDate"] as? String, "2024-10-21T08:40:00Z")
+        XCTAssertEqual(httpClient.receivedRequests.first?.httpMethod, "PUT")
+        XCTAssertEqual(httpClient.receivedRequests.first?.value(forHTTPHeaderField: "If-Match"), "3")
     }
 
-    func test_submitCatchReport_throwsDecoding_onMalformedJSON() async {
-        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: Data("not json".utf8))
-        let sut = CatchRecordService(
-            httpClient: httpClient,
-            configuration: try! makeConfiguration(),
-            tokenProvider: StaticTokenProvider(token: nil)
-        )
+    func test_saveSection_PATCH_sendsIfMatch() async throws {
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: saveResponseJSON)
+        let sut = try makeSUT(httpClient: httpClient)
 
-        do {
-            _ = try await sut.submitCatchReport(makeReport())
-            XCTFail("Expected decoding error")
-        } catch let error as APIError {
-            guard case .decoding = error else {
-                return XCTFail("Expected .decoding, got \(error)")
-            }
-        } catch {
-            XCTFail("Expected APIError, got \(error)")
+        _ = try await sut.saveSection(catchRecordId: "cr-1", expectedVersion: 2, section: .pairFishing(PairFishingDTO(enabled: false)))
+
+        XCTAssertEqual(httpClient.receivedRequests.first?.httpMethod, "PATCH")
+        XCTAssertEqual(httpClient.receivedRequests.first?.value(forHTTPHeaderField: "If-Match"), "2")
+    }
+
+    func test_abandonDraft_DELETE_succeeds_on204() async throws {
+        let httpClient = StubHTTPClient.statusOnly(204)
+        let sut = try makeSUT(httpClient: httpClient)
+
+        try await sut.abandonDraft(catchRecordId: "cr-1", expectedVersion: 1)
+
+        XCTAssertEqual(httpClient.receivedRequests.first?.httpMethod, "DELETE")
+    }
+
+    func test_history_decodesEvents() async throws {
+        let json = Data("""
+        {"catchRecordId":"cr-1","status":"DRAFT","displayStatus":"Draft","version":1,
+         "hasUnsubmittedChanges":true,"numberOfSubmissions":0,
+         "events":[{"id":"e1","eventType":"DRAFT_CREATED","timestamp":"2026-11-11T09:00:00Z","actor":"user-1"}]}
+        """.utf8)
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: json)
+        let sut = try makeSUT(httpClient: httpClient)
+
+        let response = try await sut.history(catchRecordId: "cr-1", limit: nil)
+
+        XCTAssertEqual(response.events.count, 1)
+    }
+
+    func test_submit_decodesSubmissionResponse() async throws {
+        let json = Data("""
+        {
+          "id": "cr-1", "catchRecordReference": "A12345-11112026-100000", "status": "SUBMITTED",
+          "displayStatus": "Submitted", "version": 2, "savedSection": null,
+          "sectionCompletion": { "trip": true, "pairFishing": true, "gears": true },
+          "progress": {
+            "hasUnsubmittedChanges": false, "numberOfSubmissions": 1,
+            "incompleteGearAssociationIds": [], "currentIncompleteGearAssociationId": null,
+            "allGearsComplete": true
+          },
+          "submittedAt": "2026-11-11T10:00:00Z", "submittedBy": "user-1",
+          "artifacts": [{ "submissionNumber": 1, "type": "JSON_SNAPSHOT" }]
         }
+        """.utf8)
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: json)
+        let sut = try makeSUT(httpClient: httpClient)
+
+        let response = try await sut.submit(catchRecordId: "cr-1", expectedVersion: 1, idempotencyKey: "idem-1")
+
+        XCTAssertEqual(response.submittedBy, "user-1")
+        XCTAssertEqual(httpClient.receivedRequests.first?.value(forHTTPHeaderField: "Idempotency-Key"), "idem-1")
     }
 
-    // MARK: Error mapping
+    func test_listSubmissions_decodesSubmissionGroups() async throws {
+        let json = Data("""
+        {"catchRecordId":"cr-1","count":1,"submissions":[
+          {"submissionNumber":1,"artifacts":[
+            {"type":"pdf","contentType":"application/pdf","contentLength":1024,"checksum":"abc"}
+          ]}
+        ]}
+        """.utf8)
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: json)
+        let sut = try makeSUT(httpClient: httpClient)
 
-    func test_submitCatchReport_throwsResponseWithUnauthorizedStatus_on401() async {
-        let httpClient = StubHTTPClient.statusOnly(401)
-        let sut = CatchRecordService(
-            httpClient: httpClient,
-            configuration: try! makeConfiguration(),
-            tokenProvider: StaticTokenProvider(token: nil)
+        let response = try await sut.listSubmissions(catchRecordId: "cr-1")
+
+        XCTAssertEqual(response.submissions.first?.artifacts.first?.type, .pdf)
+    }
+
+    func test_startEdit_decodesStandardSaveResponse() async throws {
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: saveResponseJSON)
+        let sut = try makeSUT(httpClient: httpClient)
+
+        let response = try await sut.startEdit(catchRecordId: "cr-1", expectedVersion: 4, idempotencyKey: nil)
+
+        XCTAssertEqual(response.status, .draft)
+    }
+
+    // MARK: Client-side precondition rejection — nothing is ever sent
+
+    func test_replaceCatchRecord_throwsInvalidRequest_andSendsNothing_whenVersionIsZero() async throws {
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: saveResponseJSON)
+        let sut = try makeSUT(httpClient: httpClient)
+        let payload = CompleteReplacementPayload(
+            vessel: VesselSnapshotDTO(id: "v", rssSnapshot: "A1", nameSnapshot: "N", externalMarkSnapshot: "E", lengthOverallMetresSnapshot: nil),
+            trip: TripDTO(startedAndFinishedToday: true, dateStarted: "2026-11-11", dateEnded: "2026-11-11", departurePort: CatchRecordPortDTO(id: "p", codeSnapshot: "C", nameSnapshot: "N"), returnPort: CatchRecordPortDTO(id: "p", codeSnapshot: "C", nameSnapshot: "N")),
+            pairFishing: PairFishingDTO(enabled: false),
+            gears: [],
+            speciesNotLanded: []
         )
 
         do {
-            _ = try await sut.submitCatchReport(makeReport())
-            XCTFail("Expected a 401 response")
+            _ = try await sut.replaceCatchRecord(catchRecordId: "cr-1", expectedVersion: 0, payload: payload)
+            XCTFail("Expected .invalidRequest")
         } catch let error as APIError {
-            XCTAssertTrue(error.isUnauthorized)
-        } catch {
-            XCTFail("Expected APIError, got \(error)")
+            guard case .invalidRequest = error else { return XCTFail("Expected .invalidRequest, got \(error)") }
         }
+        XCTAssertTrue(httpClient.receivedRequests.isEmpty)
     }
 
-    func test_submitCatchReport_throwsResponseWithServiceUnavailableStatus_on503() async {
-        let httpClient = StubHTTPClient.statusOnly(503)
-        let sut = CatchRecordService(
-            httpClient: httpClient,
-            configuration: try! makeConfiguration(),
-            tokenProvider: StaticTokenProvider(token: nil)
-        )
+    func test_listCatchRecords_throwsInvalidRequest_andSendsNothing_whenLimitOutOfRange() async throws {
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: saveResponseJSON)
+        let sut = try makeSUT(httpClient: httpClient)
 
         do {
-            _ = try await sut.submitCatchReport(makeReport())
-            XCTFail("Expected a 503 response")
+            _ = try await sut.listCatchRecords(limit: 0, status: nil)
+            XCTFail("Expected .invalidRequest")
         } catch let error as APIError {
-            XCTAssertTrue(error.isServiceUnavailable)
-        } catch {
-            XCTFail("Expected APIError, got \(error)")
+            guard case .invalidRequest = error else { return XCTFail("Expected .invalidRequest, got \(error)") }
         }
+        XCTAssertTrue(httpClient.receivedRequests.isEmpty)
     }
 
-    func test_submitCatchReport_decodesErrorEnvelope_fromResponseBody() async {
-        let httpClient = StubHTTPClient.success(
-            statusCode: 503,
-            jsonData: Data("""
-            {
-              "error": {
-                "code": "catch_record_service_unavailable",
-                "traceId": "5b1e6e2a-6e77-4c1a-9b3a-2e6f9a7d9c11",
-                "retryable": true
-              }
-            }
-            """.utf8)
-        )
-        let sut = CatchRecordService(
-            httpClient: httpClient,
-            configuration: try! makeConfiguration(),
-            tokenProvider: StaticTokenProvider(token: nil)
-        )
+    func test_submit_throwsInvalidRequest_andSendsNothing_whenIdempotencyKeyTooLong() async throws {
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: saveResponseJSON)
+        let sut = try makeSUT(httpClient: httpClient)
 
         do {
-            _ = try await sut.submitCatchReport(makeReport())
+            _ = try await sut.submit(catchRecordId: "cr-1", expectedVersion: 1, idempotencyKey: String(repeating: "a", count: 257))
+            XCTFail("Expected .invalidRequest")
+        } catch let error as APIError {
+            guard case .invalidRequest = error else { return XCTFail("Expected .invalidRequest, got \(error)") }
+        }
+        XCTAssertTrue(httpClient.receivedRequests.isEmpty)
+    }
+
+    // MARK: Error mapping — the Catch Recording Service's flat error envelope
+
+    func test_errorEnvelope_mapsCorrelationIdToTraceId_andDropsMessage() async throws {
+        let httpClient = StubHTTPClient.success(statusCode: 409, jsonData: Data("""
+        {"statusCode":409,"code":"DUPLICATE_RESOURCE","message":"A record with this reference already exists.","correlationId":"4c2c4e3a-0000-4000-8000-000000000000"}
+        """.utf8))
+        let sut = try makeSUT(httpClient: httpClient)
+
+        do {
+            _ = try await sut.createDraft(vesselId: "v1", catchRecordReference: nil, idempotencyKey: nil)
             XCTFail("Expected an error")
         } catch let error as APIError {
-            XCTAssertEqual(error.errorCode, "catch_record_service_unavailable")
-            XCTAssertEqual(error.traceId, "5b1e6e2a-6e77-4c1a-9b3a-2e6f9a7d9c11")
-            XCTAssertTrue(error.isRetryable)
-        } catch {
-            XCTFail("Expected APIError, got \(error)")
+            XCTAssertTrue(error.isConflict)
+            XCTAssertEqual(error.errorCode, "DUPLICATE_RESOURCE")
+            XCTAssertEqual(error.traceId, "4c2c4e3a-0000-4000-8000-000000000000")
         }
     }
 
-    func test_submitCatchReport_mapsToNilDetails_whenErrorBodyIsMalformed() async {
-        let httpClient = StubHTTPClient.success(statusCode: 503, jsonData: Data("not json".utf8))
-        let sut = CatchRecordService(
-            httpClient: httpClient,
-            configuration: try! makeConfiguration(),
-            tokenProvider: StaticTokenProvider(token: nil)
-        )
-
-        do {
-            _ = try await sut.submitCatchReport(makeReport())
-            XCTFail("Expected an error")
-        } catch let error as APIError {
-            XCTAssertEqual(error, .response(status: 503, details: nil))
-        } catch {
-            XCTFail("Expected APIError, got \(error)")
+    func test_statusCodes_mapToExpectedAPIErrorHelpers() async throws {
+        let cases: [(Int, (APIError) -> Bool)] = [
+            (401, \.isUnauthorized),
+            (403, \.isForbidden),
+            (404, \.isNotFound),
+            (409, \.isConflict),
+            (413, \.isPayloadTooLarge),
+            (422, \.isUnprocessable),
+            (503, \.isServiceUnavailable)
+        ]
+        for (statusCode, predicate) in cases {
+            let httpClient = StubHTTPClient.statusOnly(statusCode)
+            let sut = try makeSUT(httpClient: httpClient)
+            do {
+                _ = try await sut.retrieveCatchRecord(catchRecordId: "cr-1")
+                XCTFail("Expected a \(statusCode) response")
+            } catch let error as APIError {
+                XCTAssertTrue(predicate(error), "Status \(statusCode) did not map to the expected helper")
+            }
         }
     }
 
-    func test_submitCatchReport_throwsOffline_onNotConnectedToInternet() async {
-        let httpClient = StubHTTPClient.failure(URLError(.notConnectedToInternet))
-        let sut = CatchRecordService(
-            httpClient: httpClient,
-            configuration: try! makeConfiguration(),
-            tokenProvider: StaticTokenProvider(token: nil)
-        )
-
+    func test_offlineAndTimeout_mapToExpectedAPIError() async throws {
+        let offlineClient = StubHTTPClient.failure(URLError(.notConnectedToInternet))
+        let offlineSUT = try makeSUT(httpClient: offlineClient)
         do {
-            _ = try await sut.submitCatchReport(makeReport())
+            _ = try await offlineSUT.retrieveCatchRecord(catchRecordId: "cr-1")
             XCTFail("Expected .offline")
         } catch let error as APIError {
             XCTAssertEqual(error, .offline)
-        } catch {
-            XCTFail("Expected APIError, got \(error)")
         }
-    }
 
-    func test_submitCatchReport_throwsTimedOut_onURLErrorTimedOut() async {
-        let httpClient = StubHTTPClient.failure(URLError(.timedOut))
-        let sut = CatchRecordService(
-            httpClient: httpClient,
-            configuration: try! makeConfiguration(),
-            tokenProvider: StaticTokenProvider(token: nil)
-        )
-
+        let timeoutClient = StubHTTPClient.failure(URLError(.timedOut))
+        let timeoutSUT = try makeSUT(httpClient: timeoutClient)
         do {
-            _ = try await sut.submitCatchReport(makeReport())
+            _ = try await timeoutSUT.retrieveCatchRecord(catchRecordId: "cr-1")
             XCTFail("Expected .timedOut")
         } catch let error as APIError {
             XCTAssertEqual(error, .timedOut)
-        } catch {
-            XCTFail("Expected APIError, got \(error)")
-        }
-    }
-
-    func test_submitCatchReport_throwsResponseWithNilDetails_onUnmappedURLError() async {
-        let code = URLError.Code.cannotFindHost
-        let httpClient = StubHTTPClient.failure(URLError(code))
-        let sut = CatchRecordService(
-            httpClient: httpClient,
-            configuration: try! makeConfiguration(),
-            tokenProvider: StaticTokenProvider(token: nil)
-        )
-
-        do {
-            _ = try await sut.submitCatchReport(makeReport())
-            XCTFail("Expected .response")
-        } catch let error as APIError {
-            XCTAssertEqual(error, .response(status: code.rawValue, details: nil))
-        } catch {
-            XCTFail("Expected APIError, got \(error)")
         }
     }
 
     // MARK: Security — never logs the token or headers
 
-    func test_submitCatchReport_proceedsWithoutToken_whenTokenProviderThrows() async throws {
-        let httpClient = StubHTTPClient.success(
-            statusCode: 200,
-            jsonData: Data(#"{ "referenceNumber": "CR-0001" }"#.utf8)
-        )
-        let sut = CatchRecordService(
-            httpClient: httpClient,
-            configuration: try makeConfiguration(),
-            tokenProvider: ThrowingTokenProvider()
-        )
+    func test_neverLogsTokenOrAuthorizationHeader() async throws {
+        let sink = RecordingNetworkLogSink()
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: saveResponseJSON)
+        let sut = try makeSUT(httpClient: httpClient, token: "super-secret-token", logger: NetworkLogger(sink: sink))
 
-        let response = try await sut.submitCatchReport(makeReport())
+        _ = try await sut.startEdit(catchRecordId: "cr-1", expectedVersion: 1, idempotencyKey: nil)
 
-        XCTAssertEqual(response.referenceNumber, "CR-0001")
+        XCTAssertFalse(sink.messages.isEmpty)
+        for message in sink.messages {
+            XCTAssertFalse(message.contains("super-secret-token"))
+            XCTAssertFalse(message.contains("Authorization"))
+        }
+    }
+
+    func test_proceedsWithoutToken_whenTokenProviderThrows() async throws {
+        struct ThrowingTokenProvider: AuthTokenProviding {
+            struct Failure: Error {}
+            func bearerToken() async throws -> String? { throw Failure() }
+        }
+        let httpClient = StubHTTPClient.success(statusCode: 200, jsonData: saveResponseJSON)
+        let sut = CatchRecordService(httpClient: httpClient, configuration: try makeConfiguration(), tokenProvider: ThrowingTokenProvider())
+
+        _ = try await sut.startEdit(catchRecordId: "cr-1", expectedVersion: 1, idempotencyKey: nil)
+
         XCTAssertNil(httpClient.receivedRequests.first?.value(forHTTPHeaderField: "Authorization"))
-    }
-
-    func test_submitCatchReport_neverLogsTokenOrAuthorizationHeader() async throws {
-        let sink = RecordingNetworkLogSink()
-        let httpClient = StubHTTPClient.success(
-            statusCode: 200,
-            jsonData: Data(#"{ "referenceNumber": "CR-0001" }"#.utf8)
-        )
-        let sut = CatchRecordService(
-            httpClient: httpClient,
-            configuration: try makeConfiguration(),
-            tokenProvider: StaticTokenProvider(token: "super-secret-token"),
-            logger: NetworkLogger(sink: sink)
-        )
-
-        _ = try await sut.submitCatchReport(makeReport())
-
-        XCTAssertFalse(sink.messages.isEmpty)
-        for message in sink.messages {
-            XCTAssertFalse(message.contains("super-secret-token"))
-            XCTAssertFalse(message.contains("Authorization"))
-        }
-    }
-
-    func test_submitCatchReport_logsErrorCodeAndTraceId_butNeverTokenOrAuthorizationHeader_onFailure() async throws {
-        let sink = RecordingNetworkLogSink()
-        let httpClient = StubHTTPClient.success(
-            statusCode: 503,
-            jsonData: Data("""
-            {
-              "error": {
-                "code": "catch_record_service_unavailable",
-                "traceId": "5b1e6e2a-6e77-4c1a-9b3a-2e6f9a7d9c11",
-                "retryable": true
-              }
-            }
-            """.utf8)
-        )
-        let sut = CatchRecordService(
-            httpClient: httpClient,
-            configuration: try makeConfiguration(),
-            tokenProvider: StaticTokenProvider(token: "super-secret-token"),
-            logger: NetworkLogger(sink: sink)
-        )
-
-        do {
-            _ = try await sut.submitCatchReport(makeReport())
-            XCTFail("Expected an error")
-        } catch {
-            // Expected — asserting on the logged output below, not the thrown error here.
-        }
-
-        XCTAssertFalse(sink.messages.isEmpty)
-        let joined = sink.messages.joined(separator: "\n")
-        XCTAssertTrue(joined.contains("catch_record_service_unavailable"))
-        for message in sink.messages {
-            XCTAssertFalse(message.contains("super-secret-token"))
-            XCTAssertFalse(message.contains("Authorization"))
-        }
-    }
-
-    // MARK: Correlation header (x-cdp-request-id)
-
-    func test_submitCatchReport_sendsCorrelationHeader() async throws {
-        let httpClient = StubHTTPClient.success(
-            statusCode: 200,
-            jsonData: Data(#"{ "referenceNumber": "CR-0001" }"#.utf8)
-        )
-        let sut = CatchRecordService(
-            httpClient: httpClient,
-            configuration: try makeConfiguration(),
-            tokenProvider: StaticTokenProvider(token: nil)
-        )
-
-        _ = try await sut.submitCatchReport(makeReport())
-
-        let requestId = httpClient.receivedRequests.first?.value(forHTTPHeaderField: "x-cdp-request-id")
-        XCTAssertNotNil(requestId)
-        XCTAssertFalse(requestId?.isEmpty ?? true)
     }
 }

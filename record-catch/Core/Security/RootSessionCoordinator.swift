@@ -35,6 +35,15 @@ struct SessionStores {
     let verificationStore: SessionVerificationStoring
 }
 
+/// Bundles the two MSAL-backed authentication services (sign-in, self-service password reset —
+/// ADR-0022/ADR-0027) into one value, for the same reason as `SessionStores` above: keeping
+/// `RootSessionCoordinator.init` within SonarCloud's 7-parameter limit (swift:S107) without
+/// changing how the class addresses each service individually internally.
+struct AuthenticationServices {
+    let authenticator: any Authenticating
+    let passwordResetter: any PasswordResetting
+}
+
 @MainActor
 @Observable
 final class RootSessionCoordinator {
@@ -67,8 +76,7 @@ final class RootSessionCoordinator {
     private let isUITesting: Bool
 
     init(
-        authenticator: any Authenticating,
-        passwordResetter: any PasswordResetting,
+        authServices: AuthenticationServices,
         biometricAuthenticator: BiometricAuthenticating,
         stores: SessionStores,
         connectivityMonitor: ConnectivityMonitoring,
@@ -76,8 +84,8 @@ final class RootSessionCoordinator {
         skipsBackgroundVerification: Bool = false,
         isUITesting: Bool = LaunchArguments.current.isUITesting
     ) {
-        self.authenticator = authenticator
-        self.passwordResetter = passwordResetter
+        self.authenticator = authServices.authenticator
+        self.passwordResetter = authServices.passwordResetter
         self.biometricAuthenticator = biometricAuthenticator
         self.sessionStore = stores.sessionStore
         self.secretStore = stores.secretStore
@@ -262,8 +270,7 @@ extension RootSessionCoordinator {
 
         if launchArguments.contains(.appLockLocked) {
             return RootSessionCoordinator(
-                authenticator: authenticator,
-                passwordResetter: passwordResetter,
+                authServices: AuthenticationServices(authenticator: authenticator, passwordResetter: passwordResetter),
                 biometricAuthenticator: FakeBiometricAuthenticator(availability: .available(.faceID)),
                 stores: SessionStores(
                     sessionStore: InMemoryLocalSessionStore(hasSession: true),
@@ -279,8 +286,7 @@ extension RootSessionCoordinator {
 
         if launchArguments.contains(.appLockFallback) {
             return RootSessionCoordinator(
-                authenticator: authenticator,
-                passwordResetter: passwordResetter,
+                authServices: AuthenticationServices(authenticator: authenticator, passwordResetter: passwordResetter),
                 biometricAuthenticator: FakeBiometricAuthenticator(availability: .unavailable(.noBiometryEnrolled)),
                 stores: SessionStores(
                     sessionStore: InMemoryLocalSessionStore(hasSession: true),
@@ -309,8 +315,7 @@ extension RootSessionCoordinator {
         // `-uiTestOffline`) are not, and rely on this coordinator's phase genuinely starting at
         // `.signIn` on a fresh simulator run, exactly as a real first launch would.
         return RootSessionCoordinator(
-            authenticator: authenticator,
-            passwordResetter: passwordResetter,
+            authServices: AuthenticationServices(authenticator: authenticator, passwordResetter: passwordResetter),
             biometricAuthenticator: LABiometricAuthenticator(),
             stores: SessionStores(
                 sessionStore: KeychainLocalSessionStore(),

@@ -126,4 +126,38 @@ final class CreateNewPasswordViewModelTests: XCTestCase {
         sut.clearFormError()
         XCTAssertNil(sut.formError)
     }
+
+    // MARK: - showFormErrorSummary (AC16: summary hidden for the field-level "missing/invalid" case)
+
+    func test_showFormErrorSummary_whenNoFormError_isFalse() {
+        let sut = makeSut()
+        XCTAssertFalse(sut.showFormErrorSummary)
+    }
+
+    func test_showFormErrorSummary_whenMissingOrInvalidFields_isFalse() async {
+        let sut = makeSut()
+        await sut.submit() // blank fields → .missingOrInvalidFields
+        XCTAssertFalse(sut.showFormErrorSummary)
+    }
+
+    func test_showFormErrorSummary_whenServiceLevelError_isTrue() async {
+        let resetter = FakePasswordResetter(submitNewPasswordOutcome: .network)
+        let sut = makeSut(resetter: resetter)
+        sut.newPassword = "TestPassword123!"
+        sut.confirmPassword = "TestPassword123!"
+
+        await sut.submit()
+
+        XCTAssertTrue(sut.showFormErrorSummary)
+    }
+
+    // MARK: - NewPasswordFormError.localizationKey
+
+    func test_newPasswordFormError_localizationKey_mapsEachCase() {
+        XCTAssertNil(NewPasswordFormError.missingOrInvalidFields.localizationKey)
+        XCTAssertEqual(NewPasswordFormError.doesNotMeetPolicy.localizationKey, "passwordReset.newPassword.error.requirements")
+        XCTAssertEqual(NewPasswordFormError.sessionExpired.localizationKey, "passwordReset.error.sessionExpired")
+        XCTAssertEqual(NewPasswordFormError.network.localizationKey, "passwordReset.error.service")
+        XCTAssertEqual(NewPasswordFormError.serviceUnavailable.localizationKey, "passwordReset.error.service")
+    }
 }

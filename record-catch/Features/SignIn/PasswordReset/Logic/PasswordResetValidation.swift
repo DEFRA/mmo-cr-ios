@@ -98,7 +98,10 @@ enum PasswordResetValidation {
     /// Counts how many of the four character classes (uppercase, lowercase, digit, symbol) appear
     /// at least once in `password`.
     static func characterClassCount(_ password: String) -> Int {
-        var hasUpper = false, hasLower = false, hasDigit = false, hasSymbol = false
+        var hasUpper = false
+        var hasLower = false
+        var hasDigit = false
+        var hasSymbol = false
         for character in password {
             if character.isUppercase { hasUpper = true }
             else if character.isLowercase { hasLower = true }

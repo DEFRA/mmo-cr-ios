@@ -97,4 +97,27 @@ final class PasswordResetValidationTests: XCTestCase {
     func test_confirmPasswordError_whenMatch_returnsNil() {
         XCTAssertNil(PasswordResetValidation.confirmPasswordError(newPassword: "TestPassword123!", confirmPassword: "TestPassword123!"))
     }
+
+    // MARK: - localizationKey (string mapping consumed by every PasswordReset view)
+
+    func test_resetEmailFieldError_localizationKey_mapsEachCase() {
+        XCTAssertEqual(ResetEmailFieldError.emptyEmail.localizationKey, "passwordReset.email.error.empty")
+        XCTAssertEqual(ResetEmailFieldError.invalidEmailFormat.localizationKey, "passwordReset.email.error.invalid")
+    }
+
+    func test_resetCodeFieldError_localizationKey_mapsEmptyCode() {
+        XCTAssertEqual(ResetCodeFieldError.emptyCode.localizationKey, "passwordReset.code.error.empty")
+    }
+
+    func test_newPasswordFieldError_localizationKey_mapsEachCase() {
+        XCTAssertEqual(NewPasswordFieldError.emptyPassword.localizationKey, "passwordReset.newPassword.error.empty")
+        XCTAssertEqual(NewPasswordFieldError.tooShort.localizationKey, "passwordReset.newPassword.error.requirements")
+        XCTAssertEqual(NewPasswordFieldError.notEnoughCharacterClasses.localizationKey, "passwordReset.newPassword.error.requirements")
+        XCTAssertEqual(NewPasswordFieldError.tooLong.localizationKey, "passwordReset.newPassword.error.tooLong")
+    }
+
+    func test_confirmPasswordFieldError_localizationKey_mapsEachCase() {
+        XCTAssertEqual(ConfirmPasswordFieldError.empty.localizationKey, "passwordReset.confirmPassword.error.empty")
+        XCTAssertEqual(ConfirmPasswordFieldError.mismatch.localizationKey, "passwordReset.confirmPassword.error.mismatch")
+    }
 }

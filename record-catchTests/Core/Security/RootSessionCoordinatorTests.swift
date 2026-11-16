@@ -25,8 +25,7 @@ final class RootSessionCoordinatorTests: XCTestCase {
         let resolvedPasswordResetter: any PasswordResetting = passwordResetter ?? FakePasswordResetter()
         let resolvedConnectivityMonitor: any record_catch.ConnectivityMonitoring = connectivityMonitor ?? record_catch.StubConnectivityMonitor(isOnline: true)
         return RootSessionCoordinator(
-            authenticator: resolvedAuthenticator,
-            passwordResetter: resolvedPasswordResetter,
+            authServices: AuthenticationServices(authenticator: resolvedAuthenticator, passwordResetter: resolvedPasswordResetter),
             biometricAuthenticator: biometricAuthenticator,
             stores: SessionStores(
                 sessionStore: sessionStore,

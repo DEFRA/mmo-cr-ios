@@ -25,11 +25,11 @@ final class PasswordResetRouter {
     }
 
     /// Returns to a fresh "Reset your password" screen with the email field blank (AC9 — "Send a
-    /// new code"). Distinct from `start()` only in intent; both produce the same single-element
-    /// path with a new `attempt` token.
+    /// new code"). Distinct from `start()` only in the caller's intent (restarting an in-progress
+    /// journey vs. beginning a new one); both must produce the same single-element path with a
+    /// new `attempt` token, so this simply delegates to avoid duplicating that behaviour.
     func restart() {
-        attempt += 1
-        path = [.resetPassword(attempt: attempt)]
+        start()
     }
 
     /// Pushes the next screen in the journey.

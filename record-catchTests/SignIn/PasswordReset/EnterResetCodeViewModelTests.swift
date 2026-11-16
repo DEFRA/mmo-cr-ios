@@ -102,4 +102,42 @@ final class EnterResetCodeViewModelTests: XCTestCase {
         sut.clearFormError()
         XCTAssertNil(sut.formError)
     }
+
+    // MARK: - showSendNewCode (AC8: always offered, see doc comment on the property)
+
+    func test_showSendNewCode_isAlwaysTrue() {
+        XCTAssertTrue(makeSut().showSendNewCode)
+    }
+
+    // MARK: - showFormErrorSummary (AC6: summary hidden for the field-level "missing code" case)
+
+    func test_showFormErrorSummary_whenNoFormError_isFalse() {
+        XCTAssertFalse(makeSut().showFormErrorSummary)
+    }
+
+    func test_showFormErrorSummary_whenMissingCode_isFalse() async {
+        let sut = makeSut()
+        await sut.submit() // blank code → .missingCode
+        XCTAssertFalse(sut.showFormErrorSummary)
+    }
+
+    func test_showFormErrorSummary_whenServiceLevelError_isTrue() async {
+        let resetter = FakePasswordResetter(verifyCodeOutcome: .network)
+        let sut = makeSut(resetter: resetter)
+        sut.code = "00000000"
+
+        await sut.submit()
+
+        XCTAssertTrue(sut.showFormErrorSummary)
+    }
+
+    // MARK: - ResetCodeFormError.localizationKey
+
+    func test_resetCodeFormError_localizationKey_mapsEachCase() {
+        XCTAssertNil(ResetCodeFormError.missingCode.localizationKey)
+        XCTAssertEqual(ResetCodeFormError.invalidCode.localizationKey, "passwordReset.code.error.invalid")
+        XCTAssertEqual(ResetCodeFormError.expiredCode.localizationKey, "passwordReset.code.error.expired")
+        XCTAssertEqual(ResetCodeFormError.network.localizationKey, "passwordReset.error.service")
+        XCTAssertEqual(ResetCodeFormError.serviceUnavailable.localizationKey, "passwordReset.error.service")
+    }
 }

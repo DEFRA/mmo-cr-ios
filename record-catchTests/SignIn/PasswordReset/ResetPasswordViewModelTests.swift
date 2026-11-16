@@ -99,4 +99,35 @@ final class ResetPasswordViewModelTests: XCTestCase {
         sut.clearFormError()
         XCTAssertNil(sut.formError)
     }
+
+    // MARK: - showFormErrorSummary (AC2/AC3: summary hidden for the field-level email case)
+
+    func test_showFormErrorSummary_whenNoFormError_isFalse() {
+        XCTAssertFalse(makeSut().showFormErrorSummary)
+    }
+
+    func test_showFormErrorSummary_whenMissingOrInvalidEmail_isFalse() async {
+        let sut = makeSut()
+        await sut.submit() // blank email → .missingOrInvalidEmail
+        XCTAssertFalse(sut.showFormErrorSummary)
+    }
+
+    func test_showFormErrorSummary_whenServiceLevelError_isTrue() async {
+        let resetter = FakePasswordResetter(requestCodeOutcome: .network)
+        let sut = makeSut(resetter: resetter)
+        sut.email = "a@b.com"
+
+        await sut.submit()
+
+        XCTAssertTrue(sut.showFormErrorSummary)
+    }
+
+    // MARK: - ResetPasswordFormError.localizationKey
+
+    func test_resetPasswordFormError_localizationKey_mapsEachCase() {
+        XCTAssertNil(ResetPasswordFormError.missingOrInvalidEmail.localizationKey)
+        XCTAssertEqual(ResetPasswordFormError.network.localizationKey, "passwordReset.error.service")
+        XCTAssertEqual(ResetPasswordFormError.serviceUnavailable.localizationKey, "passwordReset.error.service")
+        XCTAssertEqual(ResetPasswordFormError.notConfigured.localizationKey, "passwordReset.error.service")
+    }
 }

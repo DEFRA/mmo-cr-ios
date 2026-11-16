@@ -23,7 +23,10 @@ struct SignInFlowView: View {
     init(
         authenticator: any Authenticating,
         passwordResetter: any PasswordResetting,
-        onSignIn: @escaping (AuthenticatedAccount) -> Void = { _ in }
+        onSignIn: @escaping (AuthenticatedAccount) -> Void = { _ in
+            // Intentionally empty: callers that don't care about the authenticated account (e.g.
+            // previews, UI tests) can omit this closure entirely rather than writing a no-op.
+        }
     ) {
         self.authenticator = authenticator
         self.passwordResetter = passwordResetter

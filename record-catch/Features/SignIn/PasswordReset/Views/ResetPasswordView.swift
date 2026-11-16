@@ -20,21 +20,9 @@ struct ResetPasswordView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Spacer()
-                LanguageToggleButton(foregroundColor: AppColors.textPrimary)
-            }
-            .padding(.horizontal, AppSpacing.medium)
-
-            ScrollView {
-                content
-                    .padding(.horizontal, AppSpacing.medium)
-                    .padding(.bottom, AppSpacing.large)
-            }
+        AuthScreenScaffold {
+            content
         }
-        .background(AppColors.background)
-        .environment(\.locale, languageStore.language.locale)
     }
 
     @ViewBuilder
@@ -44,12 +32,7 @@ struct ResetPasswordView: View {
                 formErrorSummary(key: key)
             }
 
-            Image("CrownLogo")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 64, height: 64)
-                .frame(maxWidth: .infinity, alignment: .center)
-                .accessibilityHidden(true)
+            CrownLogoHeader()
 
             LocalizedText("passwordReset.reset.heading")
                 .font(AppTypography.pageTitle)

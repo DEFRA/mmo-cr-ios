@@ -41,9 +41,11 @@ struct SignInView: View {
     ) {
         _viewModel = State(initialValue: SignInViewModel(authenticator: authenticator, onSignedIn: onSignIn))
         self.onForgottenPassword = onForgottenPassword
+        self.onSignIn = onSignIn // TEMP SIGN-IN BYPASS — remove
     }
 
     private let onForgottenPassword: () -> Void
+    private let onSignIn: (AuthenticatedAccount) -> Void // TEMP SIGN-IN BYPASS — remove
 
     var body: some View {
         // The Sign In design has no GOV.UK header bar and no footer — just a
@@ -108,6 +110,8 @@ struct SignInView: View {
             .accessibilityIdentifier("SignIn.signInButton")
 
             troubleSection
+
+            SignInDebugBypassButton(onSignIn: onSignIn) // TEMP SIGN-IN BYPASS — remove
         }
         .onChange(of: viewModel.formError) { _, newValue in
             guard newValue != nil, newValue != .missingOrInvalidFields else { return }

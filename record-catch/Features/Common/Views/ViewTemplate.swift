@@ -14,15 +14,21 @@ struct ViewTemplate<Content: View>: View {
     /// content, above the page title. Opt-in per screen (defaults to `nil`) so
     /// existing screens are unaffected.
     let warning: WarningBox?
+    /// Whether to show `SyncErrorBanner` on this screen. Per design, the "fishing data could not
+    /// be updated" notification only appears on the Home screen — defaults to `false` so every
+    /// other screen built on `ViewTemplate` is unaffected; `HomeView` opts in explicitly.
+    let showsSyncErrorBanner: Bool
     let content: Content
 
     init(
         title: String,
         warning: WarningBox? = nil,
+        showsSyncErrorBanner: Bool = false,
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
         self.warning = warning
+        self.showsSyncErrorBanner = showsSyncErrorBanner
         self.content = content()
     }
 
@@ -35,8 +41,11 @@ struct ViewTemplate<Content: View>: View {
             OfflineBanner()
             // Pinned below the offline banner (see ADR-0024 "Error UI") — renders nothing unless
             // the most recent reference-data sync failed, and nothing at all while offline (that
-            // case is already covered by `OfflineBanner` above).
-            SyncErrorBanner()
+            // case is already covered by `OfflineBanner` above). Design-confirmed: only `HomeView`
+            // opts in via `showsSyncErrorBanner` — every other screen never shows it.
+            if showsSyncErrorBanner {
+                SyncErrorBanner()
+            }
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: AppSpacing.large) {

@@ -40,7 +40,8 @@ struct HomeView: View {
     var body: some View {
         ViewTemplate(
             title: languageStore.localized("home.title"),
-            warning: WarningBox(tagKey: "home.warning.tag", messageKey: "home.warning.message")
+            warning: WarningBox(tagKey: "home.warning.tag", messageKey: "home.warning.message"),
+            showsSyncErrorBanner: true
         ) {
             content
                 .environment(\.locale, languageStore.language.locale)

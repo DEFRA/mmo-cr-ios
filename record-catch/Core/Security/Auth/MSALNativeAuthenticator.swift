@@ -50,7 +50,11 @@ final class MSALNativeAuthenticator: Authenticating {
             let config = try MSALNativeAuthPublicClientApplicationConfig(
                 clientId: configuration.clientID,
                 tenantSubdomain: configuration.tenantSubdomain,
-                challengeTypes: [.password]
+                // `.OOB` added alongside `.password` for self-service password reset's emailed
+                // code step (ADR-0027 §1, supersedes ADR-0022 §1). Sign-in's own negotiation is
+                // unaffected: an unexpected `codeRequired` step already maps to
+                // `.serviceUnavailable` below.
+                challengeTypes: [.OOB, .password]
             )
             // Avoids requiring the `com.microsoft.adalcache` shared-keychain-access-group
             // entitlement: pointing MSAL's cache at this app's own bundle identifier uses a

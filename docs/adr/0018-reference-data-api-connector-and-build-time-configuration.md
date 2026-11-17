@@ -653,6 +653,17 @@ writes a flat `APIBaseURL` key.
 
 ## Addendum (2026-11): fourth dataset — `gears` (`?view=mobile`), and a manifest `itemCount` fix
 
+> **Superseded in part by ADR-0024.** The single-request design below (`fetchGears()` fetching only
+> `?view=mobile`, `GearOption.make(dto:measurementsById:)`, dropping an unresolved measurement id
+> rather than failing) was replaced once a screen actually started consuming `GearOption`s built by
+> this connector. ADR-0024 "Gears from two requests" now fetches **both** the canonical and mobile
+> views (the canonical view's `applicableCharacteristics.fixed` is the only source of the
+> required/per-trip split and vessel-length applicability), joins them strictly via
+> `GearOption.make(canonical:mobile:measurementsById:vesselLengthBand:)`, and **throws** rather than
+> silently drops on a mismatch or an unresolved measurement id. The manifest `itemCount` fix below is
+> unaffected and remains current. See `docs/api/reference-data-api.md`'s "Gears dataset" section for
+> the current contract.
+
 Direct probing of the live CDP dev reference-data API (the same approach used to correct the
 earlier collection-route/`view` mistakes above) surfaced two findings for the `gears` dataset and
 the manifest, addressed together as a connector-only change (no view model/persistence wiring —

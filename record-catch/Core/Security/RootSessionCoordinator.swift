@@ -35,6 +35,15 @@ struct SessionStores {
     let verificationStore: SessionVerificationStoring
 }
 
+/// Bundles the two MSAL-backed authentication services (sign-in, self-service password reset —
+/// ADR-0022/ADR-0027) into one value, for the same reason as `SessionStores` above: keeping
+/// `RootSessionCoordinator.init` within SonarCloud's 7-parameter limit (swift:S107) without
+/// changing how the class addresses each service individually internally.
+struct AuthenticationServices {
+    let authenticator: any Authenticating
+    let passwordResetter: any PasswordResetting
+}
+
 @MainActor
 @Observable
 final class RootSessionCoordinator {
@@ -46,6 +55,8 @@ final class RootSessionCoordinator {
     /// from the *same* signed-in session/MSAL cache, rather than constructing a second
     /// authenticator. Read-only — only `RootSessionCoordinator` itself drives sign-in/sign-out.
     var sharedAuthenticator: any Authenticating { authenticator }
+    /// Self-service password reset (ADR-0027), shared with `SignInFlowView` via `makeSignInView()`.
+    private let passwordResetter: any PasswordResetting
     private let biometricAuthenticator: BiometricAuthenticating
     private let sessionStore: LocalSessionStoring
     private let secretStore: ReentrySecretStoring
@@ -65,7 +76,7 @@ final class RootSessionCoordinator {
     private let isUITesting: Bool
 
     init(
-        authenticator: any Authenticating,
+        authServices: AuthenticationServices,
         biometricAuthenticator: BiometricAuthenticating,
         stores: SessionStores,
         connectivityMonitor: ConnectivityMonitoring,
@@ -73,7 +84,8 @@ final class RootSessionCoordinator {
         skipsBackgroundVerification: Bool = false,
         isUITesting: Bool = LaunchArguments.current.isUITesting
     ) {
-        self.authenticator = authenticator
+        self.authenticator = authServices.authenticator
+        self.passwordResetter = authServices.passwordResetter
         self.biometricAuthenticator = biometricAuthenticator
         self.sessionStore = stores.sessionStore
         self.secretStore = stores.secretStore
@@ -182,9 +194,11 @@ final class RootSessionCoordinator {
         phase = .home
     }
 
-    /// Builds a `SignInViewModel`-backed `SignInView` sharing this coordinator's authenticator.
-    func makeSignInView() -> SignInView {
-        SignInView(authenticator: authenticator, onSignIn: { [weak self] account in
+    /// Builds a `SignInFlowView` sharing this coordinator's authenticator and password resetter
+    /// (ADR-0027 §8) — the Sign In screen plus the self-service password-reset journey pushed on
+    /// top of it.
+    func makeSignInView() -> SignInFlowView {
+        SignInFlowView(authenticator: authenticator, passwordResetter: passwordResetter, onSignIn: { [weak self] account in
             self?.handleSignIn(account)
         })
     }
@@ -248,10 +262,15 @@ extension RootSessionCoordinator {
         let authenticator: any Authenticating = launchArguments.isUITesting
             ? FakeAuthenticator.makeUITestStub()
             : MSALNativeAuthenticator.make(connectivityMonitor: resolvedConnectivityMonitor)
+        // Any `-uiTest*` launch forces the password-resetter stub too (ADR-0027, mirrors
+        // ADR-0022 §10), so no XCUITest run ever depends on network access to a real Entra tenant.
+        let passwordResetter: any PasswordResetting = launchArguments.isUITesting
+            ? UITestStubPasswordResetter()
+            : MSALNativePasswordResetter.make(connectivityMonitor: resolvedConnectivityMonitor)
 
         if launchArguments.contains(.appLockLocked) {
             return RootSessionCoordinator(
-                authenticator: authenticator,
+                authServices: AuthenticationServices(authenticator: authenticator, passwordResetter: passwordResetter),
                 biometricAuthenticator: FakeBiometricAuthenticator(availability: .available(.faceID)),
                 stores: SessionStores(
                     sessionStore: InMemoryLocalSessionStore(hasSession: true),
@@ -267,7 +286,7 @@ extension RootSessionCoordinator {
 
         if launchArguments.contains(.appLockFallback) {
             return RootSessionCoordinator(
-                authenticator: authenticator,
+                authServices: AuthenticationServices(authenticator: authenticator, passwordResetter: passwordResetter),
                 biometricAuthenticator: FakeBiometricAuthenticator(availability: .unavailable(.noBiometryEnrolled)),
                 stores: SessionStores(
                     sessionStore: InMemoryLocalSessionStore(hasSession: true),
@@ -296,7 +315,7 @@ extension RootSessionCoordinator {
         // `-uiTestOffline`) are not, and rely on this coordinator's phase genuinely starting at
         // `.signIn` on a fresh simulator run, exactly as a real first launch would.
         return RootSessionCoordinator(
-            authenticator: authenticator,
+            authServices: AuthenticationServices(authenticator: authenticator, passwordResetter: passwordResetter),
             biometricAuthenticator: LABiometricAuthenticator(),
             stores: SessionStores(
                 sessionStore: KeychainLocalSessionStore(),

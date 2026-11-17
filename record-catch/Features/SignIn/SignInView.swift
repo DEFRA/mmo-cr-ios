@@ -33,10 +33,19 @@ struct SignInView: View {
         authenticator: any Authenticating,
         onSignIn: @escaping (AuthenticatedAccount) -> Void = { _ in
             // No-op default: previews/tests that don't care about the destination.
+        },
+        onForgottenPassword: @escaping () -> Void = {
+            // No-op default: previews/tests/standalone hosting that don't need the
+            // password-reset journey (ADR-0027 §8).
         }
     ) {
         _viewModel = State(initialValue: SignInViewModel(authenticator: authenticator, onSignedIn: onSignIn))
+        self.onForgottenPassword = onForgottenPassword
+        self.onSignIn = onSignIn // TEMP SIGN-IN BYPASS — remove
     }
+
+    private let onForgottenPassword: () -> Void
+    private let onSignIn: (AuthenticatedAccount) -> Void // TEMP SIGN-IN BYPASS — remove
 
     var body: some View {
         // The Sign In design has no GOV.UK header bar and no footer — just a
@@ -101,6 +110,8 @@ struct SignInView: View {
             .accessibilityIdentifier("SignIn.signInButton")
 
             troubleSection
+
+            SignInDebugBypassButton(onSignIn: onSignIn) // TEMP SIGN-IN BYPASS — remove
         }
         .onChange(of: viewModel.formError) { _, newValue in
             guard newValue != nil, newValue != .missingOrInvalidFields else { return }
@@ -251,11 +262,11 @@ struct SignInView: View {
         )
     }
 
-    /// "Forgotten your password?" — an inert link-styled button. Self-service password reset is
-    /// deferred to a separate ticket (ADR-0022 §8, AC6); this screen never navigates anywhere.
+    /// "Forgotten your password?" — opens the self-service password-reset journey (ADR-0027,
+    /// supersedes ADR-0022 §8's inert link).
     private func linkButton(key: String, identifier: String) -> some View {
         Button {
-            // Intentionally inert — see the doc comment above (ADR-0022 §8).
+            onForgottenPassword()
         } label: {
             LocalizedText(key)
                 .font(AppTypography.body)

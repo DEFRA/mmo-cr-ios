@@ -120,14 +120,33 @@ nonisolated struct CatchRecordTransport: Sendable {
         _ = try await send(request, decoder: decoder) { _ in () }
     }
 
+    /// Maps a transport-level `URLError` (i.e. no HTTP response was ever received) to `APIError`.
+    ///
+    /// Offline-first (copilot-instructions.md §3): a real device rarely reports a clean
+    /// `.notConnectedToInternet` — a flaky signal or an unreachable backend much more commonly
+    /// surfaces as `.cannotConnectToHost`, `.cannotFindHost`, `.dnsLookupFailed`,
+    /// `.networkConnectionLost`, `.dataNotAllowed`, etc. Treating only the first two codes as
+    /// retryable meant every other "couldn't reach the backend" failure was wrongly classified as
+    /// permanent (`isRetryable == false`, since a `URLError`'s raw `errorCode` is always negative and
+    /// so never matches the `500..<600` range `isRetryable` checks) — surfacing the user-facing
+    /// error banner instead of queuing the record for automatic retry (ADR-0028). Every connection-
+    /// level failure is therefore retryable here; only genuine TLS/certificate trust failures are
+    /// still surfaced as real, non-retryable errors — those are a security signal (see
+    /// security.instructions.md — ATS/TLS) that must never be silently treated as "just offline".
     private static func mapURLError(_ error: URLError) -> APIError {
         switch error.code {
-        case .notConnectedToInternet, .networkConnectionLost:
-            return .offline
         case .timedOut:
             return .timedOut
-        default:
+        case .secureConnectionFailed, .serverCertificateUntrusted, .serverCertificateHasBadDate,
+            .serverCertificateNotYetValid, .serverCertificateHasUnknownRoot, .clientCertificateRejected,
+            .clientCertificateRequired, .appTransportSecurityRequiresSecureConnection:
             return .response(status: error.errorCode, details: nil)
+        default:
+            // Every other transport-level failure — no HTTP response was received at all — is
+            // treated as offline/retryable: `.notConnectedToInternet`, `.networkConnectionLost`,
+            // `.cannotConnectToHost`, `.cannotFindHost`, `.dnsLookupFailed`, `.dataNotAllowed`,
+            // `.internationalRoamingOff`, `.cannotLoadFromNetwork`, `.resourceUnavailable`, etc.
+            return .offline
         }
     }
 }

@@ -142,7 +142,7 @@ final class HomeUITests: XCTestCase {
 
         statusHelp.tap()
 
-        XCTAssertTrue(app.staticTexts["Unsent:"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Draft:"].waitForExistence(timeout: 5))
         // Expanding the status-help section doesn't also reveal How to record.
         XCTAssertFalse(app.staticTexts["What you need to do"].exists)
     }

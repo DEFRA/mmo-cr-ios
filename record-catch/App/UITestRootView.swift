@@ -149,7 +149,12 @@ struct UITestRootView<ProductionRoot: View>: View {
             // links without driving the whole journey by hand.
             CatchRecordHostView(
                 initialRoute: .checkYourAnswers(referenceNumber: "A1234520260727150815"),
-                draft: Self.seedCheckYourAnswersDraft
+                draft: Self.seedCheckYourAnswersDraft,
+                // Deterministic, always-succeeding submission queue (see ADR-0028) — otherwise the
+                // app-wide `CatchRecordSubmissionCoordinator` injected by `RecordCatchApp` would
+                // attempt a real network call with no reachable backend, so "Accept and submit
+                // trip details" would never reach `submissionSuccess` in this UI test.
+                submissionQueue: AlwaysSucceedingCatchRecordSubmissionQueue()
             )
         } else if launchArguments.contains(.catchRecordRecordSpeciesWeights) {
             // Seeded favourite species already recorded to the draft → "Remove species" link is

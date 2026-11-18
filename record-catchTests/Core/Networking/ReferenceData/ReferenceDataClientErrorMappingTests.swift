@@ -183,11 +183,23 @@ final class ReferenceDataClientErrorMappingTests: XCTestCase {
         await assertMapsURLError(.timedOut, to: .timedOut)
     }
 
-    func test_fetchVessels_throwsResponseWithNilDetails_onUnmappedURLError() async {
-        // Any `URLError` not explicitly named above (offline/timed-out) falls through to
-        // `mapURLError`'s `default:` branch, carrying the raw (always-negative) `errorCode` — not
-        // a real HTTP status — with no decoded envelope (see ADR-0018 §6).
-        let code = URLError.Code.cannotFindHost
+    func test_fetchVessels_throwsOffline_onUnmappedConnectivityURLError() async {
+        // Offline-first (copilot-instructions.md §3): a real device rarely reports a clean
+        // `.notConnectedToInternet` — a flaky signal or an unreachable backend much more commonly
+        // surfaces as one of these other connection-level `URLError` codes. None of them carry a
+        // real HTTP response, so they are all treated as retryable/offline rather than permanent
+        // (see `CatchRecordTransport.mapURLError`'s identical reasoning).
+        await assertMapsURLError(.cannotFindHost, to: .offline)
+        await assertMapsURLError(.cannotConnectToHost, to: .offline)
+        await assertMapsURLError(.dnsLookupFailed, to: .offline)
+        await assertMapsURLError(.dataNotAllowed, to: .offline)
+    }
+
+    func test_fetchVessels_throwsResponseWithNilDetails_onCertificateTrustFailure() async {
+        // Genuine TLS/certificate trust failures are a security signal (ATS/TLS —
+        // security.instructions.md) and must never be silently treated as "just offline"; they stay
+        // a real, non-retryable `.response`.
+        let code = URLError.Code.serverCertificateUntrusted
         await assertMapsURLError(code, to: .response(status: code.rawValue, details: nil))
     }
 

@@ -62,17 +62,21 @@ enum RecordsMerging {
     static let localCreatedByPlaceholder = "You"
 
     /// Builds the Home row for a persisted local draft, using placeholder text for any field not
-    /// yet captured. A draft flagged submitted (`UnsentDraftSummary.isSubmitted` — see
-    /// `CatchRecordDraftStoring.markSubmitted(localID:)`) renders as `.submitted` with no
-    /// resume/delete `localID`, since `DraftActionView`'s actions only apply to an Unsent row (see
-    /// `CatchRecordRouting.entryRoute(for:)`); an Unsent row keeps its `localID` as before.
+    /// yet captured. The status is resolved via `CatchRecordStatusResolver` (ADR-0028 — AC1–AC8),
+    /// from the summary's queue/backend-status fields, falling back to the legacy
+    /// `isSubmitted`-only behaviour for any row persisted before the queue existed (see
+    /// `UnsentDraftSummary.displayStatus`). Only a record resolving to **Draft**
+    /// (`.unsent`) keeps a resume/delete `localID` — every other status (including
+    /// `.completePending`, while a send is in flight) is not resumable/deletable via
+    /// `DraftActionView` (see `CatchRecordRouting.entryRoute(for:)`).
     static func row(for summary: UnsentDraftSummary) -> SubmissionRow {
-        SubmissionRow(
+        let status = summary.displayStatus
+        return SubmissionRow(
             dateText: summary.tripEndDate.map { dateFormatter.string(from: $0) } ?? placeholder,
             vesselName: summary.vessel ?? placeholder,
-            status: summary.isSubmitted ? .submitted : .unsent,
+            status: status,
             createdBy: localCreatedByPlaceholder,
-            localID: summary.isSubmitted ? nil : summary.localID,
+            localID: status == .unsent ? summary.localID : nil,
             sortDate: summary.tripEndDate ?? summary.lastEditedAt
         )
     }

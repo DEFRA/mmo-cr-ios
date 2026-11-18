@@ -70,6 +70,13 @@ struct RecordCatchApp: App {
     // feature wires it in next; see `CatchRecordServicesFactory`'s doc comment for scope.
     @State private var catchRecordServices: CatchRecordServices
 
+    // Submission queue (ADR-0028): the single app-wide `CatchRecordSubmissionCoordinator`, so
+    // every "Accept and submit trip details" across the app shares the same in-flight queue state
+    // (never two independent coordinators racing to send the same record). Holds its own
+    // `ModelContext` on the shared `sharedModelContainer`, independent of any screen's own
+    // environment `modelContext`, since it must survive and keep retrying across navigation.
+    @State private var catchRecordSubmissionCoordinator: CatchRecordSubmissionCoordinator
+
     init() {
         let monitor = Self.makeConnectivityMonitor()
         _connectivityMonitor = State(initialValue: monitor)
@@ -84,7 +91,13 @@ struct RecordCatchApp: App {
             store: ReferenceDataStore(modelContainer: sharedModelContainer),
             connectivityMonitor: monitor
         ))
-        _catchRecordServices = State(initialValue: CatchRecordServicesFactory.make(authenticator: { coordinator.sharedAuthenticator }))
+        let services = CatchRecordServicesFactory.make(authenticator: { coordinator.sharedAuthenticator })
+        _catchRecordServices = State(initialValue: services)
+        _catchRecordSubmissionCoordinator = State(initialValue: CatchRecordSubmissionCoordinator(
+            service: services.catchRecords,
+            draftStore: SwiftDataCatchRecordDraftStore(modelContext: ModelContext(sharedModelContainer)),
+            isOnline: { monitor.isOnline }
+        ))
     }
 
     var body: some Scene {
@@ -96,6 +109,7 @@ struct RecordCatchApp: App {
                 .environment(\.locale, languageStore.language.locale)
                 .environment(\.connectivityMonitor, connectivityMonitor)
                 .environment(\.referenceDataSyncStatus, referenceDataSyncCoordinator)
+                .environment(\.catchRecordSubmissionQueue, catchRecordSubmissionCoordinator)
                 // The design system (`AppColors`) mirrors the GOV.UK Design System, which is
                 // light-only: every colour (backgrounds, borders, text) is a fixed literal
                 // rather than a Dark Mode-adaptive one. Without forcing `.light` here, controls
@@ -128,10 +142,20 @@ struct RecordCatchApp: App {
                     // by Design — data is not fetched ahead of authentication).
                     guard newPhase == .active, oldPhase == .background, isPastSignIn else { return }
                     referenceDataSyncCoordinator.notifyForeground()
+                    Task { await catchRecordSubmissionCoordinator.flushPending() }
                 }
                 .onChange(of: connectivityMonitor.isOnline) { wasOnline, isOnline in
                     guard isOnline, !wasOnline, isPastSignIn else { return }
                     referenceDataSyncCoordinator.notifyConnectivityRestored()
+                    Task { await catchRecordSubmissionCoordinator.flushPending() }
+                }
+                .onChange(of: sessionCoordinator.phase) { _, newPhase in
+                    // Submission-queue trigger (ADR-0028): attempt every queued record as soon as
+                    // Home is reached (app launch while already signed in, or just having signed
+                    // in), so a record queued in a previous session gets another chance to send
+                    // without waiting for a connectivity-restored/foreground edge.
+                    guard newPhase == .home else { return }
+                    Task { await catchRecordSubmissionCoordinator.flushPending() }
                 }
         }
         .modelContainer(sharedModelContainer)

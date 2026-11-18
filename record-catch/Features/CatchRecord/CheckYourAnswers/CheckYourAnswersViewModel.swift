@@ -12,16 +12,20 @@ import Foundation
 /// was folded into this screen — see the module README and ADR-0014 amendment): the declaration
 /// notice/bullets shown beneath the summary are informational only (there is no separate
 /// confirmation checkbox), so "Accept and submit trip details" calls `submit(isOnline:)` directly.
-/// If the device is online, this (stubbed) calls `CatchRecordSubmissionServicing` and, on success,
-/// flags the persisted local draft as submitted (fire-and-forget — see
-/// `CatchRecordDraftStoring.markSubmitted(localID:)`) so it keeps showing on Home as `.submitted`
-/// rather than `.unsent` (see ADR-0014/0015), then routes to `submissionSuccess`. A
-/// transient/offline *service* failure surfaces a recoverable inline error and does not navigate
-/// (and leaves the persisted draft untouched, so it remains resumable), matching the `saveFailed`
-/// pattern used elsewhere in this module (e.g. `GearMeasurementsViewModel`). If the device has
-/// **no connectivity at all** (BR-SUB-008/AC10/AC11), the submission service is never called: the
-/// draft is (re)saved to be certain it is not lost, and the journey routes to `submissionSaved`
-/// instead — a truthful "saved on this device" screen, not the green submitted confirmation.
+///
+/// **Submission queue (ADR-0028):** the record is always enqueued first
+/// (`CatchRecordSubmissionQueuing.enqueue(_:)`), *before* any network attempt is made, so it is
+/// never lost — even if the app is killed immediately afterwards it stays **Complete/Pending** on
+/// Home and is retried automatically once a connection is available. If the device is online, this
+/// then tries to send that one record straight away, with a short timeout
+/// (`submitNow(localID:timeout:)`):
+/// - **Sent and accepted** → `submissionSuccess` (the real green confirmation — only ever shown
+///   once the backend has actually accepted the record).
+/// - **Still queued** (offline, a retryable failure, or the attempt didn't finish within the
+///   timeout) → `submissionSaved` — the truthful "saved on this device, will send automatically"
+///   screen (BR-SUB-008/AC10/AC11) — never the green one.
+/// - **Failed permanently** (validation/mapping/configuration — nothing a retry would fix) →
+///   a recoverable inline error (`submitFailed`), and the record falls back to showing as Draft.
 @MainActor
 @Observable
 final class CheckYourAnswersViewModel {
@@ -30,27 +34,29 @@ final class CheckYourAnswersViewModel {
     let referenceNumber: String
 
     private(set) var isSubmitting = false
-    /// Set when the (stubbed) submission API call fails, so the view can surface a recoverable,
-    /// accessible error rather than silently discarding the attempt.
+    /// Set when submission fails **permanently** (never worth retrying automatically — validation,
+    /// mapping, configuration), so the view can surface a recoverable, accessible error rather than
+    /// silently discarding the attempt.
     private(set) var submitFailed = false
 
     private let router: CatchRecordRouter
     private let draft: CatchRecordDraft
-    private let submissionService: CatchRecordSubmissionServicing
-    private let draftStore: CatchRecordDraftStoring
+    private let submissionQueue: CatchRecordSubmissionQueuing
+
+    /// How long `submit(isOnline: true)` waits for the backend to accept the record before
+    /// treating it as still-queued rather than blocking the user indefinitely (see ADR-0028).
+    static let onlineSubmissionTimeout: TimeInterval = 20
 
     init(
         referenceNumber: String,
         router: CatchRecordRouter,
         draft: CatchRecordDraft,
-        submissionService: CatchRecordSubmissionServicing = StubCatchRecordSubmissionService(),
-        draftStore: CatchRecordDraftStoring = InMemoryCatchRecordDraftStore()
+        submissionQueue: CatchRecordSubmissionQueuing = StubCatchRecordSubmissionQueue()
     ) {
         self.referenceNumber = referenceNumber
         self.router = router
         self.draft = draft
-        self.submissionService = submissionService
-        self.draftStore = draftStore
+        self.submissionQueue = submissionQueue
     }
 
     /// A single labelled fact about the trip, with the route its "Change" link returns to.
@@ -152,10 +158,8 @@ final class CheckYourAnswersViewModel {
         router.push(route)
     }
 
-    /// Confirms the summary and submits the completed record, either via the (stubbed) submission
-    /// service (when `isOnline`) or by routing to the saved-not-sent screen (when not). See the
-    /// class doc comment for the full behaviour (this folds in what was previously
-    /// `SubmissionConfirmationViewModel.submit()`).
+    /// Confirms the summary and submits the completed record via the on-device submission queue —
+    /// see the class doc comment for the full behaviour.
     ///
     /// - Parameter isOnline: the device's connectivity at the moment "Accept and submit trip
     ///   details" is tapped (see `ConnectivityMonitoring`). Defaults to `true` so every existing
@@ -167,20 +171,25 @@ final class CheckYourAnswersViewModel {
         guard !isSubmitting else { return }
         submitFailed = false
 
+        // Always enqueue first, before any network attempt — the record must never be lost, even
+        // if the app is killed immediately afterwards (ADR-0028).
+        await submissionQueue.enqueue(draft)
+
         guard isOnline else {
-            Task { try? await draftStore.save(draft) }
             router.push(.submissionSaved(referenceNumber: referenceNumber))
             return
         }
 
         isSubmitting = true
         defer { isSubmitting = false }
-        do {
-            try await submissionService.submit(referenceNumber: referenceNumber)
-            let localID = draft.localID
-            Task { try? await draftStore.markSubmitted(localID: localID) }
+
+        let outcome = await submissionQueue.submitNow(localID: draft.localID, timeout: Self.onlineSubmissionTimeout)
+        switch outcome {
+        case .submitted:
             router.push(.submissionSuccess(referenceNumber: referenceNumber))
-        } catch {
+        case .queued:
+            router.push(.submissionSaved(referenceNumber: referenceNumber))
+        case .failedPermanently:
             submitFailed = true
         }
     }

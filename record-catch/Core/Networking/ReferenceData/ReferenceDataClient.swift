@@ -313,14 +313,21 @@ nonisolated struct RemoteReferenceDataClient: ReferenceDataFetching {
         return try? decoder.decode(ErrorEnvelope.self, from: data).error
     }
 
+    /// Maps a transport-level `URLError` (i.e. no HTTP response was ever received) to `APIError`.
+    /// See the identical reasoning on `CatchRecordTransport.mapURLError` — only the first two
+    /// codes being retryable wrongly classified most real "can't reach the backend" failures as
+    /// permanent; every connection-level failure is retryable here except genuine TLS/certificate
+    /// trust failures, which remain real, non-retryable errors.
     private static func mapURLError(_ error: URLError) -> APIError {
         switch error.code {
-        case .notConnectedToInternet, .networkConnectionLost:
-            return .offline
         case .timedOut:
             return .timedOut
-        default:
+        case .secureConnectionFailed, .serverCertificateUntrusted, .serverCertificateHasBadDate,
+            .serverCertificateNotYetValid, .serverCertificateHasUnknownRoot, .clientCertificateRejected,
+            .clientCertificateRequired, .appTransportSecurityRequiresSecureConnection:
             return .response(status: error.errorCode, details: nil)
+        default:
+            return .offline
         }
     }
 }

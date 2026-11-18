@@ -32,6 +32,19 @@ nonisolated struct UnsentDraftSummary: Identifiable, Hashable, Sendable {
     /// predates this field; `displayStatus` falls back to `isSubmitted ? 1 : 0` in that case.
     let submissionCount: Int?
 
+    /// The three ADR-0028 queue fields grouped into one value, keeping `UnsentDraftSummary.init`
+    /// within the project's max-parameter-count limit (SonarCloud `swift:S107`) rather than passing
+    /// `queueStateRaw`/`backendStatusRaw`/`submissionCount` as three separate parameters.
+    nonisolated struct QueueSnapshot: Hashable, Sendable {
+        let queueStateRaw: Int?
+        let backendStatusRaw: String?
+        let submissionCount: Int?
+
+        /// The safe default for any row that predates the submission queue — `displayStatus` falls
+        /// back to `isSubmitted` in that case.
+        static let none = QueueSnapshot(queueStateRaw: nil, backendStatusRaw: nil, submissionCount: nil)
+    }
+
     init(
         localID: UUID,
         vessel: String?,
@@ -39,9 +52,7 @@ nonisolated struct UnsentDraftSummary: Identifiable, Hashable, Sendable {
         lastEditedAt: Date,
         checkpointRawValue: Int? = nil,
         isSubmitted: Bool = false,
-        queueStateRaw: Int? = nil,
-        backendStatusRaw: String? = nil,
-        submissionCount: Int? = nil
+        queueSnapshot: QueueSnapshot = .none
     ) {
         self.localID = localID
         self.vessel = vessel
@@ -49,9 +60,9 @@ nonisolated struct UnsentDraftSummary: Identifiable, Hashable, Sendable {
         self.lastEditedAt = lastEditedAt
         self.checkpoint = checkpointRawValue.flatMap(CatchRecordCheckpoint.init(rawValue:)) ?? .vessel
         self.isSubmitted = isSubmitted
-        self.queueState = queueStateRaw.flatMap(CatchRecordQueueState.init(rawValue:)) ?? .none
-        self.backendStatusRaw = backendStatusRaw
-        self.submissionCount = submissionCount
+        self.queueState = queueSnapshot.queueStateRaw.flatMap(CatchRecordQueueState.init(rawValue:)) ?? .none
+        self.backendStatusRaw = queueSnapshot.backendStatusRaw
+        self.submissionCount = queueSnapshot.submissionCount
     }
 
     var id: UUID { localID }
@@ -338,9 +349,11 @@ final class SwiftDataCatchRecordDraftStore: CatchRecordDraftStoring {
             lastEditedAt: entity.lastEditedAt,
             checkpointRawValue: entity.checkpointRawValue,
             isSubmitted: entity.isSubmitted,
-            queueStateRaw: entity.queueStateRaw,
-            backendStatusRaw: entity.backendStatusRaw,
-            submissionCount: entity.submissionCount
+            queueSnapshot: UnsentDraftSummary.QueueSnapshot(
+                queueStateRaw: entity.queueStateRaw,
+                backendStatusRaw: entity.backendStatusRaw,
+                submissionCount: entity.submissionCount
+            )
         )
     }
 }
@@ -499,9 +512,11 @@ final class InMemoryCatchRecordDraftStore: CatchRecordDraftStoring {
             lastEditedAt: entry.value.lastEditedAt,
             checkpointRawValue: entry.value.checkpoint.rawValue,
             isSubmitted: entry.value.isSubmitted,
-            queueStateRaw: entry.value.queueState.rawValue,
-            backendStatusRaw: entry.value.backendStatusRaw,
-            submissionCount: entry.value.submissionCount
+            queueSnapshot: UnsentDraftSummary.QueueSnapshot(
+                queueStateRaw: entry.value.queueState.rawValue,
+                backendStatusRaw: entry.value.backendStatusRaw,
+                submissionCount: entry.value.submissionCount
+            )
         )
     }
 }

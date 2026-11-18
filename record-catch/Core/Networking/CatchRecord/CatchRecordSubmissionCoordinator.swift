@@ -54,11 +54,15 @@ final class StubCatchRecordSubmissionQueue: CatchRecordSubmissionQueuing {
         try? await draftStore.enqueueForSubmission(draft)
     }
 
-    func submitNow(localID: UUID, timeout: TimeInterval) async -> CatchRecordSubmissionOutcome {
+    func submitNow(localID _: UUID, timeout _: TimeInterval) async -> CatchRecordSubmissionOutcome {
         .queued
     }
 
-    func flushPending() async {}
+    func flushPending() async {
+        // Intentionally a no-op: `enqueue(_:)` already persists the record as Complete/Pending via
+        // `CatchRecordDraftStoring`, and this stub never attempts to send — there is nothing to
+        // flush until a real `CatchRecordSubmissionCoordinator` is injected.
+    }
 }
 
 /// Deterministic, always-succeeding `CatchRecordSubmissionQueuing` test double — used only by UI
@@ -77,12 +81,15 @@ final class AlwaysSucceedingCatchRecordSubmissionQueue: CatchRecordSubmissionQue
         try? await draftStore.enqueueForSubmission(draft)
     }
 
-    func submitNow(localID: UUID, timeout: TimeInterval) async -> CatchRecordSubmissionOutcome {
+    func submitNow(localID: UUID, timeout _: TimeInterval) async -> CatchRecordSubmissionOutcome {
         try? await draftStore.markSubmissionSucceeded(localID: localID, submittedVersion: nil)
         return .submitted
     }
 
-    func flushPending() async {}
+    func flushPending() async {
+        // Intentionally a no-op: `submitNow(localID:timeout:)` always resolves synchronously to
+        // `.submitted` above, so nothing is ever left queued for this double to flush later.
+    }
 }
 
 /// Coordinates the on-device submission queue (ADR-0028): every "Accept and submit trip details"

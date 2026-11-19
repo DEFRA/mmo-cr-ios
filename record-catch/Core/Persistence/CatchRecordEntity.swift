@@ -43,6 +43,51 @@ final class CatchRecordEntity {
     /// `SchemaMigrationPlan`/`VersionedSchema` in Apple's SwiftData docs.
     var checkpointRawValue: Int?
 
+    // MARK: - Submission queue (ADR-0028)
+    //
+    // Every field below is optional, added after the first release of this entity, so every
+    // already-persisted row (predating the queue) decodes unchanged — a lightweight SwiftData
+    // migration, mirroring `checkpointRawValue` above. Together they let
+    // `CatchRecordStatusResolver` distinguish all four app-managed statuses (Draft, Complete/
+    // Pending, Submitted, Amended — AC1–AC8) from only two backend-persisted facts
+    // (`backendStatusRaw`, `submissionCount`) plus the transient `queueStateRaw`.
+
+    /// `CatchRecordQueueState.rawValue` — whether this record is currently queued/sending to the
+    /// backend. `nil`/`0` (`.none`) for a record that has never been queued, or whose last queue
+    /// attempt has already resolved (success or permanent failure).
+    var queueStateRaw: Int?
+    /// The last backend-persisted status known for this record (`PersistedCatchRecordStatus.
+    /// rawValue`, e.g. `"DRAFT"`/`"SUBMITTED"`). `nil` for a record never yet synced with the
+    /// backend. Falls back to deriving from the legacy `isSubmitted` flag for any row written
+    /// before this field existed (see `CatchRecordDraftStoring.markSubmitted(localID:)`, kept for
+    /// backward compatibility) — see `CatchRecordSubmissionCoordinator`/`RecordsMerging`.
+    var backendStatusRaw: String?
+    /// How many times this record has been successfully submitted (AC5 — `> 1` once amended).
+    /// `nil` is treated as `1` when `backendStatusRaw` indicates a submitted record (the common
+    /// "submitted exactly once, never amended" case), and as `0` otherwise.
+    var submissionCount: Int?
+    /// The Catch Recording Service's own id for this record, once `createDraft`/`startEdit` has
+    /// returned one (see `CatchRecordSubmissionCoordinator`). `nil` until the first successful
+    /// create call.
+    var serverID: String?
+    /// The optimistic-concurrency version last known for `serverID` (the service's `If-Match`
+    /// precondition — see ADR-0025 §5). Updated after every successful create/replace/submit call.
+    var serverVersion: Int?
+    /// The `Idempotency-Key` used for the current (or most recent) submission attempt cycle.
+    /// Generated once when first queued and reused across retries of the *same* attempt cycle, so
+    /// a retried create/submit call is provably the same logical request if it reaches the backend
+    /// twice (e.g. a response lost after the backend already applied it). Cleared once the cycle
+    /// resolves (success or permanent failure) so the *next* submission attempt (e.g. a future
+    /// amendment) gets a fresh key.
+    var idempotencyKey: String?
+    /// The machine-readable `APIError`/`APIErrorDetails.code` from the most recent failed attempt,
+    /// for diagnostics only (DEFRA "log errors" requirement) — never the server's free-text
+    /// `message`, which must never be logged or surfaced (see ADR-0025 §1, security instructions).
+    var lastErrorCode: String?
+    /// When the most recent submission attempt (success or failure) completed, for backoff/
+    /// diagnostics.
+    var lastAttemptAt: Date?
+
     init(
         localID: UUID,
         lastEditedAt: Date,

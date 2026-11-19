@@ -196,7 +196,7 @@ final class CatchRecordUITests: XCTestCase {
         element(app, "ViewHeader.backButton").tap()
 
         XCTAssertTrue(createButton.waitForExistence(timeout: 5))
-        XCTAssertEqual(app.staticTexts.matching(identifier: "Unsent").count, 1)
+        XCTAssertEqual(app.staticTexts.matching(identifier: "Status: Draft").count, 1)
     }
 
     @MainActor
@@ -211,7 +211,7 @@ final class CatchRecordUITests: XCTestCase {
         XCTAssertTrue(element(app, ID.tripGroup).waitForExistence(timeout: 5))
         element(app, "ViewHeader.backButton").tap()
         XCTAssertTrue(createButton.waitForExistence(timeout: 5))
-        XCTAssertEqual(app.staticTexts.matching(identifier: "Unsent").count, 1)
+        XCTAssertEqual(app.staticTexts.matching(identifier: "Status: Draft").count, 1)
 
         // Second journey: the shared draft is reset before Select vessel appears again (see
         // `HomeView.createNewRecord()`/`CatchRecordDraft.reset()`), so picking a different vessel
@@ -225,7 +225,7 @@ final class CatchRecordUITests: XCTestCase {
         element(app, "ViewHeader.backButton").tap()
 
         XCTAssertTrue(createButton.waitForExistence(timeout: 5))
-        XCTAssertEqual(app.staticTexts.matching(identifier: "Unsent").count, 2)
+        XCTAssertEqual(app.staticTexts.matching(identifier: "Status: Draft").count, 2)
     }
 
     @MainActor

@@ -12,6 +12,12 @@ struct CatchRecordHostView: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
+    /// The app-wide submission queue (see ADR-0028), injected by `RecordCatchApp` via
+    /// `.environment(\.catchRecordSubmissionQueue, ...)`. Read here (not inside
+    /// `CheckYourAnswersView.init`, where `@Environment` is not yet connected) and passed down as
+    /// an explicit parameter — mirrors how `draftStore`/`modelContext` are already threaded
+    /// through this view's `destination(for:)`.
+    @Environment(\.catchRecordSubmissionQueue) private var injectedSubmissionQueue
 
     @State private var router: CatchRecordRouter
     /// Injectable override for the journey-scoped favourite ports store (see ADR-0023: favourites
@@ -57,9 +63,22 @@ struct CatchRecordHostView: View {
     /// stubbed server records — see ADR-0015). UI tests use this to seed a deterministic row count
     /// (e.g. `-uiTestHomePaged`'s 6 rows) without depending on `draftStore` state.
     private let injectedRecordsProvider: RecordsProviding?
+    /// Explicit override for the submission queue, taking priority over the environment-injected
+    /// app-wide coordinator. `nil` in production (the environment coordinator is used). UI tests
+    /// pass an `AlwaysSucceedingCatchRecordSubmissionQueue` for `-uiTestCatchRecordCheckYourAnswers`
+    /// so "Accept and submit trip details" reaches the real `submissionSuccess` screen
+    /// deterministically, without depending on a reachable backend (see ADR-0028).
+    private let injectedSubmissionQueueOverride: CatchRecordSubmissionQueuing?
 
     private var draftStore: CatchRecordDraftStoring {
         injectedDraftStore ?? SwiftDataCatchRecordDraftStore(modelContext: modelContext)
+    }
+
+    /// The submission queue for this journey — the injected app-wide coordinator (production), or
+    /// a `StubCatchRecordSubmissionQueue` bound to this journey's own `draftStore` for previews/
+    /// tests that never configured one (see ADR-0028).
+    private var submissionQueue: CatchRecordSubmissionQueuing {
+        injectedSubmissionQueueOverride ?? injectedSubmissionQueue ?? StubCatchRecordSubmissionQueue(draftStore: draftStore)
     }
 
     /// The favourite ports store for this journey - the injected override (tests/previews), or a
@@ -139,7 +158,8 @@ struct CatchRecordHostView: View {
         speciesSearch: SpeciesSearchProviding? = nil,
         draft: CatchRecordDraft? = nil,
         draftStore: CatchRecordDraftStoring? = nil,
-        recordsProvider: RecordsProviding? = nil
+        recordsProvider: RecordsProviding? = nil,
+        submissionQueue: CatchRecordSubmissionQueuing? = nil
     ) {
         let router = CatchRecordRouter()
         if let initialRoute {
@@ -155,6 +175,7 @@ struct CatchRecordHostView: View {
         _draft = State(wrappedValue: draft ?? CatchRecordDraft())
         injectedDraftStore = draftStore
         injectedRecordsProvider = recordsProvider
+        injectedSubmissionQueueOverride = submissionQueue
     }
 
     var body: some View {
@@ -416,7 +437,7 @@ struct CatchRecordHostView: View {
                 draft: draft
             )
         case .checkYourAnswers(let referenceNumber):
-            CheckYourAnswersView(referenceNumber: referenceNumber, router: router, draft: draft, draftStore: draftStore)
+            CheckYourAnswersView(referenceNumber: referenceNumber, router: router, draft: draft, submissionQueue: submissionQueue)
         case .submissionSuccess(let referenceNumber):
             SubmissionSuccessView(referenceNumber: referenceNumber, router: router)
         case .submissionSaved(let referenceNumber):

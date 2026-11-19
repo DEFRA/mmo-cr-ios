@@ -18,6 +18,13 @@ final class DraftAutosaverTests: XCTestCase {
         func markSubmitted(localID: UUID) async throws {}
         func allUnsentDrafts() async throws -> [UnsentDraftSummary] { [] }
         func allRecords() async throws -> [UnsentDraftSummary] { [] }
+        func enqueueForSubmission(_ draft: CatchRecordDraft) async throws {}
+        func markSending(localID: UUID) async throws {}
+        func submissionProgress(localID: UUID) async throws -> CatchRecordSubmissionProgress? { nil }
+        func recordServerProgress(localID: UUID, serverID: String, version: Int) async throws {}
+        func markSubmissionSucceeded(localID: UUID, submittedVersion: Int?) async throws {}
+        func markSubmissionFailed(localID: UUID, permanent: Bool, errorCode: String) async throws {}
+        func pendingSubmissionLocalIDs() async throws -> [UUID] { [] }
     }
 
     /// A controllable "sleep" that only resumes once the test explicitly signals it, so the

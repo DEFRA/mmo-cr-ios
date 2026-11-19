@@ -20,13 +20,13 @@ struct CheckYourAnswersView: View {
         referenceNumber: String,
         router: CatchRecordRouter,
         draft: CatchRecordDraft,
-        draftStore: CatchRecordDraftStoring = InMemoryCatchRecordDraftStore()
+        submissionQueue: CatchRecordSubmissionQueuing = StubCatchRecordSubmissionQueue()
     ) {
         _viewModel = State(wrappedValue: CheckYourAnswersViewModel(
             referenceNumber: referenceNumber,
             router: router,
             draft: draft,
-            draftStore: draftStore
+            submissionQueue: submissionQueue
         ))
     }
 

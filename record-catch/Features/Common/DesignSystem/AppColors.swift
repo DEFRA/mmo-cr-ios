@@ -33,6 +33,13 @@ enum AppColors {
     static let statusUnsentText = Color(red: 0.36, green: 0.24, blue: 0.0)
     static let statusLateBackground = Color(red: 0.96, green: 0.86, blue: 0.86)
     static let statusLateText = Color(red: 0.49, green: 0.0, blue: 0.0)
+    // "Complete/Pending" (ADR-0028) — a mobile-only, UI-managed status for a record completed
+    // on-device but not yet accepted by the backend (queued or sending). Mirrors the GOV.UK
+    // Design System's grey tag (https://design-system.service.gov.uk/components/tag/), kept
+    // visually distinct from Draft (yellow/amber, above) and Submitted (green) — contrast
+    // checked at ≥4.5:1, see docs/design-specs/home.md.
+    static let statusPendingBackground = Color(red: 0.933, green: 0.937, blue: 0.941)
+    static let statusPendingText = Color(red: 0.137, green: 0.165, blue: 0.180)
 
     // MARK: - Connectivity
     //

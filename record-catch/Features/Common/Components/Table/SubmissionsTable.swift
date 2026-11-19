@@ -55,11 +55,27 @@ extension SubmissionRow: Hashable {
     }
 }
 
+/// The four app-managed (UI) catch record statuses shown on Home's "All Records" dashboard — see
+/// ADR-0028 and the business rules it implements (AC1–AC8). Only `.submitted` and `.unsent`
+/// (Draft) are ever persisted by the backend; `.completePending` and `.amended` are derived
+/// entirely on-device by `CatchRecordStatusResolver` and never sent to, or read as, a backend
+/// status value (AC7/AC8). `.late` remains a backend-only value with no on-device derivation rule
+/// yet (see ADR-0028 "Known gaps").
+///
+/// `unsent`'s `rawValue`/case name is kept unchanged (rather than renamed to `draft`) to avoid a
+/// wide, purely-cosmetic rename across the app and its tests — only its *displayed* label changed
+/// to "Draft" (`home.table.status.unsent`'s String Catalog value), matching BR-SUB-010/AC12/AC1.
 enum SubmissionStatus: String, CaseIterable {
     case submitted = "Submitted"
     case amended = "Amended"
+    /// Displayed as **Draft** (see the type's doc comment) — started but not yet successfully
+    /// submitted (AC1).
     case unsent = "Unsent"
     case late = "Late"
+    /// Displayed as **Complete/Pending** — completed on-device and queued or currently sending to
+    /// the backend, but not yet accepted (AC3). Mobile only; never persisted by the backend
+    /// (AC7/AC8).
+    case completePending = "CompletePending"
 
     /// String Catalog key for the localised tag text (see BR-SUB-010/AC12 — the previous
     /// hard-coded `rawValue` was never translated, despite Home's "Catch record statuses" help
@@ -70,6 +86,7 @@ enum SubmissionStatus: String, CaseIterable {
         case .amended: return "home.table.status.amended"
         case .unsent: return "home.table.status.unsent"
         case .late: return "home.table.status.late"
+        case .completePending: return "home.table.status.completePending"
         }
     }
 
@@ -83,6 +100,8 @@ enum SubmissionStatus: String, CaseIterable {
             return AppColors.statusUnsentBackground
         case .late:
             return AppColors.statusLateBackground
+        case .completePending:
+            return AppColors.statusPendingBackground
         }
     }
 
@@ -96,6 +115,8 @@ enum SubmissionStatus: String, CaseIterable {
             return AppColors.statusUnsentText
         case .late:
             return AppColors.statusLateText
+        case .completePending:
+            return AppColors.statusPendingText
         }
     }
 }
@@ -249,6 +270,12 @@ private struct SubmissionStatusTag: View {
             .padding(.horizontal, AppSpacing.small)
             .padding(.vertical, AppSpacing.xSmall)
             .background(status.backgroundColor)
+            // Meaning is never conveyed by colour alone (WCAG 2.2 AA 1.4.1): VoiceOver always
+            // announces the status text itself, with an explicit "Status:" prefix so it reads
+            // sensibly out of the visual table-row context.
+            .accessibilityLabel(
+                "\(languageStore.localized("home.table.header.status")): \(languageStore.localized(status.statusKey))"
+            )
     }
 }
 

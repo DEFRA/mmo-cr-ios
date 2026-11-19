@@ -6,14 +6,16 @@ import SwiftUI
 nonisolated enum CatchRecordSubmissionOutcome: Equatable, Sendable {
     /// The backend accepted the submission. Safe to show the green "submitted" confirmation.
     case submitted
-    /// Not yet submitted — either genuinely offline, a retryable failure, or the attempt did not
-    /// finish within its timeout. The record stays queued and will be retried automatically; the
-    /// caller must show the truthful "saved on this device" screen, never the submitted one
-    /// (BR-SUB-008/AC10/AC11).
+    /// Not yet submitted — genuinely offline, a retryable failure, the Catch Recording Service not
+    /// (yet) being reachable/configured for this stage (`APIError.invalidConfiguration` —
+    /// see `isRetryableForSubmission`), or the attempt did not finish within its timeout. None of
+    /// these are something the user can fix, so the record stays queued and is retried
+    /// automatically; the caller must show the truthful "saved on this device" screen, never the
+    /// submitted one (BR-SUB-008/AC10/AC11).
     case queued
-    /// A non-retryable failure (validation, mapping, configuration). The record is no longer
-    /// queued and now shows as **Draft** — the caller should surface an inline, recoverable error
-    /// rather than navigating onward.
+    /// A non-retryable failure the user **can** act on — bad/incomplete local data (validation or
+    /// mapping). The record is no longer queued and now shows as **Draft** — the caller should
+    /// surface an inline, recoverable error rather than navigating onward.
     case failedPermanently
 }
 
@@ -177,8 +179,9 @@ final class CatchRecordSubmissionCoordinator: CatchRecordSubmissionQueuing {
     }
 
     /// Runs one full create → replace → submit attempt for an already-queued record. Always
-    /// resolves the queue to a definite end state (success, retryable failure left pending, or
-    /// permanent failure reverted to Draft) — never leaves a record silently stuck.
+    /// resolves the queue to a definite end state (success, retryable failure left pending —
+    /// including a not-yet-configured/unreachable backend, see the `.invalidConfiguration` handling
+    /// below — or permanent failure reverted to Draft) — never leaves a record silently stuck.
     private func attemptSubmission(localID: UUID) async -> CatchRecordSubmissionOutcome {
         try? await draftStore.markSending(localID: localID)
 
@@ -218,12 +221,24 @@ final class CatchRecordSubmissionCoordinator: CatchRecordSubmissionQueuing {
             try? await draftStore.markSubmissionSucceeded(localID: localID, submittedVersion: submission.standard.version)
             return .submitted
         } catch let apiError as APIError {
+            // Root-cause fix: a misconfigured/unreachable Catch Recording Service
+            // (`APIError.invalidConfiguration` — e.g. `CATCH_RECORD_API_BASE_URL` not yet set for
+            // this stage/build, see `CatchRecordServicesFactory`'s `FailingCatchRecordService`
+            // fallback) is an environment/deployment problem, never something the user caused or
+            // can fix on this screen. `APIError.isRetryable` correctly reports it as `false` for
+            // *other* callers (e.g. the reference-data sync status banner, which should surface a
+            // real configuration problem rather than retry silently forever) — but for *this*
+            // queue it must behave exactly like "genuinely offline": queue it, retry automatically,
+            // never show the misleading "check your connection" banner for a backend/config issue
+            // that has nothing to do with the device's connectivity (DEFRA offline-first mandate:
+            // never lose work, never dead-end the user with an error they cannot act on).
+            let isRetryableForSubmission = apiError.isRetryable || apiError == .invalidConfiguration
             try? await draftStore.markSubmissionFailed(
                 localID: localID,
-                permanent: !apiError.isRetryable,
-                errorCode: apiError.errorCode ?? "unknown_api_error"
+                permanent: !isRetryableForSubmission,
+                errorCode: apiError.errorCode ?? (apiError == .invalidConfiguration ? "catch_record_service_not_configured" : "unknown_api_error")
             )
-            return apiError.isRetryable ? .queued : .failedPermanently
+            return isRetryableForSubmission ? .queued : .failedPermanently
         } catch {
             try? await draftStore.markSubmissionFailed(localID: localID, permanent: true, errorCode: "submission_unknown_error")
             return .failedPermanently

@@ -11,11 +11,21 @@ import SwiftData
 final class SwiftDataCatchRecordDraftStoreTests: XCTestCase {
 
     private func makeStore() throws -> SwiftDataCatchRecordDraftStore {
+        try makeStoreWithContext().store
+    }
+
+    /// Like `makeStore()`, but also hands back the underlying `ModelContext` for tests that need
+    /// to inspect a `CatchRecordEntity` field with no accessor on `CatchRecordDraftStoring` (e.g.
+    /// `serverVersion` after `markSubmissionSucceeded` clears `idempotencyKey`, at which point
+    /// `submissionProgress(localID:)` deliberately returns `nil` — see
+    /// `test_markSubmissionSucceeded_clearsTheQueueStateAndIdempotencyKey`).
+    private func makeStoreWithContext() throws -> (store: SwiftDataCatchRecordDraftStore, context: ModelContext) {
         let container = try ModelContainer(
             for: CatchRecordEntity.self,
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
-        return SwiftDataCatchRecordDraftStore(modelContext: ModelContext(container))
+        let context = ModelContext(container)
+        return (SwiftDataCatchRecordDraftStore(modelContext: context), context)
     }
 
     // MARK: - Save / load round trip
@@ -235,5 +245,173 @@ final class SwiftDataCatchRecordDraftStoreTests: XCTestCase {
         let store = try makeStore()
         let records = try await store.allRecords()
         XCTAssertTrue(records.isEmpty)
+    }
+
+    // MARK: - Submission queue (ADR-0028)
+
+    func test_enqueueForSubmission_persistsDraft_andMarksItPendingWithAnIdempotencyKey() async throws {
+        let store = try makeStore()
+        let draft = CatchRecordDraft()
+        draft.vessel = "ACHILLES"
+
+        try await store.enqueueForSubmission(draft)
+
+        let pendingIDs = try await store.pendingSubmissionLocalIDs()
+        XCTAssertEqual(pendingIDs, [draft.localID])
+        let progress = try await store.submissionProgress(localID: draft.localID)
+        XCTAssertNotNil(progress?.idempotencyKey)
+        XCTAssertNil(progress?.serverID)
+    }
+
+    func test_enqueueForSubmission_calledTwice_reusesTheSameIdempotencyKey() async throws {
+        let store = try makeStore()
+        let draft = CatchRecordDraft()
+        draft.vessel = "ACHILLES"
+
+        try await store.enqueueForSubmission(draft)
+        let firstKey = try await store.submissionProgress(localID: draft.localID)?.idempotencyKey
+
+        try await store.enqueueForSubmission(draft)
+        let secondKey = try await store.submissionProgress(localID: draft.localID)?.idempotencyKey
+
+        XCTAssertNotNil(firstKey)
+        XCTAssertEqual(firstKey, secondKey)
+    }
+
+    func test_enqueueForSubmission_forUnknownLocalID_isANoOp() async throws {
+        let store = try makeStore()
+        let draft = CatchRecordDraft() // never saved first
+        try await store.enqueueForSubmission(draft)
+        // save(_:) inside enqueueForSubmission always inserts, so this always succeeds; assert the
+        // record is now queryable rather than asserting a no-op.
+        let pendingIDs = try await store.pendingSubmissionLocalIDs()
+        XCTAssertEqual(pendingIDs, [draft.localID])
+    }
+
+    func test_markSending_updatesQueueState_withoutClearingProgress() async throws {
+        let store = try makeStore()
+        let draft = CatchRecordDraft()
+        try await store.enqueueForSubmission(draft)
+
+        try await store.markSending(localID: draft.localID)
+
+        let progress = try await store.submissionProgress(localID: draft.localID)
+        XCTAssertNotNil(progress?.idempotencyKey)
+    }
+
+    func test_markSending_forUnknownLocalID_isANoOp() async throws {
+        let store = try makeStore()
+        try await store.markSending(localID: UUID()) // should not throw
+    }
+
+    func test_submissionProgress_forNeverQueuedRecord_returnsNil() async throws {
+        let store = try makeStore()
+        let draft = CatchRecordDraft()
+        try await store.save(draft) // saved, but never enqueued for submission
+
+        let progress = try await store.submissionProgress(localID: draft.localID)
+
+        XCTAssertNil(progress)
+    }
+
+    func test_submissionProgress_forUnknownLocalID_returnsNil() async throws {
+        let store = try makeStore()
+        let progress = try await store.submissionProgress(localID: UUID())
+        XCTAssertNil(progress)
+    }
+
+    func test_recordServerProgress_storesServerIDAndVersion_forSubsequentAttempts() async throws {
+        let store = try makeStore()
+        let draft = CatchRecordDraft()
+        try await store.enqueueForSubmission(draft)
+
+        try await store.recordServerProgress(localID: draft.localID, serverID: "server-1", version: 3)
+
+        let progress = try await store.submissionProgress(localID: draft.localID)
+        XCTAssertEqual(progress?.serverID, "server-1")
+        XCTAssertEqual(progress?.serverVersion, 3)
+    }
+
+    func test_markSubmissionSucceeded_withSubmittedVersion_recordsItAsTheNewServerVersion() async throws {
+        let (store, context) = try makeStoreWithContext()
+        let draft = CatchRecordDraft()
+        try await store.enqueueForSubmission(draft)
+        try await store.recordServerProgress(localID: draft.localID, serverID: "server-1", version: 1)
+
+        try await store.markSubmissionSucceeded(localID: draft.localID, submittedVersion: 2)
+
+        // `submissionProgress(localID:)` deliberately returns nil once `markSubmissionSucceeded`
+        // clears the idempotency key (see the next test), so the persisted `serverVersion` has to
+        // be read straight off the entity here rather than through that accessor.
+        let localID = draft.localID
+        let descriptor = FetchDescriptor<CatchRecordEntity>(predicate: #Predicate { $0.localID == localID })
+        let entity = try context.fetch(descriptor).first
+        XCTAssertEqual(entity?.serverVersion, 2)
+        let records = try await store.allRecords()
+        XCTAssertEqual(records.first?.displayStatus, .submitted)
+        XCTAssertEqual(records.first?.submissionCount, 1)
+    }
+
+    func test_markSubmissionSucceeded_clearsTheQueueStateAndIdempotencyKey() async throws {
+        let store = try makeStore()
+        let draft = CatchRecordDraft()
+        try await store.enqueueForSubmission(draft)
+
+        try await store.markSubmissionSucceeded(localID: draft.localID, submittedVersion: nil)
+
+        let pendingIDs = try await store.pendingSubmissionLocalIDs()
+        XCTAssertTrue(pendingIDs.isEmpty)
+        let progress = try await store.submissionProgress(localID: draft.localID)
+        XCTAssertNil(progress, "idempotencyKey must be cleared so a future re-submission gets a fresh one")
+    }
+
+    func test_markSubmissionFailed_whenRetryable_keepsTheRecordQueued() async throws {
+        let store = try makeStore()
+        let draft = CatchRecordDraft()
+        try await store.enqueueForSubmission(draft)
+
+        try await store.markSubmissionFailed(localID: draft.localID, permanent: false, errorCode: "offline")
+
+        let pendingIDs = try await store.pendingSubmissionLocalIDs()
+        XCTAssertEqual(pendingIDs, [draft.localID])
+    }
+
+    func test_markSubmissionFailed_whenPermanent_revertsToDraft_clearingTheQueue() async throws {
+        let store = try makeStore()
+        let draft = CatchRecordDraft()
+        try await store.enqueueForSubmission(draft)
+
+        try await store.markSubmissionFailed(localID: draft.localID, permanent: true, errorCode: "missing_vessel")
+
+        let pendingIDs = try await store.pendingSubmissionLocalIDs()
+        XCTAssertTrue(pendingIDs.isEmpty)
+        let progress = try await store.submissionProgress(localID: draft.localID)
+        XCTAssertNil(progress, "a permanent failure clears the idempotency key so a retry starts a fresh cycle")
+    }
+
+    func test_markSubmissionFailed_forUnknownLocalID_isANoOp() async throws {
+        let store = try makeStore()
+        try await store.markSubmissionFailed(localID: UUID(), permanent: true, errorCode: "x") // should not throw
+    }
+
+    func test_pendingSubmissionLocalIDs_whenEmpty_returnsEmptyArray() async throws {
+        let store = try makeStore()
+        let pendingIDs = try await store.pendingSubmissionLocalIDs()
+        XCTAssertTrue(pendingIDs.isEmpty)
+    }
+
+    func test_pendingSubmissionLocalIDs_ordersOldestQueuedFirst() async throws {
+        let store = try makeStore()
+        let first = CatchRecordDraft()
+        try await store.enqueueForSubmission(first)
+
+        try await Task.sleep(nanoseconds: 5_000_000) // ensures a distinct lastEditedAt
+
+        let second = CatchRecordDraft()
+        try await store.enqueueForSubmission(second)
+
+        let pendingIDs = try await store.pendingSubmissionLocalIDs()
+
+        XCTAssertEqual(pendingIDs, [first.localID, second.localID])
     }
 }

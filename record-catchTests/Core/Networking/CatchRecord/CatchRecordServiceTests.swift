@@ -284,6 +284,23 @@ final class CatchRecordServiceTests: XCTestCase {
         }
     }
 
+    /// A TLS/certificate-trust failure is a security signal, not a "just offline" condition (see
+    /// `CatchRecordTransport.mapURLError` doc comment and security.instructions.md — ATS/TLS): it
+    /// must map to a non-retryable `.response`, never to `.offline`/`.timedOut`.
+    func test_certificateTrustFailure_mapsToNonRetryableResponse_neverOffline() async throws {
+        let client = StubHTTPClient.failure(URLError(.serverCertificateUntrusted))
+        let sut = try makeSUT(httpClient: client)
+        do {
+            _ = try await sut.retrieveCatchRecord(catchRecordId: "cr-1")
+            XCTFail("Expected a non-retryable .response error")
+        } catch let error as APIError {
+            guard case .response = error else {
+                return XCTFail("Expected .response, got \(error)")
+            }
+            XCTAssertFalse(error.isRetryable)
+        }
+    }
+
     // MARK: Security — never logs the token or headers
 
     func test_neverLogsTokenOrAuthorizationHeader() async throws {

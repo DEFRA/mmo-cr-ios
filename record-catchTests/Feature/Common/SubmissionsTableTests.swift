@@ -45,6 +45,25 @@ final class SubmissionsTableTests: XCTestCase {
         XCTAssertEqual(Set(values).count, SubmissionStatus.allCases.count)
     }
 
+    /// Every status (including `.completePending`, ADR-0028) must resolve to a distinct
+    /// background/text colour pair, so colour is never the only way two statuses are told apart
+    /// (WCAG 2.2 AA — meaning must never rely on colour alone; see accessibility.instructions.md).
+    func testEveryStatus_hasADistinctBackgroundAndTextColor() {
+        for status in SubmissionStatus.allCases {
+            XCTAssertNotNil(status.backgroundColor)
+            XCTAssertNotNil(status.textColor)
+        }
+        let backgrounds = SubmissionStatus.allCases.map(\.backgroundColor)
+        let texts = SubmissionStatus.allCases.map(\.textColor)
+        XCTAssertEqual(Set(backgrounds).count, SubmissionStatus.allCases.count)
+        XCTAssertEqual(Set(texts).count, SubmissionStatus.allCases.count)
+    }
+
+    func testCompletePendingStatus_usesThePendingColorPalette() {
+        XCTAssertEqual(SubmissionStatus.completePending.backgroundColor, AppColors.statusPendingBackground)
+        XCTAssertEqual(SubmissionStatus.completePending.textColor, AppColors.statusPendingText)
+    }
+
     // MARK: - Status tag localisation (BR-SUB-010/AC12 — previously hard-coded English rawValue)
 
     func testStatusKey_everyStatus_resolvesToADistinctLocalizedValue_inEnglish() {

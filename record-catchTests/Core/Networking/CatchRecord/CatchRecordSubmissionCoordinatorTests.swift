@@ -306,4 +306,140 @@ final class CatchRecordSubmissionCoordinatorTests: XCTestCase {
         let pendingIDs = try await draftStore.pendingSubmissionLocalIDs()
         XCTAssertEqual(pendingIDs, [draft.localID])
     }
+
+    // MARK: - Error paths with no server-side correlate yet (defensive, never leave a record stuck)
+
+    /// `loadDraft` returns `nil` for an id that was never enqueued/saved at all — a defensive path,
+    /// since every real caller enqueues the draft (persisting it) before calling `submitNow`.
+    func test_submitNow_whenNoLocalDraftExistsForTheID_returnsFailedPermanently() async throws {
+        let draftStore = InMemoryCatchRecordDraftStore()
+        let sut = makeSUT(draftStore: draftStore)
+
+        let outcome = await sut.submitNow(localID: UUID(), timeout: 5)
+
+        XCTAssertEqual(outcome, .failedPermanently)
+    }
+
+    /// `submissionProgress` returns `nil` whenever a draft was persisted via plain `save(_:)` rather
+    /// than `enqueueForSubmission(_:)` (no idempotency key yet) — a defensive guard, since every real
+    /// caller enqueues before attempting a submission.
+    func test_submitNow_whenDraftWasNeverEnqueuedForSubmission_returnsFailedPermanently() async throws {
+        let draftStore = InMemoryCatchRecordDraftStore()
+        let sut = makeSUT(draftStore: draftStore)
+        let draft = makeDraft()
+        try await draftStore.save(draft) // persisted, but not enqueued — no idempotency key yet
+
+        let outcome = await sut.submitNow(localID: draft.localID, timeout: 5)
+
+        XCTAssertEqual(outcome, .failedPermanently)
+    }
+
+    // MARK: - Unexpected (non-`APIError`) submission failure still resolves definitively
+
+    private struct UnexpectedError: Error {}
+
+    func test_submitNow_whenServiceThrowsANonAPIError_returnsFailedPermanently() async throws {
+        let service = SpyCatchRecordService()
+        service.createDraftResult = .success(makeSaveResponse())
+        service.replaceResult = .success(makeSaveResponse(version: 1))
+        service.submitResult = .failure(UnexpectedError())
+        let sut = makeSUT(service: service)
+        let draft = makeDraft()
+        await sut.enqueue(draft)
+
+        let outcome = await sut.submitNow(localID: draft.localID, timeout: 5)
+
+        XCTAssertEqual(outcome, .failedPermanently)
+    }
+
+    // MARK: - flushPending while already flushing (never drops a concurrently-requested flush)
+
+    func test_flushPending_whenCalledWhileAlreadyFlushing_runsAgainOnceTheFirstRunCompletes() async throws {
+        let draftStore = InMemoryCatchRecordDraftStore()
+        let service = SpyCatchRecordService()
+        service.createDraftResult = .success(makeSaveResponse())
+        service.replaceResult = .success(makeSaveResponse(version: 1))
+        service.submitResult = .success(makeSubmissionResponse())
+        let sut = makeSUT(service: service, draftStore: draftStore)
+        let first = makeDraft()
+        await sut.enqueue(first)
+
+        async let firstFlush: Void = sut.flushPending()
+        // Requested while the first flush is still in-flight — must not be dropped on the floor.
+        async let secondFlush: Void = sut.flushPending()
+        _ = await (firstFlush, secondFlush)
+
+        let pendingIDs = try await draftStore.pendingSubmissionLocalIDs()
+        XCTAssertTrue(pendingIDs.isEmpty)
+    }
+}
+
+// MARK: - CatchRecordSubmissionQueuing doubles
+
+/// Covers the always-queue (`StubCatchRecordSubmissionQueue`) and always-succeed
+/// (`AlwaysSucceedingCatchRecordSubmissionQueue`) test/preview doubles — the safe fallbacks used
+/// wherever no real `CatchRecordSubmissionCoordinator` has been injected (see their doc comments).
+@MainActor
+final class CatchRecordSubmissionQueueDoublesTests: XCTestCase {
+
+    private func makeDraft() -> CatchRecordDraft {
+        let draft = CatchRecordDraft()
+        draft.vessel = "ACHILLES"
+        return draft
+    }
+
+    // MARK: - StubCatchRecordSubmissionQueue
+
+    func test_stubQueue_enqueue_persistsTheDraftAsQueued() async throws {
+        let draftStore = InMemoryCatchRecordDraftStore()
+        let sut = StubCatchRecordSubmissionQueue(draftStore: draftStore)
+        let draft = makeDraft()
+
+        await sut.enqueue(draft)
+
+        let pendingIDs = try await draftStore.pendingSubmissionLocalIDs()
+        XCTAssertEqual(pendingIDs, [draft.localID])
+    }
+
+    func test_stubQueue_submitNow_alwaysReturnsQueued_withoutMutatingState() async throws {
+        let sut = StubCatchRecordSubmissionQueue()
+        let outcome = await sut.submitNow(localID: UUID(), timeout: 5)
+        XCTAssertEqual(outcome, .queued)
+    }
+
+    func test_stubQueue_flushPending_isANoOp() async {
+        let sut = StubCatchRecordSubmissionQueue()
+        await sut.flushPending() // should not throw or hang
+    }
+
+    // MARK: - AlwaysSucceedingCatchRecordSubmissionQueue
+
+    func test_alwaysSucceedingQueue_enqueue_persistsTheDraftAsQueued() async throws {
+        let draftStore = InMemoryCatchRecordDraftStore()
+        let sut = AlwaysSucceedingCatchRecordSubmissionQueue(draftStore: draftStore)
+        let draft = makeDraft()
+
+        await sut.enqueue(draft)
+
+        let pendingIDs = try await draftStore.pendingSubmissionLocalIDs()
+        XCTAssertEqual(pendingIDs, [draft.localID])
+    }
+
+    func test_alwaysSucceedingQueue_submitNow_returnsSubmitted_andMarksTheDraftSucceeded() async throws {
+        let draftStore = InMemoryCatchRecordDraftStore()
+        let sut = AlwaysSucceedingCatchRecordSubmissionQueue(draftStore: draftStore)
+        let draft = makeDraft()
+        await sut.enqueue(draft)
+
+        let outcome = await sut.submitNow(localID: draft.localID, timeout: 5)
+
+        XCTAssertEqual(outcome, .submitted)
+        let records = try await draftStore.allRecords()
+        XCTAssertEqual(records.first?.displayStatus, .submitted)
+    }
+
+    func test_alwaysSucceedingQueue_flushPending_isANoOp() async {
+        let sut = AlwaysSucceedingCatchRecordSubmissionQueue()
+        await sut.flushPending() // should not throw or hang
+    }
 }

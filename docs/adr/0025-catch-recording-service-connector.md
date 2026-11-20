@@ -143,7 +143,7 @@ journey, or showing submission history) is a separate, future change.
 ## Open questions (for a future change)
 
 - Confirm the Catch Recording Service's real base URL per stage with the backend team.
-- Confirm the Entra API scope string once the service is registered with the Entra tenant team.
+- ~~Confirm the Entra API scope string~~ — confirmed for dev: the Catch Recording Service has its own, separate Entra app registration exposing the `access_as_user` scope (`api://8bc065bf-046f-4d18-834a-753b325e5221/access_as_user`), distinct from the sign-in client ID. Still confirm the Test/Prod stages' app-id-uris with the Entra tenant team once those registrations exist.
 - Confirm whether `If-Match` really expects a bare digit or a quoted entity tag (§5).
 - Confirm `Trip.dateStarted`/`dateEnded`'s real wire shape (date-only vs date-time) — currently
   carried as opaque `String`, matching the spec's own untyped `{ type: string }` declaration.

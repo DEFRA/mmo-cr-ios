@@ -67,6 +67,34 @@ build.
 See `docs/api/reference-data-api.md` for the full endpoint/envelope reference, physical-device (LAN
 IP) testing instructions, and the developer smoke-check entry point.
 
+### Signing in locally (Entra External ID)
+
+Sign-in uses Microsoft Entra External ID native authentication (ADR-0022). Two `MMOCRAppConfig` keys
+identify the tenant/app registration; both are non-secret (a client ID and tenant subdomain are not
+credentials) and `required: false` until every stage has real values:
+
+| Key | Purpose |
+|---|---|
+| `CR_APP_CFG_ENTRA_CLIENT_ID` | Application (client) ID of the Entra App registration for this stage — a GUID |
+| `CR_APP_CFG_ENTRA_TENANT_SUBDOMAIN` | Subdomain of the Entra External ID (CIAM) tenant, e.g. `contoso` for `contoso.ciamlogin.com` |
+| `CR_APP_CFG_ENTRA_API_SCOPE` | Optional: the Entra scope requested for the Catch Recording Service API (ADR-0022 addendum, ADR-0025); `nil` only affects `accessToken()`, never sign-in |
+
+`Config/Local.xcconfig.example` ships with the DEFRA MMO External ID **dev** tenant's real values, so a
+fresh checkout can sign in locally without further setup — copy it to `Config/Local.xcconfig` as described
+above. Comment the two lines out to exercise the app's "not configured" sign-in state instead. Test/Prod
+tenant values are supplied later by the Entra tenant team as GitHub Environment variables in the release
+pipeline (never committed) — see `.github/instructions/ci-cd.instructions.md`.
+
+The Catch Recording Service has its **own**, separate Entra app registration (distinct from the
+sign-in client ID above), exposing the `access_as_user` scope. `Config/Local.xcconfig` sets
+`CR_APP_CFG_ENTRA_API_SCOPE = api:/$()/8bc065bf-046f-4d18-834a-753b325e5221/access_as_user` for the dev
+stage (the `$()` split is required — `//` starts a comment in an xcconfig file, just like `API_BASE_URL`
+above, and silently truncates the value to `api:` otherwise).
+
+See `docs/adr/0022-entra-external-id-native-authentication.md` for the full design, and
+`CR_APP_CFG_CATCH_RECORD_API_BASE_URL` (ADR-0025) for the companion Catch Recording Service base URL, which
+remains unset (and is not yet confirmed by the backend team).
+
 ## Testing
 
 - Unit tests: `record-catchTests` (XCTest)

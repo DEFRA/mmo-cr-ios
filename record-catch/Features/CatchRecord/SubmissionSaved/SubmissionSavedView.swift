@@ -7,9 +7,10 @@ import SwiftUI
 /// Reuses the shared `ConfirmationPanel` (see that type's doc comment) with
 /// `AppColors.govBlue` instead of the green used for a real submission, so the two outcomes are
 /// never conveyed by the same colour. Beneath the panel: an explanation that the record will send
-/// automatically once back online, a "Check your catch records" link, a `WarningBox` — the same
-/// "Important" notice component used elsewhere in the app — carrying the 24-hour reminder in text
-/// (not colour), and the "View your catch records" action.
+/// automatically once back online, a "Check your catch records" link, an `InlineWarningText` — the
+/// GOV.UK "Warning text" pattern (icon + bold text, no box — deliberately lighter than the
+/// bordered `WarningBox` used on Home, since this page already has its own confirmation panel)
+/// carrying the 24-hour reminder in text (not colour), and the "View your catch records" action.
 struct SubmissionSavedView: View {
 
     @Environment(AppLanguageStore.self) private var languageStore
@@ -50,7 +51,7 @@ struct SubmissionSavedView: View {
 
             checkRecordsLink
 
-            WarningBox(
+            InlineWarningText(
                 tagKey: "home.warning.tag",
                 messageKey: "catchRecord.submissionSaved.warning"
             )

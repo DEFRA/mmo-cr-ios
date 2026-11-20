@@ -21,11 +21,14 @@ import Foundation
 /// (`submitNow(localID:timeout:)`):
 /// - **Sent and accepted** → `submissionSuccess` (the real green confirmation — only ever shown
 ///   once the backend has actually accepted the record).
-/// - **Still queued** (offline, a retryable failure, or the attempt didn't finish within the
-///   timeout) → `submissionSaved` — the truthful "saved on this device, will send automatically"
-///   screen (BR-SUB-008/AC10/AC11) — never the green one.
-/// - **Failed permanently** (validation/mapping/configuration — nothing a retry would fix) →
-///   a recoverable inline error (`submitFailed`), and the record falls back to showing as Draft.
+/// - **Still queued** (offline, a retryable failure, the Catch Recording Service not yet
+///   configured/reachable for this stage, or the attempt didn't finish within the timeout) →
+///   `submissionSaved` - the truthful "saved on this device, will send automatically" screen
+///   (BR-SUB-008/AC10/AC11) — never the green one. Critically, **none of these reasons are ever
+///   the user's fault**, so none of them may show the inline error below.
+/// - **Failed permanently** (validation/mapping — bad or incomplete local data; nothing a retry
+///   would fix, but something the user *can* go back and correct) → a recoverable inline error
+///   (`submitFailed`), and the record falls back to showing as Draft.
 @MainActor
 @Observable
 final class CheckYourAnswersViewModel {

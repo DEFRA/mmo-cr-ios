@@ -56,13 +56,22 @@ final class MSALNativeAuthenticator: Authenticating {
                 // `.serviceUnavailable` below.
                 challengeTypes: [.OOB, .password]
             )
-            // Avoids requiring the `com.microsoft.adalcache` shared-keychain-access-group
-            // entitlement: pointing MSAL's cache at this app's own bundle identifier uses a
-            // private (non-shared) keychain group instead, per `MSALCacheConfig.keychainSharingGroup`'s
-            // documented opt-out (ADR-0022 §6).
-            if let bundleID = Bundle.main.bundleIdentifier {
-                config.cacheConfig.keychainSharingGroup = bundleID
-            }
+            // Deliberately NOT overriding `cacheConfig.keychainSharingGroup` here (a private,
+            // bundle-ID-scoped group was tried and reverted — see git history / incident notes).
+            // MSAL Native Auth's own silent-token path (`getAccessTokenInternal`, used by both
+            // `restoreSession()` and `accessToken()` below) rebuilds a brand-new
+            // `MSALNativeAuthPublicClientApplicationConfig` internally for every silent call and
+            // never copies this app's `cacheConfig` across — its keychain group always falls back
+            // to the SDK's static default (`com.microsoft.adalcache`), regardless of what's set
+            // here. Overriding the group only on `self.application` therefore made sign-in write
+            // the refresh token under one keychain access group while every later silent token
+            // request looked for it under a *different* one — guaranteed to never find it
+            // (confirmed by reading `MSALPublicClientApplication.m` and
+            // `MSIDSilentTokenRequest.m` in the local MSAL 2.17.0 checkout). Leaving this unset
+            // lets every code path — this instance and MSAL's internally-reconstructed ones —
+            // consistently use the SDK's real default group instead, which this app is entitled
+            // for via `keychain-access-groups` (`$(AppIdentifierPrefix)com.microsoft.adalcache`,
+            // per MSAL's own "Configure keychain" guidance).
             self.application = try MSALNativeAuthPublicClientApplication(nativeAuthConfiguration: config)
             // Tenant subdomain is public (non-secret) app-registration metadata — never the
             // client ID or any token — so it is safe to confirm at debug level.
@@ -91,6 +100,18 @@ final class MSALNativeAuthenticator: Authenticating {
 
         let parameters = MSALNativeAuthSignInParameters(username: email)
         parameters.password = password
+        // Request the Catch Recording Service's API scope (ADR-0022 addendum, ADR-0025) up front,
+        // alongside the implicit openid/profile/offline_access scopes. Without this, the
+        // sign-in-issued token/refresh-token grant never covers `catchRecordAPIScope`, so the
+        // later silent `getAccessToken(parameters:)` call in `accessToken()` below has nothing to
+        // return and fails with MSAL's "No token matching arguments found in the cache, user
+        // interaction is required" — confirmed via `lldb`/runtime diagnostics, not a keychain
+        // issue. Requires the scope to already be an admin-consented API permission on this app's
+        // Entra registration (ADR-0025) — if that consent is missing, sign-in itself will instead
+        // report an error for the missing/unconsented scope rather than silently dropping it.
+        if let catchRecordAPIScope {
+            parameters.scopes = [catchRecordAPIScope]
+        }
 
         let delegate = SignInResultDelegate()
         var step = await delegate.run { application.signIn(parameters: parameters, delegate: $0) }
@@ -103,6 +124,14 @@ final class MSALNativeAuthenticator: Authenticating {
         }
 
         let outcome = handle(step)
+        if case .success = outcome {
+            // Eagerly fetch the Catch Recording Service access token right after sign-in, so
+            // there's something to inspect in the debugger during local dev (ADR-0022 addendum,
+            // ADR-0025) — no view calls `accessToken()` yet, so without this it would never run.
+            // The return value is discarded here deliberately: see `accessToken()` below for why
+            // its value is never logged/printed; use a breakpoint there instead.
+            _ = await accessToken()
+        }
         Self.logger.debug("Sign-in finished with outcome: \(Self.describe(outcome), privacy: .public)")
         return outcome
     }
@@ -193,12 +222,34 @@ final class MSALNativeAuthenticator: Authenticating {
 
         switch result {
         case .success(let tokenResult):
+            // Never logs/prints the token value itself (a bearer credential — security
+            // instructions forbid logging secrets/tokens in plaintext, and `print`/log output can
+            // end up in a device sysdiagnose or a user-shared diagnostics export, ADR-0022 §1).
+            // The scope string is non-secret (an API permission identifier, not a credential) and
+            // the length is non-reversible, so both are safe to confirm at debug level that a
+            // token really was obtained. For local dev inspection of the actual value, use the
+            // debugger (breakpoint here + `po tokenResult.accessToken`) — that's ephemeral and
+            // never persisted, unlike `print`/`Logger`.
+            Self.logger.debug(
+                "Access token obtained for Catch Recording Service (scope: \(catchRecordAPIScope, privacy: .public), length: \(tokenResult.accessToken.count, privacy: .public))"
+            )
             return tokenResult.accessToken
-        case .failure:
-            // Never logs the detailed failure reason here (unlike `map(_:)` for sign-in): a
-            // missing protected-API token is an expected, routine outcome (e.g. the scope isn't
-            // consented/registered yet — ADR-0025), not a credential-revealing or otherwise
-            // diagnostically-interesting failure.
+        case .failure(let error):
+            // Logs the AADSTS error code(s) (public, non-PII — same pattern as `map(_:)` for
+            // sign-in failures) so a genuinely missing protected-API token is diagnosable without
+            // ever logging a credential. Common causes once sign-in itself succeeds: the scope
+            // isn't added as an API permission on the client app registration, admin consent
+            // hasn't been granted for it, or the resource app's Application ID URI/scope name
+            // doesn't match `catchRecordAPIScope` exactly (ADR-0025).
+            if let nativeError = error as? MSALNativeAuthError {
+                Self.logger.notice(
+                    "Access token request failed for Catch Recording Service scope (\(catchRecordAPIScope, privacy: .public)); AADSTS codes: \(nativeError.errorCodes, privacy: .public)"
+                )
+            } else {
+                Self.logger.notice(
+                    "Access token request failed for Catch Recording Service scope (\(catchRecordAPIScope, privacy: .public)), with a non-MSAL error"
+                )
+            }
             return nil
         }
     }

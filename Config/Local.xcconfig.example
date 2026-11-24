@@ -8,12 +8,19 @@
 // "//" starts a comment in xcconfig files, so URLs are written with "$()" splitting the slashes.
 CR_APP_CFG_API_BASE_URL = http:/$()/localhost:3002
 
-// Entra External ID (ADR-0022) — placeholders only; real per-stage values are not yet available.
-// Leave unset to exercise the app's "not configured" sign-in state locally.
-// CR_APP_CFG_ENTRA_CLIENT_ID = <application-client-id-guid>
-// CR_APP_CFG_ENTRA_TENANT_SUBDOMAIN = <tenant-subdomain>
+// Entra External ID (ADR-0022 §6) — DEFRA MMO External ID **dev** tenant values (from the
+// entra-id-poc sibling repo). Non-secret (a client ID + tenant subdomain are not credentials), so
+// they are safe to share here for a working local sign-in out of the box.
+// Comment both lines out to exercise the app's "not configured" sign-in state instead.
+CR_APP_CFG_ENTRA_CLIENT_ID = 54911235-9884-41b9-ba69-8b44ac8e1a1d
+CR_APP_CFG_ENTRA_TENANT_SUBDOMAIN = EXTIDMMOExternalTenantDev
 
-// Catch Recording Service (ADR-0025) — placeholders only; real per-stage values are not yet
-// available. Leave unset to exercise the app's "not configured"/Failing* service fallback locally.
+// Catch Recording Service (ADR-0025) — base URL is still a placeholder; real per-stage values are
+// not yet available. Leave unset to exercise the app's "not configured"/Failing* service fallback
+// locally.
 // CR_APP_CFG_CATCH_RECORD_API_BASE_URL = <catch-record-service-base-url>
-// CR_APP_CFG_ENTRA_API_SCOPE = api://<catch-record-service-app-id>/catch-recording.write
+
+// Confirmed: the Catch Recording Service has its own, separate Entra app registration
+// (app ID 8bc065bf-046f-4d18-834a-753b325e5221, distinct from the sign-in client ID above),
+// exposing the "access_as_user" scope.
+CR_APP_CFG_ENTRA_API_SCOPE = api:/$()/8bc065bf-046f-4d18-834a-753b325e5221/access_as_user

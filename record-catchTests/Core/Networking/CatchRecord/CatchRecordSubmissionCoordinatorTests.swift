@@ -226,6 +226,29 @@ final class CatchRecordSubmissionCoordinatorTests: XCTestCase {
         XCTAssertEqual(pendingIDs, [draft.localID])
     }
 
+    /// Regression test for the bug where submitting always showed "Could not submit your catch
+    /// record. Check your connection and try again" regardless of actual connectivity: whenever
+    /// `CATCH_RECORD_API_BASE_URL` is not yet configured for a stage/build,
+    /// `CatchRecordServicesFactory` substitutes `FailingCatchRecordService`, which throws
+    /// `APIError.invalidConfiguration` from every call — a deployment/environment problem the user
+    /// cannot fix, and nothing to do with their device's connectivity. This must be queued and
+    /// retried automatically (`submissionSaved`, never the inline error), exactly like a genuinely
+    /// offline device — never `.failedPermanently`.
+    func test_submitNow_whenServiceIsNotConfigured_returnsQueued_neverFailedPermanently() async throws {
+        let draftStore = InMemoryCatchRecordDraftStore()
+        let service = SpyCatchRecordService()
+        service.createDraftResult = .failure(APIError.invalidConfiguration)
+        let sut = makeSUT(service: service, draftStore: draftStore, isOnline: { true })
+        let draft = makeDraft()
+        await sut.enqueue(draft)
+
+        let outcome = await sut.submitNow(localID: draft.localID, timeout: 5)
+
+        XCTAssertEqual(outcome, .queued)
+        let pendingIDs = try await draftStore.pendingSubmissionLocalIDs()
+        XCTAssertEqual(pendingIDs, [draft.localID])
+    }
+
     // MARK: - Permanent failure reverts to Draft, never silently retried
 
     func test_submitNow_whenMappingFails_returnsFailedPermanently_andNoLongerQueued() async throws {

@@ -1122,19 +1122,19 @@
       }
     },
     "catchRecord.checkYourAnswers.submitFailed" : {
-      "comment" : "Error banner shown when the (stubbed) submission API call fails on Check your answers.",
+      "comment" : "Error banner shown on Check your answers only when submission fails PERMANENTLY — i.e. bad/incomplete local data (validation or mapping), never connectivity or backend configuration (those are queued and retried automatically — see CatchRecordSubmissionCoordinator/ADR-0028). Must not blame \"your connection\": by the time this shows, connectivity was never the cause.",
       "extractionState" : "manual",
       "localizations" : {
         "cy" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Methwyd â chyflwyno'ch cofnod dalfa. Gwiriwch eich cysylltiad a rhowch gynnig arall arni."
+            "value" : "Methwyd â chyflwyno'ch cofnod dalfa. Ewch yn ôl a gwiriwch eich atebion, yna rhowch gynnig arall arni."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Could not submit your catch record. Check your connection and try again."
+            "value" : "Could not submit your catch record. Go back and check your answers, then try again."
           }
         }
       }

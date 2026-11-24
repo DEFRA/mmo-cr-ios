@@ -31,11 +31,12 @@ nonisolated struct EntraConfiguration: Sendable, Equatable {
     /// "contoso.ciamlogin.com".
     let tenantSubdomain: String
     /// The Entra External ID scope (API permission) for the Catch Recording Service — e.g.
-    /// `"api://<catch-record-service-app-id>/catch-recording.write"` — used by
-    /// `MSALNativeAuthenticator.accessToken()` (ADR-0022 addendum, ADR-0025). `nil` until the Entra
-    /// tenant team registers the service and supplies a real scope for this stage; a `nil` scope
-    /// never prevents sign-in/`restoreSession()` from working, since this value is only consulted
-    /// when requesting a *protected-API* token, a separate concern from authentication itself.
+    /// `"api://<catch-record-service-app-id>/access_as_user"` (the dev tenant's confirmed scope
+    /// name is `access_as_user`) — used by `MSALNativeAuthenticator.accessToken()` (ADR-0022
+    /// addendum, ADR-0025). `nil` until a stage's Entra tenant supplies a real scope for this
+    /// value; a `nil` scope never prevents sign-in/`restoreSession()` from working, since this
+    /// value is only consulted when requesting a *protected-API* token, a separate concern from
+    /// authentication itself.
     let catchRecordAPIScope: String?
 
     private static let configKey = "MMOCRAppConfig"

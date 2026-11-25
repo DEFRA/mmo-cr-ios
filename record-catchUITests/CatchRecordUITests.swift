@@ -215,12 +215,12 @@ final class CatchRecordUITests: XCTestCase {
 
         // Second journey: the shared draft is reset before Select vessel appears again (see
         // `HomeView.createNewRecord()`/`CatchRecordDraft.reset()`), so picking a different vessel
-        // (HERCULES) and continuing creates a **second**, independent draft rather than
+        // (SEA SPRAY) and continuing creates a **second**, independent draft rather than
         // overwriting the first.
         createButton.tap()
-        let hercules = element(app, "CatchRecord.selectVessel.option.hercules")
-        XCTAssertTrue(hercules.waitForExistence(timeout: 5))
-        hercules.tap()
+        let seaSpray = element(app, "CatchRecord.selectVessel.option.sea-spray")
+        XCTAssertTrue(seaSpray.waitForExistence(timeout: 5))
+        seaSpray.tap()
         XCTAssertTrue(element(app, ID.tripGroup).waitForExistence(timeout: 5))
         element(app, "ViewHeader.backButton").tap()
 

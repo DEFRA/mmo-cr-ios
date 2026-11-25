@@ -131,7 +131,7 @@ namespaced `CatchRecord.<screenId>.*` throughout (e.g. `CatchRecord.selectVessel
 | # | Folder | Route case | Purpose | Continues to |
 |---|---|---|---|---|
 | 1 | `DraftAction/` | `.draftAction(SubmissionRow)` | What to do with an existing **Unsent** draft record: Complete or Delete (destructive `confirmationDialog`, requires explicit confirm). Complete loads the persisted payload (if any) into the shared draft before continuing (see ADR-0014). | Complete → `.selectVessel` (fields already answered are pre-filled as the user walks forward again); Delete confirmed → deletes the persisted draft, then `popToRoot()` (Home) |
-| 2 | `SelectVessel/` | `.selectVessel` | Pick the vessel for a new trip, from `VesselProviding` (stubbed: ACHILLES, HERCULES). Writes `draft.vessel`. | `.tripStartedToday` |
+| 2 | `SelectVessel/` | `.selectVessel` | Pick the vessel for a new trip, from `VesselProviding` (real data synced from the reference-data API's `vessels` dataset — see ADR-0024/ADR-0028; UI tests/previews use `StubVesselProvider`: ACHILLES, SEA SPRAY). Writes `draft.vessel`/`draft.vesselSnapshot`. | `.tripStartedToday` |
 | 3 | `TripStartedToday/` | `.tripStartedToday` | Yes/No — did the trip start and finish today? | Yes → port sub-journey; No → `.tripDate(.departure)` |
 | 4 | `TripDate/` | `.tripDate(phase:...)` | Reusable day/month/year date entry for departure **and** return (driven by `TripDatePhase`). Writes `draft.departureDate`/`draft.returnDate`. | Departure → `.tripDate(.return)`; Return → late? `.submissionNudge` : port sub-journey |
 | 5 | `SubmissionNudge/` | `.submissionNudge(daysLate:...)` | Interposed only when the trip ended **>24h** ago (`SubmissionNudge.isNeeded`, injectable clock). Reminds the user records must be submitted within 24h, with a link back to correct the date. | port sub-journey |
@@ -166,8 +166,9 @@ hand-built preview/test row) still routes forward with a blank draft.
 
 ### 2. Select vessel (`SelectVessel/`)
 
-`VesselProviding` is the (stubbed) source of the vessel list (`StaticVesselProvider`: ACHILLES,
-HERCULES). Generates the journey's **placeholder reference number**
+`VesselProviding` is the source of the vessel list — in production, `SyncedVesselSearchProvider`
+reads real vessels synced from the reference-data API at sign-in (see ADR-0024/ADR-0028); UI tests
+and previews use the fixed `StubVesselProvider` (ACHILLES, SEA SPRAY). Generates the journey's **placeholder reference number**
 (`SelectVesselViewModel.placeholderReferenceNumber`, a static UI-only value, not derived from any
 backend — see the design spec's reference-number note) and threads it through every later screen.
 

@@ -71,6 +71,22 @@ nonisolated struct VesselOption: Identifiable, Hashable, Sendable, Codable {
         }
     }
 
+    /// Groups the convenience initializer's sync-only metadata fields — rarely needed outside
+    /// `StubVesselProvider`'s fixture data — so the initializer itself stays under Sonar's
+    /// authorised parameter-count limit (`swift:S107`); mirrors `DraftReferenceGeneration`'s
+    /// grouping rationale in `DraftActionViewModel.swift`.
+    struct SyncMetadata {
+        var lengthOverallMetres: Double?
+        var status: String?
+        var activeTo: String?
+
+        init(lengthOverallMetres: Double? = nil, status: String? = nil, activeTo: String? = nil) {
+            self.lengthOverallMetres = lengthOverallMetres
+            self.status = status
+            self.activeTo = activeTo
+        }
+    }
+
     /// Convenience for hand-built/test values. Only the fields exercised by hand-built call sites
     /// are exposed here (see swift-swiftui.instructions.md on preferring fewer parameters); every
     /// other field is reachable only via `init(dto:)`, which the real API response always
@@ -81,9 +97,7 @@ nonisolated struct VesselOption: Identifiable, Hashable, Sendable, Codable {
         displayName: String? = nil,
         externalMark: String? = nil,
         registrationNumber: String? = nil,
-        lengthOverallMetres: Double? = nil,
-        status: String? = nil,
-        activeTo: String? = nil
+        syncMetadata: SyncMetadata = SyncMetadata()
     ) {
         self.id = id
         self.name = name
@@ -95,10 +109,10 @@ nonisolated struct VesselOption: Identifiable, Hashable, Sendable, Codable {
         self.registrationNumber = registrationNumber
         self.typeCode = nil
         self.registrationCountryCode = nil
-        self.lengthOverallMetres = lengthOverallMetres
-        self.status = status
+        self.lengthOverallMetres = syncMetadata.lengthOverallMetres
+        self.status = syncMetadata.status
         self.activeFrom = nil
-        self.activeTo = activeTo
+        self.activeTo = syncMetadata.activeTo
         self.displayName = Self.derivedDisplayName(name: name, preferred: displayName, externalMark: externalMark)
     }
 

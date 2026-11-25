@@ -13,7 +13,7 @@ import XCTest
 final class CatchRecordPayloadMapperTests: XCTestCase {
 
     private let achilles = VesselOption(
-        id: "A12345", name: "ACHILLES", registrationNumber: "A12345", lengthOverallMetres: nil
+        id: "A12345", name: "ACHILLES", registrationNumber: "A12345"
     )
 
     private func makeCompletePayload() -> CatchRecordDraftPayload {

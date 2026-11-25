@@ -40,8 +40,7 @@ nonisolated struct StubVesselProvider: VesselProviding {
             displayName: "ACHILLES PH1234",
             externalMark: "PH1234",
             registrationNumber: "PH1234",
-            lengthOverallMetres: 8.74,
-            status: "active"
+            syncMetadata: VesselOption.SyncMetadata(lengthOverallMetres: 8.74, status: "active")
         ),
         VesselOption(
             id: "00000000-0000-4000-8000-000000000012",
@@ -49,8 +48,7 @@ nonisolated struct StubVesselProvider: VesselProviding {
             displayName: "SEA SPRAY BM45",
             externalMark: "BM45",
             registrationNumber: "BM45",
-            lengthOverallMetres: 11.2,
-            status: "active"
+            syncMetadata: VesselOption.SyncMetadata(lengthOverallMetres: 11.2, status: "active")
         )
     ]
 

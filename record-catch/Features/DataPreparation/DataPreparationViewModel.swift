@@ -4,9 +4,9 @@
 //
 //  Drives the "Downloading data" screen shown between sign-in/unlock and Home (see
 //  `RootPhase.preparingData`, ADR-0024 "Data before Home"). No picker screen is reachable until
-//  the required reference data (ports/species/gears) is present on-device, so this view model
-//  blocks on a sync and reports a retryable failure — with an offline-specific message — if it
-//  can't be satisfied.
+//  the required reference data (ports/species/gears/vessels) is present on-device, so this view
+//  model blocks on a sync and reports a retryable failure — with an offline-specific message — if
+//  it can't be satisfied.
 //
 
 import Foundation

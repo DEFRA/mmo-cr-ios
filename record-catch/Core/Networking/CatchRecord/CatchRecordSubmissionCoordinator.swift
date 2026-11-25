@@ -125,7 +125,7 @@ final class CatchRecordSubmissionCoordinator: CatchRecordSubmissionQueuing {
     init(
         service: CatchRecordServicing,
         draftStore: CatchRecordDraftStoring,
-        vesselProvider: VesselProviding = StaticVesselProvider(),
+        vesselProvider: VesselProviding = SyncedVesselSearchProvider(),
         isOnline: @escaping () -> Bool
     ) {
         self.service = service
@@ -194,9 +194,11 @@ final class CatchRecordSubmissionCoordinator: CatchRecordSubmissionQueuing {
             return .failedPermanently
         }
 
+        let resolvedVessel = await resolveVessel(for: payload)
+
         let replacement: CompleteReplacementPayload
         do {
-            replacement = try CatchRecordPayloadMapper.map(payload: payload, vesselProvider: vesselProvider)
+            replacement = try CatchRecordPayloadMapper.map(payload: payload, vessel: resolvedVessel)
         } catch let mappingError as CatchRecordMappingError {
             try? await draftStore.markSubmissionFailed(localID: localID, permanent: true, errorCode: mappingError.errorCode)
             return .failedPermanently
@@ -212,14 +214,14 @@ final class CatchRecordSubmissionCoordinator: CatchRecordSubmissionQueuing {
                 payload: payload,
                 replacement: replacement
             )
-            _ = try await service.replaceCatchRecord(catchRecordId: serverID, expectedVersion: version, payload: replacement)
-            let submission = try await service.submit(
-                catchRecordId: serverID,
-                expectedVersion: version,
-                idempotencyKey: progress.idempotencyKey
+            return try await sendReplacementAndSubmit(
+                localID: localID,
+                serverID: serverID,
+                version: version,
+                replacement: replacement,
+                idempotencyKey: progress.idempotencyKey,
+                allowConflictRetry: true
             )
-            try? await draftStore.markSubmissionSucceeded(localID: localID, submittedVersion: submission.standard.version)
-            return .submitted
         } catch let apiError as APIError {
             // Root-cause fix: a misconfigured/unreachable Catch Recording Service
             // (`APIError.invalidConfiguration` — e.g. `CATCH_RECORD_API_BASE_URL` not yet set for
@@ -232,17 +234,114 @@ final class CatchRecordSubmissionCoordinator: CatchRecordSubmissionQueuing {
             // never show the misleading "check your connection" banner for a backend/config issue
             // that has nothing to do with the device's connectivity (DEFRA offline-first mandate:
             // never lose work, never dead-end the user with an error they cannot act on).
-            let isRetryableForSubmission = apiError.isRetryable || apiError == .invalidConfiguration
+            //
+            // `401 Unauthorized` (an expired/not-yet-ready sign-in session) is treated the same
+            // way: it is nothing the user can fix from this screen either, and the queue retries
+            // automatically once the app's normal silent-session-refresh/re-sign-in flow restores
+            // a valid token — never reverted to Draft for an auth problem (ADR-0028 "Auth
+            // handling").
+            let isRetryableForSubmission = apiError.isRetryable || apiError == .invalidConfiguration || apiError.isUnauthorized
             try? await draftStore.markSubmissionFailed(
                 localID: localID,
                 permanent: !isRetryableForSubmission,
-                errorCode: apiError.errorCode ?? (apiError == .invalidConfiguration ? "catch_record_service_not_configured" : "unknown_api_error")
+                errorCode: apiError.errorCode ?? Self.fallbackErrorCode(for: apiError)
             )
             return isRetryableForSubmission ? .queued : .failedPermanently
         } catch {
             try? await draftStore.markSubmissionFailed(localID: localID, permanent: true, errorCode: "submission_unknown_error")
             return .failedPermanently
         }
+    }
+
+    /// Resolves the vessel for an already-queued `payload` — the snapshot captured at selection
+    /// time (every draft from ADR-0028 onwards), or a name lookup via `vesselProvider` for a draft
+    /// persisted before `CatchRecordDraft.vesselSnapshot` existed.
+    private func resolveVessel(for payload: CatchRecordDraftPayload) async -> VesselOption? {
+        if let snapshot = payload.vesselSnapshot { return snapshot }
+        guard let name = payload.vessel else { return nil }
+        return await vesselProvider.vessel(named: name)
+    }
+
+    /// Replaces the record's content, then submits it — reusing the version `replaceCatchRecord`
+    /// itself returns for `submit`'s own `If-Match` (never the stale version `createDraft`/a
+    /// previous attempt returned — see ADR-0028 "Version handling": the service bumps the version
+    /// on every successful write, so submitting against the pre-replace version would always
+    /// conflict).
+    private func sendReplacementAndSubmit(
+        localID: UUID,
+        serverID: String,
+        version: Int,
+        replacement: CompleteReplacementPayload,
+        idempotencyKey: String?,
+        allowConflictRetry: Bool
+    ) async throws -> CatchRecordSubmissionOutcome {
+        let replaced = try await service.replaceCatchRecord(catchRecordId: serverID, expectedVersion: version, payload: replacement)
+        try? await draftStore.recordServerProgress(localID: localID, serverID: serverID, version: replaced.version)
+        return try await submitWithConflictRetry(
+            localID: localID,
+            serverID: serverID,
+            version: replaced.version,
+            idempotencyKey: idempotencyKey,
+            allowConflictRetry: allowConflictRetry
+        )
+    }
+
+    /// Submits the already-replaced record, retrying **once**, against a freshly retrieved
+    /// version, if the backend reports a `409` conflict (another session/device moved the
+    /// record's version between this attempt's replace and submit) — bounded so a persistent
+    /// conflict still resolves definitively rather than looping forever (ADR-0028 "Conflict
+    /// handling"). A replace-side conflict is not separately retried here: `replace` already
+    /// received the latest version this attempt knew about, so a conflict there reflects a
+    /// genuinely concurrent edit and is left to the outer `APIError` handling (queued/failed like
+    /// any other `409`).
+    private func submitWithConflictRetry(
+        localID: UUID,
+        serverID: String,
+        version: Int,
+        idempotencyKey: String?,
+        allowConflictRetry: Bool
+    ) async throws -> CatchRecordSubmissionOutcome {
+        do {
+            let submission = try await service.submit(catchRecordId: serverID, expectedVersion: version, idempotencyKey: idempotencyKey)
+            try? await draftStore.markSubmissionSucceeded(localID: localID, submittedVersion: submission.standard.version)
+            return .submitted
+        } catch let apiError as APIError where apiError.isConflict && allowConflictRetry {
+            guard let resolvedVersion = try await resolveConflict(localID: localID, serverID: serverID) else {
+                // The backend already shows this record as submitted — a previous attempt's
+                // response was lost in transit, not a genuine conflict. Nothing left to send.
+                return .submitted
+            }
+            return try await submitWithConflictRetry(
+                localID: localID,
+                serverID: serverID,
+                version: resolvedVersion,
+                idempotencyKey: idempotencyKey,
+                allowConflictRetry: false
+            )
+        }
+    }
+
+    /// Fetches the record's current state after a `409` conflict. Returns its live version to
+    /// retry with, or `nil` when the backend already shows it as `submitted` — in which case the
+    /// record is marked submitted locally (matching the backend) and the caller sends nothing
+    /// further.
+    private func resolveConflict(localID: UUID, serverID: String) async throws -> Int? {
+        let current = try await service.retrieveCatchRecord(catchRecordId: serverID)
+        if current.record.status == .submitted {
+            try? await draftStore.markSubmissionSucceeded(localID: localID, submittedVersion: current.record.version)
+            return nil
+        }
+        try? await draftStore.recordServerProgress(localID: localID, serverID: serverID, version: current.record.version)
+        return current.record.version
+    }
+
+    /// A non-sensitive, machine-readable fallback code for `markSubmissionFailed(errorCode:)` when
+    /// the API response carried no decodable error envelope of its own.
+    private static func fallbackErrorCode(for apiError: APIError) -> String {
+        if apiError == .invalidConfiguration { return "catch_record_service_not_configured" }
+        if apiError.isConflict { return "submission_conflict" }
+        if apiError.isUnauthorized { return "submission_unauthorized" }
+        return "unknown_api_error"
     }
 
     /// Ensures a server-side record exists for `localID`, creating one (and recording its id/

@@ -51,6 +51,24 @@ nonisolated enum ReferenceDataValidator {
         }
     }
 
+    /// The `vessels`-specific counterpart to `validateItemCount(dataset:itemCount:manifestEntry:)`:
+    /// a per-user vessel list can legitimately be **empty** (a fisher with no vessels linked to
+    /// their account yet — see ADR-0024 "Vessels" amendment/ADR-0028), so this deliberately skips
+    /// the `itemCount > 0` rejection every other dataset applies. Still checks the fetched count
+    /// against the manifest's own `itemCount`, when one was supplied, so a genuine fetch
+    /// truncation (not an intentionally-empty account) is still caught.
+    static func validateVesselItemCount(
+        itemCount: Int,
+        manifestEntry: ReferenceDataManifestEntry?
+    ) throws {
+        guard let expected = manifestEntry?.itemCount else { return }
+        guard expected == itemCount else {
+            throw ReferenceDataValidationError.itemCountMismatch(
+                dataset: "vessels", expected: expected, actual: itemCount
+            )
+        }
+    }
+
     /// Rejects a dataset containing two items with the same identifier.
     static func validateUniqueIdentifiers(dataset: String, identifiers: [String]) throws {
         var seen = Set<String>()

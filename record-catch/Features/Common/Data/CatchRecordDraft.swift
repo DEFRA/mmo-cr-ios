@@ -30,8 +30,13 @@ final class CatchRecordDraft {
     /// every actual read/write happens on the main actor in practice, same as every other property.
     nonisolated(unsafe) var localID: UUID
 
-    /// The vessel this catch record is for.
+    /// The vessel this catch record is for (display name only — see `vesselSnapshot` for the full,
+    /// API-sourced vessel record used by submission/reference generation).
     var vessel: String?
+    /// The full vessel record selected on `SelectVesselViewModel.submit()` (see ADR-0028) —
+    /// `nil` for any draft persisted before this field existed (such a draft is resolved by name
+    /// via `VesselProviding.vessel(named:)` instead, see `DraftActionViewModel.resumeDraft()`).
+    var vesselSnapshot: VesselOption?
     /// The client-generated catch record reference (see `CatchRecordReferenceGenerator`,
     /// ADR-0026), created once — the moment a vessel is confirmed on `SelectVesselViewModel.submit()`
     /// — and carried unchanged for the rest of this draft's life, including across resume. `nil`
@@ -99,6 +104,7 @@ final class CatchRecordDraft {
     func reset() {
         localID = UUID()
         vessel = nil
+        vesselSnapshot = nil
         catchRecordReference = nil
         departureDate = nil
         returnDate = nil
@@ -117,6 +123,7 @@ final class CatchRecordDraft {
     var payload: CatchRecordDraftPayload {
         CatchRecordDraftPayload(
             vessel: vessel,
+            vesselSnapshot: vesselSnapshot,
             catchRecordReference: catchRecordReference,
             departureDate: departureDate,
             returnDate: returnDate,
@@ -134,6 +141,7 @@ final class CatchRecordDraft {
     /// `.environment(draft)`) observes the resumed values.
     func apply(_ payload: CatchRecordDraftPayload) {
         vessel = payload.vessel
+        vesselSnapshot = payload.vesselSnapshot
         catchRecordReference = payload.catchRecordReference
         departureDate = payload.departureDate
         returnDate = payload.returnDate
@@ -178,6 +186,10 @@ nonisolated enum CatchRecordCheckpoint: Int, Codable, Comparable, Sendable {
 /// decoding has no `@MainActor` isolation requirement of its own.
 nonisolated struct CatchRecordDraftPayload: Codable, Equatable, Sendable {
     var vessel: String?
+    /// See `CatchRecordDraft.vesselSnapshot`. Added after the first release of this payload shape
+    /// (mirrors `catchRecordReference`/`checkpoint` below) — `nil` for any already-persisted draft
+    /// that predates this field.
+    var vesselSnapshot: VesselOption?
     /// See `CatchRecordDraft.catchRecordReference`. Added after the first release of this payload
     /// shape (mirrors `checkpoint` below) — `nil` for any already-persisted draft that predates
     /// this field; such a draft is given a reference the next time it is resumed (see
@@ -210,6 +222,7 @@ extension CatchRecordDraftPayload {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         vessel = try container.decodeIfPresent(String.self, forKey: .vessel)
+        vesselSnapshot = try container.decodeIfPresent(VesselOption.self, forKey: .vesselSnapshot)
         catchRecordReference = try container.decodeIfPresent(String.self, forKey: .catchRecordReference)
         departureDate = try container.decodeIfPresent(Date.self, forKey: .departureDate)
         returnDate = try container.decodeIfPresent(Date.self, forKey: .returnDate)

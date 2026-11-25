@@ -12,7 +12,9 @@ import XCTest
 
 final class CatchRecordPayloadMapperTests: XCTestCase {
 
-    private let vesselProvider = StaticVesselProvider()
+    private let achilles = VesselOption(
+        id: "A12345", name: "ACHILLES", registrationNumber: "A12345", lengthOverallMetres: nil
+    )
 
     private func makeCompletePayload() -> CatchRecordDraftPayload {
         CatchRecordDraftPayload(
@@ -40,7 +42,7 @@ final class CatchRecordPayloadMapperTests: XCTestCase {
     // MARK: Happy path
 
     func test_map_withEveryFieldCaptured_producesTheExpectedReplacementPayload() throws {
-        let replacement = try CatchRecordPayloadMapper.map(payload: makeCompletePayload(), vesselProvider: vesselProvider)
+        let replacement = try CatchRecordPayloadMapper.map(payload: makeCompletePayload(), vessel: achilles)
 
         XCTAssertEqual(replacement.vessel.id, "A12345")
         XCTAssertEqual(replacement.vessel.nameSnapshot, "ACHILLES")
@@ -60,7 +62,7 @@ final class CatchRecordPayloadMapperTests: XCTestCase {
     func test_map_whenDepartureAndReturnAreTheSameDay_setsStartedAndFinishedToday() throws {
         var payload = makeCompletePayload()
         payload.returnDate = payload.departureDate
-        let replacement = try CatchRecordPayloadMapper.map(payload: payload, vesselProvider: vesselProvider)
+        let replacement = try CatchRecordPayloadMapper.map(payload: payload, vessel: achilles)
         XCTAssertTrue(replacement.trip.startedAndFinishedToday)
     }
 
@@ -69,25 +71,32 @@ final class CatchRecordPayloadMapperTests: XCTestCase {
     func test_map_throwsMissingVessel_whenNoVesselCaptured() {
         var payload = makeCompletePayload()
         payload.vessel = nil
-        XCTAssertThrowsError(try CatchRecordPayloadMapper.map(payload: payload, vesselProvider: vesselProvider)) {
+        XCTAssertThrowsError(try CatchRecordPayloadMapper.map(payload: payload, vessel: achilles)) {
             XCTAssertEqual($0 as? CatchRecordMappingError, .missingVessel)
             XCTAssertEqual(($0 as? CatchRecordMappingError)?.errorCode, "mapping_missing_vessel")
         }
     }
 
-    func test_map_throwsMissingVesselDetails_whenVesselHasNoKnownRSSNumber() {
-        var payload = makeCompletePayload()
-        payload.vessel = "SOME UNKNOWN VESSEL"
-        XCTAssertThrowsError(try CatchRecordPayloadMapper.map(payload: payload, vesselProvider: vesselProvider)) {
+    func test_map_throwsMissingVesselDetails_whenVesselCouldNotBeResolved() {
+        let payload = makeCompletePayload()
+        XCTAssertThrowsError(try CatchRecordPayloadMapper.map(payload: payload, vessel: nil)) {
             XCTAssertEqual($0 as? CatchRecordMappingError, .missingVesselDetails)
             XCTAssertEqual(($0 as? CatchRecordMappingError)?.errorCode, "mapping_missing_vessel_details")
+        }
+    }
+
+    func test_map_throwsMissingVesselDetails_whenVesselHasNoRSSNumber() {
+        let payload = makeCompletePayload()
+        let vesselWithNoRSSNumber = VesselOption(id: "v-1", name: "ACHILLES")
+        XCTAssertThrowsError(try CatchRecordPayloadMapper.map(payload: payload, vessel: vesselWithNoRSSNumber)) {
+            XCTAssertEqual($0 as? CatchRecordMappingError, .missingVesselDetails)
         }
     }
 
     func test_map_throwsMissingTripDates_whenDepartureDateIsNil() {
         var payload = makeCompletePayload()
         payload.departureDate = nil
-        XCTAssertThrowsError(try CatchRecordPayloadMapper.map(payload: payload, vesselProvider: vesselProvider)) {
+        XCTAssertThrowsError(try CatchRecordPayloadMapper.map(payload: payload, vessel: achilles)) {
             XCTAssertEqual($0 as? CatchRecordMappingError, .missingTripDates)
         }
     }
@@ -95,7 +104,7 @@ final class CatchRecordPayloadMapperTests: XCTestCase {
     func test_map_throwsMissingTripDates_whenReturnDateIsNil() {
         var payload = makeCompletePayload()
         payload.returnDate = nil
-        XCTAssertThrowsError(try CatchRecordPayloadMapper.map(payload: payload, vesselProvider: vesselProvider)) {
+        XCTAssertThrowsError(try CatchRecordPayloadMapper.map(payload: payload, vessel: achilles)) {
             XCTAssertEqual($0 as? CatchRecordMappingError, .missingTripDates)
         }
     }
@@ -103,7 +112,7 @@ final class CatchRecordPayloadMapperTests: XCTestCase {
     func test_map_throwsMissingPorts_whenDeparturePortIsNil() {
         var payload = makeCompletePayload()
         payload.departurePort = nil
-        XCTAssertThrowsError(try CatchRecordPayloadMapper.map(payload: payload, vesselProvider: vesselProvider)) {
+        XCTAssertThrowsError(try CatchRecordPayloadMapper.map(payload: payload, vessel: achilles)) {
             XCTAssertEqual($0 as? CatchRecordMappingError, .missingPorts)
         }
     }
@@ -111,7 +120,7 @@ final class CatchRecordPayloadMapperTests: XCTestCase {
     func test_map_throwsMissingPorts_whenReturnPortIsNil() {
         var payload = makeCompletePayload()
         payload.returnPort = nil
-        XCTAssertThrowsError(try CatchRecordPayloadMapper.map(payload: payload, vesselProvider: vesselProvider)) {
+        XCTAssertThrowsError(try CatchRecordPayloadMapper.map(payload: payload, vessel: achilles)) {
             XCTAssertEqual($0 as? CatchRecordMappingError, .missingPorts)
         }
     }
@@ -119,7 +128,7 @@ final class CatchRecordPayloadMapperTests: XCTestCase {
     func test_map_throwsMissingGear_whenNoGearCatchesRecorded() {
         var payload = makeCompletePayload()
         payload.gearCatches = []
-        XCTAssertThrowsError(try CatchRecordPayloadMapper.map(payload: payload, vesselProvider: vesselProvider)) {
+        XCTAssertThrowsError(try CatchRecordPayloadMapper.map(payload: payload, vessel: achilles)) {
             XCTAssertEqual($0 as? CatchRecordMappingError, .missingGear)
         }
     }
@@ -127,7 +136,7 @@ final class CatchRecordPayloadMapperTests: XCTestCase {
     func test_map_throwsMissingStatisticalArea_whenAGearCatchHasNoStatisticalArea() {
         var payload = makeCompletePayload()
         payload.gearCatches[0].statisticalArea = nil
-        XCTAssertThrowsError(try CatchRecordPayloadMapper.map(payload: payload, vesselProvider: vesselProvider)) {
+        XCTAssertThrowsError(try CatchRecordPayloadMapper.map(payload: payload, vessel: achilles)) {
             XCTAssertEqual($0 as? CatchRecordMappingError, .missingStatisticalArea(gearID: "seine-nets"))
             XCTAssertEqual(($0 as? CatchRecordMappingError)?.errorCode, "mapping_missing_statistical_area")
         }

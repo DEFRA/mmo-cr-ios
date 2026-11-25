@@ -2,11 +2,11 @@ import XCTest
 @testable import record_catch
 
 /// Used by the resume tests below that assert against `SelectVesselViewModel.placeholderReferenceNumber`
-/// — has no RSS number for any vessel, so `DraftActionViewModel.resumeDraft()`'s
+/// — has no vessels at all, so `DraftActionViewModel.resumeDraft()`'s
 /// `generateReference(forVesselNamed:)` falls back to the placeholder rather than generating a
 /// real, wall-clock-dependent reference (ADR-0026), keeping these assertions deterministic.
 private struct NoRSSVesselProvider: VesselProviding {
-    let vessels: [String] = []
+    func vessels() async -> [VesselOption] { [] }
 }
 
 @MainActor

@@ -69,14 +69,25 @@ actor ReferenceDataSyncService {
         (try? await store.hasAnyData()) ?? false
     }
 
-    /// Whether every dataset in `kinds` already has at least one item synced — used by the
-    /// coordinator to gate the move from sign-in/unlock to Home on the datasets a picker actually
-    /// needs (see ADR-0024 "Data before Home").
+    /// Whether every dataset in `kinds` already has enough synced state to count as ready — used
+    /// by the coordinator to gate the move from sign-in/unlock to Home on the datasets a picker
+    /// actually needs (see ADR-0024 "Data before Home"). For every kind except `.vessels`, "ready"
+    /// means at least one **item** is persisted. `.vessels` only needs to have been **downloaded
+    /// at least once** (`store.state(for:)` is non-`nil`) — a per-user vessel list can legitimately
+    /// be empty (a fisher with no vessels linked to their account yet), and that must never block
+    /// Home (ADR-0024 "Vessels" amendment/ADR-0028).
     func hasData(for kinds: [ReferenceDataKind]) async -> Bool {
-        for kind in kinds where (try? await store.hasData(for: kind)) != true {
+        for kind in kinds where !(await isReady(kind)) {
             return false
         }
         return true
+    }
+
+    private func isReady(_ kind: ReferenceDataKind) async -> Bool {
+        if kind == .vessels {
+            return (try? await store.state(for: kind)) != nil
+        }
+        return (try? await store.hasData(for: kind)) == true
     }
 
     /// Fetches the manifest, then fetches+validates+persists every changed dataset concurrently —
@@ -276,8 +287,8 @@ actor ReferenceDataSyncService {
             return try species.map { try makePayload(itemID: $0.id, sortName: $0.name, value: $0, encoder: encoder) }
         case .vessels:
             let vessels = try await client.fetchVessels()
-            try ReferenceDataValidator.validateItemCount(
-                dataset: kind.rawValue, itemCount: vessels.count, manifestEntry: manifestEntry
+            try ReferenceDataValidator.validateVesselItemCount(
+                itemCount: vessels.count, manifestEntry: manifestEntry
             )
             try ReferenceDataValidator.validateVessels(vessels)
             return try vessels.map { try makePayload(itemID: $0.id, sortName: $0.name, value: $0, encoder: encoder) }

@@ -9,9 +9,8 @@ import Foundation
 nonisolated enum CatchRecordMappingError: Error, Equatable, Sendable {
     case missingVessel
     /// The vessel is known, but no RSS (Registry of Shipping and Seamen) number is held for it —
-    /// see `VesselProviding.rssNumber(forVesselNamed:)`. Known gap: the current vessel source
-    /// (`StaticVesselProvider`) only covers its two demo vessels; a real vessel API is tracked as
-    /// a follow-up (ADR-0025/ADR-0026).
+    /// see `VesselOption.rssNumber`. Thrown whenever the selected vessel's registration number is
+    /// missing from the downloaded reference data (see ADR-0025/ADR-0028).
     case missingVesselDetails
     case missingTripDates
     case missingPorts
@@ -41,14 +40,12 @@ nonisolated enum CatchRecordMappingError: Error, Equatable, Sendable {
 /// `RecordsMerging`.
 ///
 /// **Known simplification** (flagged, not hidden — see ADR-0028 "Known simplifications"): the
-/// Catch Recording Service's schema expects a vessel/statistical-area *id*, *code* and *name*
-/// triple for each, but the device currently only ever captures a vessel **name** and a
-/// statistical area **code** (no id/name reference-data lookup exists yet for either — see
-/// ADR-0025 §7 "Open questions"). Until a real vessel/statistical-area reference source exists,
-/// this mapper synthesises the id/name fields from what is actually held on-device (the RSS
-/// number, the area code) rather than blocking every submission on reference data that doesn't
-/// exist yet. This is expected to need revisiting once the backend team confirms real vessel ids
-/// are required to match, rather than merely well-formed.
+/// Catch Recording Service's schema expects a statistical-area *id*, *code* and *name* triple, but
+/// the device currently only ever captures a statistical area **code** (no id/name reference-data
+/// lookup exists yet for it — see ADR-0025 §7 "Open questions"). Until a real statistical-area
+/// reference source exists, this mapper synthesises the id/name fields from what is actually held
+/// on-device (the area code) rather than blocking every submission on reference data that doesn't
+/// exist yet.
 nonisolated enum CatchRecordPayloadMapper {
 
     private static let dateFormatter: DateFormatter = {
@@ -59,12 +56,15 @@ nonisolated enum CatchRecordPayloadMapper {
         return formatter
     }()
 
+    /// - Parameter vessel: the resolved vessel for this draft — already looked up (by snapshot or
+    ///   by name) by the caller (see `CatchRecordSubmissionCoordinator`), since resolving it is an
+    ///   `async` operation this otherwise-pure mapper should not need to perform itself.
     static func map(
         payload: CatchRecordDraftPayload,
-        vesselProvider: VesselProviding
+        vessel: VesselOption?
     ) throws -> CompleteReplacementPayload {
-        guard let vesselName = payload.vessel else { throw CatchRecordMappingError.missingVessel }
-        guard let rssNumber = vesselProvider.rssNumber(forVesselNamed: vesselName) else {
+        guard payload.vessel != nil else { throw CatchRecordMappingError.missingVessel }
+        guard let vessel, let rssNumber = vessel.rssNumber else {
             throw CatchRecordMappingError.missingVesselDetails
         }
         guard let departureDate = payload.departureDate, let returnDate = payload.returnDate else {
@@ -75,12 +75,12 @@ nonisolated enum CatchRecordPayloadMapper {
         }
         guard !payload.gearCatches.isEmpty else { throw CatchRecordMappingError.missingGear }
 
-        let vessel = VesselSnapshotDTO(
-            id: rssNumber,
+        let vesselSnapshot = VesselSnapshotDTO(
+            id: vessel.id,
             rssSnapshot: rssNumber,
-            nameSnapshot: vesselName,
-            externalMarkSnapshot: rssNumber,
-            lengthOverallMetresSnapshot: nil
+            nameSnapshot: vessel.name,
+            externalMarkSnapshot: vessel.externalMark ?? rssNumber,
+            lengthOverallMetresSnapshot: vessel.lengthOverallMetres
         )
 
         let trip = TripDTO(
@@ -94,7 +94,7 @@ nonisolated enum CatchRecordPayloadMapper {
         let gears = try payload.gearCatches.map(gearAssociation(for:))
 
         return CompleteReplacementPayload(
-            vessel: vessel,
+            vessel: vesselSnapshot,
             trip: trip,
             pairFishing: PairFishingDTO(enabled: false),
             gears: gears,

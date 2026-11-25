@@ -1,38 +1,64 @@
 import Foundation
 
-/// Supplies the vessels a user can pick from on the Select vessel screen.
+/// Supplies the vessels a user can pick from on the Select vessel screen, sourced from the
+/// reference-data API's `vessels` dataset — downloaded at sign-in alongside ports/species/gears
+/// (see ADR-0024/ADR-0028), never a static/bundled list.
 ///
-/// A protocol so a future API-backed implementation can swap in without changing
-/// `SelectVesselViewModel` or its tests.
+/// `async` because the production conformer (`SyncedVesselSearchProvider`) reads from the
+/// on-device reference-data store, which is actor-isolated.
 protocol VesselProviding {
-    var vessels: [String] { get }
+    /// Every vessel available for selection. Inactive vessels are excluded (see
+    /// `SyncedVesselSearchProvider`). Empty when nothing has been downloaded yet, or the signed-in
+    /// user has no vessels.
+    func vessels() async -> [VesselOption]
 
-    /// The RSS (Registry of Shipping and Seamen) number for the vessel named `name`, used to build
-    /// the catch record reference the moment a vessel is selected (see
-    /// `CatchRecordReferenceGenerator`, ADR-0026). `nil` when `name` is not a known vessel, or when
-    /// this provider has no RSS number for it.
-    ///
-    /// Defaulted to always return `nil` (see the extension below) so existing conformers (e.g.
-    /// `StubVesselProvider` in tests) are unaffected by this requirement's addition.
-    func rssNumber(forVesselNamed name: String) -> String?
+    /// The vessel matching `name`, used to resolve an already-persisted draft that only recorded
+    /// a vessel **name** (every draft from before `CatchRecordDraft.vesselSnapshot` existed — see
+    /// `DraftActionViewModel.resumeDraft()`). `nil` when no vessel with that name is known.
+    func vessel(named name: String) async -> VesselOption?
 }
 
 extension VesselProviding {
-    func rssNumber(forVesselNamed _: String) -> String? { nil }
+    func vessel(named name: String) async -> VesselOption? {
+        await vessels().first { $0.name == name }
+    }
 }
 
-/// Static, UI-only vessel list. Stands in until a real vessel API/service exists.
-nonisolated struct StaticVesselProvider: VesselProviding {
-    let vessels: [String] = ["ACHILLES", "HERCULES"]
-
-    /// Fake RSS numbers for the two static demo vessels, so the catch-record reference generator
-    /// (ADR-0026) has something to build from ahead of a real vessel API/service existing.
-    private static let rssNumbersByVesselName: [String: String] = [
-        "ACHILLES": "A12345",
-        "HERCULES": "H54321"
+/// Deterministic, fixed vessel list — used by UI tests and previews so neither depends on the
+/// on-device reference-data sync pipeline having actually run (see `SyncedVesselSearchProvider`
+/// for the real, API-backed implementation used in production). Mirrors the dev Catch Recording
+/// Service's own seed data (ACHILLES/SEA SPRAY), including their ids and registration numbers, so
+/// UI tests exercise exactly the shape real data has.
+nonisolated struct StubVesselProvider: VesselProviding {
+    /// Mirrors the dev reference-data API's seeded `vessels` dataset (see
+    /// `docs/api/reference-data-api.md`) — kept here rather than only in fixtures so `-uiTest*`
+    /// launches never depend on live network access.
+    static let defaultVessels: [VesselOption] = [
+        VesselOption(
+            id: "00000000-0000-4000-8000-000000000011",
+            name: "ACHILLES",
+            displayName: "ACHILLES PH1234",
+            externalMark: "PH1234",
+            registrationNumber: "PH1234",
+            lengthOverallMetres: 8.74,
+            status: "active"
+        ),
+        VesselOption(
+            id: "00000000-0000-4000-8000-000000000012",
+            name: "SEA SPRAY",
+            displayName: "SEA SPRAY BM45",
+            externalMark: "BM45",
+            registrationNumber: "BM45",
+            lengthOverallMetres: 11.2,
+            status: "active"
+        )
     ]
 
-    func rssNumber(forVesselNamed name: String) -> String? {
-        Self.rssNumbersByVesselName[name]
+    private let fixedVessels: [VesselOption]
+
+    init(vessels: [VesselOption] = StubVesselProvider.defaultVessels) {
+        self.fixedVessels = vessels
     }
+
+    func vessels() async -> [VesselOption] { fixedVessels }
 }

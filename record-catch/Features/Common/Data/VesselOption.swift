@@ -11,8 +11,8 @@
 //  the connector uses the canonical view rather than `?view=mobile`), flattening the wire DTO's
 //  nested `identifiers` object into top-level properties for convenience at call sites.
 //
-//  This type is intentionally not wired into `VesselProviding`/`StaticVesselProvider` or any view
-//  model in this change — see ADR-0018 for the connector-only scope of this PR.
+//  Backs `VesselProviding`/`SyncedVesselSearchProvider` (see ADR-0024/ADR-0028): the Select vessel
+//  screen reads this type directly from the on-device reference-data sync store.
 //
 
 import Foundation
@@ -79,7 +79,11 @@ nonisolated struct VesselOption: Identifiable, Hashable, Sendable, Codable {
         id: String,
         name: String,
         displayName: String? = nil,
-        externalMark: String? = nil
+        externalMark: String? = nil,
+        registrationNumber: String? = nil,
+        lengthOverallMetres: Double? = nil,
+        status: String? = nil,
+        activeTo: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -88,13 +92,13 @@ nonisolated struct VesselOption: Identifiable, Hashable, Sendable, Codable {
         self.mmsi = nil
         self.ircs = nil
         self.externalMark = externalMark
-        self.registrationNumber = nil
+        self.registrationNumber = registrationNumber
         self.typeCode = nil
         self.registrationCountryCode = nil
-        self.lengthOverallMetres = nil
-        self.status = nil
+        self.lengthOverallMetres = lengthOverallMetres
+        self.status = status
         self.activeFrom = nil
-        self.activeTo = nil
+        self.activeTo = activeTo
         self.displayName = Self.derivedDisplayName(name: name, preferred: displayName, externalMark: externalMark)
     }
 

@@ -6,13 +6,12 @@
 //  `ReferenceDataClient.swift`'s architecture (ADR-0018): `CatchRecordService` is the production
 //  implementation, composed from `HTTPPerforming` + `APIConfiguration` + `AuthTokenProviding` via
 //  the shared `CatchRecordTransport`, so it is unit-testable with an in-memory `StubHTTPClient` and
-//  needs no live network in the test suite (testing.instructions.md). `StubCatchRecordService` is a
-//  fixture-backed double for future call sites/tests; `FailingCatchRecordService` is used whenever
-//  the Catch Recording Service's base URL is not yet configured (see
-//  `CatchRecordServicesFactory`/ADR-0025).
+//  needs no live network in the test suite (testing.instructions.md).
 //
-//  **Not yet wired to anything.** No screen, view model, or the local draft store calls this
-//  connector yet — see ADR-0025 for the connector-only scope of this change.
+//  `StubCatchRecordService` is a fixture-backed double for tests/previews; `FailingCatchRecordService`
+//  is used whenever the Catch Recording Service's base URL is not yet configured (see
+//  `CatchRecordServicesFactory`/ADR-0025). Wired to the on-device submission queue via
+//  `CatchRecordSubmissionCoordinator` (ADR-0028).
 //
 
 import Foundation

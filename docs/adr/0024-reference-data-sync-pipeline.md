@@ -128,9 +128,15 @@ catch-record journey, sits behind this gate.
 throttle (reusing an already-in-flight sync via a new `inFlightSync` task reference if one is
 racing in from another trigger, rather than starting a redundant second one), waits up to 20
 seconds for it to finish, and reports whether `ReferenceDataSyncCoordinator.requiredKinds` —
-**`[.ports, .species, .gears]` only** — are all present on-device
-(`ReferenceDataSyncService.hasData(for:)`). **Vessels are deliberately excluded**: no picker consumes
-synced vessel data yet (see Consumers below), so gating on it would block Home for no benefit.
+**`[.ports, .species, .gears, .vessels]`** — are all present on-device
+(`ReferenceDataSyncService.hasData(for:)`). **Vessels carry a special "synced at least once" exception**
+rather than the strict non-empty check the other three kinds use: `isReady(_:)` treats `.vessels` as
+satisfied once a `ReferenceDatasetStateEntity` row exists for it at all, even from an empty-array sync,
+whereas `.ports`/`.species`/`.gears` require at least one stored item. This reflects that a legitimately
+configured dev/test backend may have zero vessels registered for a device yet still have synced
+successfully (see the Consumers update below, ADR-0028) — Home must not be blocked forever by an
+empty-but-successful vessel sync the way it would be by one that has never run at all (offline, or never
+attempted).
 
 On success the user proceeds straight to Home. On failure (offline, or a sync that ran but still
 lacks the required data) the screen shows a WCAG 2.2 4.1.3-announced failure state with a "Try
@@ -173,8 +179,12 @@ new Synced providers. `AddPortView`/`AddSpeciesView` gained matching `portSearch
 init parameters (defaulting to the bundled/stub provider, so every other call site — including
 previews — is unaffected) to carry the override through.
 
-**Vessels remain out of scope** for this change: no picker yet reads synced vessel data, so
-`SyncedVesselSearchProvider` does not exist and `requiredKinds` above excludes `.vessels`.
+**Vessels now have a consumer too (added by ADR-0028).** `SyncedVesselSearchProvider` conforms to
+`VesselProviding` the same way, reusing `VesselOption`'s existing `filtered(...)`-style matching;
+`active`/`inactive` vessels are filtered by `status`/`activeTo` rather than a simple `isActive` flag
+(vessels have no such field). `CatchRecordSubmissionCoordinator` and `SelectVesselViewModel` both
+default to it in production; `CatchRecordHostView`'s UI-test/production resolution pattern (above)
+applies identically, with `StubVesselProvider` standing in for UI tests/previews.
 
 ### No migrations / payload-format version
 
@@ -241,10 +251,10 @@ assets) is explicit future work.
   `SyncErrorBanner` still covers every other screen uniformly; the port/species/gear pickers
   themselves have no bespoke empty state beyond `DataPreparationView`'s app-wide gate (which only
   covers the very first sync after sign-in/unlock, not a later failure once Home has been reached).
-- **Vessel reference data has no consumer.** `SyncedVesselSearchProvider` does not exist and
-  `ReferenceDataSyncCoordinator.requiredKinds` excludes `.vessels` — vessels still come from whatever
-  pre-existing fixture/bundled source the vessel picker already used. Revisit once a vessel picker
-  is wired to read synced data.
+- **Vessel reference data now has a consumer (ADR-0028), closing this gap.** `SyncedVesselSearchProvider`
+  exists and `ReferenceDataSyncCoordinator.requiredKinds` includes `.vessels` (with the "synced at least
+  once" exception above). `StubVesselProvider` is kept only for UI tests/previews, mirroring the
+  ports/species/gears pickers.
 - **Native-app exception.** As with every feature in this app, built against the already-recorded
   native-iOS exception to DEFRA's mobile app standards (see copilot-instructions.md §2).
 
@@ -260,6 +270,9 @@ assets) is explicit future work.
   explicit DEFRA requirement for this change, not an incidental side effect.
 - Every dataset failure is independently retryable and never corrupts or partially replaces existing
   data.
+- Vessels moved from "no consumer" to "required and consumed" (ADR-0028's submission queue and vessel
+  picker both read `SyncedVesselSearchProvider`), with the empty-allowed exception above so a backend
+  with a genuinely empty vessel dataset still lets a device reach Home.
 - The reference-data layer adds `ReferenceItemEntity`/`ReferenceDatasetStateEntity`/`ReferenceBlobEntity`
   to the shared `ModelContainer`, increasing on-device storage slightly (bounded for item datasets —
   each is at most a few hundred items; the two blob datasets are larger but stored via

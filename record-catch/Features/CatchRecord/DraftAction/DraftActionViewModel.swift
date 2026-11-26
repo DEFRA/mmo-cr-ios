@@ -26,7 +26,7 @@ struct DraftReferenceGeneration {
     var referenceGenerator: CatchRecordReferenceGenerator
 
     init(
-        vesselProvider: VesselProviding = StaticVesselProvider(),
+        vesselProvider: VesselProviding = SyncedVesselSearchProvider(),
         referenceGenerator: CatchRecordReferenceGenerator = CatchRecordReferenceGenerator()
     ) {
         self.vesselProvider = vesselProvider
@@ -125,13 +125,24 @@ final class DraftActionViewModel {
         // (stays `nil`, and `resumeRoute()` uses `placeholderReferenceNumber`) if the vessel's RSS
         // number isn't known — never blocks resuming the journey.
         if draft.catchRecordReference == nil, let vessel = draft.vessel {
-            draft.catchRecordReference = generateReference(forVesselNamed: vessel)
+            draft.catchRecordReference = await generateReference(forVesselNamed: vessel)
         }
         router.push(await resumeRoute())
     }
 
-    private func generateReference(forVesselNamed vesselName: String) -> String? {
-        guard let rssNumber = vesselProvider.rssNumber(forVesselNamed: vesselName) else { return nil }
+    /// Resolves `vesselName` to a full `VesselOption` — preferring the draft's own snapshot (set
+    /// whenever `SelectVesselViewModel.submit()` captured it), falling back to a name lookup via
+    /// `vesselProvider` for a draft persisted before `vesselSnapshot` existed — then generates its
+    /// reference. Returns `nil` (triggering the placeholder fallback) if the vessel can't be
+    /// resolved at all, or has no known RSS number.
+    private func generateReference(forVesselNamed vesselName: String) async -> String? {
+        let vessel: VesselOption?
+        if let snapshot = draft.vesselSnapshot {
+            vessel = snapshot
+        } else {
+            vessel = await vesselProvider.vessel(named: vesselName)
+        }
+        guard let vessel, let rssNumber = vessel.rssNumber else { return nil }
         return try? referenceGenerator.generate(rssNumber: rssNumber)
     }
 

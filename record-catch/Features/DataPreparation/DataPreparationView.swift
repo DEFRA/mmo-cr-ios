@@ -3,8 +3,8 @@
 //  record-catch
 //
 //  "Getting your fishing data ready" — shown between sign-in/unlock and Home while the required
-//  reference data (ports/species/gears) downloads (see `RootPhase.preparingData`, ADR-0024 "Data
-//  before Home"). Mirrors `AppLockView`/`SignInView`'s plain, no-`ViewTemplate` layout (no GOV.UK
+//  reference data (ports/species/gears/vessels) downloads (see `RootPhase.preparingData`,
+//  ADR-0024 "Data before Home"). Mirrors `AppLockView`/`SignInView`'s plain, no-`ViewTemplate` layout (no GOV.UK
 //  header/footer on this screen either — there is nothing in the app shell to show yet). Always
 //  offers "Sign out" on failure so the user is never dead-ended, per accessibility.instructions.md.
 //

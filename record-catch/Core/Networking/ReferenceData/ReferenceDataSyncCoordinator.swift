@@ -30,11 +30,12 @@ final class ReferenceDataSyncCoordinator: ReferenceDataSyncStatusObserving {
     /// Minimum time between two non-bypassing sync attempts (see ADR-0024 "Triggers").
     static let throttleInterval: TimeInterval = 15 * 60
 
-    /// Datasets that must have at least one synced item before Home can be shown (see ADR-0024
-    /// "Data before Home"): ports/species/gears only. Vessels are deliberately excluded — no
-    /// picker reads them yet — and so are the map blob datasets, since they aren't required by
-    /// any wired feature and the backend may not serve them yet.
-    static let requiredKinds: [ReferenceDataKind] = [.ports, .species, .gears]
+    /// Datasets that must have at least one synced *attempt* before Home can be shown (see
+    /// ADR-0024 "Data before Home"). Ports/species/gears must additionally have at least one
+    /// *item* (see `ReferenceDataSyncService.hasData(for:)`'s per-kind rule) — vessels only need to
+    /// have been downloaded at least once, since a per-user vessel list legitimately can be empty
+    /// (see ADR-0024 "Vessels" amendment/ADR-0028) and must not block Home for that user.
+    static let requiredKinds: [ReferenceDataKind] = [.ports, .species, .gears, .vessels]
 
     private(set) var status: ReferenceDataSyncStatus = .idle
 

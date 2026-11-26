@@ -2,10 +2,8 @@
 //  CatchRecordServicesFactory.swift
 //  record-catch
 //
-//  Composition-root wiring for the Catch Recording Service connector (ADR-0025). **Not yet
-//  plugged into any screen or view model** — building `CatchRecordServicesFactory.Services` has no
-//  visible effect on the app today; this exists purely so the connector has a real construction
-//  path ready for whichever feature wires it in next.
+//  Composition-root wiring for the Catch Recording Service connector (ADR-0025), used by the
+//  on-device submission queue (`CatchRecordSubmissionCoordinator`, ADR-0028).
 //
 
 import Foundation

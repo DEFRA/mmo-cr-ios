@@ -35,6 +35,24 @@ final class ReferenceDataValidatorTests: XCTestCase {
         }
     }
 
+    // MARK: validateVesselItemCount
+
+    func test_validateVesselItemCount_succeeds_whenCountIsZero_andNoManifestEntry() throws {
+        try ReferenceDataValidator.validateVesselItemCount(itemCount: 0, manifestEntry: nil)
+    }
+
+    func test_validateVesselItemCount_succeeds_whenCountMatchesManifest() throws {
+        let entry = makeManifestEntry(itemCount: 0)
+        try ReferenceDataValidator.validateVesselItemCount(itemCount: 0, manifestEntry: entry)
+    }
+
+    func test_validateVesselItemCount_throwsMismatch_whenCountDiffersFromManifest() {
+        let entry = makeManifestEntry(itemCount: 5)
+        XCTAssertThrowsError(try ReferenceDataValidator.validateVesselItemCount(itemCount: 3, manifestEntry: entry)) {
+            XCTAssertEqual($0 as? ReferenceDataValidationError, .itemCountMismatch(dataset: "vessels", expected: 5, actual: 3))
+        }
+    }
+
     // MARK: validateUniqueIdentifiers
 
     func test_validateUniqueIdentifiers_succeeds_forDistinctIds() throws {

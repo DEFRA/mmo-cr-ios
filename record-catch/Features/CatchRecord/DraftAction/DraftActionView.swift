@@ -12,7 +12,8 @@ struct DraftActionView: View {
         draft: CatchRecordDraft = CatchRecordDraft(),
         draftStore: CatchRecordDraftStoring = InMemoryCatchRecordDraftStore(),
         favouritePorts: FavouritePortsProviding = StubFavouritePortsProvider(),
-        favouriteGears: FavouriteGearProviding = StubFavouriteGearProvider()
+        favouriteGears: FavouriteGearProviding = StubFavouriteGearProvider(),
+        vesselProvider: VesselProviding = SyncedVesselSearchProvider()
     ) {
         _viewModel = State(wrappedValue: DraftActionViewModel(
             row: row,
@@ -22,7 +23,8 @@ struct DraftActionView: View {
             resumeRouteProviders: DraftResumeRouteProviders(
                 favouritePorts: favouritePorts,
                 favouriteGears: favouriteGears
-            )
+            ),
+            referenceGeneration: DraftReferenceGeneration(vesselProvider: vesselProvider)
         ))
     }
 

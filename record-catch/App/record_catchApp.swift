@@ -65,9 +65,8 @@ struct RecordCatchApp: App {
     // constructing a second one.
     @State private var referenceDataSyncCoordinator: ReferenceDataSyncCoordinator
 
-    // Catch Recording Service connector (ADR-0025) — **not yet plugged into any screen**. Built
-    // here only so the connector has a real, app-wide construction path ready for whichever
-    // feature wires it in next; see `CatchRecordServicesFactory`'s doc comment for scope.
+    // Catch Recording Service connector (ADR-0025), wired to the on-device submission queue
+    // (ADR-0028). Built here only so the connector has a real, app-wide construction path.
     @State private var catchRecordServices: CatchRecordServices
 
     // Submission queue (ADR-0028): the single app-wide `CatchRecordSubmissionCoordinator`, so
@@ -93,9 +92,17 @@ struct RecordCatchApp: App {
         ))
         let services = CatchRecordServicesFactory.make(authenticator: { coordinator.sharedAuthenticator })
         _catchRecordServices = State(initialValue: services)
+        // Mirrors `ReferenceDataSyncCoordinator.make`'s own UI-test seam: `-uiTest*` launches
+        // never run the reference-data sync pipeline, so vessels are never actually downloaded —
+        // `StubVesselProvider` keeps submission mapping deterministic for any UI test that
+        // doesn't override the submission queue entirely (see `UITestRootView`).
+        let vesselProvider: any VesselProviding = LaunchArguments.current.isUITesting
+            ? StubVesselProvider()
+            : SyncedVesselSearchProvider()
         _catchRecordSubmissionCoordinator = State(initialValue: CatchRecordSubmissionCoordinator(
             service: services.catchRecords,
             draftStore: SwiftDataCatchRecordDraftStore(modelContext: ModelContext(sharedModelContainer)),
+            vesselProvider: vesselProvider,
             isOnline: { monitor.isOnline }
         ))
     }

@@ -32,8 +32,9 @@ private final class FakeReferenceDataFetching: ReferenceDataFetching, @unchecked
 
     func fetchVessels() async throws -> [VesselOption] {
         if allFetchesFail { throw APIError.response(status: 500, details: nil) }
-        return [VesselOption(id: "1", name: "ACHILLES")]
+        return vesselsToReturn
     }
+    var vesselsToReturn: [VesselOption] = [VesselOption(id: "1", name: "ACHILLES")]
     func fetchVessel(id _: String) async throws -> VesselOption { throw APIError.response(status: 404, details: nil) }
     func fetchSpecies() async throws -> [SpeciesOption] {
         if allFetchesFail { throw APIError.response(status: 500, details: nil) }
@@ -266,6 +267,25 @@ final class ReferenceDataSyncCoordinatorTests: XCTestCase {
         let result = await sut.hasRequiredData()
 
         XCTAssertTrue(result)
+    }
+
+    /// A per-user vessel list can legitimately be empty (a fisher with no vessels linked to their
+    /// account yet) — that must never permanently block Home, unlike ports/species/gears which
+    /// must each have at least one item (see `ReferenceDataSyncService.hasData(for:)`'s per-kind
+    /// rule, ADR-0024 "Vessels" amendment/ADR-0028).
+    func test_hasRequiredData_isTrue_whenVesselsDownloadedButEmpty() async throws {
+        let (sut, client) = try makeSUT()
+        client.vesselsToReturn = []
+        sut.notifyReachedHome()
+        await waitUntil { sut.status == .idle && client.fetchManifestCallCount > 0 }
+
+        let result = await sut.hasRequiredData()
+
+        XCTAssertTrue(result)
+    }
+
+    func test_requiredKinds_includesVessels() {
+        XCTAssertTrue(ReferenceDataSyncCoordinator.requiredKinds.contains(.vessels))
     }
 
     // MARK: prepareRequiredData(timeout:) (ADR-0024 "Data before Home")

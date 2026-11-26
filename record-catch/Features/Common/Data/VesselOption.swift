@@ -11,8 +11,8 @@
 //  the connector uses the canonical view rather than `?view=mobile`), flattening the wire DTO's
 //  nested `identifiers` object into top-level properties for convenience at call sites.
 //
-//  This type is intentionally not wired into `VesselProviding`/`StaticVesselProvider` or any view
-//  model in this change — see ADR-0018 for the connector-only scope of this PR.
+//  Backs `VesselProviding`/`SyncedVesselSearchProvider` (see ADR-0024/ADR-0028): the Select vessel
+//  screen reads this type directly from the on-device reference-data sync store.
 //
 
 import Foundation
@@ -71,6 +71,22 @@ nonisolated struct VesselOption: Identifiable, Hashable, Sendable, Codable {
         }
     }
 
+    /// Groups the convenience initializer's sync-only metadata fields — rarely needed outside
+    /// `StubVesselProvider`'s fixture data — so the initializer itself stays under Sonar's
+    /// authorised parameter-count limit (`swift:S107`); mirrors `DraftReferenceGeneration`'s
+    /// grouping rationale in `DraftActionViewModel.swift`.
+    struct SyncMetadata {
+        var lengthOverallMetres: Double?
+        var status: String?
+        var activeTo: String?
+
+        init(lengthOverallMetres: Double? = nil, status: String? = nil, activeTo: String? = nil) {
+            self.lengthOverallMetres = lengthOverallMetres
+            self.status = status
+            self.activeTo = activeTo
+        }
+    }
+
     /// Convenience for hand-built/test values. Only the fields exercised by hand-built call sites
     /// are exposed here (see swift-swiftui.instructions.md on preferring fewer parameters); every
     /// other field is reachable only via `init(dto:)`, which the real API response always
@@ -79,7 +95,9 @@ nonisolated struct VesselOption: Identifiable, Hashable, Sendable, Codable {
         id: String,
         name: String,
         displayName: String? = nil,
-        externalMark: String? = nil
+        externalMark: String? = nil,
+        registrationNumber: String? = nil,
+        syncMetadata: SyncMetadata = SyncMetadata()
     ) {
         self.id = id
         self.name = name
@@ -88,13 +106,13 @@ nonisolated struct VesselOption: Identifiable, Hashable, Sendable, Codable {
         self.mmsi = nil
         self.ircs = nil
         self.externalMark = externalMark
-        self.registrationNumber = nil
+        self.registrationNumber = registrationNumber
         self.typeCode = nil
         self.registrationCountryCode = nil
-        self.lengthOverallMetres = nil
-        self.status = nil
+        self.lengthOverallMetres = syncMetadata.lengthOverallMetres
+        self.status = syncMetadata.status
         self.activeFrom = nil
-        self.activeTo = nil
+        self.activeTo = syncMetadata.activeTo
         self.displayName = Self.derivedDisplayName(name: name, preferred: displayName, externalMark: externalMark)
     }
 

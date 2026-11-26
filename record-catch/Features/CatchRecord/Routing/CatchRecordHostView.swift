@@ -48,6 +48,10 @@ struct CatchRecordHostView: View {
     /// `injectedPortSearch` above (mirrors it exactly; UI tests fall back to
     /// `StubSpeciesSearchProvider`).
     private let injectedSpeciesSearch: SpeciesSearchProviding?
+    /// Injectable override for the Select-vessel screen's vessel source — see `injectedPortSearch`
+    /// above (mirrors it exactly; UI tests fall back to `StubVesselProvider`, the real,
+    /// API-sourced `SyncedVesselSearchProvider` is used in production — see ADR-0024/ADR-0028).
+    private let injectedVesselProvider: VesselProviding?
     /// Shared, journey-scoped draft accumulating the in-progress catch record (vessel, dates,
     /// ports, gear and species) so it is available to every screen in the stack without re-deriving
     /// it from route payloads. Offline-first, local source of truth — persisted on-device after
@@ -116,6 +120,11 @@ struct CatchRecordHostView: View {
         if let injectedSpeciesSearch { return injectedSpeciesSearch }
         return LaunchArguments.current.isUITesting ? StubSpeciesSearchProvider() : SyncedSpeciesSearchProvider()
     }
+    /// The vessel source for this journey — see `portSearch` above (mirrors it exactly).
+    private var vesselProvider: VesselProviding {
+        if let injectedVesselProvider { return injectedVesselProvider }
+        return LaunchArguments.current.isUITesting ? StubVesselProvider() : SyncedVesselSearchProvider()
+    }
 
     /// Debounced autosave for in-progress, not-yet-routed edits (see `DraftAutosaver`,
     /// BR-SUB-008/AC14). Created once, lazily, the first time it is needed - `modelContext` (via
@@ -156,6 +165,7 @@ struct CatchRecordHostView: View {
         portSearch: PortSearchProviding? = nil,
         gearSearch: GearSearchProviding? = nil,
         speciesSearch: SpeciesSearchProviding? = nil,
+        vesselProvider: VesselProviding? = nil,
         draft: CatchRecordDraft? = nil,
         draftStore: CatchRecordDraftStoring? = nil,
         recordsProvider: RecordsProviding? = nil,
@@ -172,6 +182,7 @@ struct CatchRecordHostView: View {
         injectedPortSearch = portSearch
         injectedGearSearch = gearSearch
         injectedSpeciesSearch = speciesSearch
+        injectedVesselProvider = vesselProvider
         _draft = State(wrappedValue: draft ?? CatchRecordDraft())
         injectedDraftStore = draftStore
         injectedRecordsProvider = recordsProvider
@@ -262,10 +273,11 @@ struct CatchRecordHostView: View {
                 draft: draft,
                 draftStore: draftStore,
                 favouritePorts: favouritePorts,
-                favouriteGears: favouriteGears
+                favouriteGears: favouriteGears,
+                vesselProvider: vesselProvider
             )
         case .selectVessel:
-            SelectVesselView(router: router, draft: draft)
+            SelectVesselView(router: router, provider: vesselProvider, draft: draft)
         case .tripStartedToday(let vessel, let referenceNumber):
             TripStartedTodayView(
                 vessel: vessel,

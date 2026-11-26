@@ -2,11 +2,11 @@ import XCTest
 @testable import record_catch
 
 /// Used by the resume tests below that assert against `SelectVesselViewModel.placeholderReferenceNumber`
-/// — has no RSS number for any vessel, so `DraftActionViewModel.resumeDraft()`'s
+/// — has no vessels at all, so `DraftActionViewModel.resumeDraft()`'s
 /// `generateReference(forVesselNamed:)` falls back to the placeholder rather than generating a
 /// real, wall-clock-dependent reference (ADR-0026), keeping these assertions deterministic.
 private struct NoRSSVesselProvider: VesselProviding {
-    let vessels: [String] = []
+    func vessels() async -> [VesselOption] { [] }
 }
 
 @MainActor
@@ -111,6 +111,36 @@ final class DraftActionViewModelTests: XCTestCase {
             router.path,
             [.tripStartedToday(vessel: "ACHILLES", referenceNumber: SelectVesselViewModel.placeholderReferenceNumber)]
         )
+    }
+
+    /// Covers `generateReference(forVesselNamed:)`'s snapshot branch: a draft persisted with
+    /// `vesselSnapshot` (ADR-0028) generates its reference directly from the snapshot's RSS
+    /// number, never consulting `vesselProvider` at all — so even a provider with no matching
+    /// vessel by name still produces a real (non-placeholder) reference.
+    func test_resumeDraft_withVesselSnapshot_generatesReferenceFromSnapshot_withoutConsultingProvider() async {
+        let localID = UUID()
+        let rowWithLocalID = record_catch.SubmissionRow(
+            dateText: "—", vesselName: "—", status: .unsent, createdBy: "You", localID: localID
+        )
+        let seededDraft = CatchRecordDraft(localID: localID)
+        seededDraft.vessel = "ACHILLES"
+        seededDraft.vesselSnapshot = VesselOption(id: "v-1", name: "ACHILLES", registrationNumber: "A12345")
+        let store = InMemoryCatchRecordDraftStore(seed: [localID: seededDraft.payload])
+
+        let router = CatchRecordRouter()
+        let sharedDraft = CatchRecordDraft()
+        // NoRSSVesselProvider has no vessels at all — if the snapshot were ignored, resolution
+        // would fall back to a name lookup that fails, and the reference would stay nil.
+        let sut = DraftActionViewModel(
+            row: rowWithLocalID, router: router, draft: sharedDraft, draftStore: store,
+            referenceGeneration: DraftReferenceGeneration(vesselProvider: NoRSSVesselProvider())
+        )
+
+        await sut.resumeDraft()
+
+        XCTAssertNotNil(sharedDraft.catchRecordReference)
+        XCTAssertNotEqual(sharedDraft.catchRecordReference, SelectVesselViewModel.placeholderReferenceNumber)
+        XCTAssertTrue(sharedDraft.catchRecordReference?.hasPrefix("A12345-") ?? false)
     }
 
     func test_resumeDraft_withUnknownLocalID_startsBlank_stillPushesSelectVessel() async {

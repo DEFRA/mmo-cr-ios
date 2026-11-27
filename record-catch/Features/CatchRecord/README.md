@@ -137,13 +137,14 @@ namespaced `CatchRecord.<screenId>.*` throughout (e.g. `CatchRecord.selectVessel
 | 5 | `SubmissionNudge/` | `.submissionNudge(daysLate:...)` | Interposed only when the trip ended **>24h** ago (`SubmissionNudge.isNeeded`, injectable clock). Reminds the user records must be submitted within 24h, with a link back to correct the date. | port sub-journey |
 | 6 | `AddPort/` | `.addPort(...)` | Type-to-search a port; shown only when the user has **no favourite ports**. Saves to favourites. | `.selectPort(<returnPhase ?? .departure>)` |
 | 7 | `SelectPort/` | `.selectPort(phase:...)` | Reusable radio list of favourite ports for departure **and** return (`SelectPortPhase`), plus "Add another port". Writes `draft.departurePort`/`draft.returnPort`. | Departure → `.selectPort(.return)`; Return → gear sub-journey |
-| 8 | `AddGear/` | `.addGear(...)` | Type-to-search a gear (only Seine nets in this phase); shown when there are **no favourite gears**. | `.gearMeasurements` |
-| 9 | `SelectGear/` | `.selectGear(...)` | Multi-select checkboxes of favourite gears, plus "Add another gear". Writes `draft.gear`. | `.catchLocation` |
+| 8 | `AddGear/` | `.addGear(...)` | Type-to-search a gear from the full 36-gear catalogue (see ADR-0012); shown when there are **no favourite gears**. | gear has required measurements → `.gearMeasurements`; otherwise saved straight to favourites → `.selectGear` |
+| 9 | `SelectGear/` | `.selectGear(...)` | Multi-select checkboxes of favourite gears (each with a measurement-summary subtitle, e.g. "100mm mesh"), plus "Add another gear" and a "Remove gear" link. Writes `draft.gearCatches`. | `.catchLocation` |
+| 9a | `RemoveGear/` | `.removeGear(...)` | Adapted for mobile from a supplied web design: tick one or more favourite gears and permanently delete them from the on-device favourites store (destructive `confirmationDialog`, requires explicit confirm), taking any ticked-for-removal gear out of the current trip's selection too. | any favourites remain → `.selectGear`; none remain → `.addGear` |
 | 10 | `GearMeasurements/` | `.gearMeasurements(gear:...)` | Whole-number measurement entry for a gear (e.g. mesh size for seine nets); saves the gear (with values) to favourites. | `.selectGear` |
 | 11 | `CatchLocation/` | `.catchLocation(gear:...)` | Pick the statistical area on a map (`SeaMapView`). Writes `draft.statisticalArea`. | species sub-journey |
 | 11a | `CatchLocationNearestAreas/` | `.catchLocationNearestAreas(gear:...)` | Reached from the map's "Other" button: a radio-button list of the (up to 9) statistical sub areas nearest the departure port, plus "Other" (built from a supplied Figma screenshot — see the design spec). | listed area → species sub-journey; "Other" → `.catchLocationManualEntry` |
 | 12 | `AddSpecies/` | `.addSpecies(...returnPhase:)` | Type-to-search a species; shown when there are **no favourite species**. `returnPhase` records where to return (only the weights screen now the Species Summary screen has been removed; the `.summary` case is retained but unused). | back to `returnPhase` screen |
-| 13 | `RecordSpeciesWeights/` | `.recordSpeciesWeights(gear:...)` | Tick favourite species and enter live weights (above minimum always shown; below-minimum/legally-discarded are reveal-able optional fields). Includes an "Add a species" link and a **dummy "Remove species"** link (not yet implemented). Writes `draft.speciesCaught`. Weight validation is deferred — free text for now. | `.landingStorage` |
+| 13 | `RecordSpeciesWeights/` | `.recordSpeciesWeights(gear:...)` | Tick favourite species and enter live weights (above minimum always shown; below-minimum/legally-discarded are reveal-able optional fields). Includes an "Add a species" link and, once this gear's catch has at least one recorded species, a "Remove species" link to `.removeSpecies`. Writes `draft.speciesCaught`. Weight validation is deferred — free text for now. | `.landingStorage` |
 | 14 | `LandingStorage/` | `.landingStorage(...)` | Yes/No — any catch not landed straight away (bait/keep pots)? | Yes → `.landingStorageSpecies`; No → `.checkYourAnswers` |
 | 15 | `LandingStorageSpecies/` | `.landingStorageSpecies(...)` | Tick species kept onboard/in keep pots and record one weight each. Writes `draft.speciesNotLanded`. | `.checkYourAnswers` |
 | 16 | `CheckYourAnswers/` | `.checkYourAnswers(...)` | Read-only summary of the whole `CatchRecordDraft` in four sections (Trip, Gear used, Species caught, Species not landed); each row's "Change" control pushes **forward** into the journey at the screen that captured it. Beneath the summary, a declaration notice/bullet list explains what submitting confirms (no separate checkbox — see GOV.UK Design System "Check answers" pattern), and "Accept and submit trip details" submits directly from here. | online → `.submissionSuccess`; offline → `.submissionSaved` |
@@ -199,6 +200,19 @@ parsed values (`GearMeasurementValidation.parse`), saves the gear to favourites,
 single-select port/vessel radio screens, though only the first ticked gear is currently threaded
 into `draft.gear` (single-gear support in this phase).
 
+### 9a. Remove gear (`RemoveGear/`)
+
+Adapted for mobile from a supplied web design (no Figma for this screen). Reached from a "Remove
+gear" link on `SelectGear`, shown whenever at least one favourite gear is saved. Lists every
+favourite gear (with the same measurement-summary checkbox subtitle as `SelectGear`, via
+`GearOption.checklistSubtitle(localize:)`); "Continue" validates at least one is ticked, then opens
+a destructive `confirmationDialog` (mirrors `RemoveSpecies/`) before deleting the ticked gears from
+the on-device favourites store (`FavouriteGearProviding.removeFavourite(id:)`) and taking any of
+them out of the current trip's `draft.gearCatches`. Routes back to `SelectGear` if any favourite
+remains, or to `AddGear` if the last one was just removed. See
+`docs/design-specs/create-catch-record.md`'s "Remove gear from vessel" section for the full
+deviation register.
+
 ### 11. Catch location (`CatchLocation/`)
 
 Renders the `OfflineMapView`/`OfflineMapCoordinator` (see `Features/Map/`) so the user taps a
@@ -234,9 +248,9 @@ phase. `loadFavourites()` re-seeds selection/reveal state from anything already 
 returning to the screen (e.g. via a Check-your-answers "Change" link) shows prior answers.
 On "Save and continue" it writes the ticked species (with their captured weights) into
 `draft.speciesCaught` and routes straight to `LandingStorage`. The Species Summary screen that
-previously sat between here and Landing storage has been removed from the design; a dummy
-"Remove species" link now sits under "Add a species" as a placeholder for the eventual
-remove-species action.
+previously sat between here and Landing storage has been removed from the design; once this gear's
+catch has at least one recorded species, a "Remove species" link sits under "Add a species",
+navigating to `RemoveSpecies/`.
 
 ### 14–15. Landing storage / Landing storage species
 

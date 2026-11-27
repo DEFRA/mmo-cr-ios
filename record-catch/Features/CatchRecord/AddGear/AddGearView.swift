@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// "What gear did you use?" — type-to-search a gear used by this vessel.
+/// "Enter the gear you want to add to your list" — type-to-search a gear used by this vessel.
 ///
 /// Shown when the user has no favourite gears yet, and reached via the select screen's "Add another
 /// gear" button. On save the journey continues to the measurements screen for the chosen gear — or,
@@ -49,6 +49,10 @@ struct AddGearView: View {
 
             SearchDropdownField(
                 label: heading,
+                // The heading above already states the question (see `AddPortView`'s identical
+                // pattern), so the field's own visible label would just repeat it — hidden here,
+                // but still exposed to VoiceOver/Voice Control via the field's accessibility label.
+                showsLabel: false,
                 placeholder: languageStore.localized("catchRecord.addGear.search.placeholder"),
                 options: viewModel.gearNames,
                 query: Binding(get: { viewModel.query }, set: { viewModel.query = $0 }),

@@ -26,17 +26,10 @@ enum CatchRecordRoute: Hashable {
     /// onward into the port sub-journey when the user continues.
     case submissionNudge(daysLate: Int, vessel: String, referenceNumber: String)
     /// Add a port via type-to-search and save it to the user's favourites (see ADR-0004). Shown
-    /// when the user has no favourite ports yet, and reached from a select screen's "Add another
-    /// port" button. `returnPhase` records which select screen to return to after saving
-    /// (`nil` = first-time entry, which proceeds to the departure select screen).
+    /// when the user has no favourite ports yet, and reached from a select screen's "Add port"
+    /// button. `returnPhase` records which select screen to return to after saving (`nil` =
+    /// first-time entry, which proceeds straight to the departure select screen).
     case addPort(vessel: String, referenceNumber: String, returnPhase: SelectPortPhase?)
-    /// Ask whether the port just added on `addPort` (first-time entry, no favourites yet) was both
-    /// the departure **and** return port for the trip. Reached only when `returnPhase == nil` on
-    /// the Add-port screen — carries the saved `PortOption` so the heading can name it and, on
-    /// "Yes", both draft port fields can be set without asking again. "Yes" bypasses the separate
-    /// departure/return select screens and enters the gear sub-journey directly; "No" continues to
-    /// the departure select screen as before.
-    case confirmSamePort(vessel: String, referenceNumber: String, port: PortOption)
     /// Pick a port (departure or return) from the user's favourite ports.
     case selectPort(phase: SelectPortPhase, vessel: String, referenceNumber: String)
     /// Choose the gear(s) used, from the user's favourite gears (multi-select checkboxes). Shown
@@ -45,6 +38,13 @@ enum CatchRecordRoute: Hashable {
     /// Add a gear via type-to-search. Shown when the user has no favourite gears yet, and reached
     /// from the select screen's "Add another gear" button.
     case addGear(vessel: String, referenceNumber: String)
+    /// Remove one or more saved gears from the user's favourites (multi-select checkboxes, then
+    /// "Continue" with a confirmation step). Reached from "Remove gear" on `selectGear`, adapted
+    /// for mobile from a supplied web design (see `docs/design-specs/create-catch-record.md`).
+    /// Removal is on-device only (ADR-0004/ADR-0025) and also drops the gear from this trip's
+    /// `CatchRecordDraft.gearCatches` if it was already selected. Routes back to `selectGear`, or
+    /// `addGear` if that empties favourites entirely.
+    case removeGear(vessel: String, referenceNumber: String)
     /// Enter the measurements for a chosen gear (e.g. mesh size for seine nets), then save it to
     /// favourites and return to the select screen.
     case gearMeasurements(gear: GearOption, vessel: String, referenceNumber: String)

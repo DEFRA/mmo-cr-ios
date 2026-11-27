@@ -257,38 +257,20 @@
         }
       }
     },
-    "catchRecord.addAnotherPort": {
-      "comment": "Secondary button to add another port.",
-      "extractionState": "manual",
-      "localizations": {
-        "cy": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Ychwanegu porthladd arall"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add another port"
-          }
-        }
-      }
-    },
     "catchRecord.addGear.heading": {
-      "comment": "Add-gear screen H1. No longer parameterised by vessel name (see docs/design-specs/create-catch-record.md).",
+      "comment": "Add-gear screen H1. Matches the supplied 'New gear entry' design exactly (see docs/design-specs/create-catch-record.md) — was \"What gear did you use?\".",
       "extractionState": "manual",
       "localizations": {
         "cy": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Pa offer wnaethoch chi ei ddefnyddio?"
+            "value": "Rhowch y gêr rydych am ei ychwanegu at eich rhestr"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "What gear did you use?"
+            "value": "Enter the gear you want to add to your list"
           }
         }
       }
@@ -312,19 +294,19 @@
       }
     },
     "catchRecord.addGear.search.placeholder": {
-      "comment": "Add-gear search field placeholder.",
+      "comment": "Add-gear search field placeholder. Matches the supplied design and the Add-port/Add-species screens' wording exactly.",
       "extractionState": "manual",
       "localizations": {
         "cy": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Teipiwch i chwilio"
+            "value": "Teipiwch i chwilio (o leiaf 2 nod)"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Type to search"
+            "value": "Type to search (minimum 2 characters)"
           }
         }
       }
@@ -360,7 +342,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enter the gear you want to add"
+            "value": "Select the gear you want to add"
           }
         }
       }
@@ -486,7 +468,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enter the port you want to add"
+            "value": "Enter the port or closest port you set off from"
           }
         }
       }
@@ -1139,78 +1121,6 @@
         }
       }
     },
-    "catchRecord.confirmSamePort.heading": {
-      "comment": "Confirm-same-port screen H1. %@ is the port name just saved to favourites.",
-      "extractionState": "manual",
-      "localizations": {
-        "cy": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Ai %@ oedd y porthladd neu'r porthladd agosaf y gwnaethoch gychwyn ohono a dychwelyd iddo?"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Was %@ the port or the closest port you set off from and returned to?"
-          }
-        }
-      }
-    },
-    "catchRecord.confirmSamePort.option.no": {
-      "comment": "Confirm-same-port No option.",
-      "extractionState": "manual",
-      "localizations": {
-        "cy": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Na"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No"
-          }
-        }
-      }
-    },
-    "catchRecord.confirmSamePort.option.yes": {
-      "comment": "Confirm-same-port Yes option.",
-      "extractionState": "manual",
-      "localizations": {
-        "cy": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Ie"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Yes"
-          }
-        }
-      }
-    },
-    "catchRecord.confirmSamePort.validation.none": {
-      "comment": "Confirm-same-port inline error when no option chosen.",
-      "extractionState": "manual",
-      "localizations": {
-        "cy": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Dewiswch ai dyma oedd eich porthladd ymadael a dychwelyd"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Select whether this was your departure and return port"
-          }
-        }
-      }
-    },
     "catchRecord.draftAction.delete.cancel": {
       "comment": "Destructive cancel button.",
       "extractionState": "manual",
@@ -1445,6 +1355,60 @@
         }
       }
     },
+    "catchRecord.gear.measurement.numberOfTrawls": {
+      "comment": "Label for a generic live reference-data 'gear dimension' measurement resolved to a specific label by matching the gear's own name (e.g. \"Shrimp trawls\") — see GearOption.specificDimensionLabelKey(forGearNamed:fallback:). [CY-TODO] machine-assisted translation of specialist gear term — needs professional Welsh review.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Nifer y rhwydi llusgo"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Number of trawls"
+          }
+        }
+      }
+    },
+    "catchRecord.gear.measurement.numberOfPots": {
+      "comment": "Label for a generic live reference-data 'gear dimension' measurement resolved to a specific label by matching the gear's own name (e.g. a pots-type gear) — see GearOption.specificDimensionLabelKey(forGearNamed:fallback:). [CY-TODO] machine-assisted translation of specialist gear term — needs professional Welsh review.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Nifer y potiau"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Number of pots"
+          }
+        }
+      }
+    },
+    "catchRecord.gear.measurement.numberOfHooks": {
+      "comment": "Label for a generic live reference-data 'gear dimension' measurement resolved to a specific label by matching the gear's own name (e.g. a hooks-type gear) — see GearOption.specificDimensionLabelKey(forGearNamed:fallback:). [CY-TODO] machine-assisted translation of specialist gear term — needs professional Welsh review.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Nifer y bachau"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Number of hooks"
+          }
+        }
+      }
+    },
     "catchRecord.gear.measurement.numberOfDredges": {
       "comment": "Label for the number-of-dredges measurement field (dredge gear). [CY-TODO] machine-assisted translation of specialist gear term — needs professional Welsh review.",
       "extractionState": "manual",
@@ -1495,6 +1459,114 @@
           "stringUnit": {
             "state": "translated",
             "value": "Could not save this gear. Check your connection and try again."
+          }
+        }
+      }
+    },
+    "catchRecord.gear.remove.confirm.cancel": {
+      "comment": "Cancel option of the destructive confirmation dialog shown after Continue on the Remove-gear screen — mirrors catchRecord.species.remove.confirm.cancel.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Canslo"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        }
+      }
+    },
+    "catchRecord.gear.remove.confirm.confirm": {
+      "comment": "Destructive option of the confirmation dialog shown after Continue on the Remove-gear screen — mirrors catchRecord.species.remove.confirm.confirm.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tynnu"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove"
+          }
+        }
+      }
+    },
+    "catchRecord.gear.remove.confirm.message": {
+      "comment": "Body message of the destructive confirmation dialog shown after Continue on the Remove-gear screen — mirrors catchRecord.species.remove.confirm.message.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ni ellir dadwneud hyn."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This cannot be undone."
+          }
+        }
+      }
+    },
+    "catchRecord.gear.remove.confirm.title": {
+      "comment": "Title of the destructive confirmation dialog shown after Continue on the Remove-gear screen. Not part of the supplied web design, which has no confirmation step — added to meet this app's WCAG 2.2 requirement to confirm destructive actions (see docs/design-specs/create-catch-record.md deviation register).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tynnu'r offer a ddewiswyd?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove the selected gear?"
+          }
+        }
+      }
+    },
+    "catchRecord.gear.remove.removeFailed": {
+      "comment": "Error banner shown when removing a gear from favourites fails (e.g. offline) — mirrors catchRecord.gear.measurement.saveFailed.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Methwyd â thynnu'r offer hwn. Gwiriwch eich cysylltiad a rhowch gynnig arall arni."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not remove this gear. Check your connection and try again."
+          }
+        }
+      }
+    },
+    "catchRecord.gear.remove.validation.none": {
+      "comment": "Inline validation error when Continue is tapped on the Remove-gear screen with nothing ticked — mirrors catchRecord.species.remove.error.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Dewiswch o leiaf un darn o offer i'w dynnu"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select at least one gear to remove"
           }
         }
       }
@@ -1567,6 +1639,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "mesh size %dmm"
+          }
+        }
+      }
+    },
+    "catchRecord.gear.measurementSubtitle.meshSize": {
+      "comment": "Short checkbox-subtitle form of a captured mesh-size measurement, shown under a gear's name on the Select-gear/Remove-gear screens (e.g. \"100mm mesh\") — see GearMeasurement.checklistSubtitleKey. Matches the supplied Figma/web designs exactly; differs from measurementShort.meshSize only in word order. %d is the whole-number value in millimetres.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "rhwyll %dmm"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%dmm mesh"
           }
         }
       }
@@ -2093,6 +2183,60 @@
         }
       }
     },
+    "catchRecord.removeGear.continue": {
+      "comment": "Primary button on the Remove-gear screen. Matches the supplied web design's 'Continue' exactly (not 'Save and continue' — nothing is saved, only removed).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Parhau"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue"
+          }
+        }
+      }
+    },
+    "catchRecord.removeGear.heading": {
+      "comment": "Remove-gear screen H1, formatted with the vessel name (e.g. \"Remove gear from vessel OLGA\") — adapted for mobile from the supplied web design, which shows the vessel name as a separate bold display beneath the heading; folded into a single H1 here to match how this app's other screens embed a dynamic value into their heading (e.g. catchRecord.gear.measurement.heading). %@ is the vessel name.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tynnu offer o'r llong %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove gear from vessel %@"
+          }
+        }
+      }
+    },
+    "catchRecord.removeGear.hint": {
+      "comment": "Remove-gear screen hint paragraph. Matches the supplied web design exactly.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Dewiswch bopeth sy'n berthnasol"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select all that apply"
+          }
+        }
+      }
+    },
     "catchRecord.selectGear.addAnother": {
       "comment": "Secondary button to add another gear.",
       "extractionState": "manual",
@@ -2107,6 +2251,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "Add another gear"
+          }
+        }
+      }
+    },
+    "catchRecord.selectGear.removeGear": {
+      "comment": "Link to the Remove-gear screen, shown beneath the checkboxes on the Select-gear screen — matches the approved Figma design.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tynnu offer"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove gear"
           }
         }
       }
@@ -2165,38 +2327,38 @@
         }
       }
     },
+    "catchRecord.selectPort.addPort": {
+      "comment": "Button on the select-port screen (departure/return): routes to the Add-port search screen.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ychwanegu porthladd"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add port"
+          }
+        }
+      }
+    },
     "catchRecord.selectPort.departure.heading": {
       "comment": "Select departure port H1.",
       "extractionState": "manual",
       "localizations": {
         "cy": {
           "stringUnit": {
-            "state": "needs_review",
-            "value": "O ba borthladd wnaethoch chi adael?"
+            "state": "translated",
+            "value": "Dewiswch y porthladd y gwnaethoch gychwyn ohono"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Which port did you leave from?"
-          }
-        }
-      }
-    },
-    "catchRecord.selectPort.departure.hint": {
-      "comment": "Select departure port hint.",
-      "extractionState": "manual",
-      "localizations": {
-        "cy": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Dewiswch enw porthladd neu'r porthladd agosaf i ble y gwnaethoch adael."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Select a port name or the nearest port to where you left."
+            "value": "Select the port you set off from"
           }
         }
       }
@@ -2225,32 +2387,14 @@
       "localizations": {
         "cy": {
           "stringUnit": {
-            "state": "needs_review",
-            "value": "I ba borthladd wnaethoch chi ddychwelyd?"
+            "state": "translated",
+            "value": "Dewiswch y porthladd y gwnaethoch ddychwelyd iddo"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Which port did you return to?"
-          }
-        }
-      }
-    },
-    "catchRecord.selectPort.return.hint": {
-      "comment": "Select return port hint.",
-      "extractionState": "manual",
-      "localizations": {
-        "cy": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Dewiswch enw'r porthladd, neu'r porthladd agosaf i ble y gwnaethoch ddychwelyd."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Select the port name, or the nearest port to where you returned."
+            "value": "Select the port you returned to"
           }
         }
       }

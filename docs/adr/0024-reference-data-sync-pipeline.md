@@ -257,6 +257,15 @@ assets) is explicit future work.
   ports/species/gears pickers.
 - **Native-app exception.** As with every feature in this app, built against the already-recorded
   native-iOS exception to DEFRA's mobile app standards (see copilot-instructions.md §2).
+- **Gear measurement labels — partially closed.** The "Gears from two requests" section's gap
+  ("Measurement labels are the API's plain English text, not yet a String Catalog key") is still
+  open in general, but `GearOption.make` now detects the backend's shared, multi-example "gear
+  dimension" description (several gear families reusing one measurement definition) and replaces it
+  with a specific, localized label derived from the gear's own name (trawl/beam/dredge/pot/hook
+  keyword match). This fixed the most visible symptom (e.g. Shrimp trawls' required-measurement
+  field reading a generic multi-example sentence instead of "Number of trawls"); every other
+  backend-sourced label is still shown verbatim, unlocalized, pending the fuller String Catalog
+  mapping this gap describes.
 
 ## Consequences
 

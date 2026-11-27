@@ -6,6 +6,7 @@ private struct FailingFavouriteGearProvider: FavouriteGearProviding {
     struct Failure: Error {}
     func favouriteGears() async throws -> [GearOption] { [] }
     func addFavourite(_ gear: GearOption) async throws { throw Failure() }
+    func removeFavourite(id: String) async throws { throw Failure() }
 }
 
 @MainActor

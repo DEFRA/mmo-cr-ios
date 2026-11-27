@@ -34,7 +34,6 @@ struct LaunchArguments {
         case catchRecordDraft = "-uiTestCatchRecordDraft"
         case catchRecordNew = "-uiTestCatchRecordNew"
         case catchRecordAddPort = "-uiTestCatchRecordAddPort"
-        case catchRecordConfirmSamePort = "-uiTestCatchRecordConfirmSamePort"
         case catchRecordSelectPort = "-uiTestCatchRecordSelectPort"
         case catchRecordSelectGear = "-uiTestCatchRecordSelectGear"
         case catchRecordCatchLocationNearestAreas = "-uiTestCatchRecordCatchLocationNearestAreas"
@@ -44,6 +43,7 @@ struct LaunchArguments {
         case catchRecordSubmissionNudge = "-uiTestCatchRecordSubmissionNudge"
         case catchRecordRecordSpeciesWeights = "-uiTestCatchRecordRecordSpeciesWeights"
         case catchRecordRemoveSpecies = "-uiTestCatchRecordRemoveSpecies"
+        case catchRecordRemoveGear = "-uiTestCatchRecordRemoveGear"
         case catchRecordCheckYourAnswers = "-uiTestCatchRecordCheckYourAnswers"
         case catchRecordSubmissionSuccess = "-uiTestCatchRecordSubmissionSuccess"
 

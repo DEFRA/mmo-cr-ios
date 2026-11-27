@@ -311,12 +311,9 @@ final class CatchRecordUITests: XCTestCase {
         XCTAssertTrue(newlynResult.waitForExistence(timeout: 5))
         newlynResult.tap()
 
-        // Lands on "Was Newlyn your departure and return port?" — answering "No" continues into
-        // the separate departure/return select screens as before. Selecting an option on this
-        // screen submits and routes on immediately — there is no "Save and continue" button.
+        // Saving routes straight to the departure select screen — there is no "Was <port> your
+        // departure and return port?" confirmation step.
         app.buttons["CatchRecord.addPort.saveContinue"].tap()
-        XCTAssertTrue(element(app, "CatchRecord.confirmSamePort.heading").waitForExistence(timeout: 5))
-        element(app, "CatchRecord.confirmSamePort.option.no").tap()
 
         // Picking a favourite port on the departure/return screens submits and routes on
         // immediately — there is no "Save and continue" button on either screen. The radio
@@ -351,7 +348,7 @@ final class CatchRecordUITests: XCTestCase {
         // Previously this was silent: the inline error was gated behind a non-empty query, so a
         // completely blank submit showed nothing at all.
         XCTAssertTrue(element(app, "CatchRecord.addPort.error").waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Enter the port you want to add"].exists)
+        XCTAssertTrue(app.staticTexts["Enter the port or closest port you set off from"].exists)
         XCTAssertTrue(element(app, "CatchRecord.addPort.heading").exists)
     }
 
@@ -376,35 +373,9 @@ final class CatchRecordUITests: XCTestCase {
         // With favourites seeded, the departure select screen is shown first.
         XCTAssertTrue(element(app, "CatchRecord.selectPort.departure.heading").waitForExistence(timeout: 5))
 
-        // "Add another port" routes to the Add-port search screen.
+        // "Add port" routes to the Add-port search screen.
         app.buttons["CatchRecord.selectPort.departure.addAnother"].tap()
         XCTAssertTrue(element(app, "CatchRecord.addPort.heading").waitForExistence(timeout: 5))
-    }
-
-    // MARK: - Confirm same port (Was `<port>` your departure and return port?)
-
-    @MainActor
-    func test_confirmSamePort_yes_bypassesSelectPortScreens_reachesGearSubJourneyDirectly() {
-        let app = launch("-uiTestCatchRecordConfirmSamePort")
-
-        XCTAssertTrue(element(app, "CatchRecord.confirmSamePort.heading").waitForExistence(timeout: 5))
-        element(app, "CatchRecord.confirmSamePort.option.yes").tap()
-
-        // Skips both "Which port did you leave from?"/"Which port did you return to?" screens and
-        // lands straight in the gear sub-journey (no favourite gears seeded → Add-gear screen).
-        XCTAssertTrue(element(app, "CatchRecord.addGear.heading").waitForExistence(timeout: 5))
-        XCTAssertFalse(element(app, "CatchRecord.selectPort.departure.heading").exists)
-        XCTAssertFalse(element(app, "CatchRecord.selectPort.return.heading").exists)
-    }
-
-    @MainActor
-    func test_confirmSamePort_no_continuesToSelectPortDeparture() {
-        let app = launch("-uiTestCatchRecordConfirmSamePort")
-
-        XCTAssertTrue(element(app, "CatchRecord.confirmSamePort.heading").waitForExistence(timeout: 5))
-        element(app, "CatchRecord.confirmSamePort.option.no").tap()
-
-        XCTAssertTrue(element(app, "CatchRecord.selectPort.departure.heading").waitForExistence(timeout: 5))
     }
 
     // MARK: - Check your answers
@@ -680,5 +651,93 @@ final class CatchRecordUITests: XCTestCase {
         // Deleting the last recorded species routes onward to Add-species rather than back to the
         // now-empty weights screen.
         XCTAssertTrue(element(app, RemoveSpeciesID.addSpeciesHeading).waitForExistence(timeout: 5))
+    }
+
+    // MARK: - Add gear (updated heading — see docs/design-specs/create-catch-record.md)
+
+    @MainActor
+    func test_addGear_reachedFromSelectGear_showsUpdatedHeading() {
+        let app = launch("-uiTestCatchRecordSelectGear")
+
+        app.buttons["CatchRecord.selectGear.addAnother"].tap()
+
+        XCTAssertTrue(element(app, "CatchRecord.addGear.heading").waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Enter the gear you want to add to your list"].exists)
+    }
+
+    // MARK: - Remove gear (adapted for mobile from a supplied web design)
+
+    private enum RemoveGearID {
+        static let removeLink = "CatchRecord.selectGear.removeGear"
+        static let heading = "CatchRecord.removeGear.heading"
+        static let seineOption = "CatchRecord.removeGear.option.sx"
+        static let trawlOption = "CatchRecord.removeGear.option.otb"
+        static let continueButton = "CatchRecord.removeGear.continue"
+        static let error = "CatchRecord.removeGear.error"
+        static let confirmRemove = "CatchRecord.removeGear.confirmRemove"
+        static let cancelRemoveConfirm = "CatchRecord.removeGear.cancelRemoveConfirm"
+        static let selectGearHeading = "CatchRecord.selectGear.heading"
+        static let addGearHeading = "CatchRecord.addGear.heading"
+    }
+
+    @MainActor
+    func test_selectGear_showsRemoveGearLink_navigatingToRemoveGear() {
+        let app = launch("-uiTestCatchRecordSelectGear")
+
+        let removeLink = app.buttons[RemoveGearID.removeLink]
+        XCTAssertTrue(removeLink.waitForExistence(timeout: 5))
+        removeLink.tap()
+
+        XCTAssertTrue(element(app, RemoveGearID.heading).waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    func test_removeGear_continueWithNoSelection_showsInlineError() {
+        let app = launch("-uiTestCatchRecordRemoveGear")
+
+        let continueButton = app.buttons[RemoveGearID.continueButton]
+        XCTAssertTrue(continueButton.waitForExistence(timeout: 5))
+        continueButton.tap()
+
+        XCTAssertTrue(element(app, RemoveGearID.error).waitForExistence(timeout: 5))
+        // Did not present the confirmation dialog.
+        XCTAssertFalse(element(app, RemoveGearID.confirmRemove).exists)
+    }
+
+    @MainActor
+    func test_removeGear_removingOneOfTwo_returnsToSelectGear() {
+        let app = launch("-uiTestCatchRecordRemoveGear")
+
+        let seineOption = element(app, RemoveGearID.seineOption)
+        XCTAssertTrue(seineOption.waitForExistence(timeout: 5))
+        seineOption.tap()
+        app.buttons[RemoveGearID.continueButton].tap()
+
+        let confirmButton = element(app, RemoveGearID.confirmRemove)
+        XCTAssertTrue(confirmButton.waitForExistence(timeout: 5))
+        confirmButton.tap()
+
+        // A favourite gear remains, so the journey returns to the select-gear screen.
+        XCTAssertTrue(element(app, RemoveGearID.selectGearHeading).waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    func test_removeGear_removingLastOne_routesToAddGear() {
+        let app = launch("-uiTestCatchRecordRemoveGear")
+
+        let seineOption = element(app, RemoveGearID.seineOption)
+        let trawlOption = element(app, RemoveGearID.trawlOption)
+        XCTAssertTrue(seineOption.waitForExistence(timeout: 5))
+        seineOption.tap()
+        trawlOption.tap()
+        app.buttons[RemoveGearID.continueButton].tap()
+
+        let confirmButton = element(app, RemoveGearID.confirmRemove)
+        XCTAssertTrue(confirmButton.waitForExistence(timeout: 5))
+        confirmButton.tap()
+
+        // Removing every favourite gear routes onward to Add-gear rather than back to the
+        // now-empty select-gear screen.
+        XCTAssertTrue(element(app, RemoveGearID.addGearHeading).waitForExistence(timeout: 5))
     }
 }

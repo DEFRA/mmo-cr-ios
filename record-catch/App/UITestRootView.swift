@@ -36,7 +36,6 @@ struct UITestRootView<ProductionRoot: View>: View {
     // identity, so this mirrors `CatchRecordHostView`'s own `autosaver` ("held in @State so the
     // same instance ... persists across view updates").
     @State private var addPortFavouritePorts = StubFavouritePortsProvider()
-    @State private var confirmSamePortFavouritePorts = StubFavouritePortsProvider()
     @State private var selectPortFavouritePorts = StubFavouritePortsProvider(initialFavourites: [PortOption(name: "Hastings")])
     @State private var selectGearFavouriteGears = StubFavouriteGearProvider(initialFavourites: [
         GearOption.seineNets.withRequiredMeasurements([
@@ -46,6 +45,12 @@ struct UITestRootView<ProductionRoot: View>: View {
     @State private var speciesWeightsFavouriteSpecies = StubFavouriteSpeciesProvider(initialFavourites: [.atlanticCod])
     @State private var landingStorageFavouriteSpecies = StubFavouriteSpeciesProvider(initialFavourites: [.atlanticCod])
     @State private var recordSpeciesWeightsFavouriteSpecies = StubFavouriteSpeciesProvider(initialFavourites: Self.seedRemoveSpeciesList)
+    @State private var removeGearFavouriteGears = StubFavouriteGearProvider(initialFavourites: [
+        GearOption.seineNets.withRequiredMeasurements([
+            GearMeasurement(id: "meshSize", labelKey: "catchRecord.gear.measurement.meshSize", value: 100)
+        ]),
+        GearOption(id: "OTB", name: "Bottom otter trawl")
+    ])
 
     init(
         launchArguments: LaunchArguments = .current,
@@ -65,17 +70,6 @@ struct UITestRootView<ProductionRoot: View>: View {
             CatchRecordHostView(
                 initialRoute: .addPort(vessel: "ACHILLES", referenceNumber: "A1234520260727150815", returnPhase: nil),
                 favouritePorts: addPortFavouritePorts
-            )
-        } else if launchArguments.contains(.catchRecordConfirmSamePort) {
-            // Seeds straight to the "Was <port> your departure and return port?" confirmation
-            // screen, for UI testing its Yes/No branching without driving the search flow by hand.
-            CatchRecordHostView(
-                initialRoute: .confirmSamePort(
-                    vessel: "ACHILLES",
-                    referenceNumber: "A1234520260727150815",
-                    port: PortOption(name: "Hastings")
-                ),
-                favouritePorts: confirmSamePortFavouritePorts
             )
         } else if launchArguments.contains(.catchRecordSelectPort) {
             // Seeded favourites → Select-departure-port screen first.
@@ -171,6 +165,14 @@ struct UITestRootView<ProductionRoot: View>: View {
             CatchRecordHostView(
                 initialRoute: .removeSpecies(gear: .seineNets, vessel: "ACHILLES", referenceNumber: "A1234520260727150815"),
                 draft: Self.seedRemoveSpeciesDraft
+            )
+        } else if launchArguments.contains(.catchRecordRemoveGear) {
+            // Seeds straight to the Remove-gear screen with two favourite gears already saved, for
+            // UI testing the multi-select Continue/confirm flow (including the "remove the last
+            // one" → Add-gear routing) without driving the select-gear screen by hand.
+            CatchRecordHostView(
+                initialRoute: .removeGear(vessel: "ACHILLES", referenceNumber: "A1234520260727150815"),
+                favouriteGears: removeGearFavouriteGears
             )
         } else if launchArguments.contains(.catchRecordSubmissionSuccess) {
             // Seeds straight to the final "Submitted" screen, for UI testing the confirmation

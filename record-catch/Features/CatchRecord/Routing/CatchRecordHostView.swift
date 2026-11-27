@@ -251,7 +251,7 @@ struct CatchRecordHostView: View {
         switch route {
         case .draftAction, .selectVessel, .tripStartedToday, .tripDate, .submissionNudge:
             vesselAndTripDestination(for: route)
-        case .addPort, .confirmSamePort, .selectPort, .selectGear, .addGear, .gearMeasurements:
+        case .addPort, .selectPort, .selectGear, .addGear, .removeGear, .gearMeasurements:
             portAndGearDestination(for: route)
         case .catchLocation, .catchLocationNearestAreas, .catchLocationManualEntry,
              .recordSpeciesWeights, .addSpecies, .removeSpecies:
@@ -322,15 +322,6 @@ struct CatchRecordHostView: View {
                 portSearch: portSearch,
                 favouritePorts: favouritePorts
             )
-        case .confirmSamePort(let vessel, let referenceNumber, let port):
-            ConfirmSamePortView(
-                vessel: vessel,
-                referenceNumber: referenceNumber,
-                port: port,
-                router: router,
-                favouriteGears: favouriteGears,
-                draft: draft
-            )
         case .selectPort(let phase, let vessel, let referenceNumber):
             SelectPortView(
                 phase: phase,
@@ -356,6 +347,14 @@ struct CatchRecordHostView: View {
                 router: router,
                 gearSearch: gearSearch,
                 favouriteGears: favouriteGears
+            )
+        case .removeGear(let vessel, let referenceNumber):
+            RemoveGearView(
+                vessel: vessel,
+                referenceNumber: referenceNumber,
+                router: router,
+                favouriteGears: favouriteGears,
+                draft: draft
             )
         case .gearMeasurements(let gear, let vessel, let referenceNumber):
             GearMeasurementsView(

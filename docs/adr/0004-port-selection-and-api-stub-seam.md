@@ -138,6 +138,31 @@ later use (e.g. showing the port on a map). `FavouritePortsProviding` remains an
 this update only replaces the *search* list's data source, not favourites persistence, which is
 still deferred to the future real Ports/Favourites API ADR referenced in §5 above.
 
+## Update (2026-11) — screens brought in line with supplied designs; same-port confirmation removed
+
+Three Figma screenshots were supplied for the select-port and add-port screens ("Port
+departure.png", "Port selection.png", "Port selection 16.png"). The screens were brought in line
+with them:
+
+- The select screens' headings changed to "Select the port you set off from" / "Select the port
+  you returned to" (from "Which port did you leave from?" / "Which port did you return to?"), and
+  their hint paragraph was removed.
+- Their secondary button now reads "Add port" (`catchRecord.selectPort.addPort`), replacing
+  `catchRecord.addAnotherPort`.
+- The "Was `<port>` your departure and return port?" confirmation screen (added after this ADR was
+  first written, to let a user confirm a single port for both legs) is **not part of the supplied
+  designs** and has been removed in full: its route case, view, view model,
+  `catchRecord.confirmSamePort.*` copy and launch-argument UI-test seam are all deleted.
+  `AddPortViewModel.completionRoute` now always continues straight to the departure select screen
+  after a first-time save (§4 above is amended accordingly — `returnPhase == nil` now unconditionally
+  resolves to `.selectPort(.departure, …)`, with no intermediate branch). A user whose trip left
+  from and returned to the same port now picks it again on the return select screen, rather than
+  being asked once up front.
+
+See `docs/design-specs/create-catch-record.md`'s "Select port / Add port" section for the full,
+up-to-date screen spec, and its "Removed screen" note for the historical confirmation-screen
+record.
+
 ## References
 
 - DEFRA, *Mobile application standards* (offline-first) —

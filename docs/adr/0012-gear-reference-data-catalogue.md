@@ -113,3 +113,22 @@ These markers are comment-only and never appear in a user-visible `value`, per A
 - ADR-0004 (API-stub seam), ADR-0010 (required vs variable measurement split), ADR-0011 (per-gear
   catch grouping), ADR-0002 (localisation and `needs_review`/`[CY-TODO]` convention).
 - GOV.UK Design System — content style, sentence case: https://www.gov.uk/guidance/style-guide/a-to-z-of-gov-uk-style
+
+## Update (2026-11) — generic measurement-subtitle checklist form reinstated
+
+Section "4. Generic favourite summary, not mesh-size-specific" above replaced the original
+mesh-size-shaped checkbox subtitle (`"%dmm mesh"`) with a generic `"<label>: <value>"` form,
+because 35 of the 36 gears are no longer mesh-only.
+
+Building the "Remove gear" screen (adapted for mobile from a supplied web design — see
+`docs/design-specs/create-catch-record.md`) surfaced an approved Figma/web design that expects the
+original short, natural-language form (e.g. "100mm mesh", "2 dredges") rather than
+"`<label>`: `<value>`". This is **not** a return to the old mesh-only hard-code: every required
+measurement id across the catalogue now maps to its own short form via
+`GearMeasurement.checklistSubtitleKey` (reusing `shortDescriptionKey`'s existing per-id mapping for
+everything except mesh size, which needs a different word order from its heading-context short
+form) and `GearOption.checklistSubtitle(localize:)`. `SelectGearView` and the new `RemoveGearView`
+both use this shared, fully generic helper. The `catchRecord.gear.measurement.summary` key
+("`<label>`: `<value>`") introduced by this ADR is no longer used by either screen but is left in
+the String Catalog rather than deleted, per the catalog's own "don't delete, just stop
+referencing" convention for keys that might still be wanted.

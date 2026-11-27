@@ -132,7 +132,7 @@ abandoned before the very first screen is answered never creates a persisted row
 >   species, or the one-off `PortOption`/`GearOption` a "Change" mini-journey was showing) — a much
 >   larger persistence surface for a purely navigational concern. A coarse checkpoint keeps the
 >   change additive: only the existing "section boundary" view models
->   (`TripStartedTodayViewModel`, `TripDateViewModel`, `ConfirmSamePortViewModel`,
+>   (`TripStartedTodayViewModel`, `TripDateViewModel`,
 >   `SelectPortViewModel`, `RecordSpeciesWeightsViewModel`) gained a single `draft.advance(to:)`
 >   call, plus one central hook in `CatchRecordHostView`'s existing `onChange(of: router.path)` for
 >   reaching Check your answers (reachable from several places — a single DRY hook covers them all).

@@ -1,11 +1,11 @@
 import SwiftUI
 
-/// Reusable "Which port did you leave from / return to?" screen.
+/// Reusable "Select the port you set off from / returned to" screen.
 ///
 /// Serves both the departure and return variants of the design, driven by `SelectPortPhase`
 /// (mirroring `TripDateView`). Shows the user's favourite ports as a radio group; picking a port
 /// submits and routes on immediately (no separate "Save and continue" step), alongside a
-/// secondary "Add another port" button.
+/// secondary "Add port" button.
 struct SelectPortView: View {
 
     @Environment(AppLanguageStore.self) private var languageStore
@@ -61,8 +61,6 @@ struct SelectPortView: View {
                 .accessibilityAddTraits(.isHeader)
                 .accessibilityIdentifier("\(identifierPrefix).heading")
 
-            ParagraphText(text: languageStore.localized(viewModel.phase.hintKey))
-
             RadioGroup(
                 options: viewModel.favourites.map { port in
                     RadioGroupOption(
@@ -77,7 +75,7 @@ struct SelectPortView: View {
                 errorAccessibilityIdentifier: "\(identifierPrefix).error"
             )
 
-            SecondaryButton(title: languageStore.localized("catchRecord.addAnotherPort")) {
+            SecondaryButton(title: languageStore.localized("catchRecord.selectPort.addPort")) {
                 viewModel.addAnotherPort()
             }
             .accessibilityIdentifier("\(identifierPrefix).addAnother")

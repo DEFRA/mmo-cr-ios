@@ -16,7 +16,6 @@ list — though two rows are flagged below as candidates for the next content pa
 | Select vessel | `catchRecord.selectVessel.validation.none` | "Select a vessel" |
 | Select departure port | `catchRecord.selectPort.departure.validation.none` | "Select the port you left from" |
 | Select return port | `catchRecord.selectPort.return.validation.none` | "Select the port you returned to" |
-| Confirm same port | `catchRecord.confirmSamePort.validation.none` | "Select whether this was your departure and return port" |
 | Trip started today | `catchRecord.tripToday.validation.none` | "Select whether your trip started and finished today" |
 | Gear measurements | `catchRecord.gear.measurement.validation.wholeNumber` | "Enter a whole number" |
 | Remove species | `catchRecord.species.remove.error` | "Select at least one species to remove" |

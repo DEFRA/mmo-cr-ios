@@ -11,6 +11,8 @@ nonisolated protocol FavouriteGearProviding: Sendable {
     func favouriteGears() async throws -> [GearOption]
     /// Adds `gear` to the user's favourites (replacing any existing entry with the same id).
     func addFavourite(_ gear: GearOption) async throws
+    /// Removes the gear with the given id from the user's favourites (see `RemoveGearViewModel`).
+    func removeFavourite(id: String) async throws
 }
 
 /// In-memory, UI-only favourite gears store — used by previews and unit/UI tests that don't need
@@ -37,6 +39,12 @@ nonisolated final class StubFavouriteGearProvider: FavouriteGearProviding, @unch
         lock.withLock {
             favourites.removeAll { $0.id == gear.id }
             favourites.append(gear)
+        }
+    }
+
+    func removeFavourite(id: String) async throws {
+        lock.withLock {
+            favourites.removeAll { $0.id == id }
         }
     }
 }

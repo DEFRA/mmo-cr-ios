@@ -177,10 +177,12 @@ nonisolated struct GearMeasurement: Identifiable, Hashable, Sendable, Codable {
     let id: String
     /// String Catalog key for the field label (e.g. "Mesh size (mm)") for the bundled ADR-0012
     /// catalogue. When sourced from `GearOption.make(canonical:mobile:measurementsById:vesselLengthBand:)`,
-    /// this instead holds
-    /// the API's own (unlocalised, English-only) `label` text verbatim — see that function's doc
-    /// comment and the ADR-0018 addendum "gears dataset" for why labels aren't yet mapped to the
-    /// String Catalog.
+    /// this instead holds the API's own (unlocalised, English-only) `label` text verbatim — except
+    /// for a generic, multi-example "gear dimension" label, which is replaced with a specific,
+    /// localized String Catalog key derived from the gear's own name (see
+    /// `GearOption.isGenericDimensionLabel(_:)`/`specificDimensionLabelKey(forGearNamed:fallback:)`).
+    /// See `GearOption.make`'s doc comment and the ADR-0018 addendum "gears dataset" for the wider
+    /// known gap this is a targeted fix for (most backend labels still aren't String Catalog keys).
     let labelKey: String
     /// The whole-number value the user entered, or `nil` if not yet captured.
     let value: Int?
@@ -325,6 +327,51 @@ extension GearOption {
     /// that happens.
     static let currentVesselLengthBand = "under-10m"
 
+    /// Keyword → bundled String Catalog label key, used to replace a generic, multi-example live
+    /// reference-data measurement label with one specific to the gear it is attached to. Order
+    /// matters: the first keyword found in the gear's own name wins, and "trawl" deliberately comes
+    /// **last** — gear names like "Beam trawl" contain both "beam" and "trawl", and the more
+    /// specific gear-type keyword must win over the generic one. See
+    /// `isGenericDimensionLabel(_:)`/`specificDimensionLabelKey(forGearNamed:fallback:)` for why
+    /// this exists.
+    private static let dimensionKeywordLabelKeys: [(keyword: String, labelKey: String)] = [
+        ("beam", "catchRecord.gear.measurement.numberOfBeams"),
+        ("dredge", "catchRecord.gear.measurement.numberOfDredges"),
+        ("pot", "catchRecord.gear.measurement.numberOfPots"),
+        ("hook", "catchRecord.gear.measurement.numberOfHooks"),
+        ("trawl", "catchRecord.gear.measurement.numberOfTrawls")
+    ]
+
+    /// Whether a live reference-data measurement definition's label is the backend's shared,
+    /// multi-example "gear dimension" description (e.g. "Gear dimension by number. For example:
+    /// number of trawls, number of beams, number of dredges, number of pots, number of hooks")
+    /// rather than a specific one like "Mesh size (mm)" or "Number of beams" (see the
+    /// `gears-mobile-response.json` fixture for an example of the latter, specific shape). Several
+    /// gear types can share one backend measurement definition id, so the definition's own label
+    /// is sometimes written to cover every one of them at once — detected structurally (it
+    /// mentions at least two of the known "number of <word>" examples) rather than by matching the
+    /// exact sentence, so this survives minor backend wording changes. Tracked as a known gap in
+    /// ADR-0024/`docs/api/reference-data-api.md` ("Measurement labels are the API's plain English
+    /// text, not yet a String Catalog key") — this is a targeted, gear-name-derived fix for that
+    /// gap's most visible case, not a full resolution of it.
+    private static func isGenericDimensionLabel(_ label: String) -> Bool {
+        let lowercased = label.lowercased()
+        let matchCount = dimensionKeywordLabelKeys.filter { lowercased.contains("number of \($0.keyword)") }.count
+        return matchCount >= 2
+    }
+
+    /// Resolves a specific, localized String Catalog key for a generic "gear dimension"
+    /// measurement by matching the gear's own name against known keywords (trawl/beam/dredge/pot/
+    /// hook) — e.g. "Shrimp trawls" resolves to "Number of trawls", not the raw backend text
+    /// enumerating every gear family that happens to share the one backend measurement
+    /// definition. Falls back to the generic label unchanged when no keyword matches, so an
+    /// unrecognised gear never loses its (if unhelpful) label entirely — `AppLanguageStore.localized(_:)`
+    /// already degrades gracefully by returning an unknown key's text verbatim.
+    private static func specificDimensionLabelKey(forGearNamed gearName: String, fallback: String) -> String {
+        let lowercasedName = gearName.lowercased()
+        return dimensionKeywordLabelKeys.first { lowercasedName.contains($0.keyword) }?.labelKey ?? fallback
+    }
+
     /// Joins a gear's **canonical**-view record (`GearCanonicalDTO`, the source of the
     /// required/per-trip split via `applicableCharacteristics.fixed`) with its **mobile**-view
     /// record (`GearMobileDTO`, the source of category/pair-fishing display fields) and the
@@ -363,9 +410,12 @@ extension GearOption {
                     measurementId: characteristic.characteristicId
                 )
             }
+            let labelKey = isGenericDimensionLabel(definition.label)
+                ? specificDimensionLabelKey(forGearNamed: canonical.name, fallback: definition.label)
+                : definition.label
             return GearMeasurement(
                 id: definition.id,
-                labelKey: definition.label,
+                labelKey: labelKey,
                 apiCode: definition.code,
                 unit: definition.unit
             )

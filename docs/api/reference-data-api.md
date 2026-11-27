@@ -405,6 +405,14 @@ when its `vesselLengthApplicability` includes `vesselLengthBand` (defaults to
 real length — see ADR-0024 "Vessel-length scope"); `fixed: true` becomes a required (per-favourite)
 measurement, `fixed: false` becomes a variable (per-trip) one. Measurement labels are the API's
 plain English text, not yet a String Catalog key — a tracked gap (ADR-0024 "Known gaps"), not a bug.
+**Partial fix:** when a measurement's `label` is the backend's shared, multi-example "gear
+dimension" description (several gear families reusing one measurement definition, e.g. "Gear
+dimension by number. For example: number of trawls, number of beams, number of dredges, number of
+pots, number of hooks"), `GearOption.make` replaces it with a specific, localized String Catalog
+label derived from the gear's own name (trawl/beam/dredge/pot/hook keyword match — see
+`GearOption.isGenericDimensionLabel(_:)`/`specificDimensionLabelKey(forGearNamed:fallback:)`). This
+closes the most visible instance of the gap (e.g. Shrimp trawls' field now reads "Number of
+trawls"); every other backend label is still shown verbatim, unlocalized.
 
 ## Configuration
 

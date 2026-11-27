@@ -219,6 +219,100 @@ final class GearOptionMappingTests: XCTestCase {
         }
     }
 
+    // MARK: Generic "gear dimension" label → specific, gear-name-derived label
+
+    /// A real example of the live backend's shared, multi-example "gear dimension" measurement
+    /// label, seen for Shrimp trawls (TBS) — see the gear-measurements screen bug this guards
+    /// against and `GearOption.isGenericDimensionLabel(_:)`'s doc comment.
+    private static let genericDimensionLabel =
+        "Gear dimension by number. For example: number of trawls, number of beams, " +
+        "number of dredges, number of pots, number of hooks"
+
+    func test_make_resolvesGenericDimensionLabel_toASpecificLabelDerivedFromTheGearName() throws {
+        let canonical = makeCanonical(code: "TBS", name: "Shrimp trawls", applicableCharacteristics: [
+            makeCharacteristic(characteristicId: "gear-dimension", fixed: true)
+        ])
+        let mobile = makeMobile(code: "TBS", name: "Shrimp trawls")
+        let measurementsById = [
+            "gear-dimension": makeMeasurementDefinition(
+                id: "gear-dimension",
+                code: "GD",
+                label: Self.genericDimensionLabel,
+                unit: "count"
+            )
+        ]
+
+        let gear = try GearOption.make(canonical: canonical, mobile: mobile, measurementsById: measurementsById)
+
+        XCTAssertEqual(
+            gear.requiredMeasurements[0].labelKey,
+            "catchRecord.gear.measurement.numberOfTrawls",
+            "\"Shrimp trawls\" should resolve to the specific 'number of trawls' label, not the raw backend text"
+        )
+    }
+
+    func test_make_resolvesGenericDimensionLabel_usingBeamKeyword_forABeamGear() throws {
+        let canonical = makeCanonical(code: "TBB", name: "Beam trawl", applicableCharacteristics: [
+            makeCharacteristic(characteristicId: "gear-dimension", fixed: true)
+        ])
+        let mobile = makeMobile(code: "TBB", name: "Beam trawl")
+        let measurementsById = [
+            "gear-dimension": makeMeasurementDefinition(id: "gear-dimension", label: Self.genericDimensionLabel)
+        ]
+
+        let gear = try GearOption.make(canonical: canonical, mobile: mobile, measurementsById: measurementsById)
+
+        XCTAssertEqual(gear.requiredMeasurements[0].labelKey, "catchRecord.gear.measurement.numberOfBeams")
+    }
+
+    func test_make_resolvesGenericDimensionLabel_usingDredgeKeyword_forADredgeGear() throws {
+        let canonical = makeCanonical(code: "DRB", name: "Dredge", applicableCharacteristics: [
+            makeCharacteristic(characteristicId: "gear-dimension", fixed: true)
+        ])
+        let mobile = makeMobile(code: "DRB", name: "Dredge")
+        let measurementsById = [
+            "gear-dimension": makeMeasurementDefinition(id: "gear-dimension", label: Self.genericDimensionLabel)
+        ]
+
+        let gear = try GearOption.make(canonical: canonical, mobile: mobile, measurementsById: measurementsById)
+
+        XCTAssertEqual(gear.requiredMeasurements[0].labelKey, "catchRecord.gear.measurement.numberOfDredges")
+    }
+
+    func test_make_fallsBackToTheRawAPILabel_whenNoKeywordMatchesTheGearName() throws {
+        let canonical = makeCanonical(code: "ZZZ", name: "Some future gear", applicableCharacteristics: [
+            makeCharacteristic(characteristicId: "gear-dimension", fixed: true)
+        ])
+        let mobile = makeMobile(code: "ZZZ", name: "Some future gear")
+        let measurementsById = [
+            "gear-dimension": makeMeasurementDefinition(id: "gear-dimension", label: Self.genericDimensionLabel)
+        ]
+
+        let gear = try GearOption.make(canonical: canonical, mobile: mobile, measurementsById: measurementsById)
+
+        XCTAssertEqual(
+            gear.requiredMeasurements[0].labelKey,
+            Self.genericDimensionLabel,
+            "An unrecognised gear name must keep the raw API label rather than lose it entirely"
+        )
+    }
+
+    func test_make_leavesASpecificAPILabelUnchanged_evenIfTheGearNameAlsoMatchesAKeyword() throws {
+        // "Number of beams" alone only mentions one "number of <word>" example, so it must not be
+        // mistaken for the generic multi-example description.
+        let canonical = makeCanonical(code: "TBB", name: "Beam trawl", applicableCharacteristics: [
+            makeCharacteristic(characteristicId: "number-of-beams", fixed: true)
+        ])
+        let mobile = makeMobile(code: "TBB", name: "Beam trawl")
+        let measurementsById = [
+            "number-of-beams": makeMeasurementDefinition(id: "number-of-beams", label: "Number of beams")
+        ]
+
+        let gear = try GearOption.make(canonical: canonical, mobile: mobile, measurementsById: measurementsById)
+
+        XCTAssertEqual(gear.requiredMeasurements[0].labelKey, "Number of beams")
+    }
+
     // MARK: Codable round-trip (new optional fields)
 
     func test_codable_roundTripsEveryNewField() throws {

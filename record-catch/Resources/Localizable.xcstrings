@@ -1355,6 +1355,60 @@
         }
       }
     },
+    "catchRecord.gear.measurement.numberOfTrawls": {
+      "comment": "Label for a generic live reference-data 'gear dimension' measurement resolved to a specific label by matching the gear's own name (e.g. \"Shrimp trawls\") — see GearOption.specificDimensionLabelKey(forGearNamed:fallback:). [CY-TODO] machine-assisted translation of specialist gear term — needs professional Welsh review.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Nifer y rhwydi llusgo"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Number of trawls"
+          }
+        }
+      }
+    },
+    "catchRecord.gear.measurement.numberOfPots": {
+      "comment": "Label for a generic live reference-data 'gear dimension' measurement resolved to a specific label by matching the gear's own name (e.g. a pots-type gear) — see GearOption.specificDimensionLabelKey(forGearNamed:fallback:). [CY-TODO] machine-assisted translation of specialist gear term — needs professional Welsh review.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Nifer y potiau"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Number of pots"
+          }
+        }
+      }
+    },
+    "catchRecord.gear.measurement.numberOfHooks": {
+      "comment": "Label for a generic live reference-data 'gear dimension' measurement resolved to a specific label by matching the gear's own name (e.g. a hooks-type gear) — see GearOption.specificDimensionLabelKey(forGearNamed:fallback:). [CY-TODO] machine-assisted translation of specialist gear term — needs professional Welsh review.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Nifer y bachau"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Number of hooks"
+          }
+        }
+      }
+    },
     "catchRecord.gear.measurement.numberOfDredges": {
       "comment": "Label for the number-of-dredges measurement field (dredge gear). [CY-TODO] machine-assisted translation of specialist gear term — needs professional Welsh review.",
       "extractionState": "manual",

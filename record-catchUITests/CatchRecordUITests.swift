@@ -311,12 +311,9 @@ final class CatchRecordUITests: XCTestCase {
         XCTAssertTrue(newlynResult.waitForExistence(timeout: 5))
         newlynResult.tap()
 
-        // Lands on "Was Newlyn your departure and return port?" — answering "No" continues into
-        // the separate departure/return select screens as before. Selecting an option on this
-        // screen submits and routes on immediately — there is no "Save and continue" button.
+        // Saving routes straight to the departure select screen — there is no "Was <port> your
+        // departure and return port?" confirmation step.
         app.buttons["CatchRecord.addPort.saveContinue"].tap()
-        XCTAssertTrue(element(app, "CatchRecord.confirmSamePort.heading").waitForExistence(timeout: 5))
-        element(app, "CatchRecord.confirmSamePort.option.no").tap()
 
         // Picking a favourite port on the departure/return screens submits and routes on
         // immediately — there is no "Save and continue" button on either screen. The radio
@@ -376,35 +373,9 @@ final class CatchRecordUITests: XCTestCase {
         // With favourites seeded, the departure select screen is shown first.
         XCTAssertTrue(element(app, "CatchRecord.selectPort.departure.heading").waitForExistence(timeout: 5))
 
-        // "Add another port" routes to the Add-port search screen.
+        // "Add port" routes to the Add-port search screen.
         app.buttons["CatchRecord.selectPort.departure.addAnother"].tap()
         XCTAssertTrue(element(app, "CatchRecord.addPort.heading").waitForExistence(timeout: 5))
-    }
-
-    // MARK: - Confirm same port (Was `<port>` your departure and return port?)
-
-    @MainActor
-    func test_confirmSamePort_yes_bypassesSelectPortScreens_reachesGearSubJourneyDirectly() {
-        let app = launch("-uiTestCatchRecordConfirmSamePort")
-
-        XCTAssertTrue(element(app, "CatchRecord.confirmSamePort.heading").waitForExistence(timeout: 5))
-        element(app, "CatchRecord.confirmSamePort.option.yes").tap()
-
-        // Skips both "Which port did you leave from?"/"Which port did you return to?" screens and
-        // lands straight in the gear sub-journey (no favourite gears seeded → Add-gear screen).
-        XCTAssertTrue(element(app, "CatchRecord.addGear.heading").waitForExistence(timeout: 5))
-        XCTAssertFalse(element(app, "CatchRecord.selectPort.departure.heading").exists)
-        XCTAssertFalse(element(app, "CatchRecord.selectPort.return.heading").exists)
-    }
-
-    @MainActor
-    func test_confirmSamePort_no_continuesToSelectPortDeparture() {
-        let app = launch("-uiTestCatchRecordConfirmSamePort")
-
-        XCTAssertTrue(element(app, "CatchRecord.confirmSamePort.heading").waitForExistence(timeout: 5))
-        element(app, "CatchRecord.confirmSamePort.option.no").tap()
-
-        XCTAssertTrue(element(app, "CatchRecord.selectPort.departure.heading").waitForExistence(timeout: 5))
     }
 
     // MARK: - Check your answers

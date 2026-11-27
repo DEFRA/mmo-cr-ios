@@ -3,8 +3,8 @@ import SwiftUI
 /// "Enter the port or closest port you set off from" — type-to-search a port and save it to
 /// favourites.
 ///
-/// Shown when the user has no favourite ports yet, and reached via a select screen's "Add another
-/// port" button. On save the chosen port is added to favourites and the journey returns to the
+/// Shown when the user has no favourite ports yet, and reached via a select screen's "Add port"
+/// button. On save the chosen port is added to favourites and the journey returns to the
 /// appropriate select screen (see `AddPortViewModel.completionRoute`).
 struct AddPortView: View {
 

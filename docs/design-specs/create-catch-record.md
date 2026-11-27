@@ -296,7 +296,44 @@ existing internal demo value `A1234520260727150815`) generated client-side with 
 guarantee. It is not derived from any backend and must be replaced once a real submission/reference
 API exists — tracked as a future-phase dependency, not part of this UI-only slice.
 
-## Screen — Was `<port>` your departure and return port? (`CatchRecord.confirmSamePort.*`)
+## Screen — Select port / Add port (`CatchRecord.selectPort.*` / `CatchRecord.addPort.*`)
+
+Updated 2026-11-27 to match three supplied screenshots ("Port departure.png", "Port selection.png",
+"Port selection 16.png"): no hint paragraph under the question, and the secondary button reads
+"Add port" rather than "Add another port".
+
+1. **No favourite ports saved** (`AddPortView`): caption "New catch record", display-only reference
+   number header (`.referenceNumber`), H1 "Enter the port or closest port you set off from"
+   (`.heading`), type-to-search field (`SearchDropdownField`, "Type to search (minimum 2
+   characters)"), `PrimaryButton` "Save and continue" (`.saveContinue`). Saving adds the port to
+   favourites and continues straight to "Select the port you set off from" (see below) — there is
+   **no** "Was `<port>` your departure and return port?" confirmation step (see "Removed screen"
+   below).
+2. **Favourite ports saved** (`SelectPortView`, reused for both legs via `SelectPortPhase`):
+   caption, reference number header, H1 "Select the port you set off from"
+   (`.selectPort.departure.heading`) or "Select the port you returned to"
+   (`.selectPort.return.heading`) — no hint paragraph — `RadioGroup` of the user's favourite ports
+   (`.option.<name>`), and `SecondaryButton` "Add port" (`.addPort`, identifier stays `.addAnother`)
+   that pushes the Add-port search screen above. Picking a port submits and routes on immediately
+   (no separate "Save and continue" step): departure → return, return → gear sub-journey.
+
+### Removed screen — Was `<port>` your departure and return port?
+
+The "Was `<port>` your departure and return port?" confirmation screen (previously
+`CatchRecord.confirmSamePort.*`, documented below) is **not part of the supplied designs** and has
+been removed: `AddPortViewModel.completionRoute` now always continues straight to "Select the port
+you set off from" after a first-time save. A user whose trip left from and returned to the same
+port now picks it again on the return select screen, rather than being asked once up front. The
+historical spec for the removed screen is kept below for reference; its route case, view, view
+model and `catchRecord.confirmSamePort.*` copy have all been deleted from the app.
+
+### Deviation register
+
+- Select-port screens no longer show a hint paragraph under the H1 question. This matches GOV.UK
+  guidance for a single, self-explanatory question and has no accessibility impact (the heading
+  alone is sufficient context for the radio group it labels).
+
+## Screen — Was `<port>` your departure and return port? (`CatchRecord.confirmSamePort.*`) — REMOVED, historical record only
 
 Reached only from **`AddPortView`'s first-time entry** (`returnPhase == nil` — no favourite ports
 saved yet), immediately after the searched port is saved to favourites. Lets a user whose trip left

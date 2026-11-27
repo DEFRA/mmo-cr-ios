@@ -52,18 +52,3 @@ final class SelectPortValidationTests: XCTestCase {
         XCTAssertNil(SelectPortValidation.errorKey(for: "Hastings", phase: .return))
     }
 }
-
-final class ConfirmSamePortValidationTests: XCTestCase {
-
-    func test_errorKey_withNoSelection_returnsValidationKey() {
-        XCTAssertEqual(
-            ConfirmSamePortValidation.errorKey(for: nil),
-            "catchRecord.confirmSamePort.validation.none"
-        )
-    }
-
-    func test_errorKey_withSelection_returnsNil_forBothOptions() {
-        XCTAssertNil(ConfirmSamePortValidation.errorKey(for: .yes))
-        XCTAssertNil(ConfirmSamePortValidation.errorKey(for: .no))
-    }
-}

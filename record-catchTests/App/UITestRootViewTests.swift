@@ -23,7 +23,6 @@ final class UITestRootViewTests: XCTestCase {
             LaunchArguments.Flag.catchRecordDraft,
             .catchRecordNew,
             .catchRecordAddPort,
-            .catchRecordConfirmSamePort,
             .catchRecordSelectPort,
             .catchRecordSelectGear,
             .catchRecordCheckYourAnswers,

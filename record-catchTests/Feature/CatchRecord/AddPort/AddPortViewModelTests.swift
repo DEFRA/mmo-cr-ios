@@ -89,12 +89,12 @@ final class AddPortViewModelTests: XCTestCase {
         )
     }
 
-    func test_completionRoute_firstEntry_withSelection_returnsConfirmSamePort() {
+    func test_completionRoute_firstEntry_withSelection_alsoReturnsSelectPortDeparture() {
         let sut = makeSUT(returnPhase: nil, router: CatchRecordRouter())
         sut.selectedName = "Hastings"
         XCTAssertEqual(
             sut.completionRoute,
-            .confirmSamePort(vessel: vessel, referenceNumber: referenceNumber, port: PortOption(name: "Hastings"))
+            .selectPort(phase: .departure, vessel: vessel, referenceNumber: referenceNumber)
         )
     }
 
@@ -134,7 +134,7 @@ final class AddPortViewModelTests: XCTestCase {
         )
     }
 
-    func test_submit_firstEntry_withSelection_routesToConfirmSamePort() async {
+    func test_submit_firstEntry_withSelection_routesToSelectPortDeparture() async {
         let router = CatchRecordRouter()
         let sut = makeSUT(returnPhase: nil, router: router)
         sut.selectedName = "Hastings"
@@ -143,7 +143,7 @@ final class AddPortViewModelTests: XCTestCase {
 
         XCTAssertEqual(
             router.path,
-            [.confirmSamePort(vessel: vessel, referenceNumber: referenceNumber, port: PortOption(name: "Hastings"))]
+            [.selectPort(phase: .departure, vessel: vessel, referenceNumber: referenceNumber)]
         )
     }
 

@@ -22,14 +22,6 @@ nonisolated enum SelectPortPhase: Hashable, Sendable {
         }
     }
 
-    /// String Catalog key for the screen's hint paragraph.
-    var hintKey: String {
-        switch self {
-        case .departure: return "catchRecord.selectPort.departure.hint"
-        case .return: return "catchRecord.selectPort.return.hint"
-        }
-    }
-
     /// String Catalog key for the "no selection" inline validation error.
     var validationKey: String {
         switch self {

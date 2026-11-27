@@ -257,24 +257,6 @@
         }
       }
     },
-    "catchRecord.addAnotherPort": {
-      "comment": "Secondary button to add another port.",
-      "extractionState": "manual",
-      "localizations": {
-        "cy": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Ychwanegu porthladd arall"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add another port"
-          }
-        }
-      }
-    },
     "catchRecord.addGear.heading": {
       "comment": "Add-gear screen H1. No longer parameterised by vessel name (see docs/design-specs/create-catch-record.md).",
       "extractionState": "manual",
@@ -1135,78 +1117,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Could not submit your catch record. Go back and check your answers, then try again."
-          }
-        }
-      }
-    },
-    "catchRecord.confirmSamePort.heading": {
-      "comment": "Confirm-same-port screen H1. %@ is the port name just saved to favourites.",
-      "extractionState": "manual",
-      "localizations": {
-        "cy": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Ai %@ oedd y porthladd neu'r porthladd agosaf y gwnaethoch gychwyn ohono a dychwelyd iddo?"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Was %@ the port or the closest port you set off from and returned to?"
-          }
-        }
-      }
-    },
-    "catchRecord.confirmSamePort.option.no": {
-      "comment": "Confirm-same-port No option.",
-      "extractionState": "manual",
-      "localizations": {
-        "cy": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Na"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No"
-          }
-        }
-      }
-    },
-    "catchRecord.confirmSamePort.option.yes": {
-      "comment": "Confirm-same-port Yes option.",
-      "extractionState": "manual",
-      "localizations": {
-        "cy": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Ie"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Yes"
-          }
-        }
-      }
-    },
-    "catchRecord.confirmSamePort.validation.none": {
-      "comment": "Confirm-same-port inline error when no option chosen.",
-      "extractionState": "manual",
-      "localizations": {
-        "cy": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Dewiswch ai dyma oedd eich porthladd ymadael a dychwelyd"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Select whether this was your departure and return port"
           }
         }
       }
@@ -2165,38 +2075,38 @@
         }
       }
     },
+    "catchRecord.selectPort.addPort": {
+      "comment": "Button on the select-port screen (departure/return): routes to the Add-port search screen.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ychwanegu porthladd"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add port"
+          }
+        }
+      }
+    },
     "catchRecord.selectPort.departure.heading": {
       "comment": "Select departure port H1.",
       "extractionState": "manual",
       "localizations": {
         "cy": {
           "stringUnit": {
-            "state": "needs_review",
-            "value": "O ba borthladd wnaethoch chi adael?"
+            "state": "translated",
+            "value": "Dewiswch y porthladd y gwnaethoch gychwyn ohono"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Which port did you leave from?"
-          }
-        }
-      }
-    },
-    "catchRecord.selectPort.departure.hint": {
-      "comment": "Select departure port hint.",
-      "extractionState": "manual",
-      "localizations": {
-        "cy": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Dewiswch enw porthladd neu'r porthladd agosaf i ble y gwnaethoch adael."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Select a port name or the nearest port to where you left."
+            "value": "Select the port you set off from"
           }
         }
       }
@@ -2225,32 +2135,14 @@
       "localizations": {
         "cy": {
           "stringUnit": {
-            "state": "needs_review",
-            "value": "I ba borthladd wnaethoch chi ddychwelyd?"
+            "state": "translated",
+            "value": "Dewiswch y porthladd y gwnaethoch ddychwelyd iddo"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Which port did you return to?"
-          }
-        }
-      }
-    },
-    "catchRecord.selectPort.return.hint": {
-      "comment": "Select return port hint.",
-      "extractionState": "manual",
-      "localizations": {
-        "cy": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Dewiswch enw'r porthladd, neu'r porthladd agosaf i ble y gwnaethoch ddychwelyd."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Select the port name, or the nearest port to where you returned."
+            "value": "Select the port you returned to"
           }
         }
       }

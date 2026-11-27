@@ -38,6 +38,13 @@ enum CatchRecordRoute: Hashable {
     /// Add a gear via type-to-search. Shown when the user has no favourite gears yet, and reached
     /// from the select screen's "Add another gear" button.
     case addGear(vessel: String, referenceNumber: String)
+    /// Remove one or more saved gears from the user's favourites (multi-select checkboxes, then
+    /// "Continue" with a confirmation step). Reached from "Remove gear" on `selectGear`, adapted
+    /// for mobile from a supplied web design (see `docs/design-specs/create-catch-record.md`).
+    /// Removal is on-device only (ADR-0004/ADR-0025) and also drops the gear from this trip's
+    /// `CatchRecordDraft.gearCatches` if it was already selected. Routes back to `selectGear`, or
+    /// `addGear` if that empties favourites entirely.
+    case removeGear(vessel: String, referenceNumber: String)
     /// Enter the measurements for a chosen gear (e.g. mesh size for seine nets), then save it to
     /// favourites and return to the select screen.
     case gearMeasurements(gear: GearOption, vessel: String, referenceNumber: String)

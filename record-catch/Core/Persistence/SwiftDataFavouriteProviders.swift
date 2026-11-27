@@ -63,6 +63,14 @@ nonisolated struct SwiftDataFavouriteGearProvider: FavouriteGearProviding, @unch
             try FavouriteStore.upsert(kind: .gear, itemID: gear.id, item: gear, modelContext: modelContext)
         }
     }
+
+    /// Removes the gear with the given id from favourites (mirrors `StubFavouriteGearProvider`/
+    /// `SwiftDataFavouriteSpeciesProvider.removeFavourite(id:)`). A no-op if it doesn't exist.
+    func removeFavourite(id: String) async throws {
+        try await MainActor.run {
+            try FavouriteStore.remove(kind: .gear, itemID: id, modelContext: modelContext)
+        }
+    }
 }
 
 /// SwiftData-backed `FavouriteSpeciesProviding` — see ADR-0023. As with ports/gears, species

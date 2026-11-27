@@ -140,6 +140,18 @@ journey, or showing submission history) is a separate, future change.
 - No behavioural or visual change ships to users in this change; it is purely additive, internal
   infrastructure.
 
+## Update (2026-11) — Remove-gear screen stays on-device only
+
+The new "Remove gear from vessel" screen (`RemoveGearView`/`RemoveGearViewModel`, see
+`docs/design-specs/create-catch-record.md` §"Screen — Remove gear from vessel") deletes a favourite
+gear via the existing on-device `FavouriteGearProviding.removeFavourite(id:)` seam (ADR-0004/ADR-0023),
+**not** via `VesselFavouritesServicing.removeFavouriteGear(vesselId:gearId:)` on this connector. This is
+consistent with §"Decision" item 1 and the explicit scope exclusion above (moving the favourites
+providers to be server-backed is distinct, future work): the connector exists and is fully typed/tested,
+but nothing — including this new screen — calls it yet. When the favourites surface is eventually wired
+to this connector, `removeFavouriteGear` is the route to adopt, with the offline queue/retry strategy
+noted in the open questions below.
+
 ## Open questions (for a future change)
 
 - Confirm the Catch Recording Service's real base URL per stage with the backend team.

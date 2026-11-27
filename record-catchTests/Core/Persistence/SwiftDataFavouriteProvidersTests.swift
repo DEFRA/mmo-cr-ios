@@ -90,6 +90,24 @@ final class SwiftDataFavouriteProvidersTests: XCTestCase {
         XCTAssertEqual(favourites.first?.requiredMeasurements.first?.value, 100)
     }
 
+    func test_gears_removeFavourite_removesIt() async throws {
+        let context = try makeContext()
+        let sut = SwiftDataFavouriteGearProvider(modelContext: context)
+        try await sut.addFavourite(.seineNets)
+
+        try await sut.removeFavourite(id: GearOption.seineNets.id)
+
+        let favourites = try await sut.favouriteGears()
+        XCTAssertTrue(favourites.isEmpty)
+    }
+
+    func test_gears_removeFavourite_forUnknownID_isANoOp() async throws {
+        let context = try makeContext()
+        let sut = SwiftDataFavouriteGearProvider(modelContext: context)
+
+        try await sut.removeFavourite(id: "unknown") // should not throw
+    }
+
     // MARK: - Species
 
     func test_species_addFavourite_thenFetch_returnsIt() async throws {

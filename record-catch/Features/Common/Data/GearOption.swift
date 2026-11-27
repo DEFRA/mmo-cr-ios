@@ -149,6 +149,23 @@ nonisolated struct GearOption: Identifiable, Hashable, Sendable, Codable {
         guard !parts.isEmpty else { return name }
         return "\(name) (\(parts.joined(separator: ", ")))"
     }
+
+    /// This gear's captured required measurements as a single, already-localised checkbox-subtitle
+    /// line (e.g. "100mm mesh" for seine nets, "80mm mesh, 2 trawl nets" for a gear with several),
+    /// matching the approved Select-gear and Remove-gear designs exactly (see
+    /// `docs/design-specs/create-catch-record.md`). Generic across the whole catalogue via
+    /// `GearMeasurement.checklistSubtitleKey`, not mesh-size-specific. `nil` when no required
+    /// measurement has a captured value yet, or the gear defines none at all.
+    ///
+    /// - Parameter localize: resolves a String Catalog key to its localised format string (see
+    ///   `descriptionWithMeasurements(localize:)`, which this mirrors).
+    func checklistSubtitle(localize: (String) -> String) -> String? {
+        let parts = requiredMeasurements.compactMap { measurement -> String? in
+            guard let value = measurement.value, let key = measurement.checklistSubtitleKey else { return nil }
+            return String(format: localize(key), value)
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: ", ")
+    }
 }
 
 /// A single measurement for a gear (required or variable).
@@ -203,6 +220,18 @@ nonisolated struct GearMeasurement: Identifiable, Hashable, Sendable, Codable {
         case "numberOfBeamsOrTrawls": return "catchRecord.gear.measurementShort.numberOfBeamsOrTrawls"
         default: return nil
         }
+    }
+
+    /// String Catalog key for this measurement's short form as shown in a Select-gear/Remove-gear
+    /// checkbox subtitle (e.g. "100mm mesh" for a captured mesh size of 100) — matches the approved
+    /// Figma ("Gear selection") and web ("Remove gear") designs exactly (see
+    /// `docs/design-specs/create-catch-record.md`). Differs from `shortDescriptionKey` (used in
+    /// question headings, e.g. "mesh size 100mm") only for mesh size, where the two orderings
+    /// differ; every other measurement's short form already reads correctly in both places and
+    /// reuses the same key. `nil` for measurements with no defined short form (mirrors
+    /// `shortDescriptionKey`).
+    var checklistSubtitleKey: String? {
+        id == "meshSize" ? "catchRecord.gear.measurementSubtitle.meshSize" : shortDescriptionKey
     }
 }
 

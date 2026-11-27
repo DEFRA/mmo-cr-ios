@@ -258,19 +258,19 @@
       }
     },
     "catchRecord.addGear.heading": {
-      "comment": "Add-gear screen H1. No longer parameterised by vessel name (see docs/design-specs/create-catch-record.md).",
+      "comment": "Add-gear screen H1. Matches the supplied 'New gear entry' design exactly (see docs/design-specs/create-catch-record.md) — was \"What gear did you use?\".",
       "extractionState": "manual",
       "localizations": {
         "cy": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Pa offer wnaethoch chi ei ddefnyddio?"
+            "value": "Rhowch y gêr rydych am ei ychwanegu at eich rhestr"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "What gear did you use?"
+            "value": "Enter the gear you want to add to your list"
           }
         }
       }
@@ -294,19 +294,19 @@
       }
     },
     "catchRecord.addGear.search.placeholder": {
-      "comment": "Add-gear search field placeholder.",
+      "comment": "Add-gear search field placeholder. Matches the supplied design and the Add-port/Add-species screens' wording exactly.",
       "extractionState": "manual",
       "localizations": {
         "cy": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Teipiwch i chwilio"
+            "value": "Teipiwch i chwilio (o leiaf 2 nod)"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Type to search"
+            "value": "Type to search (minimum 2 characters)"
           }
         }
       }
@@ -1409,6 +1409,114 @@
         }
       }
     },
+    "catchRecord.gear.remove.confirm.cancel": {
+      "comment": "Cancel option of the destructive confirmation dialog shown after Continue on the Remove-gear screen — mirrors catchRecord.species.remove.confirm.cancel.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Canslo"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        }
+      }
+    },
+    "catchRecord.gear.remove.confirm.confirm": {
+      "comment": "Destructive option of the confirmation dialog shown after Continue on the Remove-gear screen — mirrors catchRecord.species.remove.confirm.confirm.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tynnu"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove"
+          }
+        }
+      }
+    },
+    "catchRecord.gear.remove.confirm.message": {
+      "comment": "Body message of the destructive confirmation dialog shown after Continue on the Remove-gear screen — mirrors catchRecord.species.remove.confirm.message.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ni ellir dadwneud hyn."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This cannot be undone."
+          }
+        }
+      }
+    },
+    "catchRecord.gear.remove.confirm.title": {
+      "comment": "Title of the destructive confirmation dialog shown after Continue on the Remove-gear screen. Not part of the supplied web design, which has no confirmation step — added to meet this app's WCAG 2.2 requirement to confirm destructive actions (see docs/design-specs/create-catch-record.md deviation register).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tynnu'r offer a ddewiswyd?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove the selected gear?"
+          }
+        }
+      }
+    },
+    "catchRecord.gear.remove.removeFailed": {
+      "comment": "Error banner shown when removing a gear from favourites fails (e.g. offline) — mirrors catchRecord.gear.measurement.saveFailed.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Methwyd â thynnu'r offer hwn. Gwiriwch eich cysylltiad a rhowch gynnig arall arni."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not remove this gear. Check your connection and try again."
+          }
+        }
+      }
+    },
+    "catchRecord.gear.remove.validation.none": {
+      "comment": "Inline validation error when Continue is tapped on the Remove-gear screen with nothing ticked — mirrors catchRecord.species.remove.error.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Dewiswch o leiaf un darn o offer i'w dynnu"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select at least one gear to remove"
+          }
+        }
+      }
+    },
     "catchRecord.gear.measurement.summary": {
       "comment": "Summary of a captured required measurement shown under a selected gear favourite. %@ is the measurement label, %d is the captured whole-number value.",
       "extractionState": "manual",
@@ -1477,6 +1585,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "mesh size %dmm"
+          }
+        }
+      }
+    },
+    "catchRecord.gear.measurementSubtitle.meshSize": {
+      "comment": "Short checkbox-subtitle form of a captured mesh-size measurement, shown under a gear's name on the Select-gear/Remove-gear screens (e.g. \"100mm mesh\") — see GearMeasurement.checklistSubtitleKey. Matches the supplied Figma/web designs exactly; differs from measurementShort.meshSize only in word order. %d is the whole-number value in millimetres.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "rhwyll %dmm"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%dmm mesh"
           }
         }
       }
@@ -2003,6 +2129,60 @@
         }
       }
     },
+    "catchRecord.removeGear.continue": {
+      "comment": "Primary button on the Remove-gear screen. Matches the supplied web design's 'Continue' exactly (not 'Save and continue' — nothing is saved, only removed).",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Parhau"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue"
+          }
+        }
+      }
+    },
+    "catchRecord.removeGear.heading": {
+      "comment": "Remove-gear screen H1, formatted with the vessel name (e.g. \"Remove gear from vessel OLGA\") — adapted for mobile from the supplied web design, which shows the vessel name as a separate bold display beneath the heading; folded into a single H1 here to match how this app's other screens embed a dynamic value into their heading (e.g. catchRecord.gear.measurement.heading). %@ is the vessel name.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tynnu offer o'r llong %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove gear from vessel %@"
+          }
+        }
+      }
+    },
+    "catchRecord.removeGear.hint": {
+      "comment": "Remove-gear screen hint paragraph. Matches the supplied web design exactly.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Dewiswch bopeth sy'n berthnasol"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select all that apply"
+          }
+        }
+      }
+    },
     "catchRecord.selectGear.addAnother": {
       "comment": "Secondary button to add another gear.",
       "extractionState": "manual",
@@ -2017,6 +2197,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "Add another gear"
+          }
+        }
+      }
+    },
+    "catchRecord.selectGear.removeGear": {
+      "comment": "Link to the Remove-gear screen, shown beneath the checkboxes on the Select-gear screen — matches the approved Figma design.",
+      "extractionState": "manual",
+      "localizations": {
+        "cy": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tynnu offer"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove gear"
           }
         }
       }

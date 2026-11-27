@@ -57,7 +57,7 @@ struct SelectGearView: View {
                     CheckboxGroupOption(
                         id: gear.id,
                         title: gear.name,
-                        subtitle: measurementSummary(for: gear),
+                        subtitle: gear.checklistSubtitle(localize: languageStore.localized),
                         accessibilityIdentifier: "\(identifierPrefix).option.\(gear.id.lowercased())"
                     )
                 },
@@ -79,6 +79,11 @@ struct SelectGearView: View {
                 }
                 .accessibilityIdentifier("\(identifierPrefix).addAnother")
             }
+
+            LinkButton(title: languageStore.localized("catchRecord.selectGear.removeGear")) {
+                viewModel.removeGear()
+            }
+            .accessibilityIdentifier("\(identifierPrefix).removeGear")
         }
     }
 
@@ -131,7 +136,6 @@ struct SelectGearView: View {
         return parts.isEmpty ? nil : parts.joined(separator: ", ")
     }
 }
-
 #Preview("English") {
     SelectGearView(
         vessel: "ACHILLES",

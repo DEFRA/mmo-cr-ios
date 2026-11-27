@@ -141,4 +141,10 @@ final class SelectGearViewModel {
     func addAnotherGear() {
         router.push(.addGear(vessel: vessel, referenceNumber: referenceNumber))
     }
+
+    /// Routes to the "Remove gear from vessel" screen (adapted from the supplied web design — see
+    /// `RemoveGearViewModel`).
+    func removeGear() {
+        router.push(.removeGear(vessel: vessel, referenceNumber: referenceNumber))
+    }
 }

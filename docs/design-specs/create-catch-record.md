@@ -425,6 +425,92 @@ selected gears remain —
 No numeric "gear 2 of 3" progress indicator is shown between loops — the gear-named heading on
 each screen is enough to orient the user.
 
+## Screen — Remove gear from vessel (`CatchRecord.removeGear.*`)
+
+Adapted for mobile from a supplied web design (no Figma — see §1/§7 of the
+[figma-design instructions](../instructions/figma-design.instructions.md) for the no-Figma fallback).
+Reached from a new "Remove gear" link (`CatchRecord.selectGear.removeGear`) beneath the
+Save-and-continue/Add-another-gear buttons on `SelectGearView`, shown whenever at least one
+favourite gear exists.
+
+1. Caption/reference-number header, H1 "Remove gear from vessel `<VESSEL>`" (`.heading`, `%@` = the
+   selected vessel name — see the deviation register below for how the web design's separate bold
+   vessel-name display was adapted).
+2. Hint paragraph "Select all that apply" (`.hint`), matching the web design exactly.
+3. `CheckboxGroup` listing every favourite gear (`.option.<gearCode>`), each with the same
+   already-localised measurement-summary subtitle as `SelectGearView` (e.g. "100mm mesh" — see
+   `GearOption.checklistSubtitle(localize:)`, shared between both screens).
+4. `PrimaryButton` "Continue" (`.continue` — not "Save and continue": nothing is saved here, only
+   removed).
+5. **Validation:** at least one gear must be ticked, else the group-level inline error
+   `catchRecord.gear.remove.validation.none` (`.error`) — mirrors `RemoveSpeciesView`.
+6. **Confirmation:** a valid "Continue" opens a destructive confirmation dialog ("Remove the
+   selected gear?" / "This cannot be undone." — `catchRecord.gear.remove.confirm.*`) before anything
+   is actually removed — see the deviation register below for why this step was added.
+7. **On confirm:** every ticked gear is deleted from the on-device favourites store
+   (`FavouriteGearProviding.removeFavourite(id:)`, ADR-0023) and taken out of the current trip's
+   `CatchRecordDraft.gearCatches` if it was already selected, so the in-progress record never
+   references a favourite that no longer exists. A removal failure (e.g. offline) surfaces a
+   recoverable error banner (`catchRecord.gear.remove.removeFailed`) and leaves the screen as-is.
+8. **Routing after a successful removal:** back to `SelectGearView` if any favourite gear remains,
+   or to `AddGearView` if the last one was just removed — reusing
+   `CatchRecordRouting.gearEntryRoute`, the same rule used when first entering the gear sub-journey.
+
+Removal here is **on-device only** for now: `VesselFavouritesServicing.removeFavouriteGear` exists
+on the Catch Recording Service connector (ADR-0025) but, like the rest of the favourites surface, is
+not yet wired to a live backend.
+
+### Copy additions (en / cy)
+
+| Key | English | Welsh (placeholder, `needs_review`) |
+|---|---|---|
+| `catchRecord.removeGear.heading` | Remove gear from vessel %@ | Tynnu offer o'r llong %@ |
+| `catchRecord.removeGear.hint` | Select all that apply | Dewiswch bopeth sy'n berthnasol |
+| `catchRecord.removeGear.continue` | Continue | Parhau |
+| `catchRecord.selectGear.removeGear` | Remove gear | Tynnu offer |
+| `catchRecord.gear.remove.validation.none` | Select at least one gear to remove | Dewiswch o leiaf un darn o offer i'w dynnu |
+| `catchRecord.gear.remove.confirm.title` | Remove the selected gear? | Tynnu'r offer a ddewiswyd? |
+| `catchRecord.gear.remove.confirm.message` | This cannot be undone. | Ni ellir dadwneud hyn. |
+| `catchRecord.gear.remove.confirm.confirm` | Remove | Tynnu |
+| `catchRecord.gear.remove.confirm.cancel` | Cancel | Canslo |
+| `catchRecord.gear.remove.removeFailed` | Could not remove this gear. Check your connection and try again. | Methwyd â thynnu'r offer hwn. Gwiriwch eich cysylltiad a rhowch gynnig arall arni. |
+| `catchRecord.gear.measurementSubtitle.meshSize` | %dmm mesh | rhwyll %dmm |
+
+### Accessibility annotations
+
+Identical pattern to `RemoveSpeciesView`: single accessibility container for the `CheckboxGroup`;
+the group-level inline error is icon + `errorRed` text + red border with the "Error:"/"Gwall:"
+prefix and does not navigate on submit (WCAG 3.3.1/3.3.4); the destructive confirmation step uses
+the system `confirmationDialog`, announced by VoiceOver with its title and both actions; the
+removal-failure banner is icon + `errorRed` text, never colour alone; `PrimaryButton` meets the
+44×44pt minimum; all copy renders via `LocalizedText`/`TitleText`/`ParagraphText` so Dynamic Type
+scales to 200%/accessibility sizes without clipping.
+
+### Deviation register
+
+- **Vessel name folded into a single H1**, rather than the web design's separate bold vessel-name
+  display beneath the heading — matches how this app's other screens already embed a dynamic value
+  directly into their H1 (e.g. `GearMeasurementsView`'s "Enter the measurements for `<gear>`").
+  Logged for governance (Delivery Architecture).
+- **Added a destructive confirmation dialog** ("Remove the selected gear?") not present in the
+  supplied web design, which removes immediately on "Continue". This app's established pattern for
+  every other destructive action (`DraftActionView`, `RemoveSpeciesView`) confirms before an
+  irreversible delete; WCAG 2.2 AA favours a recoverable/confirmed action over an immediate
+  irreversible one, so the design is followed in layout/copy but overridden on this one safety
+  behaviour. Logged for governance.
+- **Generic measurement-subtitle checklist form reinstated**, reversing the mesh-size-specific-to-
+  generic-"`<label>`: `<value>`" change recorded in
+  [ADR-0012](../adr/0012-gear-reference-data-catalogue.md) §4. The checkbox subtitle on both
+  `SelectGearView` and this screen now reads e.g. "100mm mesh" / "2 dredges" via
+  `GearMeasurement.checklistSubtitleKey`/`GearOption.checklistSubtitle(localize:)` — still fully
+  generic across the whole gear catalogue (every required-measurement id maps to its own short
+  form), not reverted to a mesh-only hard-code. Matches the supplied Figma ("Gear selection") and
+  web ("Remove gear") designs exactly. Logged for governance.
+- **Add-gear screen heading and placeholder copy updated** to match the supplied design exactly
+  ("Enter the gear you want to add to your list" / "Type to search (minimum 2 characters)",
+  replacing "What gear did you use?" / "Type to search") — the field's own visible label is now
+  hidden (mirrors `AddPortView`) since the heading already states the question.
+
 ### Check your answers
 
 One section per selected gear (titled by the gear's own name) shows that gear's name, then

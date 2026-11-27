@@ -43,6 +43,7 @@ struct LaunchArguments {
         case catchRecordSubmissionNudge = "-uiTestCatchRecordSubmissionNudge"
         case catchRecordRecordSpeciesWeights = "-uiTestCatchRecordRecordSpeciesWeights"
         case catchRecordRemoveSpecies = "-uiTestCatchRecordRemoveSpecies"
+        case catchRecordRemoveGear = "-uiTestCatchRecordRemoveGear"
         case catchRecordCheckYourAnswers = "-uiTestCatchRecordCheckYourAnswers"
         case catchRecordSubmissionSuccess = "-uiTestCatchRecordSubmissionSuccess"
 

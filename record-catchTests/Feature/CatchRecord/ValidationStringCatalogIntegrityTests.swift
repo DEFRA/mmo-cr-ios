@@ -73,7 +73,21 @@ final class ValidationStringCatalogIntegrityTests: XCTestCase {
         "catchRecord.submissionSaved.checkRecordsLink",
         "catchRecord.submissionSaved.checkRecordsBody",
         "catchRecord.submissionSaved.warning",
-        "catchRecord.submissionSaved.viewRecords"
+        "catchRecord.submissionSaved.viewRecords",
+
+        // Remove gear (adapted for mobile from a supplied web design — see
+        // docs/design-specs/create-catch-record.md)
+        "catchRecord.gear.remove.validation.none",
+        "catchRecord.gear.remove.confirm.title",
+        "catchRecord.gear.remove.confirm.confirm",
+        "catchRecord.gear.remove.confirm.cancel",
+        "catchRecord.gear.remove.confirm.message",
+        "catchRecord.gear.remove.removeFailed",
+        "catchRecord.removeGear.heading",
+        "catchRecord.removeGear.hint",
+        "catchRecord.removeGear.continue",
+        "catchRecord.selectGear.removeGear",
+        "catchRecord.gear.measurementSubtitle.meshSize"
     ]
 
     func test_everyValidationKey_resolvesInEnglish() {

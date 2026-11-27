@@ -652,4 +652,92 @@ final class CatchRecordUITests: XCTestCase {
         // now-empty weights screen.
         XCTAssertTrue(element(app, RemoveSpeciesID.addSpeciesHeading).waitForExistence(timeout: 5))
     }
+
+    // MARK: - Add gear (updated heading — see docs/design-specs/create-catch-record.md)
+
+    @MainActor
+    func test_addGear_reachedFromSelectGear_showsUpdatedHeading() {
+        let app = launch("-uiTestCatchRecordSelectGear")
+
+        app.buttons["CatchRecord.selectGear.addAnother"].tap()
+
+        XCTAssertTrue(element(app, "CatchRecord.addGear.heading").waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Enter the gear you want to add to your list"].exists)
+    }
+
+    // MARK: - Remove gear (adapted for mobile from a supplied web design)
+
+    private enum RemoveGearID {
+        static let removeLink = "CatchRecord.selectGear.removeGear"
+        static let heading = "CatchRecord.removeGear.heading"
+        static let seineOption = "CatchRecord.removeGear.option.sx"
+        static let trawlOption = "CatchRecord.removeGear.option.otb"
+        static let continueButton = "CatchRecord.removeGear.continue"
+        static let error = "CatchRecord.removeGear.error"
+        static let confirmRemove = "CatchRecord.removeGear.confirmRemove"
+        static let cancelRemoveConfirm = "CatchRecord.removeGear.cancelRemoveConfirm"
+        static let selectGearHeading = "CatchRecord.selectGear.heading"
+        static let addGearHeading = "CatchRecord.addGear.heading"
+    }
+
+    @MainActor
+    func test_selectGear_showsRemoveGearLink_navigatingToRemoveGear() {
+        let app = launch("-uiTestCatchRecordSelectGear")
+
+        let removeLink = app.buttons[RemoveGearID.removeLink]
+        XCTAssertTrue(removeLink.waitForExistence(timeout: 5))
+        removeLink.tap()
+
+        XCTAssertTrue(element(app, RemoveGearID.heading).waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    func test_removeGear_continueWithNoSelection_showsInlineError() {
+        let app = launch("-uiTestCatchRecordRemoveGear")
+
+        let continueButton = app.buttons[RemoveGearID.continueButton]
+        XCTAssertTrue(continueButton.waitForExistence(timeout: 5))
+        continueButton.tap()
+
+        XCTAssertTrue(element(app, RemoveGearID.error).waitForExistence(timeout: 5))
+        // Did not present the confirmation dialog.
+        XCTAssertFalse(element(app, RemoveGearID.confirmRemove).exists)
+    }
+
+    @MainActor
+    func test_removeGear_removingOneOfTwo_returnsToSelectGear() {
+        let app = launch("-uiTestCatchRecordRemoveGear")
+
+        let seineOption = element(app, RemoveGearID.seineOption)
+        XCTAssertTrue(seineOption.waitForExistence(timeout: 5))
+        seineOption.tap()
+        app.buttons[RemoveGearID.continueButton].tap()
+
+        let confirmButton = element(app, RemoveGearID.confirmRemove)
+        XCTAssertTrue(confirmButton.waitForExistence(timeout: 5))
+        confirmButton.tap()
+
+        // A favourite gear remains, so the journey returns to the select-gear screen.
+        XCTAssertTrue(element(app, RemoveGearID.selectGearHeading).waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    func test_removeGear_removingLastOne_routesToAddGear() {
+        let app = launch("-uiTestCatchRecordRemoveGear")
+
+        let seineOption = element(app, RemoveGearID.seineOption)
+        let trawlOption = element(app, RemoveGearID.trawlOption)
+        XCTAssertTrue(seineOption.waitForExistence(timeout: 5))
+        seineOption.tap()
+        trawlOption.tap()
+        app.buttons[RemoveGearID.continueButton].tap()
+
+        let confirmButton = element(app, RemoveGearID.confirmRemove)
+        XCTAssertTrue(confirmButton.waitForExistence(timeout: 5))
+        confirmButton.tap()
+
+        // Removing every favourite gear routes onward to Add-gear rather than back to the
+        // now-empty select-gear screen.
+        XCTAssertTrue(element(app, RemoveGearID.addGearHeading).waitForExistence(timeout: 5))
+    }
 }

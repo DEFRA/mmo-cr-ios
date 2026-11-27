@@ -342,7 +342,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enter the gear you want to add"
+            "value": "Select the gear you want to add"
           }
         }
       }
@@ -468,7 +468,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enter the port you want to add"
+            "value": "Enter the port or closest port you set off from"
           }
         }
       }

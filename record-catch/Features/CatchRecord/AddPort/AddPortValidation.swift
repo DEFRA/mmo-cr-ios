@@ -3,7 +3,7 @@ import Foundation
 /// Pure, static validation for the Add-port screen.
 ///
 /// Two rules, in GOV.UK priority order (missing → fails another rule):
-/// 1. The search field must not be left blank ("Enter the port you want to add").
+/// 1. The search field must not be left blank ("Enter the port or closest port you set off from").
 /// 2. Once typed, a port must be picked from the results list ("Select a port from the list").
 ///
 /// Mirrors `AddSpeciesValidation`. GOV.UK's "Be specific" guidance warns against reusing one

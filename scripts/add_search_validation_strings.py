@@ -2,7 +2,7 @@
 """Add the "blank search field" validation keys to Localizable.xcstrings.
 
 GOV.UK's "Be specific" guidance wants a different message for each error state: a blank
-required field gets an instruction ("Enter the port you want to add"), a typed-but-unselected
+required field gets an instruction ("Enter the port or closest port you set off from"), a typed-but-unselected
 field gets the existing "Select ... from the list" message. The `.select`-equivalent half of
 each pair already exists (`catchRecord.addPort.validation.none` /
 `catchRecord.addGear.validation.none`), so only the `.enter` half is new -- except for the
@@ -23,12 +23,12 @@ CATALOG = pathlib.Path(__file__).resolve().parents[1] / "record-catch" / "Resour
 NEW_KEYS = {
     "catchRecord.addPort.validation.enter": (
         "Add-port: search field left completely blank on Save and continue.",
-        "Enter the port you want to add",
+        "Enter the port or closest port you set off from",
         "Rhowch y porthladd rydych am ei ychwanegu",
     ),
     "catchRecord.addGear.validation.enter": (
         "Add-gear: search field left completely blank on Save and continue.",
-        "Enter the gear you want to add",
+        "Select the gear you want to add",
         "Rhowch y gêr rydych am ei ychwanegu",
     ),
     "catchRecord.manualEntry.validation.enter": (

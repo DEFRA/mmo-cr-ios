@@ -348,7 +348,7 @@ final class CatchRecordUITests: XCTestCase {
         // Previously this was silent: the inline error was gated behind a non-empty query, so a
         // completely blank submit showed nothing at all.
         XCTAssertTrue(element(app, "CatchRecord.addPort.error").waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Enter the port you want to add"].exists)
+        XCTAssertTrue(app.staticTexts["Enter the port or closest port you set off from"].exists)
         XCTAssertTrue(element(app, "CatchRecord.addPort.heading").exists)
     }
 

@@ -216,7 +216,7 @@ struct SearchDropdownField: View {
                 }
                 .accessibilityElement(children: .combine)
                 // GOV.UK's visually-hidden "Error:" prefix, so VoiceOver reads
-                // "Error: Enter the port you want to add" — matching every other error in the app.
+                // "Error: Enter the port or closest port you set off from" — matching every other error in the app.
                 .accessibilityLabel("\(errorPrefix) \(errorMessage)")
                 .modifier(SearchDropdownFieldErrorIdentifier(identifier: errorAccessibilityIdentifier))
             }
